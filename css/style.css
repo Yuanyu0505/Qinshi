@@ -100,10 +100,16 @@ header.top {
 .q-dot-purple { background: #7030a0; }
 .q-dot-orange { background: #f79646; }
 .mat-line { line-height: 1.6; white-space: nowrap; }
-.forge-name { font-weight: 700; font-size: 16px; }
-.q-badge { padding: 2px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; }
-.q-orange { color: #1c1507; background: #f79646; }
-.q-purple { color: #fff; background: #7030a0; }
+.eq-block {
+  display: inline-block;
+  padding: 5px 14px;
+  border-radius: 8px;
+  font-size: 17px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.eq-orange { background: #f79646; color: #1c1507; }
+.eq-purple { background: #7030a0; color: #fff; }
 .forge-scroll { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; background: var(--bg2); }
 .forge-h-table { width: 100%; min-width: 1120px; border-collapse: collapse; }
 .forge-h-table thead th {
@@ -112,13 +118,15 @@ header.top {
   background: var(--panel);
   color: var(--gold-dim);
   padding: 8px 6px;
+  font-size: 15px;
   border-bottom: 1px solid var(--line);
   white-space: nowrap;
   text-align: center;
 }
-.forge-h-table td { padding: 8px 6px; border-bottom: 1px solid rgba(58, 49, 37, .55); text-align: center; vertical-align: middle; }
+.forge-h-table td { padding: 8px 6px; font-size: 16px; border-bottom: 1px solid rgba(58, 49, 37, .55); text-align: center; vertical-align: middle; }
 .forge-h-table tr:last-child td { border-bottom: none; }
-.forge-eq { min-width: 170px; }
+.forge-h-table .mat-line { text-align: center; white-space: nowrap; }
+.forge-eq { min-width: 200px; }
 td.hit-cell { background: rgba(212, 175, 55, .12); }
 .mat {
   display: inline-block;
@@ -126,13 +134,14 @@ td.hit-cell { background: rgba(212, 175, 55, .12); }
   margin: 2px;
   border-radius: 6px;
   border: 1px solid currentColor;
-  font-size: 13px;
+  font-size: 15px;
 }
 .mat-purple { color: #b78ae0; border-color: #7030a0; background: rgba(112, 48, 160, .15); }
 .mat-orange { color: #f0a04b; border-color: #f79646; background: rgba(247, 150, 70, .12); }
 .mat.hit { outline: 2px solid var(--gold); outline-offset: 1px; font-weight: 700; }
 .mat-dash { color: var(--status); font-style: italic; }
 tr.hit-row td { background: rgba(212, 175, 55, .06); }
+.summary-card .badge { white-space: nowrap; }
 .error {
   background: rgba(176, 58, 46, .15);
   border: 1px solid var(--red);

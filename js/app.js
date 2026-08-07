@@ -30,6 +30,7 @@
   };
 
   function init() {
+    bindTabs();
     if (!DATA || !Q) {
       el.error.hidden = false;
       return;
@@ -38,6 +39,23 @@
     renderChips();
     bindEvents();
     apply();
+  }
+
+  function bindTabs() {
+    const tabs = Array.prototype.slice.call(document.querySelectorAll(".tab"));
+    const parts = {
+      equipment: document.getElementById("partition-equipment"),
+      loulan: document.getElementById("partition-loulan")
+    };
+    tabs.forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const name = btn.dataset.partition;
+        tabs.forEach((b) => b.classList.toggle("active", b === btn));
+        Object.keys(parts).forEach((key) => {
+          parts[key].hidden = key !== name;
+        });
+      });
+    });
   }
 
   function renderChips() {

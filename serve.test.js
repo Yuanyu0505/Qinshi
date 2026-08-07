@@ -80,3 +80,30 @@ test("GET /css/style.css 返回 200 且为 CSS", async () => {
     assert.match(r.headers["content-type"], /text\/css/);
   });
 });
+
+test("首页包含楼兰棋阵分区与两个玩法的图片引用", async () => {
+  await withServer(async (port) => {
+    const r = await get(port, "/");
+    assert.match(r.body, /楼兰棋阵/);
+    assert.match(r.body, /images\/楼兰\/楼兰 \(1\)\.png/);
+    assert.match(r.body, /images\/棋阵\/棋阵 \(1\)\.png/);
+  });
+});
+
+test("楼兰图片返回 200 且为 PNG", async () => {
+  await withServer(async (port) => {
+    const p = "/images/" + encodeURIComponent("楼兰") + "/" + encodeURIComponent("楼兰 (1).png");
+    const r = await get(port, p);
+    assert.strictEqual(r.status, 200);
+    assert.match(r.headers["content-type"], /image\/png/);
+  });
+});
+
+test("棋阵图片返回 200 且为 PNG", async () => {
+  await withServer(async (port) => {
+    const p = "/images/" + encodeURIComponent("棋阵") + "/" + encodeURIComponent("棋阵 (1).png");
+    const r = await get(port, p);
+    assert.strictEqual(r.status, 200);
+    assert.match(r.headers["content-type"], /image\/png/);
+  });
+});

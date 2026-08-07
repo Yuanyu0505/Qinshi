@@ -3,71 +3,114 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>秦时 · 特殊属性装备</title>
+<title>秦时 · 攻略查询</title>
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
 <div class="wrap">
   <header class="top">
-    <h1>秦时 · 特殊属性装备</h1>
-    <div class="meta"><span id="count">加载中…</span> · 版本 <span id="version">—</span></div>
+    <h1>秦时 · 攻略查询</h1>
   </header>
+
+  <nav class="tabs">
+    <button type="button" class="tab active" data-partition="equipment">特殊属性装备</button>
+    <button type="button" class="tab" data-partition="loulan">楼兰棋阵</button>
+  </nav>
 
   <div id="data-error" class="error" hidden>数据文件缺失或加载失败，请确认 data/special-equipment.js 存在。</div>
 
   <main id="app">
-    <input id="search" type="search" placeholder="输入装备名或分类，如：墨眉 / 武器 / 神兵饰品" autocomplete="off">
+    <section id="partition-equipment">
+      <div class="partition-head">
+        特殊属性装备
+        <span class="meta"><span id="count">加载中…</span> · 版本 <span id="version">—</span></span>
+      </div>
 
-    <section class="panel">
-      <div class="panel-title">按属性筛选</div>
-      <div class="filter-row">
-        <span class="filter-label">主属性</span>
-        <div id="main-filter" class="segs">
-          <button type="button" class="seg active" data-main="">不限</button>
-          <button type="button" class="seg" data-main="攻">攻</button>
-          <button type="button" class="seg" data-main="防">防</button>
-          <button type="button" class="seg" data-main="血">血</button>
-        </div>
-      </div>
-      <div class="filter-row">
-        <span class="filter-label">副属性</span>
-        <div id="chips" class="chips"></div>
-      </div>
-      <div id="sort-panel" class="sort-panel" hidden>
-        <div class="sort-row">
-          <span>排序属性（取副属性数值）</span>
-          <div id="sort-attr" class="segs"></div>
-        </div>
-        <div class="sort-row">
-          <span>取值档位</span>
-          <div id="sort-tier" class="segs">
-            <button type="button" class="seg" data-tier="max">最高值</button>
-            <button type="button" class="seg" data-tier="红色">红色</button>
-            <button type="button" class="seg" data-tier="红金">红金</button>
+      <input id="search" type="search" placeholder="输入装备名或分类，如：墨眉 / 武器 / 神兵饰品" autocomplete="off">
+
+      <section class="panel">
+        <div class="panel-title">按属性筛选</div>
+        <div class="filter-row">
+          <span class="filter-label">主属性</span>
+          <div id="main-filter" class="segs">
+            <button type="button" class="seg active" data-main="">不限</button>
+            <button type="button" class="seg" data-main="攻">攻</button>
+            <button type="button" class="seg" data-main="防">防</button>
+            <button type="button" class="seg" data-main="血">血</button>
           </div>
         </div>
+        <div class="filter-row">
+          <span class="filter-label">副属性</span>
+          <div id="chips" class="chips"></div>
+        </div>
+        <div id="sort-panel" class="sort-panel" hidden>
+          <div class="sort-row">
+            <span>排序属性（取副属性数值）</span>
+            <div id="sort-attr" class="segs"></div>
+          </div>
+          <div class="sort-row">
+            <span>取值档位</span>
+            <div id="sort-tier" class="segs">
+              <button type="button" class="seg" data-tier="max">最高值</button>
+              <button type="button" class="seg" data-tier="红色">红色</button>
+              <button type="button" class="seg" data-tier="红金">红金</button>
+            </div>
+          </div>
+        </div>
+        <button id="clear-all" type="button" class="link-btn">清除全部条件</button>
+      </section>
+
+      <section id="results">
+        <div id="table-wrap" class="table-wrap">
+          <table>
+            <thead id="table-head"></thead>
+            <tbody id="table-body"></tbody>
+          </table>
+        </div>
+        <div id="cards" class="cards"></div>
+      </section>
+
+      <div id="empty" class="empty" hidden>
+        <p>未找到符合条件的装备</p>
+        <button id="empty-clear" type="button" class="link-btn">清除全部条件</button>
       </div>
-      <button id="clear-all" type="button" class="link-btn">清除全部条件</button>
     </section>
 
-    <section id="results">
-      <div id="table-wrap" class="table-wrap">
-        <table>
-          <thead id="table-head"></thead>
-          <tbody id="table-body"></tbody>
-        </table>
-      </div>
-      <div id="cards" class="cards"></div>
-    </section>
+    <section id="partition-loulan" hidden>
+      <div class="partition-head">楼兰棋阵 · 两个玩法</div>
 
-    <div id="empty" class="empty" hidden>
-      <p>未找到符合条件的装备</p>
-      <button id="empty-clear" type="button" class="link-btn">清除全部条件</button>
-    </div>
+      <div class="mode-block">
+        <h2 class="mode-title">楼兰</h2>
+        <div class="image-grid">
+          <figure><img src="images/楼兰/楼兰 (1).png" alt="楼兰 1"><figcaption>楼兰 1</figcaption></figure>
+          <figure><img src="images/楼兰/楼兰 (2).png" alt="楼兰 2"><figcaption>楼兰 2</figcaption></figure>
+          <figure><img src="images/楼兰/楼兰 (3).png" alt="楼兰 3"><figcaption>楼兰 3</figcaption></figure>
+          <figure><img src="images/楼兰/楼兰 (4).png" alt="楼兰 4"><figcaption>楼兰 4</figcaption></figure>
+          <figure><img src="images/楼兰/楼兰 (5).png" alt="楼兰 5"><figcaption>楼兰 5</figcaption></figure>
+        </div>
+      </div>
+
+      <div class="mode-block">
+        <h2 class="mode-title">棋阵</h2>
+        <div class="image-grid">
+          <figure><img src="images/棋阵/棋阵 (1).png" alt="棋阵 1"><figcaption>棋阵 1</figcaption></figure>
+          <figure><img src="images/棋阵/棋阵 (2).png" alt="棋阵 2"><figcaption>棋阵 2</figcaption></figure>
+          <figure><img src="images/棋阵/棋阵 (3).png" alt="棋阵 3"><figcaption>棋阵 3</figcaption></figure>
+          <figure><img src="images/棋阵/棋阵 (4).png" alt="棋阵 4"><figcaption>棋阵 4</figcaption></figure>
+          <figure><img src="images/棋阵/棋阵 (5).png" alt="棋阵 5"><figcaption>棋阵 5</figcaption></figure>
+          <figure><img src="images/棋阵/棋阵 (6).png" alt="棋阵 6"><figcaption>棋阵 6</figcaption></figure>
+          <figure><img src="images/棋阵/棋阵 (7).png" alt="棋阵 7"><figcaption>棋阵 7</figcaption></figure>
+          <figure><img src="images/棋阵/棋阵 (8).png" alt="棋阵 8"><figcaption>棋阵 8</figcaption></figure>
+          <figure><img src="images/棋阵/棋阵 (9).png" alt="棋阵 9"><figcaption>棋阵 9</figcaption></figure>
+          <figure><img src="images/棋阵/棋阵 (10).png" alt="棋阵 10"><figcaption>棋阵 10</figcaption></figure>
+          <figure><img src="images/棋阵/棋阵(11).png" alt="棋阵 11"><figcaption>棋阵 11</figcaption></figure>
+        </div>
+      </div>
+    </section>
   </main>
 
   <footer class="foot">
-    数据来源：秦时相关（更新贯侯钟离昧）20260618.xlsx · 特殊属性装备 · 本地离线运行
+    数据来源：秦时相关（更新贯侯钟离昧）20260618.xlsx · 本地离线运行
   </footer>
 </div>
 

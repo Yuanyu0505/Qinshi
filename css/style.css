@@ -40,6 +40,40 @@ header.top {
   margin-bottom: 16px;
 }
 .meta { color: var(--muted); font-size: 13px; }
+.tabs {
+  display: flex;
+  gap: 6px;
+  margin: 14px 0;
+  border-bottom: 1px solid var(--line);
+}
+.tab {
+  background: none;
+  border: 1px solid transparent;
+  border-bottom: none;
+  color: var(--muted);
+  padding: 9px 20px;
+  font-size: 15px;
+  font-family: inherit;
+  cursor: pointer;
+  border-radius: 8px 8px 0 0;
+}
+.tab:hover { color: var(--text); }
+.tab.active {
+  color: var(--gold);
+  border-color: var(--line);
+  background: var(--bg2);
+  font-weight: 700;
+}
+.partition-head {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  margin: 0 0 14px;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+.partition-head .meta { font-weight: 400; }
 .error {
   background: rgba(176, 58, 46, .15);
   border: 1px solid var(--red);
@@ -169,10 +203,43 @@ td.badge, th.badge { text-align: center; white-space: nowrap; color: var(--gold)
   font-size: 12px;
   text-align: center;
 }
+.mode-block { margin-bottom: 30px; }
+.mode-title {
+  margin: 0 0 14px;
+  font-family: "STKaiti", "KaiTi", "SimSun", serif;
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: 3px;
+  color: var(--gold);
+  border-left: 3px solid var(--gold);
+  padding-left: 10px;
+}
+.image-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+  gap: 16px;
+}
+figure {
+  margin: 0;
+  background: var(--bg2);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 10px;
+  text-align: center;
+}
+figure img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 0 auto;
+  border-radius: 6px;
+}
+figcaption { color: var(--muted); font-size: 13px; margin-top: 8px; }
 
 @media (max-width: 720px) {
   .table-wrap { display: none; }
   .cards { display: block; }
+  .image-grid { grid-template-columns: 1fr; }
 }
 @media (min-width: 721px) {
   .cards { display: none; }

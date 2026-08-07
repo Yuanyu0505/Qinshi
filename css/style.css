@@ -1,0 +1,175 @@
+/* 秦时 · 特殊属性装备 — 深色水墨古风 */
+:root {
+  --bg: #12100d;
+  --bg2: #191611;
+  --panel: #221d16;
+  --line: #3a3125;
+  --gold: #d4af37;
+  --gold-dim: #9a7f2e;
+  --red: #b03a2e;
+  --text: #e8e0cf;
+  --muted: #8f8572;
+  --status: #6b6353;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: "Microsoft YaHei", "PingFang SC", "Noto Sans CJK SC", sans-serif;
+  line-height: 1.55;
+}
+.wrap { max-width: 1180px; margin: 0 auto; padding: 18px 16px 40px; }
+h1 {
+  margin: 0;
+  font-family: "STKaiti", "KaiTi", "SimSun", serif;
+  font-weight: 700;
+  font-size: 26px;
+  letter-spacing: 5px;
+  color: var(--gold);
+  text-shadow: 0 0 18px rgba(212, 175, 55, .25);
+}
+header.top {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 8px;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 12px;
+  margin-bottom: 16px;
+}
+.meta { color: var(--muted); font-size: 13px; }
+.error {
+  background: rgba(176, 58, 46, .15);
+  border: 1px solid var(--red);
+  color: #f0c8c2;
+  padding: 10px 14px;
+  border-radius: 6px;
+  margin-bottom: 14px;
+}
+#search {
+  width: 100%;
+  padding: 12px 16px;
+  font-size: 16px;
+  background: var(--bg2);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  outline: none;
+}
+#search:focus { border-color: var(--gold-dim); box-shadow: 0 0 0 2px rgba(212, 175, 55, .15); }
+.panel {
+  margin: 14px 0;
+  padding: 14px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+.panel-title { color: var(--muted); font-size: 13px; margin-bottom: 10px; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip {
+  background: var(--bg2);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 6px 18px;
+  font-size: 14px;
+  cursor: pointer;
+}
+.chip:hover { border-color: var(--gold-dim); }
+.chip.active { background: var(--gold); border-color: var(--gold); color: #1c1507; font-weight: 700; }
+.chip:disabled { opacity: .35; cursor: not-allowed; }
+.sort-panel {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--line);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+}
+.sort-row { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 13px; }
+.segs { display: inline-flex; gap: 4px; }
+.seg {
+  background: var(--bg2);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 5px 14px;
+  font-size: 13px;
+  cursor: pointer;
+}
+.seg.active { background: var(--red); border-color: var(--red); color: #fff; font-weight: 700; }
+.link-btn {
+  background: none;
+  border: none;
+  color: var(--gold-dim);
+  cursor: pointer;
+  font-size: 13px;
+  padding: 0;
+  margin-top: 10px;
+  text-decoration: underline;
+}
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; background: var(--bg2); }
+table { width: 100%; border-collapse: collapse; min-width: 860px; }
+thead th {
+  position: sticky;
+  top: 0;
+  background: var(--panel);
+  color: var(--gold-dim);
+  font-weight: 600;
+  text-align: left;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--line);
+  white-space: nowrap;
+}
+tbody td { padding: 9px 12px; border-bottom: 1px solid rgba(58, 49, 37, .55); vertical-align: top; }
+tbody tr:hover { background: rgba(212, 175, 55, .05); }
+td.name { font-weight: 600; white-space: nowrap; }
+.cat { color: var(--gold-dim); font-size: 13px; white-space: nowrap; }
+.main { color: var(--red); font-weight: 600; }
+.tier-attr { white-space: nowrap; }
+.tier-attr.hit { color: var(--gold); font-weight: 700; }
+.tier-status { color: var(--status); font-style: italic; }
+.tier-none { color: var(--status); }
+.plus { color: var(--status); margin: 0 2px; }
+td.badge, th.badge { text-align: right; white-space: nowrap; color: var(--gold); font-weight: 600; }
+.cards { display: none; }
+.card {
+  background: var(--bg2);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 12px 14px;
+  margin-bottom: 10px;
+}
+.card-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.card-head .name { font-weight: 700; font-size: 16px; }
+.card .badge { margin-left: auto; color: var(--gold); font-weight: 700; }
+.card-main { margin: 6px 0; color: var(--muted); font-size: 13px; }
+.card-main b { color: var(--red); }
+.card-tier {
+  display: flex;
+  gap: 8px;
+  padding: 4px 0;
+  border-top: 1px dashed rgba(58, 49, 37, .6);
+  font-size: 14px;
+}
+.tier-label { color: var(--muted); min-width: 38px; }
+.empty { text-align: center; padding: 48px 0; color: var(--muted); }
+.empty p { font-size: 16px; }
+.foot {
+  margin-top: 22px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 12px;
+  text-align: center;
+}
+
+@media (max-width: 720px) {
+  .table-wrap { display: none; }
+  .cards { display: block; }
+}
+@media (min-width: 721px) {
+  .cards { display: none; }
+}

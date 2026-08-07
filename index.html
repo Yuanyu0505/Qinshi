@@ -4,8 +4,61 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>秦时 · 特殊属性装备</title>
+<link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-秦时 · 特殊属性装备（建设中）
+<div class="wrap">
+  <header class="top">
+    <h1>秦时 · 特殊属性装备</h1>
+    <div class="meta"><span id="count">加载中…</span> · 版本 <span id="version">—</span></div>
+  </header>
+
+  <div id="data-error" class="error" hidden>数据文件缺失或加载失败，请确认 data/special-equipment.js 存在。</div>
+
+  <main id="app">
+    <input id="search" type="search" placeholder="输入装备名或分类，如：墨眉 / 武器 / 神兵饰品" autocomplete="off">
+
+    <section class="panel">
+      <div class="panel-title">按属性筛选（最多 2 个）</div>
+      <div id="chips" class="chips"></div>
+      <div id="sort-panel" class="sort-panel" hidden>
+        <div class="sort-row">
+          <span>排序属性</span>
+          <div id="sort-attr" class="segs"></div>
+        </div>
+        <div class="sort-row">
+          <span>取值档位</span>
+          <div id="sort-tier" class="segs">
+            <button type="button" class="seg" data-tier="max">最高值</button>
+            <button type="button" class="seg" data-tier="红色">红色</button>
+            <button type="button" class="seg" data-tier="红金">红金</button>
+          </div>
+        </div>
+      </div>
+      <button id="clear-all" type="button" class="link-btn">清除全部条件</button>
+    </section>
+
+    <section id="results">
+      <div id="table-wrap" class="table-wrap">
+        <table>
+          <thead id="table-head"></thead>
+          <tbody id="table-body"></tbody>
+        </table>
+      </div>
+      <div id="cards" class="cards"></div>
+    </section>
+
+    <div id="empty" class="empty" hidden>
+      <p>未找到符合条件的装备</p>
+      <button id="empty-clear" type="button" class="link-btn">清除全部条件</button>
+    </div>
+  </main>
+
+  <footer class="foot">
+    数据来源：秦时相关（更新贯侯钟离昧）20260618.xlsx · 特殊属性装备 · 本地离线运行
+  </footer>
+</div>
+
+<script src="data/special-equipment.js"></script>
 </body>
 </html>

@@ -64,3 +64,19 @@ test("路径穿越返回 403", async () => {
 test("lanIPv4s 返回数组", () => {
   assert.ok(Array.isArray(lanIPv4s()));
 });
+
+test("index.html 引用数据与样式", async () => {
+  await withServer(async (port) => {
+    const r = await get(port, "/");
+    assert.match(r.body, /<script src="data\/special-equipment\.js"><\/script>/);
+    assert.match(r.body, /<link rel="stylesheet" href="css\/style\.css">/);
+  });
+});
+
+test("GET /css/style.css 返回 200 且为 CSS", async () => {
+  await withServer(async (port) => {
+    const r = await get(port, "/css/style.css");
+    assert.strictEqual(r.status, 200);
+    assert.match(r.headers["content-type"], /text\/css/);
+  });
+});

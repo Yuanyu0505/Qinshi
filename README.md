@@ -1,0 +1,34 @@
+# 秦时 · 特殊属性装备查询
+
+离线本地查询工具，无需联网。
+
+## 电脑使用
+
+直接双击 `index.html` 打开。
+
+## 手机访问
+
+1. 双击 `启动服务.bat`（首次启动如遇 Windows 防火墙弹窗，选「允许」）
+2. 手机连接与电脑相同的 Wi-Fi
+3. 用手机浏览器打开窗口中显示的「手机访问」地址
+
+## 查询功能
+
+- 搜索：输入装备名或分类关键词（如：墨眉 / 武器 / 神兵饰品）
+- 筛选：点击属性芯片，最多同时选 2 个（AND）
+- 排序：选中属性后按数值倒序；可切换排序属性与取值档位（最高值 / 红色 / 红金）
+
+## 重新生成数据（Excel 更新后）
+
+需要 Python 3 + openpyxl：
+
+```bash
+python tools/build_special_equipment.py
+```
+
+## 测试
+
+```bash
+node --test js/query.test.js serve.test.js
+python -m unittest discover -s tests -v
+```

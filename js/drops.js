@@ -31,8 +31,32 @@
     return out;
   }
 
+  /** 按道具分组：先道具名，再给出该道具在普通/英雄/声望的关卡，保持首次出现顺序 */
+  function groupDrops(data, query) {
+    var r = findDrops(data, query);
+    var order = [];
+    var groups = {};
+    function add(region, entries) {
+      entries.forEach(function (e) {
+        if (!groups[e.item]) {
+          groups[e.item] = { item: e.item, normal: [], hero: [], reward: [] };
+          order.push(e.item);
+        }
+        var g = groups[e.item];
+        if (region === "normal") g.normal.push({ chapter: e.chapter, stage: e.stage });
+        else if (region === "hero") g.hero.push({ chapter: e.chapter, stage: e.stage });
+        else g.reward.push({ chapter: e.chapter });
+      });
+    }
+    add("normal", r.normal);
+    add("hero", r.hero);
+    add("reward", r.reward);
+    return order.map(function (k) { return groups[k]; });
+  }
+
   return {
     normalize: normalize,
-    findDrops: findDrops
+    findDrops: findDrops,
+    groupDrops: groupDrops
   };
 });

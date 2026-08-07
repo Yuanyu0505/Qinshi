@@ -99,19 +99,27 @@
     </div>`;
   }
 
+  function dropItemHtml(g) {
+    const fmtStage = (e) => `<span class="drop-chip">${e.chapter}-${e.stage}</span>`;
+    const fmtReward = (e) => `<span class="drop-chip">第${e.chapter}章</span>`;
+    return `<div class="drop-item">
+      <h3 class="drop-item-title">${g.item}</h3>
+      ${dropSectionHtml("普通关卡", g.normal, fmtStage)}
+      ${dropSectionHtml("英雄关卡", g.hero, fmtStage)}
+      ${dropSectionHtml("声望奖励", g.reward, fmtReward)}
+    </div>`;
+  }
+
   function applyDrops() {
     const q = DROPS.normalize(el.dropSearch.value);
     if (!q) {
       el.dropResults.innerHTML = '<div class="empty"><p>输入道具关键字开始查询</p></div>';
       return;
     }
-    const r = DROPS.findDrops(DROP_DATA, q);
-    const fmtStage = (e) => `<span class="drop-chip">${e.chapter}-${e.stage}</span>`;
-    const fmtReward = (e) => `<span class="drop-chip">第${e.chapter}章</span>`;
-    el.dropResults.innerHTML =
-      dropSectionHtml("普通关卡", r.normal, fmtStage) +
-      dropSectionHtml("英雄关卡", r.hero, fmtStage) +
-      dropSectionHtml("声望奖励", r.reward, fmtReward);
+    const groups = DROPS.groupDrops(DROP_DATA, q);
+    el.dropResults.innerHTML = groups.length
+      ? groups.map(dropItemHtml).join("")
+      : '<div class="empty"><p>未找到匹配道具</p></div>';
   }
 
   function renderForgingSummary() {

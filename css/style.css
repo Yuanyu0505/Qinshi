@@ -140,8 +140,8 @@ td.hit-cell { background: rgba(212, 175, 55, .12); }
 .mat-orange { color: #f0a04b; border-color: #f79646; background: rgba(247, 150, 70, .12); }
 .mat.hit {
   font-weight: 700;
-  border: 3px solid var(--red);
-  padding: 1px;
+  border: 5px solid var(--red);
+  padding: 2px;
 }
 .mat-dash { color: var(--status); font-style: italic; }
 tr.hit-row td { background: rgba(212, 175, 55, .06); }

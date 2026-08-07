@@ -83,7 +83,8 @@ header.top {
   overflow-x: auto;
 }
 .summary-card table { min-width: 900px; }
-#forge-search {
+#forge-search,
+#drop-search {
   padding: 10px 14px;
   font-size: 15px;
   background: var(--bg2);
@@ -94,7 +95,8 @@ header.top {
   flex: 1;
   min-width: 220px;
 }
-#forge-search:focus { border-color: var(--gold-dim); box-shadow: 0 0 0 2px rgba(212, 175, 55, .15); }
+#forge-search:focus,
+#drop-search:focus { border-color: var(--gold-dim); box-shadow: 0 0 0 2px rgba(212, 175, 55, .15); }
 .muted-tip { color: var(--muted); font-size: 12px; margin-top: 8px; }
 .q-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin: 0 3px; vertical-align: middle; }
 .q-dot-purple { background: #7030a0; }
@@ -146,6 +148,33 @@ td.hit-cell { background: rgba(212, 175, 55, .12); }
 .mat-dash { color: var(--status); font-style: italic; }
 tr.hit-row td { background: rgba(212, 175, 55, .06); }
 .summary-card .badge { white-space: nowrap; }
+.drop-block {
+  background: var(--bg2);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 12px 14px;
+  margin-bottom: 12px;
+}
+.drop-title {
+  margin: 0 0 10px;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--gold);
+  letter-spacing: 1px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.drop-count { color: var(--muted); font-size: 13px; font-weight: 400; }
+.drop-pos { display: flex; flex-wrap: wrap; gap: 8px; }
+.drop-chip {
+  background: var(--panel);
+  border: 1px solid var(--gold-dim);
+  color: var(--text);
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 14px;
+}
 .error {
   background: rgba(176, 58, 46, .15);
   border: 1px solid var(--red);

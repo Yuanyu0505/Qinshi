@@ -124,3 +124,20 @@ test("GET /data/forging.js 返回 200 且为 JS", async () => {
     assert.match(r.headers["content-type"], /javascript/);
   });
 });
+
+test("首页包含关卡掉落分区与数据引用", async () => {
+  await withServer(async (port) => {
+    const r = await get(port, "/");
+    assert.match(r.body, /关卡掉落/);
+    assert.match(r.body, /<script src="data\/drops\.js"><\/script>/);
+    assert.match(r.body, /<script src="js\/drops\.js"><\/script>/);
+  });
+});
+
+test("GET /data/drops.js 返回 200 且为 JS", async () => {
+  await withServer(async (port) => {
+    const r = await get(port, "/data/drops.js");
+    assert.strictEqual(r.status, 200);
+    assert.match(r.headers["content-type"], /javascript/);
+  });
+});

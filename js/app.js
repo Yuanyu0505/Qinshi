@@ -9,6 +9,8 @@
   const Q = window.QSQuery;
   const FDATA = window.FORGING_DATA;
   const FORG = window.FORGING;
+  const DROP_DATA = window.DROP_DATA;
+  const DROPS = window.DROPS;
 
   const state = { search: "", main: "", filters: [], sortAttr: null, valueSource: "max" };
   const forgeState = { mode: "main", query: "" };
@@ -34,12 +36,15 @@
     forgeSearch: document.getElementById("forge-search"),
     forgeResults: document.getElementById("forge-results"),
     forgeSummaryHead: document.getElementById("forging-summary-head"),
-    forgeSummary: document.getElementById("forging-summary")
+    forgeSummary: document.getElementById("forging-summary"),
+    dropSearch: document.getElementById("drop-search"),
+    dropResults: document.getElementById("drop-results")
   };
 
   function init() {
     bindTabs();
     initForging();
+    initDrops();
     if (!DATA || !Q) {
       el.error.hidden = false;
       return;
@@ -55,7 +60,8 @@
     const parts = {
       equipment: document.getElementById("partition-equipment"),
       loulan: document.getElementById("partition-loulan"),
-      forging: document.getElementById("partition-forging")
+      forging: document.getElementById("partition-forging"),
+      drops: document.getElementById("partition-drops")
     };
     tabs.forEach((btn) => {
       btn.addEventListener("click", () => {
@@ -73,6 +79,39 @@
     renderForgingSummary();
     bindForging();
     applyForging();
+  }
+
+  function initDrops() {
+    if (!DROP_DATA || !DROPS) return;
+    el.dropSearch.addEventListener("input", () => {
+      applyDrops();
+    });
+    applyDrops();
+  }
+
+  function dropSectionHtml(title, entries, fmt) {
+    const body = entries.length
+      ? entries.map(fmt).join("")
+      : '<span class="mat-dash">未找到</span>';
+    return `<div class="drop-block">
+      <h3 class="drop-title">${title}<span class="drop-count">${entries.length} 处</span></h3>
+      <div class="drop-pos">${body}</div>
+    </div>`;
+  }
+
+  function applyDrops() {
+    const q = DROPS.normalize(el.dropSearch.value);
+    if (!q) {
+      el.dropResults.innerHTML = '<div class="empty"><p>输入道具关键字开始查询</p></div>';
+      return;
+    }
+    const r = DROPS.findDrops(DROP_DATA, q);
+    const fmtStage = (e) => `<span class="drop-chip">${e.chapter}-${e.stage}</span>`;
+    const fmtReward = (e) => `<span class="drop-chip">第${e.chapter}章</span>`;
+    el.dropResults.innerHTML =
+      dropSectionHtml("普通关卡", r.normal, fmtStage) +
+      dropSectionHtml("英雄关卡", r.hero, fmtStage) +
+      dropSectionHtml("声望奖励", r.reward, fmtReward);
   }
 
   function renderForgingSummary() {

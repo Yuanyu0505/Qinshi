@@ -107,3 +107,20 @@ test("棋阵图片返回 200 且为 PNG", async () => {
     assert.match(r.headers["content-type"], /image\/png/);
   });
 });
+
+test("首页包含橙装锻造分区与数据引用", async () => {
+  await withServer(async (port) => {
+    const r = await get(port, "/");
+    assert.match(r.body, /橙装锻造/);
+    assert.match(r.body, /<script src="data\/forging\.js"><\/script>/);
+    assert.match(r.body, /<script src="js\/forging\.js"><\/script>/);
+  });
+});
+
+test("GET /data/forging.js 返回 200 且为 JS", async () => {
+  await withServer(async (port) => {
+    const r = await get(port, "/data/forging.js");
+    assert.strictEqual(r.status, 200);
+    assert.match(r.headers["content-type"], /javascript/);
+  });
+});

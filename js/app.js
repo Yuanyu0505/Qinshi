@@ -7,8 +7,11 @@
 
   const DATA = window.SPECIAL_EQUIPMENT_DATA;
   const Q = window.QSQuery;
+  const FDATA = window.FORGING_DATA;
+  const FORG = window.FORGING;
 
   const state = { search: "", main: "", filters: [], sortAttr: null, valueSource: "max" };
+  const forgeState = { mode: "main", query: "" };
 
   const el = {
     search: document.getElementById("search"),
@@ -26,11 +29,17 @@
     empty: document.getElementById("empty"),
     clearAll: document.getElementById("clear-all"),
     emptyClear: document.getElementById("empty-clear"),
-    error: document.getElementById("data-error")
+    error: document.getElementById("data-error"),
+    forgeMode: document.getElementById("forge-mode"),
+    forgeSearch: document.getElementById("forge-search"),
+    forgeResults: document.getElementById("forge-results"),
+    forgeSummaryHead: document.getElementById("forging-summary-head"),
+    forgeSummary: document.getElementById("forging-summary")
   };
 
   function init() {
     bindTabs();
+    initForging();
     if (!DATA || !Q) {
       el.error.hidden = false;
       return;
@@ -45,7 +54,8 @@
     const tabs = Array.prototype.slice.call(document.querySelectorAll(".tab"));
     const parts = {
       equipment: document.getElementById("partition-equipment"),
-      loulan: document.getElementById("partition-loulan")
+      loulan: document.getElementById("partition-loulan"),
+      forging: document.getElementById("partition-forging")
     };
     tabs.forEach((btn) => {
       btn.addEventListener("click", () => {
@@ -56,6 +66,85 @@
         });
       });
     });
+  }
+
+  function initForging() {
+    if (!FDATA || !FORG) return;
+    renderForgingSummary();
+    bindForging();
+    applyForging();
+  }
+
+  function renderForgingSummary() {
+    el.forgeSummaryHead.innerHTML = "<tr><th>装备名称</th>" +
+      FDATA.meta.stageNames.map((s) => `<th>${s}</th>`).join("") +
+      "<th>合计</th></tr>";
+    el.forgeSummary.innerHTML = FDATA.summary.map((s) => "<tr><td class=\"cat\">" + s.cat + "</td>" +
+      s.stages.map((v) => `<td>${v}</td>`).join("") +
+      `<td class="badge">${s.total}</td></tr>`).join("");
+  }
+
+  function bindForging() {
+    el.forgeMode.addEventListener("click", (e) => {
+      const btn = e.target.closest("button[data-mode]");
+      if (!btn) return;
+      forgeState.mode = btn.dataset.mode;
+      applyForging();
+    });
+    el.forgeSearch.addEventListener("input", () => {
+      forgeState.query = el.forgeSearch.value;
+      applyForging();
+    });
+  }
+
+  function forgingTokenHtml(tk, hit) {
+    if (tk.dash) return '<span class="mat-dash">—</span>';
+    const q = tk.q === "紫" ? "mat-purple" : "mat-orange";
+    return `<span class="mat ${q}${hit ? " hit" : ""}">${tk.n}</span>`;
+  }
+
+  function forgingItemHtml(item, hitStages) {
+    const hitSet = hitStages ? new Set(hitStages) : null;
+    const badge = item.quality === "紫" ? "q-purple" : "q-orange";
+    const label = item.quality === "紫" ? "紫色装备" : "橙色装备";
+    const rows = item.stages.map((st, si) => {
+      const hit = hitSet ? hitSet.has(si) : false;
+      return `<tr${hit ? ' class="hit-row"' : ""}>
+        <td class="stage">${st.stage}</td>
+        <td>${st.tokens.map((tk) => forgingTokenHtml(tk, hit)).join('<span class="plus"> + </span>')}</td>
+      </tr>`;
+    }).join("");
+    return `<div class="forge-item">
+      <div class="forge-head">
+        <span class="cat">${item.cat}</span>
+        <span class="forge-name">${item.name}</span>
+        <span class="q-badge ${badge}">${label}</span>
+        ${hitSet ? `<span class="muted">素材命中 ${hitSet.size} 个阶段</span>` : '<span class="muted">主锻造装备</span>'}
+      </div>
+      <table class="forge-table"><tbody>${rows}</tbody></table>
+    </div>`;
+  }
+
+  function applyForging() {
+    const q = FORG.normalizeName(forgeState.query);
+    el.forgeMode.querySelectorAll("button").forEach((btn) => {
+      btn.classList.toggle("active", btn.dataset.mode === forgeState.mode);
+    });
+    if (!q) {
+      el.forgeResults.innerHTML = '<div class="empty"><p>输入装备名开始查询</p></div>';
+      return;
+    }
+    if (forgeState.mode === "main") {
+      const items = FORG.findMain(FDATA.items, q);
+      el.forgeResults.innerHTML = items.length
+        ? items.map((i) => forgingItemHtml(i, null)).join("")
+        : '<div class="empty"><p>未找到该主锻造装备</p></div>';
+    } else {
+      const found = FORG.findAsMaterial(FDATA.items, q);
+      el.forgeResults.innerHTML = found.length
+        ? found.map((r) => forgingItemHtml(r.item, r.hitStages)).join("")
+        : '<div class="empty"><p>未找到使用该素材的主锻造装备</p></div>';
+    }
   }
 
   function renderChips() {

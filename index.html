@@ -14,6 +14,7 @@
 
   <nav class="tabs">
     <button type="button" class="tab active" data-partition="equipment">特殊属性装备</button>
+    <button type="button" class="tab" data-partition="forging">橙装锻造</button>
     <button type="button" class="tab" data-partition="loulan">楼兰棋阵</button>
   </nav>
 
@@ -107,6 +108,36 @@
         </div>
       </div>
     </section>
+
+    <section id="partition-forging" hidden>
+      <div class="partition-head">橙装锻造</div>
+
+      <div class="summary-card">
+        <h3 class="mode-title">锻造材料总览（四大类通用）</h3>
+        <table class="summary-table">
+          <thead id="forging-summary-head"></thead>
+          <tbody id="forging-summary"></tbody>
+        </table>
+      </div>
+
+      <section class="panel">
+        <div class="panel-title">查找方式</div>
+        <div class="filter-row">
+          <span class="filter-label">模式</span>
+          <div id="forge-mode" class="segs">
+            <button type="button" class="seg active" data-mode="main">作为主锻造装备</button>
+            <button type="button" class="seg" data-mode="material">作为素材装备</button>
+          </div>
+        </div>
+        <div class="filter-row">
+          <span class="filter-label">装备名</span>
+          <input id="forge-search" type="search" placeholder="如：雷神锤 / 非攻" autocomplete="off">
+        </div>
+        <div class="muted-tip">「—」表示该阶段不需要额外装备材料；<span class="q-dot q-dot-purple"></span>紫色素材为紫色装备，<span class="q-dot q-dot-orange"></span>橙色素材与主装备为橙色装备。</div>
+      </section>
+
+      <div id="forge-results"></div>
+    </section>
   </main>
 
   <footer class="foot">
@@ -115,7 +146,9 @@
 </div>
 
 <script src="data/special-equipment.js"></script>
+<script src="data/forging.js"></script>
 <script src="js/query.js"></script>
+<script src="js/forging.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>

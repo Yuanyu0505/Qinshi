@@ -15,6 +15,14 @@
     return String(s == null ? "" : s).trim().toLowerCase();
   }
 
+  /** 拆分材料字符串（如 "10紫石2橙石"）为每类一行；无法识别时原样返回 */
+  function splitMaterials(s) {
+    var text = String(s == null ? "" : s).trim();
+    if (!text) return [];
+    var parts = text.match(/\d+(?:\.\d+)?(?:紫石|橙石|红石)/g);
+    return parts ? parts : [text];
+  }
+
   /** 作为主锻造装备：按名称（含分类无关）模糊匹配主行 */
   function findMain(items, query) {
     var q = normalizeName(query);
@@ -45,6 +53,7 @@
 
   return {
     normalizeName: normalizeName,
+    splitMaterials: splitMaterials,
     findMain: findMain,
     findAsMaterial: findAsMaterial
   };

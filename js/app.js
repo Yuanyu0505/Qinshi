@@ -78,10 +78,10 @@
   function renderForgingSummary() {
     el.forgeSummaryHead.innerHTML = "<tr><th>装备名称</th>" +
       FDATA.meta.stageNames.map((s) => `<th>${s}</th>`).join("") +
-      "<th>合计</th></tr>";
+      "</tr>";
     el.forgeSummary.innerHTML = FDATA.summary.map((s) => "<tr><td class=\"cat\">" + s.cat + "</td>" +
-      s.stages.map((v) => `<td>${v}</td>`).join("") +
-      `<td class="badge">${s.total}</td></tr>`).join("");
+      s.stages.map((v) => `<td>${FORG.splitMaterials(v).map((p) => `<div class="mat-line">${p}</div>`).join("")}</td>`).join("") +
+      "</tr>").join("");
   }
 
   function bindForging() {
@@ -103,30 +103,26 @@
     return `<span class="mat ${q}${hit ? " hit" : ""}">${tk.n}</span>`;
   }
 
-  function forgingItemHtml(item, hitStages) {
-    const hitSet = hitStages ? new Set(hitStages) : null;
+  function forgingRowHtml(item, hitSet) {
     const badge = item.quality === "紫" ? "q-purple" : "q-orange";
     const label = item.quality === "紫" ? "紫色装备" : "橙色装备";
-    const rows = item.stages.map((st, si) => {
-      const hit = hitSet ? hitSet.has(si) : false;
-      return `<tr${hit ? ' class="hit-row"' : ""}>
-        <td class="stage">${st.stage}</td>
-        <td>${st.tokens.map((tk) => forgingTokenHtml(tk, hit)).join('<span class="plus"> + </span>')}</td>
-      </tr>`;
-    }).join("");
-    return `<div class="forge-item">
-      <div class="forge-head">
+    return `<tr${hitSet ? ' class="hit-row"' : ""}>
+      <td class="forge-eq">
         <span class="cat">${item.cat}</span>
         <span class="forge-name">${item.name}</span>
         <span class="q-badge ${badge}">${label}</span>
-        ${hitSet ? `<span class="muted">素材命中 ${hitSet.size} 个阶段</span>` : '<span class="muted">主锻造装备</span>'}
-      </div>
-      <table class="forge-table"><tbody>${rows}</tbody></table>
-    </div>`;
+        ${hitSet ? `<div class="muted">素材命中 ${hitSet.size} 个阶段</div>` : ""}
+      </td>
+      ${item.stages.map((st, si) => {
+        const hit = hitSet ? hitSet.has(si) : false;
+        return `<td${hit ? ' class="hit-cell"' : ""}>${st.tokens.map((tk) => forgingTokenHtml(tk, hit)).join('<span class="plus"> + </span>')}</td>`;
+      }).join("")}
+    </tr>`;
   }
 
   function applyForging() {
     const q = FORG.normalizeName(forgeState.query);
+    const tableHead = `<tr><th>装备</th>${FDATA.meta.stageNames.map((s) => `<th>${s}</th>`).join("")}</tr>`;
     el.forgeMode.querySelectorAll("button").forEach((btn) => {
       btn.classList.toggle("active", btn.dataset.mode === forgeState.mode);
     });
@@ -137,12 +133,12 @@
     if (forgeState.mode === "main") {
       const items = FORG.findMain(FDATA.items, q);
       el.forgeResults.innerHTML = items.length
-        ? items.map((i) => forgingItemHtml(i, null)).join("")
+        ? `<div class="forge-scroll"><table class="forge-h-table"><thead>${tableHead}</thead><tbody>${items.map((i) => forgingRowHtml(i, null)).join("")}</tbody></table></div>`
         : '<div class="empty"><p>未找到该主锻造装备</p></div>';
     } else {
       const found = FORG.findAsMaterial(FDATA.items, q);
       el.forgeResults.innerHTML = found.length
-        ? found.map((r) => forgingItemHtml(r.item, r.hitStages)).join("")
+        ? `<div class="forge-scroll"><table class="forge-h-table"><thead>${tableHead}</thead><tbody>${found.map((r) => forgingRowHtml(r.item, new Set(r.hitStages))).join("")}</tbody></table></div>`
         : '<div class="empty"><p>未找到使用该素材的主锻造装备</p></div>';
     }
   }

@@ -20,6 +20,14 @@ test("normalizeName：去除首尾空格", () => {
   assert.strictEqual(F.normalizeName(""), "");
 });
 
+test("splitMaterials：每个种类拆为一行", () => {
+  assert.deepStrictEqual(F.splitMaterials("10紫石2橙石"), ["10紫石", "2橙石"]);
+  assert.deepStrictEqual(F.splitMaterials("12橙石5红石"), ["12橙石", "5红石"]);
+  assert.deepStrictEqual(F.splitMaterials("50紫石54橙石24红石"), ["50紫石", "54橙石", "24红石"]);
+  assert.deepStrictEqual(F.splitMaterials(""), []);
+  assert.deepStrictEqual(F.splitMaterials("无"), ["无"]);
+});
+
 test("findMain：按名称模糊匹配主锻造装备", () => {
   const r = F.findMain(fixture, "雷神");
   assert.deepStrictEqual(r.map(i => i.name), ["雷神锤"]);

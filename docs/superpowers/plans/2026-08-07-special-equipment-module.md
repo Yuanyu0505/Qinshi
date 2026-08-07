@@ -659,14 +659,6 @@ test("GET /data/special-equipment.js 返回 200 且为 JS", async () => {
   });
 });
 
-test("GET /css/style.css 返回 200 且为 CSS", async () => {
-  await withServer(async (port) => {
-    const r = await get(port, "/css/style.css");
-    assert.strictEqual(r.status, 200);
-    assert.match(r.headers["content-type"], /text\/css/);
-  });
-});
-
 test("不存在的文件返回 404", async () => {
   await withServer(async (port) => {
     const r = await get(port, "/no-such-file.js");
@@ -685,8 +677,6 @@ test("lanIPv4s 返回数组", () => {
   assert.ok(Array.isArray(lanIPv4s()));
 });
 ```
-
-注：`css/style.css` 断言在 Task 4 中才会通过；Task 3 运行时该用例处于失败属预期，Task 4 完成前不删除该用例。
 
 - [ ] **Step 2: 运行测试确认失败**
 
@@ -872,10 +862,10 @@ python -m unittest discover -s tests -v
 ```
 ```
 
-- [ ] **Step 7: 运行测试确认通过（css 用例除外）**
+- [ ] **Step 7: 运行测试确认通过**
 
 Run: `node --test serve.test.js`
-Expected: 除 `GET /css/style.css` 外全部 PASS；该用例待 Task 4 通过。
+Expected: 全部 PASS。
 
 - [ ] **Step 8: 提交（需 escalate）**
 
@@ -907,6 +897,14 @@ test("index.html 引用数据与样式", async () => {
     const r = await get(port, "/");
     assert.match(r.body, /<script src="data\/special-equipment\.js"><\/script>/);
     assert.match(r.body, /<link rel="stylesheet" href="css\/style\.css">/);
+  });
+});
+
+test("GET /css/style.css 返回 200 且为 CSS", async () => {
+  await withServer(async (port) => {
+    const r = await get(port, "/css/style.css");
+    assert.strictEqual(r.status, 200);
+    assert.match(r.headers["content-type"], /text\/css/);
   });
 });
 ```

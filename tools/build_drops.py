@@ -16,9 +16,8 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DEFAULT_XLSX = os.path.join(ROOT, "秦时相关（更新贯侯钟离昧）20260618.xlsx")
 OUT_JS = os.path.join(ROOT, "data", "drops.js")
 
-NORMAL_COLS = {3: 10, 4: 9, 5: 7, 6: 5}   # C..F -> 关卡号
-HERO_COLS = {3: 5, 4: 4, 5: 3, 6: 2, 7: 1}  # C..G -> 关卡号
 CHAPTER_RE = re.compile(r"(\d+)")
+CHAPTER_CN_RE = re.compile(r"第(\d+)章")
 
 
 def cell_text(value):
@@ -33,26 +32,42 @@ def parse_sheet(path):
     ws = wb.worksheets[0]  # 章节掉落新版
     rows = list(ws.iter_rows(values_only=True))
     normal = []
-    for r in range(3, 64):
+    stage_map = {}
+    for r in range(2, 69):
         b = cell_text(rows[r - 1][1])
-        m = CHAPTER_RE.search(b)
-        if not m:
-            continue
-        chapter = int(m.group(1))
-        for c, stage in NORMAL_COLS.items():
-            item = cell_text(rows[r - 1][c - 1])
-            if item:
-                normal.append({"chapter": chapter, "stage": stage, "item": item})
+        m = CHAPTER_CN_RE.search(b)
+        if m:
+            chapter = int(m.group(1))
+            for c, stage in stage_map.items():
+                item = cell_text(rows[r - 1][c - 1])
+                if item:
+                    normal.append({"chapter": chapter, "stage": stage, "item": item})
+        else:
+            new_map = {}
+            for c in range(3, 7):
+                v = cell_text(rows[r - 1][c - 1])
+                if v.isdigit():
+                    new_map[c] = int(v)
+            if new_map:
+                stage_map = new_map
     hero = []
-    for r in range(66, 101):
+    stage_map = {}
+    for r in range(70, 106):
         b = cell_text(rows[r - 1][1])
-        if not b.isdigit():
-            continue
-        chapter = int(b)
-        for c, stage in HERO_COLS.items():
-            item = cell_text(rows[r - 1][c - 1])
-            if item:
-                hero.append({"chapter": chapter, "stage": stage, "item": item})
+        if b.isdigit():
+            chapter = int(b)
+            for c, stage in stage_map.items():
+                item = cell_text(rows[r - 1][c - 1])
+                if item:
+                    hero.append({"chapter": chapter, "stage": stage, "item": item})
+        else:
+            new_map = {}
+            for c in range(3, 8):
+                v = cell_text(rows[r - 1][c - 1])
+                if v.isdigit():
+                    new_map[c] = int(v)
+            if new_map:
+                stage_map = new_map
     reward = []
     for r in range(4, 60):
         j = cell_text(rows[r - 1][9])

@@ -7,7 +7,7 @@ window.DROP_DATA = {
     "generatedAt": "2026-08-07",
     "totalNormal": 197,
     "totalHero": 128,
-    "totalReward": 28
+    "totalReward": 56
   },
   "normal": [
     {
@@ -782,7 +782,7 @@ window.DROP_DATA = {
     },
     {
       "chapter": 18,
-      "stage": 7,
+      "stage": 5,
       "item": "儒家弟子服"
     },
     {
@@ -797,7 +797,7 @@ window.DROP_DATA = {
     },
     {
       "chapter": 17,
-      "stage": 7,
+      "stage": 5,
       "item": "宫廷华服"
     },
     {
@@ -812,7 +812,7 @@ window.DROP_DATA = {
     },
     {
       "chapter": 16,
-      "stage": 7,
+      "stage": 5,
       "item": "贵族佩剑"
     },
     {
@@ -827,7 +827,7 @@ window.DROP_DATA = {
     },
     {
       "chapter": 15,
-      "stage": 7,
+      "stage": 5,
       "item": "粗布衣"
     },
     {
@@ -842,7 +842,7 @@ window.DROP_DATA = {
     },
     {
       "chapter": 14,
-      "stage": 7,
+      "stage": 5,
       "item": "铁爪"
     },
     {
@@ -857,7 +857,7 @@ window.DROP_DATA = {
     },
     {
       "chapter": 13,
-      "stage": 7,
+      "stage": 5,
       "item": "宫廷华服"
     },
     {
@@ -872,7 +872,7 @@ window.DROP_DATA = {
     },
     {
       "chapter": 12,
-      "stage": 7,
+      "stage": 5,
       "item": "贵族佩剑"
     },
     {
@@ -887,7 +887,7 @@ window.DROP_DATA = {
     },
     {
       "chapter": 11,
-      "stage": 7,
+      "stage": 5,
       "item": "长矛"
     },
     {
@@ -902,7 +902,7 @@ window.DROP_DATA = {
     },
     {
       "chapter": 10,
-      "stage": 7,
+      "stage": 5,
       "item": "长棍"
     },
     {
@@ -917,82 +917,82 @@ window.DROP_DATA = {
     },
     {
       "chapter": 9,
-      "stage": 7,
+      "stage": 5,
       "item": "藤木弓"
     },
     {
       "chapter": 8,
-      "stage": 10,
+      "stage": 9,
       "item": "公输仇"
     },
     {
       "chapter": 8,
-      "stage": 9,
+      "stage": 8,
       "item": "机关伞"
     },
     {
       "chapter": 8,
-      "stage": 7,
+      "stage": 5,
       "item": "宫廷华服"
     },
     {
       "chapter": 7,
-      "stage": 9,
+      "stage": 8,
       "item": "刈鹿刃"
     },
     {
       "chapter": 7,
-      "stage": 7,
+      "stage": 5,
       "item": "铁剑"
     },
     {
       "chapter": 6,
-      "stage": 9,
+      "stage": 7,
       "item": "天蚕幻彩衣"
     },
     {
       "chapter": 6,
-      "stage": 7,
+      "stage": 4,
       "item": "墨家弟子服"
     },
     {
       "chapter": 5,
-      "stage": 9,
+      "stage": 7,
       "item": "绣花布衣"
     },
     {
       "chapter": 5,
-      "stage": 7,
+      "stage": 4,
       "item": "长矛"
     },
     {
       "chapter": 4,
-      "stage": 9,
+      "stage": 6,
       "item": "铁爪"
     },
     {
       "chapter": 4,
-      "stage": 7,
+      "stage": 3,
       "item": "青铜战甲"
     },
     {
       "chapter": 3,
-      "stage": 9,
+      "stage": 6,
       "item": "铁剑"
     },
     {
       "chapter": 3,
-      "stage": 7,
+      "stage": 3,
       "item": "墨家弟子服"
     },
     {
       "chapter": 2,
-      "stage": 9,
+      "stage": 5,
       "item": "匕首"
     },
     {
       "chapter": 1,
-      "stage": 9,
+      "stage": 5,
       "item": "粗布衣"
     }
   ],
@@ -1750,6 +1750,118 @@ window.DROP_DATA = {
     {
       "chapter": 29,
       "item": "白羽绸衣"
+    },
+    {
+      "chapter": 28,
+      "item": "神农令"
+    },
+    {
+      "chapter": 27,
+      "item": "天问"
+    },
+    {
+      "chapter": 26,
+      "item": "秋骊"
+    },
+    {
+      "chapter": 25,
+      "item": "六韬"
+    },
+    {
+      "chapter": 24,
+      "item": "神行符"
+    },
+    {
+      "chapter": 23,
+      "item": "凌虚"
+    },
+    {
+      "chapter": 22,
+      "item": "三略"
+    },
+    {
+      "chapter": 21,
+      "item": "霸天令"
+    },
+    {
+      "chapter": 20,
+      "item": "转魄"
+    },
+    {
+      "chapter": 19,
+      "item": "管子"
+    },
+    {
+      "chapter": 18,
+      "item": "龙啸"
+    },
+    {
+      "chapter": 17,
+      "item": "号钟琴"
+    },
+    {
+      "chapter": 16,
+      "item": "刺客列传"
+    },
+    {
+      "chapter": 15,
+      "item": "驱虎令"
+    },
+    {
+      "chapter": 14,
+      "item": "真龙黑袍"
+    },
+    {
+      "chapter": 13,
+      "item": "乱神"
+    },
+    {
+      "chapter": 12,
+      "item": "天河霓裳"
+    },
+    {
+      "chapter": 11,
+      "item": "双剑魍魉"
+    },
+    {
+      "chapter": 10,
+      "item": "升雪凌霄衣"
+    },
+    {
+      "chapter": 9,
+      "item": "断水"
+    },
+    {
+      "chapter": 8,
+      "item": "文曲服"
+    },
+    {
+      "chapter": 7,
+      "item": "非攻"
+    },
+    {
+      "chapter": 6,
+      "item": "星云法衣"
+    },
+    {
+      "chapter": 5,
+      "item": "木剑"
+    },
+    {
+      "chapter": 4,
+      "item": "连环锁子甲"
+    },
+    {
+      "chapter": 3,
+      "item": "机关手"
+    },
+    {
+      "chapter": 2,
+      "item": "杀手服"
+    },
+    {
+      "chapter": 1,
+      "item": "玉箫"
     }
   ]
 };

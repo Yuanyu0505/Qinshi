@@ -15,7 +15,7 @@ class TestDrops(unittest.TestCase):
     def test_counts(self):
         self.assertEqual(len(self.data["normal"]), 197)
         self.assertEqual(len(self.data["hero"]), 128)
-        self.assertEqual(len(self.data["reward"]), 28)
+        self.assertEqual(len(self.data["reward"]), 56)
 
     def test_normal_chapter_stage(self):
         normal = self.data["normal"]
@@ -26,6 +26,18 @@ class TestDrops(unittest.TestCase):
         self.assertEqual(
             [(e["chapter"], e["stage"]) for e in normal if e["item"] == "银针"],
             [(22, 9), (19, 7), (15, 9)],
+        )
+        self.assertEqual(
+            [(e["chapter"], e["stage"]) for e in normal if e["item"] == "宫廷华服"],
+            [(17, 5), (13, 5), (8, 5)],
+        )
+        self.assertEqual(
+            [(e["chapter"], e["stage"]) for e in normal if e["item"] == "粗布衣"],
+            [(15, 5), (1, 5)],
+        )
+        self.assertEqual(
+            [(e["chapter"], e["stage"]) for e in normal if e["item"] == "匕首"],
+            [(2, 5)],
         )
 
     def test_hero_chapter_stage(self):
@@ -43,6 +55,8 @@ class TestDrops(unittest.TestCase):
         reward = self.data["reward"]
         self.assertEqual([e["chapter"] for e in reward if e["item"] == "赤霄"], [56])
         self.assertEqual([e["chapter"] for e in reward if e["item"] == "河图"], [55])
+        self.assertEqual([e["chapter"] for e in reward if e["item"] == "天问"], [27])
+        self.assertEqual([e["chapter"] for e in reward if e["item"] == "神农令"], [28])
 
     def test_advanced_ticket_count(self):
         normal = self.data["normal"]

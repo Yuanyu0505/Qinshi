@@ -103,15 +103,20 @@
     return `<span class="mat ${q}${hit ? " hit" : ""}">${tk.n}</span>`;
   }
 
-  function forgingRowHtml(item, hitSet) {
+  function forgingRowHtml(item, hits) {
     const eqClass = item.quality === "紫" ? "eq-purple" : "eq-orange";
-    return `<tr${hitSet ? ' class="hit-row"' : ""}>
+    const stageHit = hits ? new Set(hits.map((h) => h.stageIdx)) : null;
+    const tokenHit = hits ? new Map(hits.map((h) => [`${h.stageIdx}:${h.tokenIdx}`, true])) : null;
+    return `<tr${stageHit ? ' class="hit-row"' : ""}>
       <td class="forge-eq">
         <span class="eq-block ${eqClass}">${item.cat}-${item.name}</span>
       </td>
       ${item.stages.map((st, si) => {
-        const hit = hitSet ? hitSet.has(si) : false;
-        return `<td${hit ? ' class="hit-cell"' : ""}>${st.tokens.map((tk) => `<div class="mat-line">${forgingTokenHtml(tk, hit)}</div>`).join("")}</td>`;
+        const cellHit = stageHit ? stageHit.has(si) : false;
+        return `<td${cellHit ? ' class="hit-cell"' : ""}>${st.tokens.map((tk, ti) => {
+          const hit = tokenHit ? tokenHit.has(`${si}:${ti}`) : false;
+          return `<div class="mat-line">${forgingTokenHtml(tk, hit)}</div>`;
+        }).join("")}</td>`;
       }).join("")}
     </tr>`;
   }
@@ -134,7 +139,7 @@
     } else {
       const found = FORG.findAsMaterial(FDATA.items, q);
       el.forgeResults.innerHTML = found.length
-        ? `<div class="forge-scroll"><table class="forge-h-table"><thead>${tableHead}</thead><tbody>${found.map((r) => forgingRowHtml(r.item, new Set(r.hitStages))).join("")}</tbody></table></div>`
+        ? `<div class="forge-scroll"><table class="forge-h-table"><thead>${tableHead}</thead><tbody>${found.map((r) => forgingRowHtml(r.item, r.hits)).join("")}</tbody></table></div>`
         : '<div class="empty"><p>未找到使用该素材的主锻造装备</p></div>';
     }
   }

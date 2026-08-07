@@ -41,19 +41,19 @@ test("findMain：空输入与无结果返回空数组", () => {
   assert.deepStrictEqual(F.findMain(fixture, "不存在"), []);
 });
 
-test("findAsMaterial：找出作为素材参与的主装备及命中阶段", () => {
+test("findAsMaterial：找出作为素材参与的主装备及命中的文字位置", () => {
   const r = F.findAsMaterial(fixture, "非攻");
   assert.strictEqual(r.length, 2);
   assert.deepStrictEqual(r[0].item.name, "雷神锤");
-  assert.deepStrictEqual(r[0].hitStages, [0]);
+  assert.deepStrictEqual(r[0].hits, [{ stageIdx: 0, tokenIdx: 0 }]);
   assert.deepStrictEqual(r[1].item.name, "胡非子");
-  assert.deepStrictEqual(r[1].hitStages, [1]);
+  assert.deepStrictEqual(r[1].hits, [{ stageIdx: 1, tokenIdx: 0 }]);
 });
 
-test("findAsMaterial：多素材格命中正确阶段", () => {
+test("findAsMaterial：多素材格只命中对应文字", () => {
   const r = F.findAsMaterial(fixture, "木剑");
   assert.strictEqual(r.length, 1);
-  assert.deepStrictEqual(r[0].hitStages, [1]);
+  assert.deepStrictEqual(r[0].hits, [{ stageIdx: 1, tokenIdx: 1 }]);
 });
 
 test("findAsMaterial：横杠不参与素材匹配", () => {

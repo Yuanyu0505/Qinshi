@@ -32,7 +32,7 @@
     });
   }
 
-  /** 作为素材装备：返回参与的主装备及命中阶段索引 */
+  /** 作为素材装备：返回参与的主装备及命中的文字位置 [{stageIdx, tokenIdx}] */
   function findAsMaterial(items, query) {
     var q = normalizeName(query);
     if (!q) return [];
@@ -40,13 +40,13 @@
     items.forEach(function (item) {
       var hits = [];
       item.stages.forEach(function (st, si) {
-        st.tokens.forEach(function (tk) {
+        st.tokens.forEach(function (tk, ti) {
           if (tk.n && tk.n.toLowerCase().indexOf(q) !== -1) {
-            hits.push(si);
+            hits.push({ stageIdx: si, tokenIdx: ti });
           }
         });
       });
-      if (hits.length) out.push({ item: item, hitStages: hits });
+      if (hits.length) out.push({ item: item, hits: hits });
     });
     return out;
   }

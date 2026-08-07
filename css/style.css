@@ -127,6 +127,7 @@ header.top {
 .forge-h-table tr:last-child td { border-bottom: none; }
 .forge-h-table .mat-line { text-align: center; white-space: nowrap; }
 .forge-eq { min-width: 200px; }
+td.hit-cell { background: rgba(212, 175, 55, .12); }
 .mat {
   display: inline-block;
   padding: 2px 9px;
@@ -137,13 +138,9 @@ header.top {
 }
 .mat-purple { color: #b78ae0; border-color: #7030a0; background: rgba(112, 48, 160, .15); }
 .mat-orange { color: #f0a04b; border-color: #f79646; background: rgba(247, 150, 70, .12); }
-.mat.hit { font-weight: 700; }
+.mat.hit { outline: 2px solid var(--gold); outline-offset: 1px; font-weight: 700; }
 .mat-dash { color: var(--status); font-style: italic; }
-tr.hit-row td {
-  background: rgba(212, 175, 55, .06);
-  border: 3px solid var(--red);
-}
-tr td.hit-cell { background: rgba(212, 175, 55, .12); }
+tr.hit-row td { background: rgba(212, 175, 55, .06); }
 .summary-card .badge { white-space: nowrap; }
 .error {
   background: rgba(176, 58, 46, .15);

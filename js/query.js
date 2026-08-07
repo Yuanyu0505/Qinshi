@@ -26,8 +26,13 @@
            item.cat.toLowerCase().indexOf(q) !== -1;
   }
 
-  function hasAttr(item, attr) {
-    if (item.main === attr) return true;
+  /** 主属性筛选：main 为空/未提供表示不限 */
+  function matchMain(item, main) {
+    return main == null || main === "" || item.main === main;
+  }
+
+  /** 副属性命中：只查各档位 token，主属性不算 */
+  function hasSubAttr(item, attr) {
     for (var i = 0; i < TIER_ORDER.length; i++) {
       var tokens = item.tiers[TIER_ORDER[i]] || [];
       for (var j = 0; j < tokens.length; j++) {
@@ -39,7 +44,7 @@
 
   function matchFilters(item, filters) {
     for (var i = 0; i < filters.length; i++) {
-      if (!hasAttr(item, filters[i])) return false;
+      if (!hasSubAttr(item, filters[i])) return false;
     }
     return true;
   }
@@ -69,13 +74,14 @@
   function queryItems(items, opts) {
     opts = opts || {};
     var search = opts.search || "";
+    var main = opts.main == null ? "" : opts.main;
     var filters = opts.filters || [];
     var sortAttr = opts.sortAttr || (filters.length ? filters[0] : null);
     var valueSource = opts.valueSource || "max";
 
     var result = [];
     for (var i = 0; i < items.length; i++) {
-      if (matchSearch(items[i], search) && matchFilters(items[i], filters)) {
+      if (matchSearch(items[i], search) && matchMain(items[i], main) && matchFilters(items[i], filters)) {
         result.push(items[i]);
       }
     }
@@ -100,7 +106,8 @@
     VALUE_SOURCES: VALUE_SOURCES,
     normalizeInput: normalizeInput,
     matchSearch: matchSearch,
-    hasAttr: hasAttr,
+    matchMain: matchMain,
+    hasSubAttr: hasSubAttr,
     matchFilters: matchFilters,
     sortValue: sortValue,
     queryItems: queryItems

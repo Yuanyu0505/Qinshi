@@ -19,11 +19,23 @@
     <input id="search" type="search" placeholder="输入装备名或分类，如：墨眉 / 武器 / 神兵饰品" autocomplete="off">
 
     <section class="panel">
-      <div class="panel-title">按属性筛选（最多 2 个）</div>
-      <div id="chips" class="chips"></div>
+      <div class="panel-title">按属性筛选</div>
+      <div class="filter-row">
+        <span class="filter-label">主属性</span>
+        <div id="main-filter" class="segs">
+          <button type="button" class="seg active" data-main="">不限</button>
+          <button type="button" class="seg" data-main="攻">攻</button>
+          <button type="button" class="seg" data-main="防">防</button>
+          <button type="button" class="seg" data-main="血">血</button>
+        </div>
+      </div>
+      <div class="filter-row">
+        <span class="filter-label">副属性</span>
+        <div id="chips" class="chips"></div>
+      </div>
       <div id="sort-panel" class="sort-panel" hidden>
         <div class="sort-row">
-          <span>排序属性</span>
+          <span>排序属性（取副属性数值）</span>
           <div id="sort-attr" class="segs"></div>
         </div>
         <div class="sort-row">

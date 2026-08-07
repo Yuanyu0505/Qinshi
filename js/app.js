@@ -8,10 +8,11 @@
   const DATA = window.SPECIAL_EQUIPMENT_DATA;
   const Q = window.QSQuery;
 
-  const state = { search: "", filters: [], sortAttr: null, valueSource: "max" };
+  const state = { search: "", main: "", filters: [], sortAttr: null, valueSource: "max" };
 
   const el = {
     search: document.getElementById("search"),
+    mainBtns: document.getElementById("main-filter"),
     chips: document.getElementById("chips"),
     sortPanel: document.getElementById("sort-panel"),
     sortAttrBtns: document.getElementById("sort-attr"),
@@ -50,6 +51,12 @@
       state.search = el.search.value;
       apply();
     });
+    el.mainBtns.addEventListener("click", (e) => {
+      const btn = e.target.closest("button[data-main]");
+      if (!btn) return;
+      state.main = btn.dataset.main;
+      apply();
+    });
     el.chips.addEventListener("click", (e) => {
       const btn = e.target.closest(".chip");
       if (!btn || btn.disabled) return;
@@ -77,6 +84,7 @@
     });
     const clear = () => {
       state.search = "";
+      state.main = "";
       state.filters = [];
       state.sortAttr = null;
       state.valueSource = "max";
@@ -90,6 +98,7 @@
   function apply() {
     const items = Q.queryItems(DATA.items, {
       search: state.search,
+      main: state.main,
       filters: state.filters,
       sortAttr: state.sortAttr,
       valueSource: state.valueSource
@@ -104,6 +113,9 @@
   }
 
   function renderControls() {
+    el.mainBtns.querySelectorAll("button").forEach((btn) => {
+      btn.classList.toggle("active", btn.dataset.main === state.main);
+    });
     document.querySelectorAll(".chip").forEach((btn) => {
       const attr = btn.dataset.attr;
       const active = state.filters.indexOf(attr) >= 0;

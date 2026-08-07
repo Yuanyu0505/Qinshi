@@ -67,6 +67,8 @@ header.top {
   border-radius: 10px;
 }
 .panel-title { color: var(--muted); font-size: 13px; margin-bottom: 10px; }
+.filter-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+.filter-label { color: var(--muted); font-size: 13px; min-width: 3.2em; }
 .chips { display: flex; flex-wrap: wrap; gap: 8px; }
 .chip {
   background: var(--bg2);
@@ -118,12 +120,12 @@ thead th {
   background: var(--panel);
   color: var(--gold-dim);
   font-weight: 600;
-  text-align: left;
+  text-align: center;
   padding: 10px 12px;
   border-bottom: 1px solid var(--line);
   white-space: nowrap;
 }
-tbody td { padding: 9px 12px; border-bottom: 1px solid rgba(58, 49, 37, .55); vertical-align: top; }
+tbody td { padding: 9px 12px; border-bottom: 1px solid rgba(58, 49, 37, .55); vertical-align: middle; text-align: center; }
 tbody tr:hover { background: rgba(212, 175, 55, .05); }
 td.name { font-weight: 600; white-space: nowrap; }
 .cat { color: var(--gold-dim); font-size: 13px; white-space: nowrap; }
@@ -133,7 +135,7 @@ td.name { font-weight: 600; white-space: nowrap; }
 .tier-status { color: var(--status); font-style: italic; }
 .tier-none { color: var(--status); }
 .plus { color: var(--status); margin: 0 2px; }
-td.badge, th.badge { text-align: right; white-space: nowrap; color: var(--gold); font-weight: 600; }
+td.badge, th.badge { text-align: center; white-space: nowrap; color: var(--gold); font-weight: 600; }
 .cards { display: none; }
 .card {
   background: var(--bg2);
@@ -142,13 +144,15 @@ td.badge, th.badge { text-align: right; white-space: nowrap; color: var(--gold);
   padding: 12px 14px;
   margin-bottom: 10px;
 }
-.card-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.card-head { display: flex; align-items: center; justify-content: center; gap: 8px; flex-wrap: wrap; }
 .card-head .name { font-weight: 700; font-size: 16px; }
-.card .badge { margin-left: auto; color: var(--gold); font-weight: 700; }
-.card-main { margin: 6px 0; color: var(--muted); font-size: 13px; }
+.card .badge { color: var(--gold); font-weight: 700; }
+.card-main { margin: 6px 0; color: var(--muted); font-size: 13px; text-align: center; }
 .card-main b { color: var(--red); }
 .card-tier {
   display: flex;
+  justify-content: center;
+  text-align: center;
   gap: 8px;
   padding: 4px 0;
   border-top: 1px dashed rgba(58, 49, 37, .6);

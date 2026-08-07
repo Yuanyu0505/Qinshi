@@ -65,11 +65,15 @@ Sheet 布局：
 deepseek/
 ├─ index.html                       # 入口页面（双击可开）
 ├─ css/style.css                    # 样式（深色水墨古风 + 响应式）
-├─ js/app.js                        # 查询 / 筛选 / 排序 / 渲染逻辑
+├─ js/query.js                      # 查询 / 筛选 / 排序纯逻辑（可单元测试）
+├─ js/app.js                        # DOM 渲染与交互
 ├─ data/special-equipment.js        # 生成的数据（window.SPECIAL_EQUIPMENT_DATA）
 ├─ serve.js                         # Node 静态服务（手机访问）
 ├─ 启动服务.bat                     # 双击启动服务
 ├─ tools/build_special_equipment.py # Excel → 数据解析脚本
+├─ js/query.test.js                 # 查询核心单元测试（node:test）
+├─ serve.test.js                    # 静态服务测试（node:test）
+├─ tests/test_build_special_equipment.py # 解析脚本测试（unittest）
 ├─ README.md                        # 使用说明
 └─ docs/superpowers/specs/          # 设计文档目录
 ```
@@ -224,6 +228,7 @@ pause
 3. 响应式：DevTools 手机视口验证卡片布局
 4. 服务：启动 serve.js，本机请求 `http://localhost:端口/` 与 `http://局域网IP:端口/` 均返回 200；bat 可正常启动
 5. 数据一致性：data 文件 JSON 可解析，与脚本统计一致
+6. 自动化测试：`node --test js/query.test.js serve.test.js` 与 `python -m unittest discover -s tests -v` 全部通过
 
 ## 12. 后续扩展点（本期不做，设计已预留）
 

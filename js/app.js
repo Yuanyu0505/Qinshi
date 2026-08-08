@@ -13,6 +13,9 @@
   const DROPS = window.DROPS;
   const PROG = window.PROGRESS;
   const PROG_STORE_KEY = "qinshi_forging_progress_v1";
+  const ATLAS_DATA = window.ATLAS_DATA;
+  const ATLAS = window.ATLAS;
+  const ATLAS_LEVELS_KEY = "qinshi_atlas_levels_v1";
 
   const state = { search: "", main: "", filters: [], sortAttr: null, valueSource: "max" };
   const forgeState = { mode: "main", query: "" };
@@ -50,7 +53,10 @@
     progNext: document.getElementById("prog-next"),
     progPageTitle: document.getElementById("prog-page-title"),
     progOverall: document.getElementById("prog-overall"),
-    progDisciples: document.getElementById("prog-disciples")
+    progDisciples: document.getElementById("prog-disciples"),
+    atlasTabs: document.getElementById("atlas-tabs"),
+    atlasSearch: document.getElementById("atlas-search"),
+    atlasResults: document.getElementById("atlas-results")
   };
 
   const progState = {
@@ -59,12 +65,18 @@
     disciples: loadProgress()
   };
   const PROG_CAT_ORDER = ["武器", "盔甲", "首饰", "典籍"];
+  const atlasState = {
+    tab: "攻",
+    query: "",
+    levels: loadAtlasLevels()
+  };
 
   function init() {
     bindTabs();
     initForging();
     initDrops();
     initProgress();
+    initAtlas();
     if (!DATA || !Q) {
       el.error.hidden = false;
       return;
@@ -81,7 +93,8 @@
       equipment: document.getElementById("partition-equipment"),
       loulan: document.getElementById("partition-loulan"),
       forging: document.getElementById("partition-forging"),
-      drops: document.getElementById("partition-drops")
+      drops: document.getElementById("partition-drops"),
+      atlas: document.getElementById("partition-atlas")
     };
     tabs.forEach((btn) => {
       btn.addEventListener("click", () => {
@@ -107,6 +120,82 @@
       applyDrops();
     });
     applyDrops();
+  }
+
+  function loadAtlasLevels() {
+    try {
+      const raw = localStorage.getItem(ATLAS_LEVELS_KEY);
+      const parsed = raw ? JSON.parse(raw) : {};
+      return parsed && typeof parsed === "object" ? parsed : {};
+    } catch (e) {
+      return {};
+    }
+  }
+
+  function saveAtlasLevels() {
+    try {
+      localStorage.setItem(ATLAS_LEVELS_KEY, JSON.stringify(atlasState.levels));
+    } catch (e) {
+      // 忽略存储失败
+    }
+  }
+
+  function initAtlas() {
+    if (!ATLAS_DATA || !ATLAS) return;
+    el.atlasTabs.addEventListener("click", (e) => {
+      const btn = e.target.closest("button[data-atlas]");
+      if (!btn) return;
+      atlasState.tab = btn.dataset.atlas;
+      applyAtlas();
+    });
+    el.atlasSearch.addEventListener("input", () => {
+      atlasState.query = el.atlasSearch.value;
+      applyAtlas();
+    });
+    el.atlasResults.addEventListener("change", (e) => {
+      if (e.target.classList.contains("atlas-level")) {
+        atlasState.levels[e.target.dataset.id] = parseInt(e.target.value, 10) || 0;
+        saveAtlasLevels();
+        applyAtlas();
+      }
+    });
+    applyAtlas();
+  }
+
+  function atlasItemHtml(item) {
+    const L = ATLAS.levelOf(item, atlasState.levels);
+    const needed = ATLAS.neededStages(item, L);
+    const stagesHtml = L >= 10
+      ? '<div class="muted-tip">已完成（无需装备）</div>'
+      : needed.map((st) => `<div class="atlas-stage">
+          <span class="atlas-stage-key">${st.key}</span>
+          <span>${st.items.map((n) => `<span class="drop-chip">${escapeHtml(n)}</span>`).join("") || '<span class="mat-dash">无</span>'}</span>
+        </div>`).join("");
+    return `<div class="atlas-item">
+      <div class="atlas-head">
+        <span class="q-badge q-orange">${item.atlas}图鉴</span>
+        <span class="forge-name">${escapeHtml(item.name)}</span>
+        <label class="atlas-level-label">图鉴等级
+          <input type="number" class="atlas-level" data-id="${item.id}" value="${L}" min="0">
+        </label>
+      </div>
+      <div class="atlas-meta">
+        <span>获取途径：${escapeHtml(item.acquire) || "—"}</span>
+        <span>所属图鉴：${escapeHtml(item.group) || "—"}</span>
+      </div>
+      ${stagesHtml}
+    </div>`;
+  }
+
+  function applyAtlas() {
+    el.atlasTabs.querySelectorAll("button").forEach((b) => {
+      b.classList.toggle("active", b.dataset.atlas === atlasState.tab);
+    });
+    const inTab = ATLAS_DATA.items.filter((i) => i.atlas === atlasState.tab);
+    const items = ATLAS.searchAtlas(inTab, atlasState.query, atlasState.levels);
+    el.atlasResults.innerHTML = items.length
+      ? items.map(atlasItemHtml).join("")
+      : '<div class="empty"><p>未找到匹配的图鉴弟子</p></div>';
   }
 
   function loadProgress() {

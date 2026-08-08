@@ -16,6 +16,7 @@
     <button type="button" class="tab active" data-partition="equipment">特殊属性装备</button>
     <button type="button" class="tab" data-partition="forging">橙装锻造</button>
     <button type="button" class="tab" data-partition="drops">关卡掉落</button>
+    <button type="button" class="tab" data-partition="atlas">图鉴</button>
     <button type="button" class="tab" data-partition="loulan">楼兰棋阵</button>
   </nav>
 
@@ -179,6 +180,28 @@
       </section>
       <div id="drop-results"></div>
     </section>
+
+    <section id="partition-atlas" hidden>
+      <div class="partition-head">图鉴</div>
+      <section class="panel">
+        <div class="panel-title">图鉴分区</div>
+        <div class="filter-row">
+          <span class="filter-label">分区</span>
+          <div id="atlas-tabs" class="segs">
+            <button type="button" class="seg active" data-atlas="攻">攻图鉴</button>
+            <button type="button" class="seg" data-atlas="血">血图鉴</button>
+            <button type="button" class="seg" data-atlas="内力">内力图鉴</button>
+            <button type="button" class="seg" data-atlas="防">防图鉴</button>
+          </div>
+        </div>
+        <div class="filter-row">
+          <span class="filter-label">搜索</span>
+          <input id="atlas-search" type="search" placeholder="弟子名 / 获取途径 / 所属图鉴 / 道具 / 等级（如 9级、10级以下）" autocomplete="off">
+        </div>
+        <div class="muted-tip">图鉴等级为个人进度（可直接修改）：等级 ≥ 10 表示已满无需装备；已超过的等级阶段装备自动隐藏。</div>
+      </section>
+      <div id="atlas-results"></div>
+    </section>
   </main>
 
   <footer class="foot">
@@ -189,10 +212,12 @@
 <script src="data/special-equipment.js"></script>
 <script src="data/forging.js"></script>
 <script src="data/drops.js"></script>
+<script src="data/atlas.js"></script>
 <script src="js/query.js"></script>
 <script src="js/forging.js"></script>
 <script src="js/drops.js"></script>
 <script src="js/progress.js"></script>
+<script src="js/atlas.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>

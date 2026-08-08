@@ -270,6 +270,27 @@ tr.hit-row td { background: rgba(212, 175, 55, .06); }
 }
 .prog-item-opt:hover { background: rgba(212, 175, 55, .12); }
 .prog-add-tip { color: var(--red); font-size: 12px; }
+.atlas-item {
+  background: var(--bg2);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 12px 14px;
+  margin-bottom: 12px;
+}
+.atlas-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; }
+.atlas-level-label { color: var(--muted); font-size: 13px; margin-left: auto; display: flex; align-items: center; gap: 6px; }
+.atlas-level {
+  width: 74px;
+  padding: 6px 8px;
+  font-size: 16px;
+  background: var(--panel);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+}
+.atlas-meta { display: flex; gap: 18px; flex-wrap: wrap; color: var(--muted); font-size: 13px; margin-bottom: 8px; }
+.atlas-stage { display: flex; align-items: baseline; gap: 10px; padding: 4px 0; font-size: 14px; }
+.atlas-stage-key { color: var(--gold-dim); min-width: 52px; white-space: nowrap; }
 .prog-equip {
   background: var(--bg2);
   border: 1px solid var(--line);

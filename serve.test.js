@@ -157,3 +157,20 @@ test("GET /js/progress.js 返回 200 且为 JS", async () => {
     assert.match(r.headers["content-type"], /javascript/);
   });
 });
+
+test("首页包含图鉴分区与数据引用", async () => {
+  await withServer(async (port) => {
+    const r = await get(port, "/");
+    assert.match(r.body, /图鉴/);
+    assert.match(r.body, /<script src="data\/atlas\.js"><\/script>/);
+    assert.match(r.body, /<script src="js\/atlas\.js"><\/script>/);
+  });
+});
+
+test("GET /data/atlas.js 返回 200 且为 JS", async () => {
+  await withServer(async (port) => {
+    const r = await get(port, "/data/atlas.js");
+    assert.strictEqual(r.status, 200);
+    assert.match(r.headers["content-type"], /javascript/);
+  });
+});

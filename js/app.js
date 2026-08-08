@@ -58,6 +58,7 @@
     page: 0,
     disciples: loadProgress()
   };
+  const PROG_CAT_ORDER = ["武器", "盔甲", "首饰", "典籍"];
 
   function init() {
     bindTabs();
@@ -314,7 +315,11 @@
   }
 
   function discipleHtml(d) {
-    const itemsHtml = d.items.map((it) => equipmentHtml(d, it)).join("");
+    const itemsHtml = d.items.slice().sort((a, b) => {
+      const ia = PROG_CAT_ORDER.indexOf(a.cat);
+      const ib = PROG_CAT_ORDER.indexOf(b.cat);
+      return (ia === -1 ? PROG_CAT_ORDER.length : ia) - (ib === -1 ? PROG_CAT_ORDER.length : ib);
+    }).map((it) => equipmentHtml(d, it)).join("");
     const summary = PROG.discipleSummary(FDATA, d);
     const sumHtml = summary.materials.length
       ? summary.materials.map((m) => `<tr><td>${m.n}</td><td>${m.q}色</td><td>${m.count}</td></tr>`).join("")

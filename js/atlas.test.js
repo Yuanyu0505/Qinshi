@@ -6,27 +6,27 @@ const fixture = [
   {
     id: "t-0001", atlas: "攻", name: "琴师高渐离",
     stages: [
-      { key: "5--6", end: 6, items: ["号钟琴"] },
-      { key: "7--8", end: 8, items: ["水寒"] },
-      { key: "9--10", end: 10, items: ["残虹"] }
+      { key: "5--6", end: 6, items: [{ n: "号钟琴", q: "紫" }] },
+      { key: "7--8", end: 8, items: [{ n: "水寒", q: "紫" }] },
+      { key: "9--10", end: 10, items: [{ n: "残虹", q: "橙" }] }
     ],
     acquire: "棋阵/招募", group: "非攻墨门", level: 19
   },
   {
     id: "t-0002", atlas: "攻", name: "星魂",
     stages: [
-      { key: "5--6", end: 6, items: ["星云法衣"] },
-      { key: "7--8", end: 8, items: ["阴符经"] },
-      { key: "9--10", end: 10, items: ["罡星戒"] }
+      { key: "5--6", end: 6, items: [{ n: "星云法衣", q: "紫" }] },
+      { key: "7--8", end: 8, items: [{ n: "阴符经", q: "紫" }] },
+      { key: "9--10", end: 10, items: [{ n: "罡星戒", q: "橙" }] }
     ],
     acquire: "庄园", group: "阴阳轮转", level: 19
   },
   {
     id: "t-0003", atlas: "防", name: "医仙端木蓉",
     stages: [
-      { key: "5--6", end: 6, items: ["冰魄戒"] },
-      { key: "7--8", end: 8, items: ["墨眉"] },
-      { key: "9--10", end: 10, items: ["黄帝内经"] }
+      { key: "5--6", end: 6, items: [{ n: "冰魄戒", q: "紫" }] },
+      { key: "7--8", end: 8, items: [{ n: "墨眉", q: "橙" }] },
+      { key: "9--10", end: 10, items: [{ n: "黄帝内经", q: "橙" }] }
     ],
     acquire: "千抽", group: "非攻墨门", level: 5
   }

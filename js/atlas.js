@@ -57,7 +57,7 @@
       if (item.group.toLowerCase().indexOf(q) !== -1) return true;
       return item.stages.some(function (st) {
         return st.items.some(function (n) {
-          return n.toLowerCase().indexOf(q) !== -1;
+          return n.n.toLowerCase().indexOf(q) !== -1;
         });
       });
     });

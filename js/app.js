@@ -169,7 +169,7 @@
       ? '<div class="muted-tip">已完成（无需装备）</div>'
       : needed.map((st) => `<div class="atlas-stage">
           <span class="atlas-stage-key">${st.key}</span>
-          <span>${st.items.map((n) => `<span class="drop-chip">${escapeHtml(n)}</span>`).join("") || '<span class="mat-dash">无</span>'}</span>
+          <span>${st.items.map((tk) => `<span class="mat ${tk.q === "紫" ? "mat-purple" : "mat-orange"}">${escapeHtml(tk.n)}</span>`).join("") || '<span class="mat-dash">无</span>'}</span>
         </div>`).join("");
     return `<div class="atlas-item">
       <div class="atlas-head">

@@ -32,8 +32,31 @@ def cell_text(value):
     return str(value).strip()
 
 
+def cell_quality(cell):
+    """按单元格底色判定品质：紫色填充(theme:7/8064A2) → 紫；橙色(theme:9/F79646) → 橙。"""
+    fill = cell.fill
+    if fill is None or fill.patternType is None:
+        return "橙"
+    color = fill.fgColor
+    if color is None:
+        return "橙"
+    try:
+        if color.type == "theme":
+            return "紫" if color.theme == 7 else "橙"
+        if color.type == "rgb" and color.rgb:
+            s = str(color.rgb)
+            if len(s) == 8:
+                s = s[2:]
+            r = int(s[0:2], 16)
+            b = int(s[4:6], 16)
+            return "紫" if b > r else "橙"
+    except Exception:
+        pass
+    return "橙"
+
+
 def parse_sheet(path):
-    wb = openpyxl.load_workbook(path, data_only=True, read_only=True)
+    wb = openpyxl.load_workbook(path, data_only=True)
     ws = wb["图鉴汇总"]
     rows = list(ws.iter_rows(values_only=True))
     items = []
@@ -48,7 +71,10 @@ def parse_sheet(path):
                 stages.append({
                     "key": key,
                     "end": stage_end,
-                    "items": [p.strip() for p in raw.replace("、", ",").split(",") if p.strip()],
+                    "items": [
+                        {"n": p.strip(), "q": cell_quality(ws.cell(row=r, column=name_col + 1 + idx))}
+                        for p in raw.replace("、", ",").split(",") if p.strip()
+                    ],
                 })
             acquire = cell_text(rows[r - 1][name_col + 3])
             group = cell_text(rows[r - 1][name_col + 4])

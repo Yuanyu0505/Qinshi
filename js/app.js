@@ -46,12 +46,16 @@
     forgeProgress: document.getElementById("forge-progress"),
     progAddDisciple: document.getElementById("prog-add-disciple"),
     progSaveTip: document.getElementById("prog-save-tip"),
+    progPrev: document.getElementById("prog-prev"),
+    progNext: document.getElementById("prog-next"),
+    progPageTitle: document.getElementById("prog-page-title"),
     progOverall: document.getElementById("prog-overall"),
     progDisciples: document.getElementById("prog-disciples")
   };
 
   const progState = {
     view: "query",
+    page: 0,
     disciples: loadProgress()
   };
 
@@ -146,8 +150,21 @@
     });
     el.progAddDisciple.addEventListener("click", () => {
       progState.disciples.push({ id: uid(), name: "弟子" + (progState.disciples.length + 1), items: [] });
+      progState.page = progState.disciples.length;
       saveProgress();
       renderProgress();
+    });
+    el.progPrev.addEventListener("click", () => {
+      if (progState.page > 0) {
+        progState.page -= 1;
+        renderProgress();
+      }
+    });
+    el.progNext.addEventListener("click", () => {
+      if (progState.page < progState.disciples.length) {
+        progState.page += 1;
+        renderProgress();
+      }
     });
     el.progDisciples.addEventListener("click", (e) => {
       const btn = e.target.closest("button[data-act]");
@@ -346,10 +363,25 @@
   }
 
   function renderProgress() {
-    renderOverallSummary();
-    el.progDisciples.innerHTML = progState.disciples.length
-      ? progState.disciples.map(discipleHtml).join("")
-      : '<div class="empty"><p>还没有弟子，点击「+ 添加弟子」开始</p></div>';
+    const total = progState.disciples.length;
+    if (progState.page > total) progState.page = total;
+    if (progState.page < 0) progState.page = 0;
+    const page = progState.page;
+    el.progPageTitle.textContent = page === 0
+      ? "全体弟子剩余材料汇总"
+      : (progState.disciples[page - 1] ? progState.disciples[page - 1].name : "弟子");
+    el.progPrev.disabled = page === 0;
+    el.progNext.disabled = page >= total;
+    el.progOverall.hidden = page !== 0;
+    el.progDisciples.hidden = page === 0;
+    if (page === 0) {
+      renderOverallSummary();
+      el.progDisciples.innerHTML = "";
+    } else {
+      const d = progState.disciples[page - 1];
+      el.progOverall.innerHTML = "";
+      el.progDisciples.innerHTML = d ? discipleHtml(d) : "";
+    }
   }
 
   function dropSectionHtml(title, entries, fmt) {

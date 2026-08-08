@@ -167,16 +167,31 @@
         const form = el.progDisciples.querySelector(`[data-add-form="${dId}"]`);
         if (form) {
           form.hidden = !form.hidden;
-          if (!form.hidden) fillItemOptions(form, form.querySelector(".prog-cat").value);
+          if (!form.hidden) renderItemOptions(form, form.querySelector(".prog-cat").value, "");
+        }
+      } else if (act === "pick-item") {
+        const form = el.progDisciples.querySelector(`[data-add-form="${dId}"]`);
+        if (form) {
+          form.querySelector(".prog-item-search").value = btn.dataset.name;
+          form.dataset.selected = btn.dataset.name;
+          form.querySelector(".prog-item-list").hidden = true;
+          const tip = form.querySelector(".prog-add-tip");
+          if (tip) tip.textContent = "";
         }
       } else if (act === "add-item") {
         const form = el.progDisciples.querySelector(`[data-add-form="${dId}"]`);
-        const name = form.querySelector(".prog-item").value;
-        if (name) {
-          d.items.push({ id: uid(), name: name, cat: form.querySelector(".prog-cat").value, progress: 0 });
-          saveProgress();
-          renderProgress();
+        const cat = form.querySelector(".prog-cat").value;
+        const raw = (form.dataset.selected || form.querySelector(".prog-item-search").value || "").trim();
+        const item = FDATA.items.find((i) => i.name === raw && i.cat === cat);
+        const tip = form.querySelector(".prog-add-tip");
+        if (!item) {
+          if (tip) tip.textContent = "未找到该橙装，请从匹配列表中选择";
+          return;
         }
+        d.items.push({ id: uid(), name: item.name, cat: item.cat, progress: 0 });
+        resetAddForm(form, cat);
+        saveProgress();
+        renderProgress();
       } else if (act === "remove-item") {
         if (confirm("确定移除该装备？")) {
           d.items = d.items.filter((x) => x.id !== btn.dataset.item);
@@ -191,6 +206,15 @@
         }
       }
     });
+    el.progDisciples.addEventListener("input", (e) => {
+      if (e.target.classList.contains("prog-item-search")) {
+        const form = e.target.closest("[data-add-form]");
+        if (form) {
+          form.dataset.selected = "";
+          renderItemOptions(form, form.querySelector(".prog-cat").value, e.target.value);
+        }
+      }
+    });
     el.progDisciples.addEventListener("change", (e) => {
       if (e.target.classList.contains("prog-name")) {
         const d = findDisciple(e.target.dataset.disciple);
@@ -201,7 +225,10 @@
         }
       } else if (e.target.classList.contains("prog-cat")) {
         const form = e.target.closest("[data-add-form]");
-        if (form) fillItemOptions(form, e.target.value);
+        if (form) {
+          resetAddForm(form, e.target.value);
+          renderItemOptions(form, e.target.value, "");
+        }
       }
     });
     applyForgeView();
@@ -216,12 +243,29 @@
     if (progState.view === "progress") renderProgress();
   }
 
-  function fillItemOptions(form, cat) {
-    const sel = form.querySelector(".prog-item");
-    sel.innerHTML = FDATA.sheets["橙装"].items
-      .filter((i) => i.cat === cat)
-      .map((i) => `<option value="${escapeHtml(i.name)}">${escapeHtml(i.name)}（${i.quality}色）</option>`)
-      .join("");
+  function matchOrangeItems(cat, keyword) {
+    const q = keyword.trim().toLowerCase();
+    return FDATA.items
+      .filter((i) => i.cat === cat && (!q || i.name.toLowerCase().includes(q)))
+      .slice(0, 20);
+  }
+
+  function renderItemOptions(form, cat, keyword) {
+    const list = form.querySelector(".prog-item-list");
+    const matches = matchOrangeItems(cat, keyword);
+    list.innerHTML = matches.map((i) =>
+      `<button type="button" class="prog-item-opt" data-act="pick-item" data-name="${escapeHtml(i.name)}">${escapeHtml(i.name)}（${i.quality}色）</button>`
+    ).join("");
+    list.hidden = matches.length === 0;
+  }
+
+  function resetAddForm(form, cat) {
+    form.querySelector(".prog-item-search").value = "";
+    form.querySelector(".prog-item-list").innerHTML = "";
+    form.querySelector(".prog-item-list").hidden = true;
+    form.dataset.selected = "";
+    const tip = form.querySelector(".prog-add-tip");
+    if (tip) tip.textContent = "";
   }
 
   function stageTokensHtml(tokens) {
@@ -276,8 +320,12 @@
           <option value="典籍">典籍</option>
           <option value="首饰">首饰</option>
         </select>
-        <select class="prog-item"></select>
+        <div class="prog-pick">
+          <input class="prog-item-search" placeholder="输入关键词自动匹配橙装…" autocomplete="off">
+          <div class="prog-item-list" hidden></div>
+        </div>
         <button type="button" class="seg" data-act="add-item" data-disciple="${d.id}">添加</button>
+        <span class="prog-add-tip muted-tip"></span>
       </div>
       ${itemsHtml || '<div class="muted-tip">该弟子还没有装备</div>'}
       <div class="prog-summary">

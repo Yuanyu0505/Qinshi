@@ -85,8 +85,8 @@ header.top {
 .summary-card table { min-width: 900px; }
 #forge-search,
 #drop-search {
-  padding: 10px 14px;
-  font-size: 15px;
+  padding: 12px 16px;
+  font-size: 16px;
   background: var(--bg2);
   color: var(--text);
   border: 1px solid var(--line);
@@ -203,8 +203,8 @@ tr.hit-row td { background: rgba(212, 175, 55, .06); }
   color: var(--text);
   border: 1px solid var(--line);
   border-radius: 6px;
-  padding: 6px 10px;
-  font-size: 16px;
+  padding: 8px 12px;
+  font-size: 18px;
   font-weight: 700;
 }
 .prog-add-form { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
@@ -214,9 +214,47 @@ tr.hit-row td { background: rgba(212, 175, 55, .06); }
   color: var(--text);
   border: 1px solid var(--line);
   border-radius: 6px;
-  padding: 6px 8px;
+  padding: 9px 12px;
+  font-size: 15px;
+}
+.prog-pick { position: relative; flex: 1; min-width: 260px; }
+.prog-item-search {
+  width: 100%;
+  padding: 10px 14px;
+  font-size: 16px;
+  background: var(--bg2);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  outline: none;
+}
+.prog-item-search:focus { border-color: var(--gold-dim); box-shadow: 0 0 0 2px rgba(212, 175, 55, .15); }
+.prog-item-list {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 20;
+  background: var(--bg2);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  max-height: 260px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+.prog-item-list[hidden] { display: none; }
+.prog-item-opt {
+  background: none;
+  border: none;
+  color: var(--text);
+  text-align: left;
+  padding: 9px 12px;
+  cursor: pointer;
   font-size: 14px;
 }
+.prog-item-opt:hover { background: rgba(212, 175, 55, .12); }
+.prog-add-tip { color: var(--red); font-size: 12px; }
 .prog-equip {
   background: var(--bg2);
   border: 1px solid var(--line);
@@ -253,8 +291,8 @@ tr.hit-row td { background: rgba(212, 175, 55, .06); }
 }
 #search {
   width: 100%;
-  padding: 12px 16px;
-  font-size: 16px;
+  padding: 14px 18px;
+  font-size: 17px;
   background: var(--bg2);
   color: var(--text);
   border: 1px solid var(--line);

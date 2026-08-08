@@ -170,7 +170,7 @@
       if (act === "set-stage") {
         const it = d.items.find((x) => x.id === btn.dataset.item);
         if (it) {
-          it.progress = Number(btn.dataset.idx) + 1;
+          it.progress = Number(btn.dataset.idx);
           saveProgress();
           renderProgress();
         }
@@ -283,8 +283,8 @@
       let cls = "prog-stage";
       if (i < it.progress) cls += " done";
       if (i === it.progress) cls += " next";
-      return `<button type="button" class="${cls}" data-act="set-stage" data-disciple="${d.id}" data-item="${it.id}" data-idx="${i}" title="点击设为已完成到 ${st.stage}">${st.stage}</button>`;
-    }).join("");
+      return `<button type="button" class="${cls}" data-act="set-stage" data-disciple="${d.id}" data-item="${it.id}" data-idx="${i}" title="点击设为当前锻造阶段：${st.stage}">${st.stage}</button>`;
+    }).join("") + `<button type="button" class="prog-stage done-all${it.progress >= item.stages.length ? " next" : ""}" data-act="set-stage" data-disciple="${d.id}" data-item="${it.id}" data-idx="${item.stages.length}" title="点击设为全部完成">全部完成</button>`;
     const next = PROG.nextStage(item, it.progress);
     const remaining = PROG.remainingStages(item, it.progress);
     const nextHtml = next ? `${next.stage}：${stageTokensHtml(next.tokens)}` : "全部锻造完成";

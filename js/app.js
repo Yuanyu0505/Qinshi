@@ -152,10 +152,21 @@
     el.progDisciples.addEventListener("click", (e) => {
       const btn = e.target.closest("button[data-act]");
       if (!btn) return;
+      const act = btn.dataset.act;
+      if (act === "pick-item") {
+        const form = btn.closest("[data-add-form]");
+        if (form) {
+          form.querySelector(".prog-item-search").value = btn.dataset.name;
+          form.dataset.selected = btn.dataset.name;
+          form.querySelector(".prog-item-list").hidden = true;
+          const tip = form.querySelector(".prog-add-tip");
+          if (tip) tip.textContent = "";
+        }
+        return;
+      }
       const dId = btn.dataset.disciple;
       const d = findDisciple(dId);
       if (!d) return;
-      const act = btn.dataset.act;
       if (act === "set-stage") {
         const it = d.items.find((x) => x.id === btn.dataset.item);
         if (it) {
@@ -168,15 +179,6 @@
         if (form) {
           form.hidden = !form.hidden;
           if (!form.hidden) renderItemOptions(form, form.querySelector(".prog-cat").value, "");
-        }
-      } else if (act === "pick-item") {
-        const form = el.progDisciples.querySelector(`[data-add-form="${dId}"]`);
-        if (form) {
-          form.querySelector(".prog-item-search").value = btn.dataset.name;
-          form.dataset.selected = btn.dataset.name;
-          form.querySelector(".prog-item-list").hidden = true;
-          const tip = form.querySelector(".prog-add-tip");
-          if (tip) tip.textContent = "";
         }
       } else if (act === "add-item") {
         const form = el.progDisciples.querySelector(`[data-add-form="${dId}"]`);

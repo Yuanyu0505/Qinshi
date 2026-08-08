@@ -195,20 +195,19 @@
         const form = el.progDisciples.querySelector(`[data-add-form="${dId}"]`);
         if (form) {
           form.hidden = !form.hidden;
-          if (!form.hidden) renderItemOptions(form, form.querySelector(".prog-cat").value, "");
+          if (!form.hidden) renderItemOptions(form, "");
         }
       } else if (act === "add-item") {
         const form = el.progDisciples.querySelector(`[data-add-form="${dId}"]`);
-        const cat = form.querySelector(".prog-cat").value;
         const raw = (form.dataset.selected || form.querySelector(".prog-item-search").value || "").trim();
-        const item = FDATA.items.find((i) => i.name === raw && i.cat === cat);
+        const item = FDATA.items.find((i) => i.name === raw);
         const tip = form.querySelector(".prog-add-tip");
         if (!item) {
           if (tip) tip.textContent = "未找到该橙装，请从匹配列表中选择";
           return;
         }
         d.items.push({ id: uid(), name: item.name, cat: item.cat, progress: 0 });
-        resetAddForm(form, cat);
+        resetAddForm(form);
         saveProgress();
         renderProgress();
       } else if (act === "remove-item") {
@@ -230,7 +229,7 @@
         const form = e.target.closest("[data-add-form]");
         if (form) {
           form.dataset.selected = "";
-          renderItemOptions(form, form.querySelector(".prog-cat").value, e.target.value);
+          renderItemOptions(form, e.target.value);
         }
       }
     });
@@ -241,12 +240,6 @@
           d.name = e.target.value.trim() || d.name;
           saveProgress();
           renderProgress();
-        }
-      } else if (e.target.classList.contains("prog-cat")) {
-        const form = e.target.closest("[data-add-form]");
-        if (form) {
-          resetAddForm(form, e.target.value);
-          renderItemOptions(form, e.target.value, "");
         }
       }
     });
@@ -262,23 +255,23 @@
     if (progState.view === "progress") renderProgress();
   }
 
-  function matchOrangeItems(cat, keyword) {
+  function matchOrangeItems(keyword) {
     const q = keyword.trim().toLowerCase();
     return FDATA.items
-      .filter((i) => i.cat === cat && (!q || i.name.toLowerCase().includes(q)))
+      .filter((i) => !q || i.name.toLowerCase().includes(q))
       .slice(0, 20);
   }
 
-  function renderItemOptions(form, cat, keyword) {
+  function renderItemOptions(form, keyword) {
     const list = form.querySelector(".prog-item-list");
-    const matches = matchOrangeItems(cat, keyword);
+    const matches = matchOrangeItems(keyword);
     list.innerHTML = matches.map((i) =>
-      `<button type="button" class="prog-item-opt" data-act="pick-item" data-name="${escapeHtml(i.name)}">${escapeHtml(i.name)}（${i.quality}色）</button>`
+      `<button type="button" class="prog-item-opt" data-act="pick-item" data-name="${escapeHtml(i.name)}">${escapeHtml(i.name)}（${i.cat}·${i.quality}色）</button>`
     ).join("");
     list.hidden = matches.length === 0;
   }
 
-  function resetAddForm(form, cat) {
+  function resetAddForm(form) {
     form.querySelector(".prog-item-search").value = "";
     form.querySelector(".prog-item-list").innerHTML = "";
     form.querySelector(".prog-item-list").hidden = true;
@@ -333,14 +326,8 @@
         <button type="button" class="seg danger" data-act="remove-disciple" data-disciple="${d.id}">移除弟子</button>
       </div>
       <div class="prog-add-form" data-add-form="${d.id}" hidden>
-        <select class="prog-cat">
-          <option value="武器">武器</option>
-          <option value="盔甲">盔甲</option>
-          <option value="典籍">典籍</option>
-          <option value="首饰">首饰</option>
-        </select>
         <div class="prog-pick">
-          <input class="prog-item-search" placeholder="输入关键词自动匹配橙装…" autocomplete="off">
+          <input class="prog-item-search" placeholder="输入关键词自动匹配橙装（无需选分区）…" autocomplete="off">
           <div class="prog-item-list" hidden></div>
         </div>
         <button type="button" class="seg" data-act="add-item" data-disciple="${d.id}">添加</button>

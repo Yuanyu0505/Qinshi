@@ -11,6 +11,8 @@
   const FORG = window.FORGING;
   const DROP_DATA = window.DROP_DATA;
   const DROPS = window.DROPS;
+  const PROG = window.PROGRESS;
+  const PROG_STORE_KEY = "qinshi_forging_progress_v1";
 
   const state = { search: "", main: "", filters: [], sortAttr: null, valueSource: "max" };
   const forgeState = { mode: "main", query: "" };
@@ -38,13 +40,26 @@
     forgeSummaryHead: document.getElementById("forging-summary-head"),
     forgeSummary: document.getElementById("forging-summary"),
     dropSearch: document.getElementById("drop-search"),
-    dropResults: document.getElementById("drop-results")
+    dropResults: document.getElementById("drop-results"),
+    forgeView: document.getElementById("forge-view"),
+    forgeQuery: document.getElementById("forge-query"),
+    forgeProgress: document.getElementById("forge-progress"),
+    progAddDisciple: document.getElementById("prog-add-disciple"),
+    progSaveTip: document.getElementById("prog-save-tip"),
+    progOverall: document.getElementById("prog-overall"),
+    progDisciples: document.getElementById("prog-disciples")
+  };
+
+  const progState = {
+    view: "query",
+    disciples: loadProgress()
   };
 
   function init() {
     bindTabs();
     initForging();
     initDrops();
+    initProgress();
     if (!DATA || !Q) {
       el.error.hidden = false;
       return;
@@ -87,6 +102,204 @@
       applyDrops();
     });
     applyDrops();
+  }
+
+  function loadProgress() {
+    try {
+      const raw = localStorage.getItem(PROG_STORE_KEY);
+      if (!raw) return [];
+      const parsed = JSON.parse(raw);
+      return Array.isArray(parsed.disciples) ? parsed.disciples : [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  function saveProgress() {
+    try {
+      localStorage.setItem(PROG_STORE_KEY, JSON.stringify({ disciples: progState.disciples }));
+      el.progSaveTip.textContent = "已保存 " + new Date().toLocaleTimeString();
+    } catch (e) {
+      el.progSaveTip.textContent = "保存失败：浏览器本地存储不可用";
+    }
+  }
+
+  function uid() {
+    return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+  }
+
+  function findDisciple(id) {
+    return progState.disciples.find((d) => d.id === id);
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  }
+
+  function initProgress() {
+    if (!PROG || !FDATA) return;
+    el.forgeView.addEventListener("click", (e) => {
+      const btn = e.target.closest("button[data-view]");
+      if (!btn) return;
+      progState.view = btn.dataset.view;
+      applyForgeView();
+    });
+    el.progAddDisciple.addEventListener("click", () => {
+      progState.disciples.push({ id: uid(), name: "弟子" + (progState.disciples.length + 1), items: [] });
+      saveProgress();
+      renderProgress();
+    });
+    el.progDisciples.addEventListener("click", (e) => {
+      const btn = e.target.closest("button[data-act]");
+      if (!btn) return;
+      const dId = btn.dataset.disciple;
+      const d = findDisciple(dId);
+      if (!d) return;
+      const act = btn.dataset.act;
+      if (act === "set-stage") {
+        const it = d.items.find((x) => x.id === btn.dataset.item);
+        if (it) {
+          it.progress = Number(btn.dataset.idx) + 1;
+          saveProgress();
+          renderProgress();
+        }
+      } else if (act === "toggle-add") {
+        const form = el.progDisciples.querySelector(`[data-add-form="${dId}"]`);
+        if (form) {
+          form.hidden = !form.hidden;
+          if (!form.hidden) fillItemOptions(form, form.querySelector(".prog-cat").value);
+        }
+      } else if (act === "add-item") {
+        const form = el.progDisciples.querySelector(`[data-add-form="${dId}"]`);
+        const name = form.querySelector(".prog-item").value;
+        if (name) {
+          d.items.push({ id: uid(), name: name, cat: form.querySelector(".prog-cat").value, progress: 0 });
+          saveProgress();
+          renderProgress();
+        }
+      } else if (act === "remove-item") {
+        if (confirm("确定移除该装备？")) {
+          d.items = d.items.filter((x) => x.id !== btn.dataset.item);
+          saveProgress();
+          renderProgress();
+        }
+      } else if (act === "remove-disciple") {
+        if (confirm("确定移除该弟子及其全部装备？")) {
+          progState.disciples = progState.disciples.filter((x) => x.id !== dId);
+          saveProgress();
+          renderProgress();
+        }
+      }
+    });
+    el.progDisciples.addEventListener("change", (e) => {
+      if (e.target.classList.contains("prog-name")) {
+        const d = findDisciple(e.target.dataset.disciple);
+        if (d) {
+          d.name = e.target.value.trim() || d.name;
+          saveProgress();
+          renderProgress();
+        }
+      } else if (e.target.classList.contains("prog-cat")) {
+        const form = e.target.closest("[data-add-form]");
+        if (form) fillItemOptions(form, e.target.value);
+      }
+    });
+    applyForgeView();
+  }
+
+  function applyForgeView() {
+    el.forgeView.querySelectorAll("button").forEach((b) => {
+      b.classList.toggle("active", b.dataset.view === progState.view);
+    });
+    el.forgeQuery.hidden = progState.view !== "query";
+    el.forgeProgress.hidden = progState.view !== "progress";
+    if (progState.view === "progress") renderProgress();
+  }
+
+  function fillItemOptions(form, cat) {
+    const sel = form.querySelector(".prog-item");
+    sel.innerHTML = FDATA.sheets["橙装"].items
+      .filter((i) => i.cat === cat)
+      .map((i) => `<option value="${escapeHtml(i.name)}">${escapeHtml(i.name)}（${i.quality}色）</option>`)
+      .join("");
+  }
+
+  function stageTokensHtml(tokens) {
+    return tokens.map((tk) => forgingTokenHtml(tk, false)).join("");
+  }
+
+  function equipmentHtml(d, it) {
+    const item = PROG.findItem(FDATA, it.name);
+    if (!item) {
+      return `<div class="prog-equip"><span class="forge-name">${escapeHtml(it.name)}</span><span class="muted">（锻造数据缺失）</span></div>`;
+    }
+    const chips = item.stages.map((st, i) => {
+      let cls = "prog-stage";
+      if (i < it.progress) cls += " done";
+      if (i === it.progress) cls += " next";
+      return `<button type="button" class="${cls}" data-act="set-stage" data-disciple="${d.id}" data-item="${it.id}" data-idx="${i}" title="点击设为已完成到 ${st.stage}">${st.stage}</button>`;
+    }).join("");
+    const next = PROG.nextStage(item, it.progress);
+    const remaining = PROG.remainingStages(item, it.progress);
+    const nextHtml = next ? `${next.stage}：${stageTokensHtml(next.tokens)}` : "全部锻造完成";
+    const remRows = remaining.map((st) => `<tr><td>${st.stage}</td><td>${stageTokensHtml(st.tokens)}</td></tr>`).join("");
+    return `<div class="prog-equip">
+      <div class="prog-equip-head">
+        <span class="cat">${item.cat}</span>
+        <span class="forge-name">${escapeHtml(item.name)}</span>
+        <span class="q-badge ${item.quality === "紫" ? "q-purple" : "q-orange"}">${item.quality}色</span>
+        <span class="muted">${it.progress}/${item.stages.length} 阶段</span>
+        <button type="button" class="seg danger" data-act="remove-item" data-disciple="${d.id}" data-item="${it.id}">移除</button>
+      </div>
+      <div class="prog-stages">${chips}</div>
+      <div class="prog-next">下一阶段：${nextHtml}</div>
+      <table class="mini-table"><tbody>${remRows || '<tr><td colspan="2">已完成全部阶段</td></tr>'}</tbody></table>
+    </div>`;
+  }
+
+  function discipleHtml(d) {
+    const itemsHtml = d.items.map((it) => equipmentHtml(d, it)).join("");
+    const summary = PROG.discipleSummary(FDATA, d);
+    const sumHtml = summary.materials.length
+      ? summary.materials.map((m) => `<tr><td>${m.n}</td><td>${m.q}色</td><td>${m.count}</td></tr>`).join("")
+      : '<tr><td colspan="3">无</td></tr>';
+    return `<div class="prog-disciple" data-disciple="${d.id}">
+      <div class="prog-disciple-head">
+        <input class="prog-name" data-disciple="${d.id}" value="${escapeHtml(d.name)}">
+        <button type="button" class="seg" data-act="toggle-add" data-disciple="${d.id}">+ 添加装备</button>
+        <button type="button" class="seg danger" data-act="remove-disciple" data-disciple="${d.id}">移除弟子</button>
+      </div>
+      <div class="prog-add-form" data-add-form="${d.id}" hidden>
+        <select class="prog-cat">
+          <option value="武器">武器</option>
+          <option value="盔甲">盔甲</option>
+          <option value="典籍">典籍</option>
+          <option value="首饰">首饰</option>
+        </select>
+        <select class="prog-item"></select>
+        <button type="button" class="seg" data-act="add-item" data-disciple="${d.id}">添加</button>
+      </div>
+      ${itemsHtml || '<div class="muted-tip">该弟子还没有装备</div>'}
+      <div class="prog-summary">
+        <h4 class="drop-title">该弟子剩余材料汇总<span class="drop-count">${summary.materials.length} 种</span></h4>
+        <table class="mini-table"><thead><tr><th>材料</th><th>品质</th><th>数量</th></tr></thead><tbody>${sumHtml}</tbody></table>
+      </div>
+    </div>`;
+  }
+
+  function renderOverallSummary() {
+    const mats = PROG.overallSummary(FDATA, progState.disciples);
+    el.progOverall.innerHTML = `<div class="drop-item-title">全体弟子剩余材料汇总（${progState.disciples.length} 名弟子）</div>` +
+      (mats.length
+        ? `<table class="mini-table"><thead><tr><th>材料</th><th>品质</th><th>数量</th></tr></thead><tbody>${mats.map((m) => `<tr><td>${m.n}</td><td>${m.q}色</td><td>${m.count}</td></tr>`).join("")}</tbody></table>`
+        : '<div class="muted-tip">暂无数据，添加弟子和装备后自动汇总</div>');
+  }
+
+  function renderProgress() {
+    renderOverallSummary();
+    el.progDisciples.innerHTML = progState.disciples.length
+      ? progState.disciples.map(discipleHtml).join("")
+      : '<div class="empty"><p>还没有弟子，点击「+ 添加弟子」开始</p></div>';
   }
 
   function dropSectionHtml(title, entries, fmt) {

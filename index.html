@@ -113,31 +113,53 @@
     <section id="partition-forging" hidden>
       <div class="partition-head">橙装锻造</div>
 
-      <div class="summary-card">
-        <h3 class="mode-title">锻造材料总览（四大类通用）</h3>
-        <table class="summary-table">
-          <thead id="forging-summary-head"></thead>
-          <tbody id="forging-summary"></tbody>
-        </table>
-      </div>
-
       <section class="panel">
-        <div class="panel-title">查找方式</div>
+        <div class="panel-title">视图</div>
         <div class="filter-row">
           <span class="filter-label">模式</span>
-          <div id="forge-mode" class="segs">
-            <button type="button" class="seg active" data-mode="main">作为主锻造装备</button>
-            <button type="button" class="seg" data-mode="material">作为素材装备</button>
+          <div id="forge-view" class="segs">
+            <button type="button" class="seg active" data-view="query">查询</button>
+            <button type="button" class="seg" data-view="progress">个人进度</button>
           </div>
         </div>
-        <div class="filter-row">
-          <span class="filter-label">装备名</span>
-          <input id="forge-search" type="search" placeholder="如：雷神锤 / 非攻" autocomplete="off">
-        </div>
-        <div class="muted-tip">「—」表示该阶段不需要额外装备材料；<span class="q-dot q-dot-purple"></span>紫色素材为紫色装备，<span class="q-dot q-dot-orange"></span>橙色素材与主装备为橙色装备。</div>
       </section>
 
-      <div id="forge-results"></div>
+      <div id="forge-query">
+        <div class="summary-card">
+          <h3 class="mode-title">锻造材料总览（四大类通用）</h3>
+          <table class="summary-table">
+            <thead id="forging-summary-head"></thead>
+            <tbody id="forging-summary"></tbody>
+          </table>
+        </div>
+
+        <section class="panel">
+          <div class="panel-title">查找方式</div>
+          <div class="filter-row">
+            <span class="filter-label">模式</span>
+            <div id="forge-mode" class="segs">
+              <button type="button" class="seg active" data-mode="main">作为主锻造装备</button>
+              <button type="button" class="seg" data-mode="material">作为素材装备</button>
+            </div>
+          </div>
+          <div class="filter-row">
+            <span class="filter-label">装备名</span>
+            <input id="forge-search" type="search" placeholder="如：雷神锤 / 非攻" autocomplete="off">
+          </div>
+          <div class="muted-tip">「—」表示该阶段不需要额外装备材料；<span class="q-dot q-dot-purple"></span>紫色素材为紫色装备，<span class="q-dot q-dot-orange"></span>橙色素材与主装备为橙色装备。</div>
+        </section>
+
+        <div id="forge-results"></div>
+      </div>
+
+      <section id="forge-progress" hidden>
+        <div class="progress-toolbar">
+          <button id="prog-add-disciple" type="button" class="seg">+ 添加弟子</button>
+          <span id="prog-save-tip" class="muted-tip">进度自动保存在本机浏览器</span>
+        </div>
+        <div id="prog-overall" class="drop-item"></div>
+        <div id="prog-disciples"></div>
+      </section>
     </section>
 
     <section id="partition-drops" hidden>
@@ -165,6 +187,7 @@
 <script src="js/query.js"></script>
 <script src="js/forging.js"></script>
 <script src="js/drops.js"></script>
+<script src="js/progress.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>

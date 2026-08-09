@@ -56,6 +56,7 @@
     progDisciples: document.getElementById("prog-disciples"),
     atlasTabs: document.getElementById("atlas-tabs"),
     atlasSearch: document.getElementById("atlas-search"),
+    atlasLevelFilter: document.getElementById("atlas-level-filter"),
     atlasResults: document.getElementById("atlas-results")
   };
 
@@ -68,6 +69,7 @@
   const atlasState = {
     tab: "攻",
     query: "",
+    levelFilter: "",
     levels: loadAtlasLevels()
   };
 
@@ -152,6 +154,10 @@
       atlasState.query = el.atlasSearch.value;
       applyAtlas();
     });
+    el.atlasLevelFilter.addEventListener("change", () => {
+      atlasState.levelFilter = el.atlasLevelFilter.value;
+      applyAtlas();
+    });
     el.atlasResults.addEventListener("change", (e) => {
       if (e.target.classList.contains("atlas-level")) {
         atlasState.levels[e.target.dataset.id] = parseInt(e.target.value, 10) || 0;
@@ -192,7 +198,12 @@
       b.classList.toggle("active", b.dataset.atlas === atlasState.tab);
     });
     const inTab = ATLAS_DATA.items.filter((i) => i.atlas === atlasState.tab);
-    const items = ATLAS.searchAtlas(inTab, atlasState.query, atlasState.levels);
+    let items = inTab;
+    if (atlasState.levelFilter) {
+      const n = Number(atlasState.levelFilter);
+      items = items.filter((i) => ATLAS.levelOf(i, atlasState.levels) < n);
+    }
+    items = ATLAS.searchAtlas(items, atlasState.query, atlasState.levels);
     el.atlasResults.innerHTML = items.length
       ? items.map(atlasItemHtml).join("")
       : '<div class="empty"><p>未找到匹配的图鉴弟子</p></div>';

@@ -198,6 +198,15 @@
           <span class="filter-label">搜索</span>
           <input id="atlas-search" type="search" placeholder="弟子名 / 获取途径 / 所属图鉴 / 道具 / 等级（如 9级、10级以下）" autocomplete="off">
         </div>
+        <div class="filter-row">
+          <span class="filter-label">等级筛选</span>
+          <select id="atlas-level-filter">
+            <option value="">全部</option>
+            <option value="5">5级以下</option>
+            <option value="10">10级以下</option>
+            <option value="15">15级以下</option>
+          </select>
+        </div>
         <div class="muted-tip">图鉴等级为个人进度（可直接修改）：等级 ≥ 10 表示已满无需装备；已超过的等级阶段装备自动隐藏。</div>
       </section>
       <div id="atlas-results"></div>

@@ -122,6 +122,9 @@ header.top {
 .quiz-editor-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 10px; }
 .quiz-editor-row input { flex: 1 1 220px; min-width: 0; padding: 8px 10px; font: inherit; color: var(--text); background: var(--bg2); border: 1px solid var(--line); border-radius: 6px; }
 .quiz-delete { color: #e35d5b; }
+.ins-card { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 10px; margin: 10px 0; }
+#inscription-modes { margin-bottom: 12px; }
+#ins-quality,#ins-tian,#ins-shield,#ins-progress-select { padding: 9px; background: var(--bg2); color:var(--text); border:1px solid var(--line); border-radius:6px; }
 .q-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin: 0 3px; vertical-align: middle; }
 .q-dot-purple { background: #7030a0; }
 .q-dot-orange { background: #f79646; }

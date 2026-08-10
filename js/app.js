@@ -17,6 +17,7 @@
   const ATLAS = window.ATLAS;
   const QUIZ_DATA = window.QUIZ_DATA;
   const QUIZ = window.QUIZ;
+  const INS_DATA = window.INSCRIPTION_DATA;
   const ATLAS_LEVELS_KEY = "qinshi_atlas_levels_v1";
   const ATLAS_TARGET_LEVEL_KEY = "qinshi_atlas_target_level_v1";
   const QUIZ_STORE_KEY = "qinshi_quiz_items_v1";
@@ -74,6 +75,7 @@
     quizAddQuestion: document.getElementById("quiz-add-question"),
     quizAddAnswer: document.getElementById("quiz-add-answer"),
     quizAdd: document.getElementById("quiz-add")
+    ,insModes: document.getElementById("inscription-modes"), insProgress: document.getElementById("inscription-progress"), insQuery: document.getElementById("inscription-query"), insReference: document.getElementById("inscription-reference"), insQuality: document.getElementById("ins-quality"), insTian: document.getElementById("ins-tian"), insShield: document.getElementById("ins-shield"), insSearch: document.getElementById("ins-search"), insResults: document.getElementById("ins-results")
   };
 
   const progState = {
@@ -99,6 +101,7 @@
     initProgress();
     initAtlas();
     initQuiz();
+    initInscription();
     if (!DATA || !Q) {
       el.error.hidden = false;
       return;
@@ -118,7 +121,7 @@
       forging: document.getElementById("partition-forging"),
       drops: document.getElementById("partition-drops"),
       atlas: document.getElementById("partition-atlas"),
-      quiz: document.getElementById("partition-quiz")
+      quiz: document.getElementById("partition-quiz"), inscription: document.getElementById("partition-inscription")
     };
     tabs.forEach((btn) => {
       btn.addEventListener("click", () => {
@@ -294,6 +297,20 @@
     });
     applyQuiz();
   }
+
+  function initInscription() {
+    if (!INS_DATA) return;
+    var tians = ["天府", "天相", "天同", "天梁", "天机"], shields = ["天盾", "地盾", "人盾", "神盾", "鬼盾", "龙盾", "虎盾", "风盾", "云盾"];
+    el.insTian.innerHTML += tians.map(function (x) { return `<option>${x}</option>`; }).join("");
+    el.insShield.innerHTML += shields.map(function (x) { return `<option>${x}</option>`; }).join("");
+    el.insModes.addEventListener("click", function (e) { var b=e.target.closest("button"); if (!b) return; el.insModes.querySelectorAll("button").forEach(function(x){x.classList.toggle("active",x===b);}); ["progress","query","reference"].forEach(function(m){document.getElementById("inscription-"+m).hidden=b.dataset.mode!==m;}); });
+    [el.insQuality,el.insTian,el.insShield,el.insSearch].forEach(function(x){x.addEventListener("input", renderInscription);});
+    el.insProgress.innerHTML = '<section class="panel"><div class="panel-title">个人进度</div><p class="muted-tip">请选择弟子后可记录铭文；紫色铭文暂不展示主属性。</p><select id="ins-progress-select"><option value="">选择弟子</option>'+INS_DATA.items.map(function(i){return `<option value="${i.quality}\u0000${i.name}">${i.quality} · ${i.name}</option>`;}).join("")+'</select><div id="ins-progress-detail"></div></section>';
+    document.getElementById("ins-progress-select").addEventListener("change", function(e){var v=e.target.value.split("\u0000"), i=INS_DATA.items.find(function(x){return x.quality===v[0]&&x.name===v[1];}); document.getElementById("ins-progress-detail").innerHTML=i?'<div class="ins-card"><b>'+i.name+'</b>'+i.slots.map(function(s){return '<div>'+s.tian+'·'+s.shield+'　<select><option>橙色 2星</option><option>橙色 1星</option><option>紫色 2星</option><option>紫色 1星</option></select></div>';}).join("")+'</div>':'';});
+    el.insReference.innerHTML = '<section class="panel"><div class="panel-title">资料图表</div>'+shields.map(function(s){return '<div class="ins-card"><b>'+s+'</b>：'+({"天盾":"3攻、暴击伤害、技能减免、内力、追加伤害","地盾":"PVP速、暴击、PVP免伤、3技能穿透、防御","人盾":"3血、抗暴击、PVP伤害、技能穿透、防御","神盾":"PVP速、3攻、3PVP伤害、技能穿透、内力","鬼盾":"3速、血、护盾、暴击伤害、防御","龙盾":"3PVP速、血、3暴击、PVP伤害、技能减免","虎盾":"3血、暴击伤害、抗暴击、3内力、追加伤害","风盾":"攻、暴击、护盾、3PVP免伤、追加伤害","云盾":"3护盾、3抗暴击、PVP免伤、3技能减免、防御"}[s])+'</div>';}).join("")+'</section>';
+    renderInscription();
+  }
+  function renderInscription(){if(!INS_DATA)return;var q=el.insSearch.value.trim(), list=INS_DATA.items.filter(function(i){return(!el.insQuality.value||i.quality===el.insQuality.value)&&(!q||i.name.indexOf(q)>=0)&&i.slots.some(function(s){return(!el.insTian.value||s.tian===el.insTian.value)&&(!el.insShield.value||s.shield===el.insShield.value);});});el.insResults.innerHTML=list.map(function(i){return '<div class="ins-card"><b>'+i.quality+' · '+i.name+'</b><div>'+i.slots.map(function(s){return s.tian+'·'+s.shield;}).join('　')+'</div></div>';}).join("")||'<div class="empty"><p>未找到匹配弟子</p></div>';}
 
   function loadQuizItems() {
     var defaults = QUIZ_DATA && QUIZ_DATA.items ? QUIZ_DATA.items : [];

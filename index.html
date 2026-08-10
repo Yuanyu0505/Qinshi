@@ -19,6 +19,7 @@
     <button type="button" class="tab" data-partition="atlas">图鉴</button>
     <button type="button" class="tab" data-partition="loulan">楼兰棋阵</button>
     <button type="button" class="tab" data-partition="quiz">答题</button>
+    <button type="button" class="tab" data-partition="inscription">铭文</button>
   </nav>
 
   <div id="data-error" class="error" hidden>数据文件缺失或加载失败，请确认 data/special-equipment.js 存在。</div>
@@ -135,6 +136,14 @@
         </div>
       </section>
       <div id="quiz-results" class="quiz-results"></div>
+    </section>
+
+    <section id="partition-inscription" hidden>
+      <div class="partition-head">铭文</div>
+      <div id="inscription-modes" class="segs"><button class="seg active" data-mode="progress">个人进度</button><button class="seg" data-mode="query">查询筛选</button><button class="seg" data-mode="reference">资料图表</button></div>
+      <div id="inscription-progress"></div>
+      <div id="inscription-query" hidden><section class="panel"><div class="filter-row"><select id="ins-quality"><option value="">全部品质</option><option>普通橙色</option><option>红色神将</option></select><select id="ins-tian"><option value="">全部天位</option></select><select id="ins-shield"><option value="">全部盾位</option></select><input id="ins-search" type="search" placeholder="搜索弟子关键词"></div></section><div id="ins-results"></div></div>
+      <div id="inscription-reference" hidden></div>
     </section>
 
     <section id="partition-forging" hidden>
@@ -262,6 +271,7 @@
 <script src="data/drops.js"></script>
 <script src="data/atlas.js"></script>
 <script src="data/quiz.js"></script>
+<script src="data/inscription.js"></script>
 <script src="js/query.js"></script>
 <script src="js/forging.js"></script>
 <script src="js/drops.js"></script>

@@ -123,7 +123,7 @@
   function renderEditor(item) {
     if (!item) { el.editor.innerHTML = ""; return; }
     var saved = progress[keyOf(item)];
-    el.editor.innerHTML = '<section class="ins-editor"><div class="ins-card-head"><div><span class="ins-quality ' + (item.quality === "红色神将" ? "red" : "orange") + '">' + item.quality + '</span><b>' + escapeHtml(item.name) + '</b></div><button type="button" class="link-btn" data-action="cancel">取消</button></div><div class="muted-tip ins-editor-tip">每个位置分别选择三条副属性；标记为“极致”的属性允许三条相同，其他属性不可重复选择。</div>' + item.slots.map(function (slot) {
+    el.editor.innerHTML = '<section class="ins-editor"><div class="ins-card-head"><div><span class="ins-quality ' + (item.quality === "红色神将" ? "red" : "orange") + '">' + item.quality + '</span><b>' + escapeHtml(item.name) + '</b></div><button type="button" class="link-btn" data-action="cancel">取消</button></div><div class="muted-tip ins-editor-tip">每个位置分别选择三条副属性；普通属性最多选择两条相同，标记为“极致”的属性允许三条相同。</div>' + item.slots.map(function (slot) {
       var old = saved && saved.slots && saved.slots.find(function (x) { return x.tian === slot.tian; });
       var quality = old ? old.quality : "橙色";
       var star = old ? old.star : "2";
@@ -141,8 +141,8 @@
     if (event && event.target.classList.contains("ins-edit-sub") && event.target.value) {
       var changedRow = event.target.closest(".ins-editor-slot");
       var changedAttr = SUBS[changedRow.dataset.shield].find(function (item) { return item.n === event.target.value; });
-      var duplicate = Array.prototype.some.call(changedRow.querySelectorAll(".ins-edit-sub"), function (select) { return select !== event.target && select.value === event.target.value; });
-      if (changedAttr && !changedAttr.x && duplicate) event.target.value = "";
+      var selectedCount = Array.prototype.filter.call(changedRow.querySelectorAll(".ins-edit-sub"), function (select) { return select.value === event.target.value; }).length;
+      if (changedAttr && !changedAttr.x && selectedCount > 2) event.target.value = "";
     }
     el.editor.querySelectorAll(".ins-editor-slot").forEach(function (row) {
       var quality = row.querySelector(".ins-edit-quality").value;
@@ -154,7 +154,8 @@
         Array.prototype.forEach.call(select.options, function (option) {
           if (!option.value) { option.disabled = false; return; }
           var attr = SUBS[row.dataset.shield].find(function (item) { return item.n === option.value; });
-          option.disabled = Boolean(attr && !attr.x && selected.some(function (value, index) { return index !== currentIndex && value === option.value; }));
+          var otherCount = selected.filter(function (value, index) { return index !== currentIndex && value === option.value; }).length;
+          option.disabled = Boolean(attr && !attr.x && select.value !== option.value && otherCount >= 2);
         });
       });
     });

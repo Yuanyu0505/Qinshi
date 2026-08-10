@@ -82,6 +82,19 @@ test("summarizeUpgrade：聚合未达标弟子的实际装备", () => {
   assert.strictEqual(summary.equipment.find(item => item.n === "冰魄戒").count, 2);
 });
 
+test("summarizeUpgrade：紫色优先且同色按装备名称拼音排序", () => {
+  const summary = A.summarizeUpgrade(
+    fixture,
+    { "t-0001": 5, "t-0002": 5, "t-0003": 5 },
+    10,
+    upgradeStages
+  );
+  assert.deepStrictEqual(
+    summary.equipment.map(item => `${item.q}:${item.n}`),
+    ["紫:冰魄戒", "紫:号钟琴", "紫:水寒", "紫:阴符经", "橙:残虹", "橙:罡星冠", "橙:黄帝内经", "橙:墨梅"]
+  );
+});
+
 test("searchAtlas：按名称/获取途径/所属图鉴/道具/等级搜索", () => {
   assert.deepStrictEqual(A.searchAtlas(fixture, "高渐离", {}).map(i => i.id), ["t-0001"]);
   assert.deepStrictEqual(A.searchAtlas(fixture, "庄园", {}).map(i => i.id), ["t-0002"]);

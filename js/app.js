@@ -222,10 +222,10 @@
     const L = ATLAS.levelOf(item, atlasState.levels);
     const plan = ATLAS.upgradePlan(item, L, atlasState.targetLevel, ATLAS_DATA.meta.upgradeStages);
     const equipmentHtml = plan.equipmentStages.length
-      ? plan.equipmentStages.map((st) => `<div class="atlas-stage">
+      ? `<div class="atlas-equipment-stage-list">${plan.equipmentStages.map((st) => `<div class="atlas-equipment-stage">
           <span class="atlas-stage-key">${st.key}</span>
-          <span>${st.items.map((tk) => `<span class="mat ${tk.q === "紫" ? "mat-purple" : "mat-orange"}">${escapeHtml(tk.n)}</span>`).join("") || '<span class="mat-dash">无</span>'}</span>
-        </div>`).join("")
+          <span class="atlas-equipment-items">${st.items.map((tk) => `<span class="mat ${tk.q === "紫" ? "mat-purple" : "mat-orange"}">${escapeHtml(tk.n)}</span>`).join("") || '<span class="mat-dash">无</span>'}</span>
+        </div>`).join("")}</div>`
       : '<div class="muted-tip">该目标区间无需装备</div>';
     const upgradeHtml = plan.reached
       ? `<div class="atlas-upgrade done">已达到目标等级（${plan.currentLevel} / ${plan.targetLevel}级）</div>`
@@ -237,7 +237,7 @@
             <span>成长值 <b>+${plan.growth}</b></span>
           </div>
           <div class="muted-tip">14级后不再获得成长值</div>
-          <div class="atlas-upgrade-equipment"><span class="atlas-stage-key">所需装备</span>${equipmentHtml}</div>
+          <div class="atlas-upgrade-equipment"><div class="atlas-equipment-title">所需装备</div>${equipmentHtml}</div>
         </div>`;
     return `<div class="atlas-item">
       <div class="atlas-head">
@@ -269,7 +269,7 @@
         <span>魂魄 <b>${summary.souls}</b></span>
         <span>成长值 <b>+${summary.growth}</b></span>
       </div>
-      <div class="atlas-summary-equipment"><span class="atlas-stage-key">所需装备</span>${equipment}</div>
+      <div class="atlas-summary-equipment"><div class="atlas-equipment-title">所需装备</div><div class="atlas-summary-equipment-list">${equipment}</div></div>
       <div class="muted-tip">14级后不再获得成长值</div>
     </div>`;
   }

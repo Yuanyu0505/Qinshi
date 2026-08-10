@@ -96,7 +96,10 @@
       });
     });
     summary.equipment = Object.keys(equipmentMap).map(function (key) { return equipmentMap[key]; })
-      .sort(function (a, b) { return b.count - a.count || a.n.localeCompare(b.n); });
+      .sort(function (a, b) {
+        var qualityOrder = (a.q === "紫" ? 0 : 1) - (b.q === "紫" ? 0 : 1);
+        return qualityOrder || a.n.localeCompare(b.n, "zh-Hans-CN");
+      });
     return summary;
   }
 

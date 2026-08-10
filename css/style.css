@@ -19,7 +19,7 @@ body {
   font-family: "Microsoft YaHei", "PingFang SC", "Noto Sans CJK SC", sans-serif;
   line-height: 1.55;
 }
-.wrap { max-width: 1180px; margin: 0 auto; padding: 18px 16px 40px; }
+.wrap { max-width: 1480px; margin: 0 auto; padding: 18px 16px 40px; }
 h1 {
   margin: 0;
   font-family: "STKaiti", "KaiTi", "SimSun", serif;
@@ -38,24 +38,32 @@ header.top {
   border-bottom: 1px solid var(--line);
   padding-bottom: 12px;
   margin-bottom: 16px;
+  margin-left: 174px;
 }
 .meta { color: var(--muted); font-size: 13px; }
+.app-shell { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 24px; align-items: start; }
+.app-content { min-width: 0; }
 .tabs {
+  position: sticky;
+  top: 18px;
   display: flex;
+  flex-direction: column;
   gap: 6px;
-  margin: 14px 0;
-  border-bottom: 1px solid var(--line);
+  margin: 0;
+  padding-right: 12px;
+  border-right: 1px solid var(--line);
 }
 .tab {
   background: none;
   border: 1px solid transparent;
-  border-bottom: none;
   color: var(--muted);
-  padding: 9px 20px;
+  width: 100%;
+  padding: 10px 14px;
   font-size: 15px;
   font-family: inherit;
   cursor: pointer;
-  border-radius: 8px 8px 0 0;
+  border-radius: 8px;
+  text-align: left;
 }
 .tab:hover { color: var(--text); }
 .tab.active {
@@ -275,9 +283,12 @@ header.top {
 .ins-editor-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px; }
 .ins-saved-slots,
 .ins-query-slots { display: grid; gap: 8px; }
-.ins-query-slot { display: grid; grid-template-columns: minmax(150px, .65fr) minmax(210px, 1fr) minmax(360px, 2fr); gap: 10px; align-items: start; }
+.ins-query-slot { display: grid; grid-template-columns: minmax(210px, .75fr) minmax(270px, 1fr) minmax(420px, 2fr); gap: 14px; align-items: start; }
+.ins-query-slot .ins-slot-title { white-space: normal; }
+.ins-query-slot .ins-extreme-note { display: block; margin: 3px 0 0; }
 .ins-saved-slot { display: grid; grid-template-columns: minmax(420px, .9fr) minmax(500px, 1.45fr); gap: 14px; align-items: center; }
 .ins-saved-core { display: grid; grid-template-columns: minmax(140px, .8fr) minmax(90px, .55fr) minmax(190px, 1.2fr); gap: 10px; align-items: center; }
+.ins-main-stack { display: grid; gap: 2px; line-height: 1.4; }
 .ins-saved-substats { display: grid; grid-template-columns: repeat(3, minmax(120px, 1fr)); gap: 8px; }
 .ins-saved-sub {
   display: grid;
@@ -292,7 +303,7 @@ header.top {
 .ins-saved-sub strong { color: #f2ce58; overflow-wrap: anywhere; }
 .ins-saved-sub.extreme { border-color: var(--red); background: rgba(176, 58, 46, .15); }
 .ins-saved-sub.extreme strong { color: #ff8a80; }
-.ins-saved-name { color: #ff5c57; text-shadow: 0 0 10px rgba(255, 92, 87, .2); }
+.ins-saved-name { color: #54d17a; text-shadow: 0 0 10px rgba(84, 209, 122, .22); }
 .ins-sub-list { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; }
 .ins-sub-label { color: var(--muted); font-size: 12px; }
 .ins-sub-tag {
@@ -312,8 +323,9 @@ header.top {
 }
 .ins-sub-tag em { margin-left: 3px; font-size: 11px; font-style: normal; }
 .ins-reference-block h3 { margin: 0 0 10px; color: var(--gold); font-size: 17px; }
-.ins-reference-table { min-width: 720px; }
+.ins-reference-table { min-width: 920px; }
 .ins-reference-table td:first-child { color: var(--gold); font-weight: 700; white-space: nowrap; }
+.ins-shield-note { min-width: 230px; color: var(--text); text-align: left; }
 .q-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin: 0 3px; vertical-align: middle; }
 .q-dot-purple { background: #7030a0; }
 .q-dot-orange { background: #f79646; }
@@ -738,6 +750,29 @@ figure img {
 }
 figcaption { color: var(--muted); font-size: 13px; margin-top: 8px; }
 
+@media (max-width: 900px) {
+  .wrap { max-width: 1180px; }
+  header.top { margin-left: 0; }
+  .app-shell { display: block; }
+  .tabs {
+    position: static;
+    flex-direction: row;
+    gap: 6px;
+    margin: 14px 0;
+    padding: 0;
+    overflow-x: auto;
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .tab {
+    width: auto;
+    flex: 0 0 auto;
+    padding: 9px 16px;
+    border-bottom: 0;
+    border-radius: 8px 8px 0 0;
+    white-space: nowrap;
+  }
+}
 @media (max-width: 980px) {
   .ins-editor-layout,
   .ins-saved-slot { grid-template-columns: 1fr; }

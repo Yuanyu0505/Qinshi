@@ -23,6 +23,14 @@
     "风盾": [{ n: "攻" }, { n: "暴击" }, { n: "护盾" }, { n: "PVP免伤", x: true }, { n: "追加伤害" }],
     "云盾": [{ n: "护盾", x: true }, { n: "抗暴击", x: true }, { n: "PVP免伤" }, { n: "技能减免", x: true }, { n: "防御" }]
   };
+  var SHIELD_NOTES = {
+    "龙盾": "可洗3/4/5速度；可洗血属性，最多双血",
+    "鬼盾": "可洗3/4/5速度；可洗血属性，最多双血",
+    "神盾": "二星橙色铭文最多3+4速",
+    "地盾": "二星橙色铭文最多3+4速",
+    "人盾": "可洗血属性；可三血",
+    "虎盾": "可洗血属性；可三血"
+  };
 
   var progress = loadProgress();
   var editingKey = "";
@@ -186,8 +194,9 @@
   function savedSlotHtml(slot) {
     var main = slot.quality === "紫色" ? "主属性暂不展示" : MAIN[slot.tian][slot.star];
     var subs = Array.isArray(slot.subs) ? slot.subs : ["", "", ""];
-    return '<div class="ins-saved-slot"><div class="ins-saved-core"><b>' + slot.tian + ' · ' + slot.shield + extremeNoteHtml(slot.shield) + '</b><span>' + slot.quality + ' ' + slot.star + '星</span><span>' + main + '</span></div><div class="ins-saved-substats">' + subs.map(function (sub, index) { return '<span class="ins-saved-sub' + (isExtremeAttr(slot.shield, sub) ? " extreme" : "") + '"><small>副属性' + (index + 1) + '</small><strong>' + (sub ? escapeHtml(sub) : "未设置") + '</strong></span>'; }).join("") + '</div></div>';
+    return '<div class="ins-saved-slot"><div class="ins-saved-core"><b>' + slot.tian + ' · ' + slot.shield + extremeNoteHtml(slot.shield) + '</b><span>' + slot.quality + ' ' + slot.star + '星</span>' + mainStackHtml(main) + '</div><div class="ins-saved-substats">' + subs.map(function (sub, index) { return '<span class="ins-saved-sub' + (isExtremeAttr(slot.shield, sub) ? " extreme" : "") + '"><small>副属性' + (index + 1) + '</small><strong>' + (sub ? escapeHtml(sub) : "未设置") + '</strong></span>'; }).join("") + '</div></div>';
   }
+  function mainStackHtml(main) { return '<span class="ins-main-stack">' + main.split("、").map(function (part) { return '<span>' + escapeHtml(part.trim()) + '</span>'; }).join("") + '</span>'; }
   function handleProgressAction(event) {
     var button = event.target.closest("button[data-edit-key],button[data-delete-key]");
     if (!button) return;
@@ -242,7 +251,7 @@
   }
 
   function renderReference() {
-    el.reference.innerHTML = '<section class="ins-reference-block"><h3>天位主属性</h3><div class="table-wrap"><table class="ins-reference-table"><thead><tr><th>天位</th><th>橙色一星</th><th>橙色二星</th><th>紫色</th></tr></thead><tbody>' + TIANS.map(function (tian) { return '<tr><th>' + tian + '</th><td>' + MAIN[tian]["1"] + '</td><td>' + MAIN[tian]["2"] + '</td><td>暂不展示主属性</td></tr>'; }).join("") + '</tbody></table></div></section><section class="ins-reference-block"><h3>盾位副属性</h3><div class="table-wrap"><table class="ins-reference-table"><thead><tr><th>盾位</th><th>可洗练副属性</th></tr></thead><tbody>' + SHIELDS.map(function (shield) { return '<tr><th>' + shield + extremeNoteHtml(shield) + '</th><td><div class="ins-sub-list">' + SUBS[shield].map(subTagHtml).join("") + '</div></td></tr>'; }).join("") + '</tbody></table></div><div class="muted-tip">“极致”表示该基础属性可同时出现在副属性1、副属性2、副属性3中，不是名为“3攻”或“3技能穿透”的单条属性。</div></section>';
+    el.reference.innerHTML = '<section class="ins-reference-block"><h3>天位主属性</h3><div class="table-wrap"><table class="ins-reference-table"><thead><tr><th>天位</th><th>橙色一星</th><th>橙色二星</th><th>紫色</th></tr></thead><tbody>' + TIANS.map(function (tian) { return '<tr><th>' + tian + '</th><td>' + MAIN[tian]["1"] + '</td><td>' + MAIN[tian]["2"] + '</td><td>暂不展示主属性</td></tr>'; }).join("") + '</tbody></table></div></section><section class="ins-reference-block"><h3>盾位副属性</h3><div class="table-wrap"><table class="ins-reference-table"><thead><tr><th>盾位</th><th>可洗练副属性</th><th>备注</th></tr></thead><tbody>' + SHIELDS.map(function (shield) { return '<tr><th>' + shield + extremeNoteHtml(shield) + '</th><td><div class="ins-sub-list">' + SUBS[shield].map(subTagHtml).join("") + '</div></td><td class="ins-shield-note">' + (SHIELD_NOTES[shield] || "—") + '</td></tr>'; }).join("") + '</tbody></table></div><div class="muted-tip">“极致”表示该基础属性可同时出现在副属性1、副属性2、副属性3中，不是名为“3攻”或“3技能穿透”的单条属性。</div></section>';
   }
 
   document.addEventListener("DOMContentLoaded", init);

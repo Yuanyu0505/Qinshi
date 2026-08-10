@@ -12,22 +12,25 @@
     <h1>秦时 · 攻略查询</h1>
   </header>
 
-  <nav class="tabs">
-    <button type="button" class="tab active" data-partition="equipment">特殊属性装备</button>
-    <button type="button" class="tab" data-partition="forging">橙装锻造</button>
-    <button type="button" class="tab" data-partition="drops">关卡掉落</button>
-    <button type="button" class="tab" data-partition="atlas">图鉴</button>
-    <button type="button" class="tab" data-partition="loulan">楼兰棋阵</button>
-    <button type="button" class="tab" data-partition="quiz">答题</button>
-    <button type="button" class="tab" data-partition="inscription">铭文</button>
-  </nav>
+  <div class="app-shell">
+    <nav class="tabs">
+      <button type="button" class="tab active" data-partition="atlas">图鉴</button>
+      <button type="button" class="tab" data-partition="drops">关卡掉落</button>
+      <button type="button" class="tab" data-partition="equipment">装备属性</button>
+      <button type="button" class="tab" data-partition="forging">橙装锻造</button>
+      <button type="button" class="tab" data-partition="inscription">铭文</button>
+      <button type="button" class="tab" data-partition="quiz">答题</button>
+      <button type="button" class="tab" data-partition="loulan">楼兰棋阵</button>
+    </nav>
 
-  <div id="data-error" class="error" hidden>数据文件缺失或加载失败，请确认 data/special-equipment.js 存在。</div>
+    <div class="app-content">
 
-  <main id="app">
-    <section id="partition-equipment">
+      <div id="data-error" class="error" hidden>数据文件缺失或加载失败，请确认 data/special-equipment.js 存在。</div>
+
+      <main id="app">
+    <section id="partition-equipment" hidden>
       <div class="partition-head">
-        特殊属性装备
+        装备属性
         <span class="meta"><span id="count">加载中…</span> · 版本 <span id="version">—</span></span>
       </div>
 
@@ -254,7 +257,7 @@
       <div id="drop-results"></div>
     </section>
 
-    <section id="partition-atlas" hidden>
+    <section id="partition-atlas">
       <div class="partition-head">图鉴</div>
       <section class="panel">
         <div class="panel-title">图鉴分区</div>
@@ -289,11 +292,13 @@
       <div id="atlas-upgrade-summary"></div>
       <div id="atlas-results"></div>
     </section>
-  </main>
+      </main>
 
-  <footer class="foot">
-    数据来源：秦时相关（更新贯侯钟离昧）20260618.xlsx · 本地离线运行
-  </footer>
+      <footer class="foot">
+        数据来源：秦时相关（更新贯侯钟离昧）20260618.xlsx · 本地离线运行
+      </footer>
+    </div>
+  </div>
 </div>
 
 <script src="data/special-equipment.js"></script>

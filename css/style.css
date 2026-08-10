@@ -118,6 +118,10 @@ header.top {
 .quiz-question { font-size: 16px; color: var(--text); margin-bottom: 8px; }
 .quiz-answer { color: #e35d5b; font-size: 17px; font-weight: 700; }
 .quiz-answer span { display: inline-block; color: var(--gold-dim); font-size: 13px; margin-right: 10px; }
+.quiz-add-panel { margin-top: -4px; }
+.quiz-editor-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 10px; }
+.quiz-editor-row input { flex: 1 1 220px; min-width: 0; padding: 8px 10px; font: inherit; color: var(--text); background: var(--bg2); border: 1px solid var(--line); border-radius: 6px; }
+.quiz-delete { color: #e35d5b; }
 .q-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin: 0 3px; vertical-align: middle; }
 .q-dot-purple { background: #7030a0; }
 .q-dot-orange { background: #f79646; }

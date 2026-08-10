@@ -23,13 +23,22 @@ BLOCKS = [
     ("内力", 20, 3, 31),
     ("防", 28, 3, 37),
 ]
-STAGES = [("5--6", 6), ("7--8", 8), ("9--10", 10)]
+STAGES = [("5→6", 6), ("7→8", 8), ("9→10", 10)]
+UPGRADE_START_ROW = 51
+UPGRADE_END_ROW = 69
+UPGRADE_COLS = (20, 21, 22, 23, 24)  # T..X
 
 
 def cell_text(value):
     if value is None:
         return ""
     return str(value).strip()
+
+
+def int_value(value):
+    if value is None or value == "":
+        return 0
+    return int(value)
 
 
 def cell_quality(cell):
@@ -92,8 +101,39 @@ def parse_sheet(path):
     return items
 
 
+def parse_upgrade_stages(ws):
+    """解析 T51:X69 图鉴升级成本表。"""
+    stages = []
+    for r in range(UPGRADE_START_ROW, UPGRADE_END_ROW + 1):
+        raw = cell_text(ws.cell(row=r, column=UPGRADE_COLS[0]).value)
+        m = re.fullmatch(r"(\d+)\s*-\s*(\d+)", raw)
+        if not m:
+            raise ValueError(f"图鉴升级阶段格式无法识别：T{r}={raw!r}")
+        start = int(m.group(1))
+        end = int(m.group(2))
+        if end != start + 1:
+            raise ValueError(f"图鉴升级阶段必须连续：T{r}={raw!r}")
+        knots = int_value(ws.cell(row=r, column=UPGRADE_COLS[1]).value)
+        souls = int_value(ws.cell(row=r, column=UPGRADE_COLS[2]).value)
+        equipment = int_value(ws.cell(row=r, column=UPGRADE_COLS[3]).value)
+        growth = int_value(ws.cell(row=r, column=UPGRADE_COLS[4]).value)
+        stages.append({
+            "key": f"{start}→{end}",
+            "from": start,
+            "to": end,
+            "knots": knots,
+            "souls": souls,
+            "needsEquipment": equipment > 0,
+            "growth": growth,
+        })
+    return stages
+
+
 def build_data(path, out_path):
     items = parse_sheet(path)
+    wb = openpyxl.load_workbook(path, data_only=True)
+    upgrade_stages = parse_upgrade_stages(wb["图鉴汇总"])
+    max_level = max(stage["to"] for stage in upgrade_stages)
     m = re.search(r"(\d{8})", os.path.basename(path))
     from collections import Counter
     counts = Counter(i["atlas"] for i in items)
@@ -106,6 +146,9 @@ def build_data(path, out_path):
             "total": len(items),
             "atlasOrder": ["攻", "血", "内力", "防"],
             "counts": dict(counts),
+            "upgradeStages": upgrade_stages,
+            "maxLevel": max_level,
+            "defaultTargetLevel": min(max(item["level"] for item in items), max_level),
         },
         "items": items,
     }

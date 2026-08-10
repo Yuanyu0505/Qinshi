@@ -16,6 +16,7 @@
   const ATLAS_DATA = window.ATLAS_DATA;
   const ATLAS = window.ATLAS;
   const ATLAS_LEVELS_KEY = "qinshi_atlas_levels_v1";
+  const ATLAS_TARGET_LEVEL_KEY = "qinshi_atlas_target_level_v1";
 
   const state = { search: "", category: "", main: "", filters: [], sortAttr: null, valueSource: "max" };
   const forgeState = { mode: "main", query: "" };
@@ -61,6 +62,8 @@
     atlasTabs: document.getElementById("atlas-tabs"),
     atlasSearch: document.getElementById("atlas-search"),
     atlasLevelFilter: document.getElementById("atlas-level-filter"),
+    atlasTargetLevel: document.getElementById("atlas-target-level"),
+    atlasUpgradeSummary: document.getElementById("atlas-upgrade-summary"),
     atlasResults: document.getElementById("atlas-results")
   };
 
@@ -75,6 +78,7 @@
     tab: "攻",
     query: "",
     levelFilter: "",
+    targetLevel: loadAtlasTargetLevel(),
     levels: loadAtlasLevels()
   };
 
@@ -148,8 +152,42 @@
     }
   }
 
+  function atlasMaxLevel() {
+    return Number(ATLAS_DATA && ATLAS_DATA.meta && ATLAS_DATA.meta.maxLevel) || 20;
+  }
+
+  function defaultAtlasTargetLevel() {
+    const raw = Number(ATLAS_DATA && ATLAS_DATA.meta && ATLAS_DATA.meta.defaultTargetLevel) || 19;
+    return Math.max(1, Math.min(raw, atlasMaxLevel()));
+  }
+
+  function normalizeAtlasTargetLevel(value) {
+    const n = Number(value);
+    if (!Number.isInteger(n) || n < 1 || n > atlasMaxLevel()) return defaultAtlasTargetLevel();
+    return n;
+  }
+
+  function loadAtlasTargetLevel() {
+    try {
+      return normalizeAtlasTargetLevel(localStorage.getItem(ATLAS_TARGET_LEVEL_KEY));
+    } catch (e) {
+      return defaultAtlasTargetLevel();
+    }
+  }
+
+  function saveAtlasTargetLevel() {
+    try {
+      localStorage.setItem(ATLAS_TARGET_LEVEL_KEY, String(atlasState.targetLevel));
+    } catch (e) {
+      // 忽略存储失败
+    }
+  }
+
   function initAtlas() {
     if (!ATLAS_DATA || !ATLAS) return;
+    el.atlasTargetLevel.min = "1";
+    el.atlasTargetLevel.max = String(atlasMaxLevel());
+    el.atlasTargetLevel.value = String(atlasState.targetLevel);
     el.atlasTabs.addEventListener("click", (e) => {
       const btn = e.target.closest("button[data-atlas]");
       if (!btn) return;
@@ -164,6 +202,12 @@
       atlasState.levelFilter = el.atlasLevelFilter.value;
       applyAtlas();
     });
+    el.atlasTargetLevel.addEventListener("change", () => {
+      atlasState.targetLevel = normalizeAtlasTargetLevel(el.atlasTargetLevel.value);
+      el.atlasTargetLevel.value = String(atlasState.targetLevel);
+      saveAtlasTargetLevel();
+      applyAtlas();
+    });
     el.atlasResults.addEventListener("change", (e) => {
       if (e.target.classList.contains("atlas-level")) {
         atlasState.levels[e.target.dataset.id] = parseInt(e.target.value, 10) || 0;
@@ -176,13 +220,25 @@
 
   function atlasItemHtml(item) {
     const L = ATLAS.levelOf(item, atlasState.levels);
-    const needed = ATLAS.neededStages(item, L);
-    const stagesHtml = L >= 10
-      ? '<div class="muted-tip">已完成（无需装备）</div>'
-      : needed.map((st) => `<div class="atlas-stage">
+    const plan = ATLAS.upgradePlan(item, L, atlasState.targetLevel, ATLAS_DATA.meta.upgradeStages);
+    const equipmentHtml = plan.equipmentStages.length
+      ? plan.equipmentStages.map((st) => `<div class="atlas-stage">
           <span class="atlas-stage-key">${st.key}</span>
           <span>${st.items.map((tk) => `<span class="mat ${tk.q === "紫" ? "mat-purple" : "mat-orange"}">${escapeHtml(tk.n)}</span>`).join("") || '<span class="mat-dash">无</span>'}</span>
-        </div>`).join("");
+        </div>`).join("")
+      : '<div class="muted-tip">该目标区间无需装备</div>';
+    const upgradeHtml = plan.reached
+      ? `<div class="atlas-upgrade done">已达到目标等级（${plan.currentLevel} / ${plan.targetLevel}级）</div>`
+      : `<div class="atlas-upgrade">
+          <div class="atlas-upgrade-title">升至 ${plan.targetLevel} 级</div>
+          <div class="atlas-upgrade-cost">
+            <span>明鬼绳结 <b>${plan.knots}</b></span>
+            <span>魂魄 <b>${plan.souls}</b></span>
+            <span>成长值 <b>+${plan.growth}</b></span>
+          </div>
+          <div class="muted-tip">14级后不再获得成长值</div>
+          <div class="atlas-upgrade-equipment"><span class="atlas-stage-key">所需装备</span>${equipmentHtml}</div>
+        </div>`;
     return `<div class="atlas-item">
       <div class="atlas-head">
         <span class="q-badge q-orange">${item.atlas}图鉴</span>
@@ -193,9 +249,28 @@
       </div>
       <div class="atlas-meta">
         <span>获取途径：${escapeHtml(item.acquire) || "—"}</span>
-        <span>所属图鉴：${escapeHtml(item.group) || "—"}</span>
+        <span>所属图鉴：${item.group ? `<span class="atlas-group">${escapeHtml(item.group)}</span>` : "—"}</span>
       </div>
-      ${stagesHtml}
+      ${upgradeHtml}
+    </div>`;
+  }
+
+  function atlasUpgradeSummaryHtml(summary) {
+    if (summary.pending === 0) {
+      return `<div class="atlas-upgrade-summary"><div class="drop-item-title">当前结果升至 ${summary.targetLevel} 级汇总</div><div class="muted-tip">当前结果已全部达到目标等级</div></div>`;
+    }
+    const equipment = summary.equipment.length
+      ? summary.equipment.map((item) => `<span class="mat ${item.q === "紫" ? "mat-purple" : "mat-orange"}">${escapeHtml(item.n)} ×${item.count}</span>`).join("")
+      : '<span class="muted-tip">无需装备</span>';
+    return `<div class="atlas-upgrade-summary">
+      <div class="drop-item-title">当前结果升至 ${summary.targetLevel} 级汇总<span class="drop-count">${summary.pending}/${summary.total} 名未达标</span></div>
+      <div class="atlas-upgrade-cost">
+        <span>明鬼绳结 <b>${summary.knots}</b></span>
+        <span>魂魄 <b>${summary.souls}</b></span>
+        <span>成长值 <b>+${summary.growth}</b></span>
+      </div>
+      <div class="atlas-summary-equipment"><span class="atlas-stage-key">所需装备</span>${equipment}</div>
+      <div class="muted-tip">14级后不再获得成长值</div>
     </div>`;
   }
 
@@ -210,6 +285,9 @@
       items = items.filter((i) => ATLAS.levelOf(i, atlasState.levels) < n);
     }
     items = ATLAS.searchAtlas(items, atlasState.query, atlasState.levels);
+    el.atlasUpgradeSummary.innerHTML = atlasUpgradeSummaryHtml(
+      ATLAS.summarizeUpgrade(items, atlasState.levels, atlasState.targetLevel, ATLAS_DATA.meta.upgradeStages)
+    );
     el.atlasResults.innerHTML = items.length
       ? items.map(atlasItemHtml).join("")
       : '<div class="empty"><p>未找到匹配的图鉴弟子</p></div>';

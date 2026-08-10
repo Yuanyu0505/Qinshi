@@ -4,21 +4,21 @@ window.FORGING_DATA = {
     "sourceFile": "秦时相关（更新贯侯钟离昧）20260618.xlsx",
     "sourceSheet": "橙装锻造",
     "version": "20260618",
-    "generatedAt": "2026-08-07",
+    "generatedAt": "2026-08-10",
     "total": 156,
     "summaryTotal": 4,
     "stageNames": [
-      "0-1锻",
-      "1-2锻",
-      "2-3锻",
-      "3-4锻",
-      "4-5锻",
-      "5-6锻",
-      "6-7锻",
-      "7-8锻",
-      "8-9锻",
-      "9-10锻",
-      "10锻-红金"
+      "0→1锻",
+      "1→2锻",
+      "2→3锻",
+      "3→4锻",
+      "4→5锻",
+      "5→6锻",
+      "6→7锻",
+      "7→8锻",
+      "8→9锻",
+      "9→10锻",
+      "10锻→红金"
     ]
   },
   "summary": [
@@ -99,7 +99,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "n": "非攻",
@@ -108,7 +108,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "n": "灭魂",
@@ -117,7 +117,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "n": "水寒",
@@ -126,7 +126,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "凌虚",
@@ -139,7 +139,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "三略",
@@ -148,7 +148,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "墨眉",
@@ -157,7 +157,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -165,7 +165,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "鲨齿",
@@ -174,7 +174,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "秋骊",
@@ -183,7 +183,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "千面",
@@ -192,7 +192,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "赤霄",
@@ -209,7 +209,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "n": "非攻",
@@ -218,7 +218,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "n": "灭魂",
@@ -227,7 +227,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "n": "水寒",
@@ -236,7 +236,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "凌虚",
@@ -249,7 +249,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "三略",
@@ -258,7 +258,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "墨眉",
@@ -267,7 +267,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -275,7 +275,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "墨眉",
@@ -284,7 +284,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "鲨齿",
@@ -293,7 +293,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "镇天刀",
@@ -302,7 +302,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "干将莫邪",
@@ -319,7 +319,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "n": "非攻",
@@ -328,7 +328,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "n": "双剑魍魉",
@@ -337,7 +337,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "n": "水寒",
@@ -346,7 +346,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "凌虚",
@@ -359,7 +359,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "刺客列传",
@@ -368,7 +368,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "残虹",
@@ -377,7 +377,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -385,7 +385,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "墨眉",
@@ -394,7 +394,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "残虹",
@@ -403,7 +403,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "干将莫邪",
@@ -412,7 +412,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "秋骊",
@@ -429,7 +429,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "n": "非攻",
@@ -438,7 +438,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "n": "灭魂",
@@ -447,7 +447,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "n": "水寒",
@@ -456,7 +456,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "凌虚",
@@ -469,7 +469,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "三略",
@@ -478,7 +478,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "墨眉",
@@ -487,7 +487,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -495,7 +495,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "墨眉",
@@ -504,7 +504,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "秋骊",
@@ -513,7 +513,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "千面",
@@ -522,7 +522,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "赤霄",
@@ -539,7 +539,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "n": "非攻",
@@ -548,7 +548,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "n": "灭魂",
@@ -557,7 +557,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "n": "水寒",
@@ -566,7 +566,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "凌虚",
@@ -579,7 +579,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "三略",
@@ -588,7 +588,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "墨眉",
@@ -597,7 +597,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -605,7 +605,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "墨眉",
@@ -614,7 +614,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "秋骊",
@@ -623,7 +623,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "赤霄",
@@ -632,7 +632,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "赤霄",
@@ -649,7 +649,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "n": "羽刃",
@@ -658,7 +658,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "n": "转魄",
@@ -667,7 +667,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "n": "断水",
@@ -676,7 +676,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "凌虚",
@@ -689,7 +689,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "六韬",
@@ -698,7 +698,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "巨阙",
@@ -707,7 +707,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -715,7 +715,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "鲨齿",
@@ -724,7 +724,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "秋骊",
@@ -733,7 +733,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "赤霄",
@@ -742,7 +742,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "天问",
@@ -759,7 +759,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "n": "羽刃",
@@ -768,7 +768,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "n": "转魄",
@@ -777,7 +777,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "n": "断水",
@@ -786,7 +786,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "凌虚",
@@ -799,7 +799,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "六韬",
@@ -808,7 +808,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "巨阙",
@@ -817,7 +817,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -825,7 +825,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "寒蝉",
@@ -834,7 +834,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "淬毒环刃",
@@ -843,7 +843,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "凤鸟自舞",
@@ -852,7 +852,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "潜蛟",
@@ -869,7 +869,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "n": "羽刃",
@@ -878,7 +878,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "n": "转魄",
@@ -887,7 +887,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "n": "断水",
@@ -896,7 +896,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "凌虚",
@@ -909,7 +909,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "六韬",
@@ -918,7 +918,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "巨阙",
@@ -927,7 +927,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -935,7 +935,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "墨眉",
@@ -944,7 +944,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "淬毒环刃",
@@ -953,7 +953,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "千面",
@@ -962,7 +962,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "无极刃",
@@ -979,7 +979,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "n": "非攻",
@@ -988,7 +988,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "n": "灭魂",
@@ -997,7 +997,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "n": "水寒",
@@ -1006,7 +1006,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "凌虚",
@@ -1019,7 +1019,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "三略",
@@ -1028,7 +1028,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "墨眉",
@@ -1037,7 +1037,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -1045,7 +1045,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "巨阙",
@@ -1054,7 +1054,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "鲨齿",
@@ -1063,7 +1063,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "惊鲵",
@@ -1072,7 +1072,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "掩日",
@@ -1089,7 +1089,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "n": "羽刃",
@@ -1098,7 +1098,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "n": "转魄",
@@ -1107,7 +1107,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "n": "断水",
@@ -1116,7 +1116,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "凌虚",
@@ -1129,7 +1129,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "六韬",
@@ -1138,7 +1138,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "巨阙",
@@ -1147,7 +1147,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -1155,7 +1155,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "墨眉",
@@ -1164,7 +1164,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "渊虹",
@@ -1173,7 +1173,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "怒涛",
@@ -1182,7 +1182,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "寒蝉",
@@ -1199,7 +1199,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "n": "号钟琴",
@@ -1208,7 +1208,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "n": "乱神",
@@ -1217,7 +1217,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "n": "水寒",
@@ -1226,7 +1226,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "凌虚",
@@ -1239,7 +1239,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "庄子",
@@ -1248,7 +1248,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "秋骊",
@@ -1257,7 +1257,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -1265,7 +1265,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "巨阙",
@@ -1274,7 +1274,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "秋骊",
@@ -1283,7 +1283,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "寒蝉",
@@ -1292,7 +1292,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "秋骊",
@@ -1309,7 +1309,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "n": "非攻",
@@ -1318,7 +1318,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "n": "双剑魍魉",
@@ -1327,7 +1327,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "n": "水寒",
@@ -1336,7 +1336,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "凌虚",
@@ -1349,7 +1349,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "刺客列传",
@@ -1358,7 +1358,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "残虹",
@@ -1367,7 +1367,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -1375,7 +1375,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "墨眉",
@@ -1384,7 +1384,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "渊虹",
@@ -1393,7 +1393,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "惊鲵",
@@ -1402,7 +1402,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "残虹",
@@ -1419,7 +1419,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "n": "破阵霸王枪",
@@ -1428,7 +1428,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "n": "真刚",
@@ -1437,7 +1437,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "n": "水寒",
@@ -1446,7 +1446,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "凌虚",
@@ -1459,7 +1459,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "乐经",
@@ -1468,7 +1468,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "渊虹",
@@ -1477,7 +1477,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -1485,7 +1485,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "墨眉",
@@ -1494,7 +1494,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "天问",
@@ -1503,7 +1503,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "君临霸王枪",
@@ -1512,7 +1512,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "渊虹",
@@ -1529,7 +1529,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "n": "羽刃",
@@ -1538,7 +1538,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "n": "转魄",
@@ -1547,7 +1547,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "n": "断水",
@@ -1556,7 +1556,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "凌虚",
@@ -1569,7 +1569,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "六韬",
@@ -1578,7 +1578,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "巨阙",
@@ -1587,7 +1587,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -1595,7 +1595,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "墨眉",
@@ -1604,7 +1604,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "蚩尤",
@@ -1613,7 +1613,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "掩日",
@@ -1622,7 +1622,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "巨阙",
@@ -1639,7 +1639,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "n": "羽刃",
@@ -1648,7 +1648,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "n": "转魄",
@@ -1657,7 +1657,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "n": "断水",
@@ -1666,7 +1666,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "凌虚",
@@ -1679,7 +1679,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "六韬",
@@ -1688,7 +1688,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "巨阙",
@@ -1697,7 +1697,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -1705,7 +1705,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "巨阙",
@@ -1714,7 +1714,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "秋骊",
@@ -1723,7 +1723,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "镇天刀",
@@ -1732,7 +1732,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "墨眉",
@@ -1749,7 +1749,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "n": "非攻",
@@ -1758,7 +1758,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "n": "灭魂",
@@ -1767,7 +1767,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "n": "水寒",
@@ -1776,7 +1776,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "凌虚",
@@ -1789,7 +1789,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "三略",
@@ -1798,7 +1798,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "墨眉",
@@ -1807,7 +1807,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -1815,7 +1815,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "巨阙",
@@ -1824,7 +1824,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "蚩尤",
@@ -1833,7 +1833,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "寒蝉",
@@ -1842,7 +1842,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "鲨齿",
@@ -1859,7 +1859,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "n": "非攻",
@@ -1868,7 +1868,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "n": "灭魂",
@@ -1877,7 +1877,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "n": "水寒",
@@ -1886,7 +1886,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "凌虚",
@@ -1899,7 +1899,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "三略",
@@ -1908,7 +1908,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "墨眉",
@@ -1917,7 +1917,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -1925,7 +1925,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "巨阙",
@@ -1934,7 +1934,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "天问",
@@ -1943,7 +1943,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "掩日",
@@ -1952,7 +1952,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "太阿",
@@ -1969,7 +1969,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "n": "雪霁",
@@ -1978,7 +1978,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "n": "断水",
@@ -1987,7 +1987,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "n": "水寒",
@@ -1996,7 +1996,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "凌虚",
@@ -2009,7 +2009,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "易经",
@@ -2018,7 +2018,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "天问",
@@ -2027,7 +2027,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -2035,7 +2035,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "墨眉",
@@ -2044,7 +2044,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "蚩尤",
@@ -2053,7 +2053,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "君临霸王枪",
@@ -2062,7 +2062,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "天问",
@@ -2079,7 +2079,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "n": "号钟琴",
@@ -2088,7 +2088,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "n": "乱神",
@@ -2097,7 +2097,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "n": "水寒",
@@ -2106,7 +2106,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "凌虚",
@@ -2119,7 +2119,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "五德终始",
@@ -2128,7 +2128,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "蚩尤",
@@ -2137,7 +2137,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -2145,7 +2145,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "巨阙",
@@ -2154,7 +2154,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "鲨齿",
@@ -2163,7 +2163,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "虎魄",
@@ -2172,7 +2172,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "蚩尤",
@@ -2189,7 +2189,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "n": "号钟琴",
@@ -2198,7 +2198,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "n": "乱神",
@@ -2207,7 +2207,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "n": "水寒",
@@ -2216,7 +2216,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "凌虚",
@@ -2229,7 +2229,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "庄子",
@@ -2238,7 +2238,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "秋骊",
@@ -2247,7 +2247,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -2255,7 +2255,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "墨眉",
@@ -2264,7 +2264,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "天问",
@@ -2273,7 +2273,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "元戎",
@@ -2282,7 +2282,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "秋骊",
@@ -2299,7 +2299,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "n": "雪霁",
@@ -2308,7 +2308,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "n": "断水",
@@ -2317,7 +2317,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "n": "水寒",
@@ -2326,7 +2326,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "凌虚",
@@ -2339,7 +2339,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "刺客列传",
@@ -2348,7 +2348,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "赤霄",
@@ -2357,7 +2357,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -2365,7 +2365,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "墨眉",
@@ -2374,7 +2374,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "渊虹",
@@ -2383,7 +2383,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "天命轮",
@@ -2392,7 +2392,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "赤霄",
@@ -2409,7 +2409,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "n": "破阵霸王枪",
@@ -2418,7 +2418,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "n": "非攻",
@@ -2427,7 +2427,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "n": "水寒",
@@ -2436,7 +2436,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "凌虚",
@@ -2449,7 +2449,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "上农",
@@ -2458,7 +2458,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "天问",
@@ -2467,7 +2467,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -2475,7 +2475,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "巨阙",
@@ -2484,7 +2484,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "鲨齿",
@@ -2493,7 +2493,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "元戎",
@@ -2502,7 +2502,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "君临霸王枪",
@@ -2519,7 +2519,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "n": "双剑魍魉",
@@ -2528,7 +2528,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "n": "羽刃",
@@ -2537,7 +2537,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "n": "水寒",
@@ -2546,7 +2546,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "凌虚",
@@ -2559,7 +2559,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "胡非子",
@@ -2568,7 +2568,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "天问",
@@ -2577,7 +2577,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -2585,7 +2585,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "巨阙",
@@ -2594,7 +2594,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "残虹",
@@ -2603,7 +2603,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "镇天刀",
@@ -2612,7 +2612,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "天罡斧",
@@ -2629,7 +2629,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "n": "乱神",
@@ -2638,7 +2638,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "n": "破阵霸王枪",
@@ -2647,7 +2647,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "n": "雪霁",
@@ -2656,7 +2656,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "凌虚",
@@ -2669,7 +2669,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "五德终始",
@@ -2678,7 +2678,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "元戎",
@@ -2687,7 +2687,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -2695,7 +2695,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "墨眉",
@@ -2704,7 +2704,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "渊虹",
@@ -2713,7 +2713,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "虎魄",
@@ -2722,7 +2722,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "元戎",
@@ -2739,7 +2739,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "n": "双剑魍魉",
@@ -2748,7 +2748,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "n": "羽刃",
@@ -2757,7 +2757,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "n": "水寒",
@@ -2766,7 +2766,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "凌虚",
@@ -2779,7 +2779,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "上农",
@@ -2788,7 +2788,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "镇天刀",
@@ -2797,7 +2797,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -2805,7 +2805,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "巨阙",
@@ -2814,7 +2814,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "残虹",
@@ -2823,7 +2823,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "天命轮",
@@ -2832,7 +2832,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "镇天刀",
@@ -2849,7 +2849,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "n": "真刚",
@@ -2858,7 +2858,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "n": "破阵霸王枪",
@@ -2867,7 +2867,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "n": "断水",
@@ -2876,7 +2876,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "凌虚",
@@ -2889,7 +2889,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "上农",
@@ -2898,7 +2898,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "虎魄",
@@ -2907,7 +2907,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -2915,7 +2915,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "巨阙",
@@ -2924,7 +2924,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "太阿",
@@ -2933,7 +2933,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "干将莫邪",
@@ -2942,7 +2942,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "虎魄",
@@ -2959,7 +2959,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "n": "破阵霸王枪",
@@ -2968,7 +2968,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "n": "雪霁",
@@ -2977,7 +2977,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "n": "凌虚",
@@ -2990,7 +2990,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "胡非子",
@@ -2999,7 +2999,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "女神之泪",
@@ -3008,7 +3008,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "圣诞长枪",
@@ -3017,7 +3017,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -3025,7 +3025,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "墨眉",
@@ -3034,7 +3034,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "蚩尤",
@@ -3043,7 +3043,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "赤霄",
@@ -3052,7 +3052,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "君临霸王枪",
@@ -3069,7 +3069,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "n": "双剑魍魉",
@@ -3078,7 +3078,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "n": "羽刃",
@@ -3087,7 +3087,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "n": "水寒",
@@ -3096,7 +3096,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "凌虚",
@@ -3109,7 +3109,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "易经",
@@ -3118,7 +3118,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "干将莫邪",
@@ -3127,7 +3127,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -3135,7 +3135,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "巨阙",
@@ -3144,7 +3144,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "太阿",
@@ -3153,7 +3153,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "天罡斧",
@@ -3162,7 +3162,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "干将莫邪",
@@ -3179,7 +3179,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "n": "破阵霸王枪",
@@ -3188,7 +3188,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "n": "非攻",
@@ -3197,7 +3197,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "n": "水寒",
@@ -3206,7 +3206,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "凌虚",
@@ -3219,7 +3219,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "上农",
@@ -3228,7 +3228,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "千面",
@@ -3237,7 +3237,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -3245,7 +3245,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "巨阙",
@@ -3254,7 +3254,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "太阿",
@@ -3263,7 +3263,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "饮血刃",
@@ -3272,7 +3272,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "千面",
@@ -3289,7 +3289,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "n": "双剑魍魉",
@@ -3298,7 +3298,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "n": "非攻",
@@ -3307,7 +3307,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "n": "水寒",
@@ -3316,7 +3316,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "凌虚",
@@ -3329,7 +3329,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "刺客列传",
@@ -3338,7 +3338,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "天命轮",
@@ -3347,7 +3347,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -3355,7 +3355,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "巨阙",
@@ -3364,7 +3364,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "天问",
@@ -3373,7 +3373,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "天罡斧",
@@ -3382,7 +3382,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "天命轮",
@@ -3399,7 +3399,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "n": "乱神",
@@ -3408,7 +3408,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "n": "非攻",
@@ -3417,7 +3417,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "n": "水寒",
@@ -3426,7 +3426,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "凌虚",
@@ -3439,7 +3439,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "阴符经",
@@ -3448,7 +3448,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "饮血刃",
@@ -3457,7 +3457,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -3465,7 +3465,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "墨眉",
@@ -3474,7 +3474,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "蚩尤",
@@ -3483,7 +3483,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "赤霄",
@@ -3492,7 +3492,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "饮血刃",
@@ -3509,7 +3509,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "n": "断水",
@@ -3518,7 +3518,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "n": "乱神",
@@ -3527,7 +3527,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "n": "雪霁",
@@ -3536,7 +3536,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "凌虚",
@@ -3549,7 +3549,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "上农",
@@ -3558,7 +3558,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "寒蝉",
@@ -3567,7 +3567,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -3575,7 +3575,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "墨眉",
@@ -3584,7 +3584,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "残虹",
@@ -3593,7 +3593,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "饮血刃",
@@ -3602,7 +3602,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "寒蝉",
@@ -3619,7 +3619,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "n": "断水",
@@ -3628,7 +3628,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "n": "非攻",
@@ -3637,7 +3637,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "n": "雪霁",
@@ -3646,7 +3646,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "凌虚",
@@ -3659,7 +3659,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "刺客列传",
@@ -3668,7 +3668,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "惊鲵",
@@ -3677,7 +3677,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -3685,7 +3685,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "墨眉",
@@ -3694,7 +3694,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "渊虹",
@@ -3703,7 +3703,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "寒蝉",
@@ -3712,7 +3712,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "惊鲵",
@@ -3729,7 +3729,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "n": "真刚",
@@ -3738,7 +3738,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "n": "破阵霸王枪",
@@ -3747,7 +3747,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "n": "雪霁",
@@ -3756,7 +3756,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "凌虚",
@@ -3769,7 +3769,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "五德终始",
@@ -3778,7 +3778,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "掩日",
@@ -3787,7 +3787,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -3795,7 +3795,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "巨阙",
@@ -3804,7 +3804,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "鲨齿",
@@ -3813,7 +3813,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "天罡斧",
@@ -3822,7 +3822,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "掩日",
@@ -3839,7 +3839,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "n": "乱神",
@@ -3848,7 +3848,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "n": "非攻",
@@ -3857,7 +3857,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "n": "雪霁",
@@ -3866,7 +3866,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "凌虚",
@@ -3879,7 +3879,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "刺客列传",
@@ -3888,7 +3888,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "无极刃",
@@ -3897,7 +3897,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -3905,7 +3905,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "墨眉",
@@ -3914,7 +3914,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "蚩尤",
@@ -3923,7 +3923,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "元戎",
@@ -3932,7 +3932,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "无极刃",
@@ -3949,7 +3949,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "n": "双剑魍魉",
@@ -3958,7 +3958,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "n": "非攻",
@@ -3967,7 +3967,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "n": "号钟琴",
@@ -3976,7 +3976,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "凌虚",
@@ -3989,7 +3989,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "阴符经",
@@ -3998,7 +3998,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "百战穿甲弩",
@@ -4007,7 +4007,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -4015,7 +4015,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "巨阙",
@@ -4024,7 +4024,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "寒蝉",
@@ -4033,7 +4033,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "天问",
@@ -4042,7 +4042,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "百战穿甲弩",
@@ -4059,7 +4059,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "n": "真刚",
@@ -4068,7 +4068,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "n": "破阵霸王枪",
@@ -4077,7 +4077,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "n": "断水",
@@ -4086,7 +4086,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "凌虚",
@@ -4099,7 +4099,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "上农",
@@ -4108,7 +4108,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "镇岳",
@@ -4117,7 +4117,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -4125,7 +4125,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "巨阙",
@@ -4134,7 +4134,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "镇天刀",
@@ -4143,7 +4143,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "掩日",
@@ -4152,7 +4152,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "镇岳",
@@ -4169,7 +4169,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "n": "双剑魍魉",
@@ -4178,7 +4178,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "n": "雪霁",
@@ -4187,7 +4187,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "n": "乱神",
@@ -4196,7 +4196,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "凌虚",
@@ -4209,7 +4209,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "刺客列传",
@@ -4218,7 +4218,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "淬毒环刃",
@@ -4227,7 +4227,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -4235,7 +4235,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "墨眉",
@@ -4244,7 +4244,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "元戎",
@@ -4253,7 +4253,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "惊鲵",
@@ -4262,7 +4262,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "淬毒环刃",
@@ -4279,7 +4279,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "n": "羽刃",
@@ -4288,7 +4288,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "n": "转魄",
@@ -4297,7 +4297,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "n": "灭魂",
@@ -4306,7 +4306,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "凌虚",
@@ -4319,7 +4319,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "刺客列传",
@@ -4328,7 +4328,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "火灵簪",
@@ -4337,7 +4337,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -4345,7 +4345,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "墨眉",
@@ -4354,7 +4354,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "赤霄",
@@ -4363,7 +4363,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "饮血刃",
@@ -4372,7 +4372,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "火灵簪",
@@ -4389,7 +4389,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "n": "双剑魍魉",
@@ -4398,7 +4398,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "n": "真刚",
@@ -4407,7 +4407,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "n": "断水",
@@ -4416,7 +4416,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "凌虚",
@@ -4429,7 +4429,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "刺客列传",
@@ -4438,7 +4438,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "霜血双剑",
@@ -4447,7 +4447,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -4455,7 +4455,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "巨阙",
@@ -4464,7 +4464,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "寒蝉",
@@ -4473,7 +4473,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "干将莫邪",
@@ -4482,7 +4482,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "霜血双剑",
@@ -4499,7 +4499,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "n": "水寒",
@@ -4508,7 +4508,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "n": "乱神",
@@ -4517,7 +4517,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "n": "号钟琴",
@@ -4526,7 +4526,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "凌虚",
@@ -4539,7 +4539,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "道德经",
@@ -4548,7 +4548,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "南瓜灯笼",
@@ -4557,7 +4557,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -4565,7 +4565,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "dash": true
@@ -4573,7 +4573,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "dash": true
@@ -4581,7 +4581,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "dash": true
@@ -4589,7 +4589,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "dash": true
@@ -4605,7 +4605,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "n": "非攻",
@@ -4614,7 +4614,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "n": "雪霁",
@@ -4623,7 +4623,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "n": "水寒",
@@ -4632,7 +4632,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "凌虚",
@@ -4645,7 +4645,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "刺客列传",
@@ -4654,7 +4654,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "含光",
@@ -4663,7 +4663,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -4671,7 +4671,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "残虹",
@@ -4680,7 +4680,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "元戎",
@@ -4689,7 +4689,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "天命轮",
@@ -4698,7 +4698,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "含光",
@@ -4715,7 +4715,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "n": "灭魂",
@@ -4724,7 +4724,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "n": "转魄",
@@ -4733,7 +4733,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "n": "雪霁",
@@ -4742,7 +4742,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "凌虚",
@@ -4755,7 +4755,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "五德终始",
@@ -4764,7 +4764,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "怒涛",
@@ -4773,7 +4773,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -4781,7 +4781,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "蚩尤",
@@ -4790,7 +4790,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "百战穿甲弩",
@@ -4799,7 +4799,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "无极刃",
@@ -4808,7 +4808,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "怒涛",
@@ -4825,7 +4825,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "n": "非攻",
@@ -4834,7 +4834,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "n": "号钟琴",
@@ -4843,7 +4843,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "n": "水寒",
@@ -4852,7 +4852,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "凌虚",
@@ -4865,7 +4865,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "阴符经",
@@ -4874,7 +4874,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "天照",
@@ -4883,7 +4883,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -4891,7 +4891,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "天命轮",
@@ -4900,7 +4900,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "镇岳",
@@ -4909,7 +4909,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "怒涛",
@@ -4918,7 +4918,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "天照",
@@ -4935,7 +4935,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "n": "雪霁",
@@ -4944,7 +4944,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "n": "真刚",
@@ -4953,7 +4953,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "n": "断水",
@@ -4962,7 +4962,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "凌虚",
@@ -4975,7 +4975,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "刺客列传",
@@ -4984,7 +4984,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "朔日辉光",
@@ -4993,7 +4993,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -5001,7 +5001,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "元戎",
@@ -5010,7 +5010,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "含光",
@@ -5019,7 +5019,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "怒涛",
@@ -5028,7 +5028,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "朔日辉光",
@@ -5045,7 +5045,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "n": "非攻",
@@ -5054,7 +5054,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "n": "号钟琴",
@@ -5063,7 +5063,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "n": "乱神",
@@ -5072,7 +5072,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "凌虚",
@@ -5085,7 +5085,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "刺客列传",
@@ -5094,7 +5094,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "逆鳞",
@@ -5103,7 +5103,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -5111,7 +5111,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "天罡斧",
@@ -5120,7 +5120,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "百战穿甲弩",
@@ -5129,7 +5129,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "含光",
@@ -5138,7 +5138,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "逆鳞",
@@ -5155,7 +5155,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "n": "真刚",
@@ -5164,7 +5164,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "n": "双剑魍魉",
@@ -5173,7 +5173,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "n": "雪霁",
@@ -5182,7 +5182,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "凌虚",
@@ -5195,7 +5195,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "刺客列传",
@@ -5204,7 +5204,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "黑白玄翦",
@@ -5213,7 +5213,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -5221,7 +5221,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "惊鲵",
@@ -5230,7 +5230,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "掩日",
@@ -5239,7 +5239,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "鲨齿",
@@ -5248,7 +5248,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "渊虹",
@@ -5265,7 +5265,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "n": "水寒",
@@ -5274,7 +5274,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "n": "乱神",
@@ -5283,7 +5283,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "n": "号钟琴",
@@ -5292,7 +5292,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "凌虚",
@@ -5305,7 +5305,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "道德经",
@@ -5314,7 +5314,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "清风宝扇",
@@ -5323,7 +5323,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -5331,7 +5331,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "元戎",
@@ -5340,7 +5340,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "含光",
@@ -5349,7 +5349,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "怒涛",
@@ -5358,7 +5358,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "清风宝扇",
@@ -5375,7 +5375,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "n": "非攻",
@@ -5384,7 +5384,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "n": "号钟琴",
@@ -5393,7 +5393,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "n": "水寒",
@@ -5402,7 +5402,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "凌虚",
@@ -5415,7 +5415,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "刺客列传",
@@ -5424,7 +5424,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "凤鸟自舞",
@@ -5433,7 +5433,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -5441,7 +5441,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "渊虹",
@@ -5450,7 +5450,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "赤霄",
@@ -5459,7 +5459,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "天问",
@@ -5468,7 +5468,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "凤鸟自舞",
@@ -5485,7 +5485,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "n": "非攻",
@@ -5494,7 +5494,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "n": "灭魂",
@@ -5503,7 +5503,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "n": "水寒",
@@ -5512,7 +5512,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "凌虚",
@@ -5525,7 +5525,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "三略",
@@ -5534,7 +5534,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "衍天星际",
@@ -5543,7 +5543,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -5551,7 +5551,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "鲨齿",
@@ -5560,7 +5560,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "秋骊",
@@ -5569,7 +5569,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "千面",
@@ -5578,7 +5578,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "衍天星际",
@@ -5595,7 +5595,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "n": "号钟琴",
@@ -5604,7 +5604,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "n": "双剑魍魉",
@@ -5613,7 +5613,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "n": "水寒",
@@ -5622,7 +5622,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "凌虚",
@@ -5635,7 +5635,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "刺客列传",
@@ -5644,7 +5644,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "潜蛟",
@@ -5653,7 +5653,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -5661,7 +5661,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "惊倪",
@@ -5670,7 +5670,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "巨阙",
@@ -5679,7 +5679,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "寒蝉",
@@ -5688,7 +5688,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "潜蛟",
@@ -5705,7 +5705,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "n": "非攻",
@@ -5714,7 +5714,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "n": "雪霁",
@@ -5723,7 +5723,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "n": "断水",
@@ -5732,7 +5732,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "凌虚",
@@ -5745,7 +5745,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "刺客列传",
@@ -5754,7 +5754,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "煞魂蛇噬",
@@ -5763,7 +5763,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -5771,7 +5771,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "天照",
@@ -5780,7 +5780,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "千面",
@@ -5789,7 +5789,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "天问",
@@ -5798,7 +5798,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "煞魂蛇噬",
@@ -5815,7 +5815,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "n": "断水",
@@ -5824,7 +5824,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "n": "双剑魍魉",
@@ -5833,7 +5833,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "n": "雪霁",
@@ -5842,7 +5842,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "凌虚",
@@ -5855,7 +5855,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "五德终始",
@@ -5864,7 +5864,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "撼地镰",
@@ -5873,7 +5873,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -5881,7 +5881,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "淬毒环刃",
@@ -5890,7 +5890,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "镇天刀",
@@ -5899,7 +5899,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "怒涛",
@@ -5908,7 +5908,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "撼地镰",
@@ -5925,7 +5925,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "n": "破阵霸王枪",
@@ -5934,7 +5934,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "n": "羽刃",
@@ -5943,7 +5943,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "n": "号钟琴",
@@ -5952,7 +5952,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "凌虚",
@@ -5965,7 +5965,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "刺客列传",
@@ -5974,7 +5974,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "血矛",
@@ -5983,7 +5983,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -5991,7 +5991,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "天罡斧",
@@ -6000,7 +6000,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "天命轮",
@@ -6009,7 +6009,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "天照",
@@ -6018,7 +6018,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "血矛",
@@ -6035,7 +6035,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "n": "乱神",
@@ -6044,7 +6044,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "n": "水寒",
@@ -6053,7 +6053,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "n": "非攻",
@@ -6062,7 +6062,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "凌虚",
@@ -6075,7 +6075,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "五德终始",
@@ -6084,7 +6084,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "永恒之夜",
@@ -6093,7 +6093,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -6101,7 +6101,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "镇岳",
@@ -6110,7 +6110,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "含光",
@@ -6119,7 +6119,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "潜蛟",
@@ -6128,7 +6128,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "永恒之夜",
@@ -6145,7 +6145,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "n": "羽刃",
@@ -6154,7 +6154,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "n": "双剑魍魉",
@@ -6163,7 +6163,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "n": "断水",
@@ -6172,7 +6172,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "凌虚",
@@ -6185,7 +6185,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "刺客列传",
@@ -6194,7 +6194,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "龙骧",
@@ -6203,7 +6203,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -6211,7 +6211,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "千面",
@@ -6220,7 +6220,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "百战穿甲弩",
@@ -6229,7 +6229,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "含光",
@@ -6238,7 +6238,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "龙骧",
@@ -6255,7 +6255,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "n": "非攻",
@@ -6264,7 +6264,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "n": "乱神",
@@ -6273,7 +6273,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "n": "水寒",
@@ -6282,7 +6282,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "凌虚",
@@ -6295,7 +6295,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "五德终始",
@@ -6304,7 +6304,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "非攻九变",
@@ -6313,7 +6313,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -6321,7 +6321,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "太阿",
@@ -6330,7 +6330,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "天照",
@@ -6339,7 +6339,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "撼地镰",
@@ -6348,7 +6348,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "非攻九变",
@@ -6365,7 +6365,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "n": "破阵霸王枪",
@@ -6374,7 +6374,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "n": "断水",
@@ -6383,7 +6383,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "n": "灭魂",
@@ -6392,7 +6392,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "凌虚",
@@ -6405,7 +6405,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "洛书",
@@ -6414,7 +6414,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "重铸渊虹",
@@ -6423,7 +6423,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -6431,7 +6431,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "寒蝉",
@@ -6440,7 +6440,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "干将莫邪",
@@ -6449,7 +6449,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "含光",
@@ -6458,7 +6458,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "重铸渊虹",
@@ -6475,7 +6475,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "n": "破阵霸王枪",
@@ -6484,7 +6484,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "n": "真刚",
@@ -6493,7 +6493,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "n": "转魄",
@@ -6502,7 +6502,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "凌虚",
@@ -6515,7 +6515,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "刺客列传",
@@ -6524,7 +6524,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "腾龙枪",
@@ -6533,7 +6533,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -6541,7 +6541,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "百战穿甲弩",
@@ -6550,7 +6550,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "饮血刃",
@@ -6559,7 +6559,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "撼地镰",
@@ -6568,7 +6568,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "腾龙枪",
@@ -6585,7 +6585,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "n": "非攻",
@@ -6594,7 +6594,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "n": "水寒",
@@ -6603,7 +6603,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "n": "转魄",
@@ -6612,7 +6612,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "凌虚",
@@ -6625,7 +6625,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "刺客列传",
@@ -6634,7 +6634,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "破阵弓",
@@ -6643,7 +6643,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -6651,7 +6651,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "dash": true
@@ -6659,7 +6659,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "dash": true
@@ -6667,7 +6667,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "dash": true
@@ -6675,7 +6675,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "破阵弓",
@@ -6692,7 +6692,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "n": "星云法衣",
@@ -6701,7 +6701,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "n": "天河霓裳",
@@ -6710,7 +6710,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "n": "升雪凌霄衣",
@@ -6719,7 +6719,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "真龙黑袍",
@@ -6732,7 +6732,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "神行符",
@@ -6741,7 +6741,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "苍云甲",
@@ -6750,7 +6750,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -6758,7 +6758,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "苍云甲",
@@ -6767,7 +6767,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "万象法袍",
@@ -6776,7 +6776,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "醉梦罗裳",
@@ -6785,7 +6785,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "纵横战袍",
@@ -6802,7 +6802,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "n": "星云法衣",
@@ -6811,7 +6811,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "n": "天河霓裳",
@@ -6820,7 +6820,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "n": "升雪凌霄衣",
@@ -6829,7 +6829,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "真龙黑袍",
@@ -6842,7 +6842,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "神行符",
@@ -6851,7 +6851,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "苍云甲",
@@ -6860,7 +6860,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -6868,7 +6868,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "白羽绸衣",
@@ -6877,7 +6877,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "万象法袍",
@@ -6886,7 +6886,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "醉梦罗裳",
@@ -6895,7 +6895,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "独黑斗篷",
@@ -6912,7 +6912,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "n": "星云法衣",
@@ -6921,7 +6921,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "n": "天河霓裳",
@@ -6930,7 +6930,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "n": "升雪凌霄衣",
@@ -6939,7 +6939,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "真龙黑袍",
@@ -6952,7 +6952,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "神行符",
@@ -6961,7 +6961,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "苍云甲",
@@ -6970,7 +6970,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -6978,7 +6978,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "苍云甲",
@@ -6987,7 +6987,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "纵横战袍",
@@ -6996,7 +6996,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "管事服",
@@ -7005,7 +7005,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "七海蛟龙甲",
@@ -7022,7 +7022,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "n": "星云法衣",
@@ -7031,7 +7031,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "n": "天河霓裳",
@@ -7040,7 +7040,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "n": "升雪凌霄衣",
@@ -7049,7 +7049,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "真龙黑袍",
@@ -7062,7 +7062,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "霸天令",
@@ -7071,7 +7071,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "纵横战袍",
@@ -7080,7 +7080,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -7088,7 +7088,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "苍云甲",
@@ -7097,7 +7097,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "独黑斗篷",
@@ -7106,7 +7106,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "管事服",
@@ -7115,7 +7115,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "纵横战袍",
@@ -7132,7 +7132,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "n": "星云法衣",
@@ -7141,7 +7141,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "n": "天河霓裳",
@@ -7150,7 +7150,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "n": "升雪凌霄衣",
@@ -7159,7 +7159,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "真龙黑袍",
@@ -7172,7 +7172,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "神行符",
@@ -7181,7 +7181,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "苍云甲",
@@ -7190,7 +7190,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -7198,7 +7198,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "白羽绸衣",
@@ -7207,7 +7207,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "月华战袍",
@@ -7216,7 +7216,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "管事服",
@@ -7225,7 +7225,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "苍云甲",
@@ -7242,7 +7242,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "n": "星云法衣",
@@ -7251,7 +7251,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "n": "天河霓裳",
@@ -7260,7 +7260,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "n": "升雪凌霄衣",
@@ -7269,7 +7269,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "真龙黑袍",
@@ -7282,7 +7282,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "驱虎令",
@@ -7291,7 +7291,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "白羽绸衣",
@@ -7300,7 +7300,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -7308,7 +7308,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "苍云甲",
@@ -7317,7 +7317,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "月华战袍",
@@ -7326,7 +7326,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "管事服",
@@ -7335,7 +7335,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "独黑斗篷",
@@ -7352,7 +7352,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "n": "星云法衣",
@@ -7361,7 +7361,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "n": "天河霓裳",
@@ -7370,7 +7370,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "n": "升雪凌霄衣",
@@ -7379,7 +7379,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "真龙黑袍",
@@ -7392,7 +7392,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "凤鸣",
@@ -7401,7 +7401,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "万象法袍",
@@ -7410,7 +7410,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -7418,7 +7418,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "白羽绸衣",
@@ -7427,7 +7427,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "七海蛟龙甲",
@@ -7436,7 +7436,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "醉梦罗裳",
@@ -7445,7 +7445,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "万象法袍",
@@ -7462,7 +7462,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "n": "星云法衣",
@@ -7471,7 +7471,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "n": "天河霓裳",
@@ -7480,7 +7480,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "n": "升雪凌霄衣",
@@ -7489,7 +7489,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "真龙黑袍",
@@ -7502,7 +7502,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "驱虎令",
@@ -7511,7 +7511,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "白羽绸衣",
@@ -7520,7 +7520,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -7528,7 +7528,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "苍云甲",
@@ -7537,7 +7537,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "纵横战袍",
@@ -7546,7 +7546,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "管事服",
@@ -7555,7 +7555,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "白羽绸衣",
@@ -7572,7 +7572,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "n": "星云法衣",
@@ -7581,7 +7581,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "n": "天河霓裳",
@@ -7590,7 +7590,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "n": "升雪凌霄衣",
@@ -7599,7 +7599,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "真龙黑袍",
@@ -7612,7 +7612,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "驱虎令",
@@ -7621,7 +7621,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "白羽绸衣",
@@ -7630,7 +7630,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -7638,7 +7638,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "白羽绸衣",
@@ -7647,7 +7647,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "独黑斗篷",
@@ -7656,7 +7656,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "醉梦罗裳",
@@ -7665,7 +7665,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "管事服",
@@ -7682,7 +7682,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "n": "星云法衣",
@@ -7691,7 +7691,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "n": "天河霓裳",
@@ -7700,7 +7700,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "n": "升雪凌霄衣",
@@ -7709,7 +7709,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "真龙黑袍",
@@ -7722,7 +7722,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "冰魄戒",
@@ -7731,7 +7731,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "月华战袍",
@@ -7740,7 +7740,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -7748,7 +7748,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "苍云甲",
@@ -7757,7 +7757,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "七海蛟龙甲",
@@ -7766,7 +7766,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "醉梦罗裳",
@@ -7775,7 +7775,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "月华战袍",
@@ -7792,7 +7792,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "n": "星云法衣",
@@ -7801,7 +7801,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "n": "天河霓裳",
@@ -7810,7 +7810,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "n": "升雪凌霄衣",
@@ -7819,7 +7819,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "真龙黑袍",
@@ -7832,7 +7832,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "凤鸣",
@@ -7841,7 +7841,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "醉梦罗裳",
@@ -7850,7 +7850,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -7858,7 +7858,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "白羽绸衣",
@@ -7867,7 +7867,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "万象法袍",
@@ -7876,7 +7876,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "管事服",
@@ -7885,7 +7885,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "醉梦罗裳",
@@ -7902,7 +7902,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "n": "星云法衣",
@@ -7911,7 +7911,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "n": "天河霓裳",
@@ -7920,7 +7920,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "n": "升雪凌霄衣",
@@ -7929,7 +7929,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "霸天令",
@@ -7942,7 +7942,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "共工戒",
@@ -7951,7 +7951,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "血族斗篷",
@@ -7960,7 +7960,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -7968,7 +7968,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "苍云甲",
@@ -7977,7 +7977,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "纵横战袍",
@@ -7986,7 +7986,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "管事服",
@@ -7995,7 +7995,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "万象法袍",
@@ -8012,7 +8012,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "n": "星云法衣",
@@ -8021,7 +8021,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "n": "天河霓裳",
@@ -8030,7 +8030,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "n": "升雪凌霄衣",
@@ -8039,7 +8039,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "霸天令",
@@ -8052,7 +8052,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "传国玉玺",
@@ -8061,7 +8061,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "七海蛟龙甲",
@@ -8070,7 +8070,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -8078,7 +8078,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "苍云甲",
@@ -8087,7 +8087,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "独黑斗篷",
@@ -8096,7 +8096,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "月华战袍",
@@ -8105,7 +8105,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "七海蛟龙甲",
@@ -8122,7 +8122,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "n": "星云法衣",
@@ -8131,7 +8131,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "n": "天河霓裳",
@@ -8140,7 +8140,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "n": "升雪凌霄衣",
@@ -8149,7 +8149,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "真龙黑袍",
@@ -8162,7 +8162,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "龙啸",
@@ -8171,7 +8171,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "管事服",
@@ -8180,7 +8180,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -8188,7 +8188,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "白羽绸衣",
@@ -8197,7 +8197,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "独黑斗篷",
@@ -8206,7 +8206,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "醉梦罗裳",
@@ -8215,7 +8215,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "管事服",
@@ -8232,7 +8232,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "n": "星云法衣",
@@ -8241,7 +8241,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "n": "天河霓裳",
@@ -8250,7 +8250,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "n": "升雪凌霄衣",
@@ -8259,7 +8259,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "霸天令",
@@ -8272,7 +8272,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "传国玉玺",
@@ -8281,7 +8281,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "七海蛟龙甲",
@@ -8290,7 +8290,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -8298,7 +8298,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "苍云甲",
@@ -8307,7 +8307,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "独黑斗篷",
@@ -8316,7 +8316,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "月华战袍",
@@ -8325,7 +8325,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "七海蛟龙甲",
@@ -8342,7 +8342,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "n": "星云法衣",
@@ -8351,7 +8351,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "n": "天河霓裳",
@@ -8360,7 +8360,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "n": "升雪凌霄衣",
@@ -8369,7 +8369,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "真龙黑袍",
@@ -8382,7 +8382,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "凤鸣",
@@ -8391,7 +8391,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "月狼锦纱",
@@ -8400,7 +8400,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -8408,7 +8408,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "纵横战袍",
@@ -8417,7 +8417,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "万象法袍",
@@ -8426,7 +8426,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "醉梦罗裳",
@@ -8435,7 +8435,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "月狼锦纱",
@@ -8452,7 +8452,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "n": "星云法衣",
@@ -8461,7 +8461,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "n": "天河霓裳",
@@ -8470,7 +8470,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "n": "升雪凌霄衣",
@@ -8479,7 +8479,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "真龙黑袍",
@@ -8492,7 +8492,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "凤鸣",
@@ -8501,7 +8501,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "流焰袍",
@@ -8510,7 +8510,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -8518,7 +8518,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "白羽绸衣",
@@ -8527,7 +8527,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "月狼锦纱",
@@ -8536,7 +8536,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "醉梦罗裳",
@@ -8545,7 +8545,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "流焰袍",
@@ -8562,7 +8562,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "n": "星云法衣",
@@ -8571,7 +8571,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "n": "天河霓裳",
@@ -8580,7 +8580,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "n": "升雪凌霄衣",
@@ -8589,7 +8589,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "真龙黑袍",
@@ -8602,7 +8602,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "龙啸",
@@ -8611,7 +8611,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "凝血衣",
@@ -8620,7 +8620,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -8628,7 +8628,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "苍云甲",
@@ -8637,7 +8637,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "纵横战袍",
@@ -8646,7 +8646,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "月华战袍",
@@ -8655,7 +8655,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "凝血衣",
@@ -8672,7 +8672,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "n": "星云法衣",
@@ -8681,7 +8681,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "n": "天河霓裳",
@@ -8690,7 +8690,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "n": "升雪凌霄衣",
@@ -8699,7 +8699,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "霸天令",
@@ -8712,7 +8712,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "冰魄戒",
@@ -8721,7 +8721,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "圣诞斗篷",
@@ -8730,7 +8730,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -8738,7 +8738,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "dash": true
@@ -8746,7 +8746,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "dash": true
@@ -8754,7 +8754,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "dash": true
@@ -8762,7 +8762,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "dash": true
@@ -8778,7 +8778,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "n": "星云法衣",
@@ -8787,7 +8787,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "n": "天河霓裳",
@@ -8796,7 +8796,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "n": "升雪凌霄衣",
@@ -8805,7 +8805,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "真龙黑袍",
@@ -8818,7 +8818,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "龙啸",
@@ -8827,7 +8827,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "圣贤服",
@@ -8836,7 +8836,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -8844,7 +8844,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "白羽绸衣",
@@ -8853,7 +8853,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "独黑斗篷",
@@ -8862,7 +8862,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "月华战袍",
@@ -8871,7 +8871,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "圣贤服",
@@ -8888,7 +8888,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "n": "星云法衣",
@@ -8897,7 +8897,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "n": "天河霓裳",
@@ -8906,7 +8906,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "n": "升雪凌霄衣",
@@ -8915,7 +8915,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "真龙黑袍",
@@ -8928,7 +8928,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "霸天令",
@@ -8937,7 +8937,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "无极黑袍",
@@ -8946,7 +8946,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -8954,7 +8954,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "独黑斗篷",
@@ -8963,7 +8963,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "万象法袍",
@@ -8972,7 +8972,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "圣贤服",
@@ -8981,7 +8981,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "无极黑袍",
@@ -8998,7 +8998,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "n": "星云法衣",
@@ -9007,7 +9007,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "n": "天河霓裳",
@@ -9016,7 +9016,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "n": "升雪凌霄衣",
@@ -9025,7 +9025,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "真龙黑袍",
@@ -9038,7 +9038,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "冰魄戒",
@@ -9047,7 +9047,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "幽兰素裳",
@@ -9056,7 +9056,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -9064,7 +9064,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "白羽绸衣",
@@ -9073,7 +9073,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "月狼锦纱",
@@ -9082,7 +9082,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "醉梦罗裳",
@@ -9091,7 +9091,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "幽兰素裳",
@@ -9108,7 +9108,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "n": "星云法衣",
@@ -9117,7 +9117,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "n": "天河霓裳",
@@ -9126,7 +9126,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "n": "升雪凌霄衣",
@@ -9135,7 +9135,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "真龙黑袍",
@@ -9148,7 +9148,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "龙啸",
@@ -9157,7 +9157,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "藏刃衣",
@@ -9166,7 +9166,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -9174,7 +9174,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "苍云甲",
@@ -9183,7 +9183,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "纵横战袍",
@@ -9192,7 +9192,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "月华战袍",
@@ -9201,7 +9201,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "藏刃衣",
@@ -9218,7 +9218,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "n": "星云法衣",
@@ -9227,7 +9227,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "n": "天河霓裳",
@@ -9236,7 +9236,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "n": "升雪凌霄衣",
@@ -9245,7 +9245,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "真龙黑袍",
@@ -9258,7 +9258,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "冰魄戒",
@@ -9267,7 +9267,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "虎头鞋",
@@ -9276,7 +9276,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -9284,7 +9284,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "dash": true
@@ -9292,7 +9292,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "dash": true
@@ -9300,7 +9300,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "dash": true
@@ -9308,7 +9308,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "dash": true
@@ -9324,7 +9324,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "n": "文曲服",
@@ -9333,7 +9333,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "n": "星云法衣",
@@ -9342,7 +9342,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "n": "真龙黑袍",
@@ -9351,7 +9351,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "天河霓裳",
@@ -9364,7 +9364,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "冰魄戒",
@@ -9373,7 +9373,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "地煞魔铠",
@@ -9382,7 +9382,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -9390,7 +9390,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "藏刃衣",
@@ -9399,7 +9399,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "七海蛟龙甲",
@@ -9408,7 +9408,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "月华战袍",
@@ -9417,7 +9417,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "地煞魔铠",
@@ -9434,7 +9434,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "n": "星云法衣",
@@ -9443,7 +9443,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "n": "天河霓裳",
@@ -9452,7 +9452,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "n": "升雪凌霄衣",
@@ -9461,7 +9461,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "真龙黑袍",
@@ -9474,7 +9474,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "龙啸",
@@ -9483,7 +9483,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "赤眉衣",
@@ -9492,7 +9492,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -9500,7 +9500,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "管事服",
@@ -9509,7 +9509,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "月狼锦纱",
@@ -9518,7 +9518,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "藏刃衣",
@@ -9527,7 +9527,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "赤眉衣",
@@ -9544,7 +9544,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "n": "星云法衣",
@@ -9553,7 +9553,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "n": "天河霓裳",
@@ -9562,7 +9562,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "n": "升雪凌霄衣",
@@ -9571,7 +9571,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "真龙黑袍",
@@ -9584,7 +9584,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "龙啸",
@@ -9593,7 +9593,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "玄冥甲",
@@ -9602,7 +9602,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -9610,7 +9610,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "独黑斗篷",
@@ -9619,7 +9619,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "七海蛟龙甲",
@@ -9628,7 +9628,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "无极黑袍",
@@ -9637,7 +9637,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "玄冥甲",
@@ -9654,7 +9654,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "n": "星云法衣",
@@ -9663,7 +9663,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "n": "天河霓裳",
@@ -9672,7 +9672,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "n": "升雪凌霄衣",
@@ -9681,7 +9681,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "真龙黑袍",
@@ -9694,7 +9694,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "驱虎令",
@@ -9703,7 +9703,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "元帅服",
@@ -9712,7 +9712,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -9720,7 +9720,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "白羽绸衣",
@@ -9729,7 +9729,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "管事服",
@@ -9738,7 +9738,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "藏刃衣",
@@ -9747,7 +9747,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "元帅服",
@@ -9764,7 +9764,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "n": "星云法衣",
@@ -9773,7 +9773,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "n": "天河霓裳",
@@ -9782,7 +9782,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "n": "升雪凌霄衣",
@@ -9791,7 +9791,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "真龙黑袍",
@@ -9804,7 +9804,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "龙啸",
@@ -9813,7 +9813,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "剑侠衣",
@@ -9822,7 +9822,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -9830,7 +9830,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "独黑斗篷",
@@ -9839,7 +9839,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "圣贤服",
@@ -9848,7 +9848,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "纵横战袍",
@@ -9857,7 +9857,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "剑侠衣",
@@ -9874,7 +9874,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "dash": true
@@ -9882,7 +9882,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "dash": true
@@ -9890,7 +9890,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "dash": true
@@ -9898,7 +9898,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "龙啸",
@@ -9907,7 +9907,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "管子",
@@ -9916,7 +9916,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "精卫石",
@@ -9925,7 +9925,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -9933,7 +9933,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "白玉君子佩",
@@ -9942,7 +9942,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "传国玉玺",
@@ -9951,7 +9951,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "共工戒",
@@ -9960,7 +9960,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "黄金牡丹",
@@ -9977,7 +9977,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "dash": true
@@ -9985,7 +9985,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "dash": true
@@ -9993,7 +9993,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "dash": true
@@ -10001,7 +10001,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "龙啸",
@@ -10010,7 +10010,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "管子",
@@ -10019,7 +10019,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "精卫石",
@@ -10028,7 +10028,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -10036,7 +10036,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "白玉君子佩",
@@ -10045,7 +10045,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "共工戒",
@@ -10054,7 +10054,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "传国玉玺",
@@ -10063,7 +10063,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "黄金牡丹",
@@ -10080,7 +10080,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "dash": true
@@ -10088,7 +10088,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "dash": true
@@ -10096,7 +10096,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "dash": true
@@ -10104,7 +10104,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "龙啸",
@@ -10113,7 +10113,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "管子",
@@ -10122,7 +10122,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "精卫石",
@@ -10131,7 +10131,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -10139,7 +10139,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "白玉君子佩",
@@ -10148,7 +10148,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "共工戒",
@@ -10157,7 +10157,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "神农令",
@@ -10166,7 +10166,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "女神之泪",
@@ -10183,7 +10183,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "dash": true
@@ -10191,7 +10191,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "dash": true
@@ -10199,7 +10199,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "dash": true
@@ -10207,7 +10207,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "龙啸",
@@ -10216,7 +10216,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "管子",
@@ -10225,7 +10225,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "精卫石",
@@ -10234,7 +10234,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -10242,7 +10242,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "罡星戒",
@@ -10251,7 +10251,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "共工戒",
@@ -10260,7 +10260,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "神农令",
@@ -10269,7 +10269,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "精卫石",
@@ -10286,7 +10286,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "dash": true
@@ -10294,7 +10294,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "dash": true
@@ -10302,7 +10302,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "dash": true
@@ -10310,7 +10310,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "霸天令",
@@ -10319,7 +10319,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "五德终始",
@@ -10328,7 +10328,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "传国玉玺",
@@ -10337,7 +10337,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -10345,7 +10345,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "精卫石",
@@ -10354,7 +10354,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "黄金牡丹",
@@ -10363,7 +10363,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "神农令",
@@ -10372,7 +10372,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "传国玉玺",
@@ -10389,7 +10389,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "dash": true
@@ -10397,7 +10397,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "dash": true
@@ -10405,7 +10405,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "dash": true
@@ -10413,7 +10413,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "凤鸣",
@@ -10422,7 +10422,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "易经",
@@ -10431,7 +10431,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "白玉君子佩",
@@ -10440,7 +10440,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -10448,7 +10448,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "罡星戒",
@@ -10457,7 +10457,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "神农令",
@@ -10466,7 +10466,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "传国玉玺",
@@ -10475,7 +10475,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "白玉君子佩",
@@ -10492,7 +10492,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "dash": true
@@ -10500,7 +10500,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "dash": true
@@ -10508,7 +10508,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "dash": true
@@ -10516,7 +10516,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "霸天令",
@@ -10525,7 +10525,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "刺客列传",
@@ -10534,7 +10534,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "罡星戒",
@@ -10543,7 +10543,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -10551,7 +10551,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "白玉君子佩",
@@ -10560,7 +10560,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "神农令",
@@ -10569,7 +10569,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "传国玉玺",
@@ -10578,7 +10578,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "罡星戒",
@@ -10595,7 +10595,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "dash": true
@@ -10603,7 +10603,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "dash": true
@@ -10611,7 +10611,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "dash": true
@@ -10619,7 +10619,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "冰魄戒",
@@ -10628,7 +10628,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "乐经",
@@ -10637,7 +10637,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "共工戒",
@@ -10646,7 +10646,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -10654,7 +10654,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "精卫石",
@@ -10663,7 +10663,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "女神之泪",
@@ -10672,7 +10672,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "黄金牡丹",
@@ -10681,7 +10681,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "共工戒",
@@ -10698,7 +10698,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "dash": true
@@ -10706,7 +10706,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "dash": true
@@ -10714,7 +10714,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "dash": true
@@ -10722,7 +10722,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "龙啸",
@@ -10731,7 +10731,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "管子",
@@ -10740,7 +10740,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "精卫石",
@@ -10749,7 +10749,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -10757,7 +10757,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "精卫石",
@@ -10766,7 +10766,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "黄金牡丹",
@@ -10775,7 +10775,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "共工戒",
@@ -10784,7 +10784,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "女神之泪",
@@ -10801,7 +10801,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "dash": true
@@ -10809,7 +10809,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "dash": true
@@ -10817,7 +10817,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "dash": true
@@ -10825,7 +10825,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "龙啸",
@@ -10834,7 +10834,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "管子",
@@ -10843,7 +10843,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "精卫石",
@@ -10852,7 +10852,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -10860,7 +10860,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "罡星戒",
@@ -10869,7 +10869,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "共工戒",
@@ -10878,7 +10878,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "神农令",
@@ -10887,7 +10887,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "精卫石",
@@ -10904,7 +10904,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "dash": true
@@ -10912,7 +10912,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "dash": true
@@ -10920,7 +10920,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "dash": true
@@ -10928,7 +10928,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "冰魄戒",
@@ -10937,7 +10937,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "乐经",
@@ -10946,7 +10946,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "黄金牡丹",
@@ -10955,7 +10955,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -10963,7 +10963,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "精卫石",
@@ -10972,7 +10972,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "女神之泪",
@@ -10981,7 +10981,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "神农令",
@@ -10990,7 +10990,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "黄金牡丹",
@@ -11007,7 +11007,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "dash": true
@@ -11015,7 +11015,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "dash": true
@@ -11023,7 +11023,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "dash": true
@@ -11031,7 +11031,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "神行符",
@@ -11040,7 +11040,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "上农",
@@ -11049,7 +11049,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "神农令",
@@ -11058,7 +11058,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -11066,7 +11066,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "罡星戒",
@@ -11075,7 +11075,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "黄金牡丹",
@@ -11084,7 +11084,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "共工戒",
@@ -11093,7 +11093,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "神农令",
@@ -11110,7 +11110,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "dash": true
@@ -11118,7 +11118,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "dash": true
@@ -11126,7 +11126,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "dash": true
@@ -11134,7 +11134,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "冰魄戒",
@@ -11143,7 +11143,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "乐经",
@@ -11152,7 +11152,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "传国玉玺",
@@ -11161,7 +11161,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -11169,7 +11169,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "白玉君子佩",
@@ -11178,7 +11178,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "女神之泪",
@@ -11187,7 +11187,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "传国玉玺",
@@ -11196,7 +11196,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "精卫石",
@@ -11213,7 +11213,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "dash": true
@@ -11221,7 +11221,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "dash": true
@@ -11229,7 +11229,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "dash": true
@@ -11237,7 +11237,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "霸天令",
@@ -11246,7 +11246,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "五德终始",
@@ -11255,7 +11255,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "神农令",
@@ -11264,7 +11264,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -11272,7 +11272,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "白玉君子佩",
@@ -11281,7 +11281,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "黄金牡丹",
@@ -11290,7 +11290,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "神农令",
@@ -11299,7 +11299,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "传国玉玺",
@@ -11316,7 +11316,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "dash": true
@@ -11324,7 +11324,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "dash": true
@@ -11332,7 +11332,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "dash": true
@@ -11340,7 +11340,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "精卫石",
@@ -11349,7 +11349,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "黄石天书",
@@ -11358,7 +11358,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "貔貅玩偶",
@@ -11367,7 +11367,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -11375,7 +11375,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "dash": true
@@ -11383,7 +11383,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "dash": true
@@ -11391,7 +11391,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "dash": true
@@ -11399,7 +11399,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "dash": true
@@ -11415,7 +11415,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "dash": true
@@ -11423,7 +11423,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "dash": true
@@ -11431,7 +11431,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "dash": true
@@ -11439,7 +11439,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "霸天令",
@@ -11448,7 +11448,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "五德终始",
@@ -11457,7 +11457,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "火魅耳环",
@@ -11466,7 +11466,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -11474,7 +11474,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "精卫石",
@@ -11483,7 +11483,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "女神之泪",
@@ -11492,7 +11492,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "神农令",
@@ -11501,7 +11501,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "火魅耳环",
@@ -11518,7 +11518,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "dash": true
@@ -11526,7 +11526,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "dash": true
@@ -11534,7 +11534,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "dash": true
@@ -11542,7 +11542,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "冰魄戒",
@@ -11551,7 +11551,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "黄石天书",
@@ -11560,7 +11560,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "月光耳坠",
@@ -11569,7 +11569,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -11577,7 +11577,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "罡星戒",
@@ -11586,7 +11586,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "黄金牡丹",
@@ -11595,7 +11595,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "女神之泪",
@@ -11604,7 +11604,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "月光耳坠",
@@ -11621,7 +11621,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "dash": true
@@ -11629,7 +11629,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "dash": true
@@ -11637,7 +11637,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "dash": true
@@ -11645,7 +11645,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "霸天令",
@@ -11654,7 +11654,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "刺客列传",
@@ -11663,7 +11663,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "化枯冠",
@@ -11672,7 +11672,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -11680,7 +11680,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "白玉君子佩",
@@ -11689,7 +11689,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "黄金牡丹",
@@ -11698,7 +11698,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "共工戒",
@@ -11707,7 +11707,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "化枯冠",
@@ -11724,7 +11724,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "dash": true
@@ -11732,7 +11732,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "dash": true
@@ -11740,7 +11740,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "dash": true
@@ -11748,7 +11748,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "凤鸣",
@@ -11757,7 +11757,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "刺客列传",
@@ -11766,7 +11766,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "百鸟信物",
@@ -11775,7 +11775,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -11783,7 +11783,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "精卫石",
@@ -11792,7 +11792,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "黄金牡丹",
@@ -11801,7 +11801,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "神农令",
@@ -11810,7 +11810,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "百鸟信物",
@@ -11827,7 +11827,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "dash": true
@@ -11835,7 +11835,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "dash": true
@@ -11843,7 +11843,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "dash": true
@@ -11851,7 +11851,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "冰魄戒",
@@ -11860,7 +11860,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "易经",
@@ -11869,7 +11869,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "碧海珊瑚樽",
@@ -11878,7 +11878,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -11886,7 +11886,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "精卫石",
@@ -11895,7 +11895,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "白玉君子佩",
@@ -11904,7 +11904,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "百鸟信物",
@@ -11913,7 +11913,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "碧海珊瑚樽",
@@ -11930,7 +11930,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "dash": true
@@ -11938,7 +11938,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "dash": true
@@ -11946,7 +11946,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "dash": true
@@ -11954,7 +11954,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "霸天令",
@@ -11963,7 +11963,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "庄子",
@@ -11972,7 +11972,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "道经师宝玉",
@@ -11981,7 +11981,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -11989,7 +11989,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "罡星戒",
@@ -11998,7 +11998,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "白玉君子佩",
@@ -12007,7 +12007,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "神农令",
@@ -12016,7 +12016,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "道经师宝玉",
@@ -12033,7 +12033,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "dash": true
@@ -12041,7 +12041,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "dash": true
@@ -12049,7 +12049,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "dash": true
@@ -12057,7 +12057,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "驱虎令",
@@ -12066,7 +12066,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "道德经",
@@ -12075,7 +12075,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "寒霜挂坠",
@@ -12084,7 +12084,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -12092,7 +12092,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "白玉君子佩",
@@ -12101,7 +12101,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "百鸟信物",
@@ -12110,7 +12110,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "碧海珊瑚樽",
@@ -12119,7 +12119,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "寒霜挂坠",
@@ -12136,7 +12136,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "dash": true
@@ -12144,7 +12144,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "dash": true
@@ -12152,7 +12152,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "dash": true
@@ -12160,7 +12160,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "霸天令",
@@ -12169,7 +12169,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "五德终始",
@@ -12178,7 +12178,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "金乌神饰",
@@ -12187,7 +12187,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -12195,7 +12195,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "罡星戒",
@@ -12204,7 +12204,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "白玉君子佩",
@@ -12213,7 +12213,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "神农令",
@@ -12222,7 +12222,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "金乌神饰",
@@ -12239,7 +12239,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "dash": true
@@ -12247,7 +12247,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "dash": true
@@ -12255,7 +12255,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "dash": true
@@ -12263,7 +12263,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "霸天令",
@@ -12272,7 +12272,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "黄石天书",
@@ -12281,7 +12281,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "结晶神座",
@@ -12290,7 +12290,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -12298,7 +12298,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "精卫石",
@@ -12307,7 +12307,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "百鸟信物",
@@ -12316,7 +12316,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "金乌神饰",
@@ -12325,7 +12325,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "结晶神座",
@@ -12342,7 +12342,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "dash": true
@@ -12350,7 +12350,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "dash": true
@@ -12358,7 +12358,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "dash": true
@@ -12366,7 +12366,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "驱虎令",
@@ -12375,7 +12375,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "黄帝内经",
@@ -12384,7 +12384,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "花间雾",
@@ -12393,7 +12393,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -12401,7 +12401,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "罡星戒",
@@ -12410,7 +12410,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "白玉君子佩",
@@ -12419,7 +12419,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "金乌神饰",
@@ -12428,7 +12428,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "花间雾",
@@ -12445,7 +12445,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "dash": true
@@ -12453,7 +12453,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "dash": true
@@ -12461,7 +12461,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "dash": true
@@ -12469,7 +12469,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "霸天令",
@@ -12478,7 +12478,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "论语",
@@ -12487,7 +12487,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "暗夜凶影",
@@ -12496,7 +12496,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -12504,7 +12504,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "精卫石",
@@ -12513,7 +12513,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "百鸟信物",
@@ -12522,7 +12522,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "碧海珊瑚樽",
@@ -12531,7 +12531,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "暗夜凶影",
@@ -12548,7 +12548,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "dash": true
@@ -12556,7 +12556,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "dash": true
@@ -12564,7 +12564,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "dash": true
@@ -12572,7 +12572,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "驱虎令",
@@ -12581,7 +12581,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "鬼谷子",
@@ -12590,7 +12590,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "鬼谷戒",
@@ -12599,7 +12599,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -12607,7 +12607,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "罡星戒",
@@ -12616,7 +12616,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "神农令",
@@ -12625,7 +12625,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "道经师宝玉",
@@ -12634,7 +12634,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "鬼谷戒",
@@ -12651,7 +12651,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "dash": true
@@ -12659,7 +12659,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "dash": true
@@ -12667,7 +12667,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "n": "神行符",
@@ -12676,7 +12676,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "公孙龙子",
@@ -12685,7 +12685,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "精卫石",
@@ -12694,7 +12694,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "黄石天书",
@@ -12703,7 +12703,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -12711,7 +12711,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "黄石天书",
@@ -12720,7 +12720,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "鬼谷子",
@@ -12729,7 +12729,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "列子",
@@ -12738,7 +12738,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "河图",
@@ -12755,7 +12755,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "dash": true
@@ -12763,7 +12763,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "dash": true
@@ -12771,7 +12771,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "n": "神行符",
@@ -12780,7 +12780,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "公孙龙子",
@@ -12789,7 +12789,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "精卫石",
@@ -12798,7 +12798,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "黄石天书",
@@ -12807,7 +12807,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -12815,7 +12815,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "道德经",
@@ -12824,7 +12824,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "黄帝内经",
@@ -12833,7 +12833,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "列子",
@@ -12842,7 +12842,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "河图",
@@ -12859,7 +12859,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "dash": true
@@ -12867,7 +12867,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "dash": true
@@ -12875,7 +12875,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "n": "驱虎令",
@@ -12884,7 +12884,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "孟子",
@@ -12893,7 +12893,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "罡星戒",
@@ -12902,7 +12902,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "道德经",
@@ -12911,7 +12911,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -12919,7 +12919,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "道德经",
@@ -12928,7 +12928,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "黄帝内经",
@@ -12937,7 +12937,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "孙子兵法",
@@ -12946,7 +12946,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "列子",
@@ -12963,7 +12963,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "dash": true
@@ -12971,7 +12971,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "dash": true
@@ -12979,7 +12979,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "n": "神行符",
@@ -12988,7 +12988,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "公孙龙子",
@@ -12997,7 +12997,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "精卫石",
@@ -13006,7 +13006,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "黄石天书",
@@ -13015,7 +13015,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -13023,7 +13023,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "黄石天书",
@@ -13032,7 +13032,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "鬼谷子",
@@ -13041,7 +13041,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "战国策",
@@ -13050,7 +13050,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "列子",
@@ -13067,7 +13067,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "dash": true
@@ -13075,7 +13075,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "dash": true
@@ -13083,7 +13083,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "n": "神行符",
@@ -13092,7 +13092,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "公孙龙子",
@@ -13101,7 +13101,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "精卫石",
@@ -13110,7 +13110,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "黄石天书",
@@ -13119,7 +13119,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -13127,7 +13127,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "黄石天书",
@@ -13136,7 +13136,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "鬼谷子",
@@ -13145,7 +13145,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "战国策",
@@ -13154,7 +13154,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "列子",
@@ -13171,7 +13171,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "dash": true
@@ -13179,7 +13179,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "dash": true
@@ -13187,7 +13187,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "n": "驱虎令",
@@ -13196,7 +13196,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "孟子",
@@ -13205,7 +13205,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "罡星戒",
@@ -13214,7 +13214,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "道德经",
@@ -13223,7 +13223,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -13231,7 +13231,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "道德经",
@@ -13240,7 +13240,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "论语",
@@ -13249,7 +13249,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "列子",
@@ -13258,7 +13258,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "孙子兵法",
@@ -13275,7 +13275,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "dash": true
@@ -13283,7 +13283,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "dash": true
@@ -13291,7 +13291,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "n": "神行符",
@@ -13300,7 +13300,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "公孙龙子",
@@ -13309,7 +13309,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "精卫石",
@@ -13318,7 +13318,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "黄石天书",
@@ -13327,7 +13327,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -13335,7 +13335,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "黄石天书",
@@ -13344,7 +13344,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "鬼谷子",
@@ -13353,7 +13353,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "孙子兵法",
@@ -13362,7 +13362,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "战国策",
@@ -13379,7 +13379,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "dash": true
@@ -13387,7 +13387,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "dash": true
@@ -13395,7 +13395,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "n": "驱虎令",
@@ -13404,7 +13404,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "孟子",
@@ -13413,7 +13413,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "罡星戒",
@@ -13422,7 +13422,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "道德经",
@@ -13431,7 +13431,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -13439,7 +13439,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "黄石天书",
@@ -13448,7 +13448,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "商君书",
@@ -13457,7 +13457,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "孙子兵法",
@@ -13466,7 +13466,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "鬼谷子",
@@ -13483,7 +13483,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "dash": true
@@ -13491,7 +13491,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "dash": true
@@ -13499,7 +13499,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "n": "神行符",
@@ -13508,7 +13508,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "公孙龙子",
@@ -13517,7 +13517,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "精卫石",
@@ -13526,7 +13526,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "黄石天书",
@@ -13535,7 +13535,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -13543,7 +13543,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "道德经",
@@ -13552,7 +13552,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "鬼谷子",
@@ -13561,7 +13561,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "战国策",
@@ -13570,7 +13570,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "墨子",
@@ -13587,7 +13587,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "dash": true
@@ -13595,7 +13595,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "dash": true
@@ -13603,7 +13603,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "n": "驱虎令",
@@ -13612,7 +13612,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "孟子",
@@ -13621,7 +13621,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "罡星戒",
@@ -13630,7 +13630,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "道德经",
@@ -13639,7 +13639,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -13647,7 +13647,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "黄石天书",
@@ -13656,7 +13656,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "墨子",
@@ -13665,7 +13665,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "列子",
@@ -13674,7 +13674,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "论语",
@@ -13691,7 +13691,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "dash": true
@@ -13699,7 +13699,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "dash": true
@@ -13707,7 +13707,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "n": "神行符",
@@ -13716,7 +13716,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "公孙龙子",
@@ -13725,7 +13725,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "精卫石",
@@ -13734,7 +13734,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "黄石天书",
@@ -13743,7 +13743,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -13751,7 +13751,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "道德经",
@@ -13760,7 +13760,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "论语",
@@ -13769,7 +13769,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "孙子兵法",
@@ -13778,7 +13778,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "河图",
@@ -13795,7 +13795,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "dash": true
@@ -13803,7 +13803,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "dash": true
@@ -13811,7 +13811,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "n": "驱虎令",
@@ -13820,7 +13820,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "孟子",
@@ -13829,7 +13829,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "罡星戒",
@@ -13838,7 +13838,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "道德经",
@@ -13847,7 +13847,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -13855,7 +13855,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "黄石天书",
@@ -13864,7 +13864,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "河图",
@@ -13873,7 +13873,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "战国策",
@@ -13882,7 +13882,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "黄帝内经",
@@ -13899,7 +13899,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "dash": true
@@ -13907,7 +13907,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "dash": true
@@ -13915,7 +13915,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "n": "神行符",
@@ -13924,7 +13924,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "公孙龙子",
@@ -13933,7 +13933,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "精卫石",
@@ -13942,7 +13942,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "黄石天书",
@@ -13951,7 +13951,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -13959,7 +13959,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "道德经",
@@ -13968,7 +13968,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "黄帝内经",
@@ -13977,7 +13977,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "列子",
@@ -13986,7 +13986,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "商君书",
@@ -14003,7 +14003,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "dash": true
@@ -14011,7 +14011,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "dash": true
@@ -14019,7 +14019,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "n": "驱虎令",
@@ -14028,7 +14028,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "孟子",
@@ -14037,7 +14037,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "罡星戒",
@@ -14046,7 +14046,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "道德经",
@@ -14055,7 +14055,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -14063,7 +14063,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "黄石天书",
@@ -14072,7 +14072,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "鬼谷子",
@@ -14081,7 +14081,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "孙子兵法",
@@ -14090,7 +14090,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "商君书",
@@ -14107,7 +14107,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "dash": true
@@ -14115,7 +14115,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "dash": true
@@ -14123,7 +14123,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "n": "驱虎令",
@@ -14132,7 +14132,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "孟子",
@@ -14141,7 +14141,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "罡星戒",
@@ -14150,7 +14150,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "道德经",
@@ -14159,7 +14159,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -14167,7 +14167,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "道德经",
@@ -14176,7 +14176,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "墨子",
@@ -14185,7 +14185,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "战国策",
@@ -14194,7 +14194,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "黄帝内经",
@@ -14211,7 +14211,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "dash": true
@@ -14219,7 +14219,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "dash": true
@@ -14227,7 +14227,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "n": "驱虎令",
@@ -14236,7 +14236,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "孟子",
@@ -14245,7 +14245,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "罡星戒",
@@ -14254,7 +14254,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "道德经",
@@ -14263,7 +14263,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -14271,7 +14271,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "黄石天书",
@@ -14280,7 +14280,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "论语",
@@ -14289,7 +14289,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "列子",
@@ -14298,7 +14298,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "墨子",
@@ -14315,7 +14315,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "dash": true
@@ -14323,7 +14323,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "dash": true
@@ -14331,7 +14331,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "n": "神行符",
@@ -14340,7 +14340,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "公孙龙子",
@@ -14349,7 +14349,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "精卫石",
@@ -14358,7 +14358,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "黄石天书",
@@ -14367,7 +14367,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -14375,7 +14375,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "道德经",
@@ -14384,7 +14384,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "商君书",
@@ -14393,7 +14393,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "战国策",
@@ -14402,7 +14402,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "论语",
@@ -14419,7 +14419,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "dash": true
@@ -14427,7 +14427,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "dash": true
@@ -14435,7 +14435,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "n": "驱虎令",
@@ -14444,7 +14444,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "孟子",
@@ -14453,7 +14453,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "罡星戒",
@@ -14462,7 +14462,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "道德经",
@@ -14471,7 +14471,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -14479,7 +14479,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "黄石天书",
@@ -14488,7 +14488,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "黄帝内经",
@@ -14497,7 +14497,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "列子",
@@ -14506,7 +14506,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "河图",
@@ -14523,7 +14523,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "dash": true
@@ -14531,7 +14531,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "dash": true
@@ -14539,7 +14539,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "n": "神行符",
@@ -14548,7 +14548,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "公孙龙子",
@@ -14557,7 +14557,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "精卫石",
@@ -14566,7 +14566,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "黄石天书",
@@ -14575,7 +14575,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -14583,7 +14583,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "道德经",
@@ -14592,7 +14592,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "鬼谷子",
@@ -14601,7 +14601,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "战国策",
@@ -14610,7 +14610,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "黄石天书",
@@ -14627,7 +14627,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "dash": true
@@ -14635,7 +14635,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "dash": true
@@ -14643,7 +14643,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "n": "驱虎令",
@@ -14652,7 +14652,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "孟子",
@@ -14661,7 +14661,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "罡星戒",
@@ -14670,7 +14670,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "道德经",
@@ -14679,7 +14679,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -14687,7 +14687,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "黄石天书",
@@ -14696,7 +14696,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "河图",
@@ -14705,7 +14705,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "列子",
@@ -14714,7 +14714,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "道德经",
@@ -14731,7 +14731,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "dash": true
@@ -14739,7 +14739,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "dash": true
@@ -14747,7 +14747,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "n": "霸天令",
@@ -14756,7 +14756,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "易经",
@@ -14765,7 +14765,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "共工戒",
@@ -14774,7 +14774,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "商君书",
@@ -14783,7 +14783,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -14791,7 +14791,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "道德经",
@@ -14800,7 +14800,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "论语",
@@ -14809,7 +14809,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "孙子兵法",
@@ -14818,7 +14818,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "商君书",
@@ -14835,7 +14835,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "dash": true
@@ -14843,7 +14843,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "dash": true
@@ -14851,7 +14851,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "n": "神行符",
@@ -14860,7 +14860,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "公孙龙子",
@@ -14869,7 +14869,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "精卫石",
@@ -14878,7 +14878,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "黄石天书",
@@ -14887,7 +14887,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -14895,7 +14895,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "道德经",
@@ -14904,7 +14904,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "论语",
@@ -14913,7 +14913,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "孙子兵法",
@@ -14922,7 +14922,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "墨子",
@@ -14939,7 +14939,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "dash": true
@@ -14947,7 +14947,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "dash": true
@@ -14955,7 +14955,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "n": "驱虎令",
@@ -14964,7 +14964,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "孟子",
@@ -14973,7 +14973,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "罡星戒",
@@ -14982,7 +14982,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "道德经",
@@ -14991,7 +14991,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -14999,7 +14999,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "道德经",
@@ -15008,7 +15008,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "鬼谷子",
@@ -15017,7 +15017,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "列子",
@@ -15026,7 +15026,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "论语",
@@ -15043,7 +15043,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "dash": true
@@ -15051,7 +15051,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "dash": true
@@ -15059,7 +15059,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "n": "冰魄戒",
@@ -15068,7 +15068,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "五德终始",
@@ -15077,7 +15077,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "白玉君子佩",
@@ -15086,7 +15086,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "黄帝内经",
@@ -15095,7 +15095,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -15103,7 +15103,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "道德经",
@@ -15112,7 +15112,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "河图",
@@ -15121,7 +15121,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "战国策",
@@ -15130,7 +15130,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "黄帝内经",
@@ -15147,7 +15147,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "dash": true
@@ -15155,7 +15155,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "dash": true
@@ -15163,7 +15163,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "n": "凤鸣",
@@ -15172,7 +15172,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "乐经",
@@ -15181,7 +15181,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "罡星戒",
@@ -15190,7 +15190,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "河图",
@@ -15199,7 +15199,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -15207,7 +15207,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "黄石天书",
@@ -15216,7 +15216,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "黄帝内经",
@@ -15225,7 +15225,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "列子",
@@ -15234,7 +15234,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "河图",
@@ -15251,7 +15251,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "dash": true
@@ -15259,7 +15259,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "dash": true
@@ -15267,7 +15267,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "n": "龙啸",
@@ -15276,7 +15276,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "刺客列传",
@@ -15285,7 +15285,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "女神之泪",
@@ -15294,7 +15294,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "鬼谷子",
@@ -15303,7 +15303,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -15311,7 +15311,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "黄石天书",
@@ -15320,7 +15320,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "河图",
@@ -15329,7 +15329,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "孙子兵法",
@@ -15338,7 +15338,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "鬼谷子",
@@ -15355,7 +15355,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "dash": true
@@ -15363,7 +15363,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "dash": true
@@ -15371,7 +15371,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "n": "霸天令",
@@ -15380,7 +15380,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "五德终始",
@@ -15389,7 +15389,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "共工戒",
@@ -15398,7 +15398,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "河图",
@@ -15407,7 +15407,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -15415,7 +15415,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "道德经",
@@ -15424,7 +15424,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "论语",
@@ -15433,7 +15433,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "战国策",
@@ -15442,7 +15442,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "孙子兵法",
@@ -15459,7 +15459,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "dash": true
@@ -15467,7 +15467,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "dash": true
@@ -15475,7 +15475,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "n": "霸天令",
@@ -15484,7 +15484,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "刺客列传",
@@ -15493,7 +15493,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "共工戒",
@@ -15502,7 +15502,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "战国策",
@@ -15511,7 +15511,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -15519,7 +15519,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "黄石天书",
@@ -15528,7 +15528,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "商君书",
@@ -15537,7 +15537,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "列子",
@@ -15546,7 +15546,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "战国策",
@@ -15563,7 +15563,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "dash": true
@@ -15571,7 +15571,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "dash": true
@@ -15579,7 +15579,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "n": "冰魄戒",
@@ -15588,7 +15588,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "刺客列传",
@@ -15597,7 +15597,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "传国玉玺",
@@ -15606,7 +15606,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "列子",
@@ -15615,7 +15615,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -15623,7 +15623,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "道德经",
@@ -15632,7 +15632,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "墨子",
@@ -15641,7 +15641,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "孙子兵法",
@@ -15650,7 +15650,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "列子",
@@ -15667,7 +15667,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "dash": true
@@ -15675,7 +15675,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "dash": true
@@ -15683,7 +15683,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "n": "龙啸",
@@ -15692,7 +15692,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "五德终始",
@@ -15701,7 +15701,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "黄金牡丹",
@@ -15710,7 +15710,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "列子",
@@ -15719,7 +15719,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -15727,7 +15727,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "黄石天书",
@@ -15736,7 +15736,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "论语",
@@ -15745,7 +15745,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "战国策",
@@ -15754,7 +15754,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "韩非子",
@@ -15771,7 +15771,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "dash": true
@@ -15779,7 +15779,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "dash": true
@@ -15787,7 +15787,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "n": "神行符",
@@ -15796,7 +15796,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "易经",
@@ -15805,7 +15805,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "传国玉玺",
@@ -15814,7 +15814,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "奇门遁甲",
@@ -15823,7 +15823,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -15831,7 +15831,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "黄石天书",
@@ -15840,7 +15840,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "墨子",
@@ -15849,7 +15849,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "战国策",
@@ -15858,7 +15858,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "奇门遁甲",
@@ -15875,7 +15875,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "dash": true
@@ -15883,7 +15883,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "dash": true
@@ -15891,7 +15891,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "n": "驱虎令",
@@ -15900,7 +15900,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "孟子",
@@ -15909,7 +15909,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "共工戒",
@@ -15918,7 +15918,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "礼经",
@@ -15927,7 +15927,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -15935,7 +15935,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "道德经",
@@ -15944,7 +15944,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "论语",
@@ -15953,7 +15953,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "列子",
@@ -15962,7 +15962,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "礼经",
@@ -15979,7 +15979,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "dash": true
@@ -15987,7 +15987,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "dash": true
@@ -15995,7 +15995,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "n": "神行符",
@@ -16004,7 +16004,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "晏子春秋",
@@ -16013,7 +16013,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "神农令",
@@ -16022,7 +16022,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "百家杂记",
@@ -16031,7 +16031,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -16039,7 +16039,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "黄石天书",
@@ -16048,7 +16048,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "商君书",
@@ -16057,7 +16057,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "战国策",
@@ -16066,7 +16066,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "百家杂记",
@@ -16083,7 +16083,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "dash": true
@@ -16091,7 +16091,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "dash": true
@@ -16099,7 +16099,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "n": "龙啸",
@@ -16108,7 +16108,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "孟子",
@@ -16117,7 +16117,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "百鸟信物",
@@ -16126,7 +16126,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "尚书",
@@ -16135,7 +16135,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -16143,7 +16143,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "道德经",
@@ -16152,7 +16152,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "黄帝内经",
@@ -16161,7 +16161,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "列子",
@@ -16170,7 +16170,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "尚书",
@@ -16187,7 +16187,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "dash": true
@@ -16195,7 +16195,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "dash": true
@@ -16203,7 +16203,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "n": "龙啸",
@@ -16212,7 +16212,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "五德终始",
@@ -16221,7 +16221,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "百鸟信物",
@@ -16230,7 +16230,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "左传",
@@ -16239,7 +16239,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -16247,7 +16247,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "黄石天书",
@@ -16256,7 +16256,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "黄帝内经",
@@ -16265,7 +16265,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "列子",
@@ -16274,7 +16274,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "左传",
@@ -16291,7 +16291,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "dash": true
@@ -16299,7 +16299,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "dash": true
@@ -16307,7 +16307,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "n": "驱虎令",
@@ -16316,7 +16316,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "上农",
@@ -16325,7 +16325,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "道经师宝玉",
@@ -16334,7 +16334,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "吕氏春秋",
@@ -16343,7 +16343,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -16351,7 +16351,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "道德经",
@@ -16360,7 +16360,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "墨子",
@@ -16369,7 +16369,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "尚书",
@@ -16378,7 +16378,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "吕氏春秋",
@@ -16395,7 +16395,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "dash": true
@@ -16403,7 +16403,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "dash": true
@@ -16411,7 +16411,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "n": "驱虎令",
@@ -16420,7 +16420,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "易经",
@@ -16429,7 +16429,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "碧海珊瑚樽",
@@ -16438,7 +16438,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "封神纪",
@@ -16447,7 +16447,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -16455,7 +16455,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "论语",
@@ -16464,7 +16464,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "鬼谷子",
@@ -16473,7 +16473,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "左传",
@@ -16482,7 +16482,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "封神纪",
@@ -16499,7 +16499,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "dash": true
@@ -16507,7 +16507,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "dash": true
@@ -16515,7 +16515,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "n": "神行符",
@@ -16524,7 +16524,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "洛书",
@@ -16533,7 +16533,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "道经师宝玉",
@@ -16542,7 +16542,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "冥界史诗",
@@ -16551,7 +16551,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -16559,7 +16559,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "墨子",
@@ -16568,7 +16568,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "河图",
@@ -16577,7 +16577,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "战国策",
@@ -16586,7 +16586,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "冥界史诗",
@@ -16603,7 +16603,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "dash": true
@@ -16611,7 +16611,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "dash": true
@@ -16619,7 +16619,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "n": "霸天令",
@@ -16628,7 +16628,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "刺客列传",
@@ -16637,7 +16637,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "罡星戒",
@@ -16646,7 +16646,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "南华真经",
@@ -16655,7 +16655,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -16663,7 +16663,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "道德经",
@@ -16672,7 +16672,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "鬼谷子",
@@ -16681,7 +16681,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "商君书",
@@ -16690,7 +16690,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "南华真经",
@@ -16707,7 +16707,7 @@ window.FORGING_DATA = {
       "quality": "橙",
       "stages": [
         {
-          "stage": "0-1锻",
+          "stage": "0→1锻",
           "tokens": [
             {
               "dash": true
@@ -16715,7 +16715,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "1-2锻",
+          "stage": "1→2锻",
           "tokens": [
             {
               "dash": true
@@ -16723,7 +16723,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "2-3锻",
+          "stage": "2→3锻",
           "tokens": [
             {
               "n": "龙啸",
@@ -16732,7 +16732,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "3-4锻",
+          "stage": "3→4锻",
           "tokens": [
             {
               "n": "刺客列传",
@@ -16741,7 +16741,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "4-5锻",
+          "stage": "4→5锻",
           "tokens": [
             {
               "n": "女神之泪",
@@ -16750,7 +16750,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "5-6锻",
+          "stage": "5→6锻",
           "tokens": [
             {
               "n": "鬼谷子",
@@ -16759,7 +16759,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "6-7锻",
+          "stage": "6→7锻",
           "tokens": [
             {
               "dash": true
@@ -16767,7 +16767,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "7-8锻",
+          "stage": "7→8锻",
           "tokens": [
             {
               "n": "商君书",
@@ -16776,7 +16776,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "8-9锻",
+          "stage": "8→9锻",
           "tokens": [
             {
               "n": "战国策",
@@ -16785,7 +16785,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "9-10锻",
+          "stage": "9→10锻",
           "tokens": [
             {
               "n": "尚书",
@@ -16794,7 +16794,7 @@ window.FORGING_DATA = {
           ]
         },
         {
-          "stage": "10锻-红金",
+          "stage": "10锻→红金",
           "tokens": [
             {
               "n": "吕氏春秋",

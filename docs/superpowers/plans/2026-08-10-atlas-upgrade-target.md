@@ -119,9 +119,9 @@ STAGE_NAMES = [
   currentLevel: 5,
   targetLevel: 19,
   reached: false,
-  knots: 3558,
-  souls: 595,
-  growth: 29,
+  knots: 3489,
+  souls: 765,
+  growth: 39,
   equipmentStages: [
     { key: "5→6", items: [{ n: "冰魄戒", q: "紫" }] },
     { key: "7→8", items: [{ n: "墨眉", q: "橙" }] },

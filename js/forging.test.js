@@ -4,14 +4,14 @@ const F = require("./forging.js");
 
 const fixture = [
   { id: "f-0001", cat: "武器", name: "雷神锤", quality: "橙", stages: [
-    { stage: "0-1锻", tokens: [{ n: "非攻", q: "紫" }] },
-    { stage: "3-4锻", tokens: [{ n: "凌虚", q: "紫" }, { n: "木剑", q: "紫" }] },
-    { stage: "6-7锻", tokens: [{ dash: true }] },
-    { stage: "7-8锻", tokens: [{ n: "鲨齿", q: "橙" }] }
+    { stage: "0→1锻", tokens: [{ n: "非攻", q: "紫" }] },
+    { stage: "3→4锻", tokens: [{ n: "凌虚", q: "紫" }, { n: "木剑", q: "紫" }] },
+    { stage: "6→7锻", tokens: [{ dash: true }] },
+    { stage: "7→8锻", tokens: [{ n: "鲨齿", q: "橙" }] }
   ] },
   { id: "f-0002", cat: "典籍", name: "胡非子", quality: "橙", stages: [
-    { stage: "0-1锻", tokens: [{ dash: true }] },
-    { stage: "3-4锻", tokens: [{ n: "非攻", q: "紫" }] }
+    { stage: "0→1锻", tokens: [{ dash: true }] },
+    { stage: "3→4锻", tokens: [{ n: "非攻", q: "紫" }] }
   ] }
 ];
 

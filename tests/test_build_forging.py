@@ -65,8 +65,8 @@ class TestForgingSummary(unittest.TestCase):
 
     def test_stage_labels(self):
         item = next(i for i in self.items if i["name"] == "雷神锤")
-        self.assertEqual(item["stages"][0]["stage"], "0-1锻")
-        self.assertEqual(item["stages"][10]["stage"], "10锻-红金")
+        self.assertEqual(item["stages"][0]["stage"], "0→1锻")
+        self.assertEqual(item["stages"][10]["stage"], "10锻→红金")
 
 
 if __name__ == "__main__":

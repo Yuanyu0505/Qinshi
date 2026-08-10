@@ -4,7 +4,7 @@ window.ATLAS_DATA = {
     "sourceFile": "秦时相关（更新贯侯钟离昧）20260618.xlsx",
     "sourceSheet": "图鉴汇总",
     "version": "20260618",
-    "generatedAt": "2026-08-09",
+    "generatedAt": "2026-08-10",
     "total": 177,
     "atlasOrder": [
       "攻",
@@ -17,7 +17,182 @@ window.ATLAS_DATA = {
       "血": 63,
       "内力": 29,
       "防": 35
-    }
+    },
+    "upgradeStages": [
+      {
+        "key": "1→2",
+        "from": 1,
+        "to": 2,
+        "knots": 35,
+        "souls": 20,
+        "needsEquipment": false,
+        "growth": 1
+      },
+      {
+        "key": "2→3",
+        "from": 2,
+        "to": 3,
+        "knots": 49,
+        "souls": 25,
+        "needsEquipment": false,
+        "growth": 1
+      },
+      {
+        "key": "3→4",
+        "from": 3,
+        "to": 4,
+        "knots": 69,
+        "souls": 35,
+        "needsEquipment": false,
+        "growth": 1
+      },
+      {
+        "key": "4→5",
+        "from": 4,
+        "to": 5,
+        "knots": 97,
+        "souls": 50,
+        "needsEquipment": false,
+        "growth": 1
+      },
+      {
+        "key": "5→6",
+        "from": 5,
+        "to": 6,
+        "knots": 136,
+        "souls": 0,
+        "needsEquipment": true,
+        "growth": 2
+      },
+      {
+        "key": "6→7",
+        "from": 6,
+        "to": 7,
+        "knots": 191,
+        "souls": 95,
+        "needsEquipment": false,
+        "growth": 2
+      },
+      {
+        "key": "7→8",
+        "from": 7,
+        "to": 8,
+        "knots": 268,
+        "souls": 0,
+        "needsEquipment": true,
+        "growth": 3
+      },
+      {
+        "key": "8→9",
+        "from": 8,
+        "to": 9,
+        "knots": 376,
+        "souls": 160,
+        "needsEquipment": false,
+        "growth": 3
+      },
+      {
+        "key": "9→10",
+        "from": 9,
+        "to": 10,
+        "knots": 526,
+        "souls": 0,
+        "needsEquipment": true,
+        "growth": 5
+      },
+      {
+        "key": "10→11",
+        "from": 10,
+        "to": 11,
+        "knots": 188,
+        "souls": 40,
+        "needsEquipment": false,
+        "growth": 5
+      },
+      {
+        "key": "11→12",
+        "from": 11,
+        "to": 12,
+        "knots": 188,
+        "souls": 40,
+        "needsEquipment": false,
+        "growth": 6
+      },
+      {
+        "key": "12→13",
+        "from": 12,
+        "to": 13,
+        "knots": 188,
+        "souls": 40,
+        "needsEquipment": false,
+        "growth": 6
+      },
+      {
+        "key": "13→14",
+        "from": 13,
+        "to": 14,
+        "knots": 188,
+        "souls": 40,
+        "needsEquipment": false,
+        "growth": 7
+      },
+      {
+        "key": "14→15",
+        "from": 14,
+        "to": 15,
+        "knots": 188,
+        "souls": 40,
+        "needsEquipment": false,
+        "growth": 0
+      },
+      {
+        "key": "15→16",
+        "from": 15,
+        "to": 16,
+        "knots": 188,
+        "souls": 40,
+        "needsEquipment": false,
+        "growth": 0
+      },
+      {
+        "key": "16→17",
+        "from": 16,
+        "to": 17,
+        "knots": 288,
+        "souls": 90,
+        "needsEquipment": false,
+        "growth": 0
+      },
+      {
+        "key": "17→18",
+        "from": 17,
+        "to": 18,
+        "knots": 288,
+        "souls": 90,
+        "needsEquipment": false,
+        "growth": 0
+      },
+      {
+        "key": "18→19",
+        "from": 18,
+        "to": 19,
+        "knots": 288,
+        "souls": 90,
+        "needsEquipment": false,
+        "growth": 0
+      },
+      {
+        "key": "19→20",
+        "from": 19,
+        "to": 20,
+        "knots": 288,
+        "souls": 90,
+        "needsEquipment": false,
+        "growth": 0
+      }
+    ],
+    "maxLevel": 20,
+    "defaultTargetLevel": 19
   },
   "items": [
     {
@@ -26,7 +201,7 @@ window.ATLAS_DATA = {
       "name": "琴师高渐离",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -36,7 +211,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -46,7 +221,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -66,7 +241,7 @@ window.ATLAS_DATA = {
       "name": "星魂",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -76,7 +251,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -86,7 +261,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -106,7 +281,7 @@ window.ATLAS_DATA = {
       "name": "卫庄",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -116,7 +291,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -126,7 +301,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -146,7 +321,7 @@ window.ATLAS_DATA = {
       "name": "残虹盖聂",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -156,7 +331,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -166,7 +341,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -186,7 +361,7 @@ window.ATLAS_DATA = {
       "name": "少司命",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -196,7 +371,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -206,7 +381,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -226,7 +401,7 @@ window.ATLAS_DATA = {
       "name": "伏念",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -236,7 +411,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -246,7 +421,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -266,7 +441,7 @@ window.ATLAS_DATA = {
       "name": "黑衣张良",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -276,7 +451,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -286,7 +461,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -306,7 +481,7 @@ window.ATLAS_DATA = {
       "name": "项羽",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -316,7 +491,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -326,7 +501,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -346,7 +521,7 @@ window.ATLAS_DATA = {
       "name": "钟离昧",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -356,7 +531,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -366,7 +541,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -386,7 +561,7 @@ window.ATLAS_DATA = {
       "name": "英布",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -396,7 +571,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -406,7 +581,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -426,7 +601,7 @@ window.ATLAS_DATA = {
       "name": "赵高",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -436,7 +611,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -446,7 +621,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -466,7 +641,7 @@ window.ATLAS_DATA = {
       "name": "墨鸦",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -476,7 +651,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -486,7 +661,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -506,7 +681,7 @@ window.ATLAS_DATA = {
       "name": "小黎",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -516,7 +691,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -526,7 +701,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -546,7 +721,7 @@ window.ATLAS_DATA = {
       "name": "田虎",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -556,7 +731,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -566,7 +741,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -586,7 +761,7 @@ window.ATLAS_DATA = {
       "name": "刘邦",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -596,7 +771,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -606,7 +781,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -626,7 +801,7 @@ window.ATLAS_DATA = {
       "name": "田赐",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -636,7 +811,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -646,7 +821,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -666,7 +841,7 @@ window.ATLAS_DATA = {
       "name": "胡姬",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -676,7 +851,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -686,7 +861,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -706,7 +881,7 @@ window.ATLAS_DATA = {
       "name": "夜幕墨鸦",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -716,7 +891,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -726,7 +901,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -746,7 +921,7 @@ window.ATLAS_DATA = {
       "name": "夜幕白凤",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -756,7 +931,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -766,7 +941,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -786,7 +961,7 @@ window.ATLAS_DATA = {
       "name": "罗网赵高",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -796,7 +971,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -806,7 +981,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -826,7 +1001,7 @@ window.ATLAS_DATA = {
       "name": "丽姬",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -836,7 +1011,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -846,7 +1021,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -866,7 +1041,7 @@ window.ATLAS_DATA = {
       "name": "圣王伏念",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -876,7 +1051,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -886,7 +1061,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -906,7 +1081,7 @@ window.ATLAS_DATA = {
       "name": "虞姬",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -916,7 +1091,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -926,7 +1101,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -946,7 +1121,7 @@ window.ATLAS_DATA = {
       "name": "舜",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -956,7 +1131,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -966,7 +1141,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -986,7 +1161,7 @@ window.ATLAS_DATA = {
       "name": "渊虹盖聂",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -996,7 +1171,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -1006,7 +1181,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -1026,7 +1201,7 @@ window.ATLAS_DATA = {
       "name": "巨阙陈胜",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -1036,7 +1211,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -1046,7 +1221,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -1066,7 +1241,7 @@ window.ATLAS_DATA = {
       "name": "墨家雪女",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -1076,7 +1251,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -1086,7 +1261,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -1106,7 +1281,7 @@ window.ATLAS_DATA = {
       "name": "太虚月神",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -1116,7 +1291,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -1126,7 +1301,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -1146,7 +1321,7 @@ window.ATLAS_DATA = {
       "name": "惊鲵田言",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -1156,7 +1331,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -1166,7 +1341,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -1186,7 +1361,7 @@ window.ATLAS_DATA = {
       "name": "龙骧章邯",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -1196,7 +1371,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -1206,7 +1381,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -1226,7 +1401,7 @@ window.ATLAS_DATA = {
       "name": "神·森罗大司命",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -1236,7 +1411,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -1246,7 +1421,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -1266,7 +1441,7 @@ window.ATLAS_DATA = {
       "name": "神·太虚月神",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -1276,7 +1451,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -1286,7 +1461,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -1306,7 +1481,7 @@ window.ATLAS_DATA = {
       "name": "神·田虎",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -1316,7 +1491,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -1326,7 +1501,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -1346,7 +1521,7 @@ window.ATLAS_DATA = {
       "name": "神·吴旷",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -1356,7 +1531,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -1366,7 +1541,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -1386,7 +1561,7 @@ window.ATLAS_DATA = {
       "name": "神·嬴政",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -1396,7 +1571,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -1406,7 +1581,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -1426,7 +1601,7 @@ window.ATLAS_DATA = {
       "name": "神·蒙恬",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -1436,7 +1611,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -1446,7 +1621,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -1466,7 +1641,7 @@ window.ATLAS_DATA = {
       "name": "神·项羽",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -1476,7 +1651,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -1486,7 +1661,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -1506,7 +1681,7 @@ window.ATLAS_DATA = {
       "name": "神·白凤",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -1516,7 +1691,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -1526,7 +1701,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -1546,7 +1721,7 @@ window.ATLAS_DATA = {
       "name": "神·墨鸦",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -1556,7 +1731,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -1566,7 +1741,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -1586,7 +1761,7 @@ window.ATLAS_DATA = {
       "name": "神·蚩魔卫庄",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -1596,7 +1771,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -1606,7 +1781,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -1626,7 +1801,7 @@ window.ATLAS_DATA = {
       "name": "神·荆轲",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -1636,7 +1811,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -1646,7 +1821,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -1666,7 +1841,7 @@ window.ATLAS_DATA = {
       "name": "神·燕丹",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -1676,7 +1851,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -1686,7 +1861,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -1706,7 +1881,7 @@ window.ATLAS_DATA = {
       "name": "神·胜七",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -1716,7 +1891,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -1726,7 +1901,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -1746,7 +1921,7 @@ window.ATLAS_DATA = {
       "name": "神·惊鲵",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -1756,7 +1931,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -1766,7 +1941,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -1786,7 +1961,7 @@ window.ATLAS_DATA = {
       "name": "神·胡亥",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -1796,7 +1971,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -1806,7 +1981,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -1826,7 +2001,7 @@ window.ATLAS_DATA = {
       "name": "神·诺敏",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -1836,7 +2011,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -1846,7 +2021,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -1866,7 +2041,7 @@ window.ATLAS_DATA = {
       "name": "神·惊鲵田言",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -1876,7 +2051,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -1886,7 +2061,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -1906,7 +2081,7 @@ window.ATLAS_DATA = {
       "name": "神·霸道田虎",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -1916,7 +2091,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -1926,7 +2101,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -1946,7 +2121,7 @@ window.ATLAS_DATA = {
       "name": "神·秋水晓梦",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -1956,7 +2131,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -1966,7 +2141,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -1986,7 +2161,7 @@ window.ATLAS_DATA = {
       "name": "神·兰轩紫女",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -1996,7 +2171,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -2006,7 +2181,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -2026,7 +2201,7 @@ window.ATLAS_DATA = {
       "name": "木剑盖聂",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -2036,7 +2211,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -2046,7 +2221,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -2066,7 +2241,7 @@ window.ATLAS_DATA = {
       "name": "乐师雪女",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -2076,7 +2251,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -2086,7 +2261,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -2106,7 +2281,7 @@ window.ATLAS_DATA = {
       "name": "东皇太一",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -2116,7 +2291,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -2126,7 +2301,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -2146,7 +2321,7 @@ window.ATLAS_DATA = {
       "name": "王翦",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -2156,7 +2331,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -2166,7 +2341,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -2186,7 +2361,7 @@ window.ATLAS_DATA = {
       "name": "湘夫人",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -2196,7 +2371,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -2206,7 +2381,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -2226,7 +2401,7 @@ window.ATLAS_DATA = {
       "name": "颜路",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -2236,7 +2411,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -2246,7 +2421,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -2266,7 +2441,7 @@ window.ATLAS_DATA = {
       "name": "鬼谷子",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -2276,7 +2451,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -2286,7 +2461,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -2306,7 +2481,7 @@ window.ATLAS_DATA = {
       "name": "少年盖聂",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -2316,7 +2491,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -2326,7 +2501,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -2346,7 +2521,7 @@ window.ATLAS_DATA = {
       "name": "范增",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -2356,7 +2531,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -2366,7 +2541,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -2386,7 +2561,7 @@ window.ATLAS_DATA = {
       "name": "胡亥",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -2396,7 +2571,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -2406,7 +2581,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -2426,7 +2601,7 @@ window.ATLAS_DATA = {
       "name": "涟衣",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -2436,7 +2611,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -2446,7 +2621,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -2466,7 +2641,7 @@ window.ATLAS_DATA = {
       "name": "少年白凤",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -2476,7 +2651,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -2486,7 +2661,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -2506,7 +2681,7 @@ window.ATLAS_DATA = {
       "name": "魔化卫庄",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -2516,7 +2691,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -2526,7 +2701,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -2546,7 +2721,7 @@ window.ATLAS_DATA = {
       "name": "朱家",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -2556,7 +2731,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -2566,7 +2741,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -2586,7 +2761,7 @@ window.ATLAS_DATA = {
       "name": "田言",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -2596,7 +2771,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -2606,7 +2781,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -2626,7 +2801,7 @@ window.ATLAS_DATA = {
       "name": "金先生",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -2636,7 +2811,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -2646,7 +2821,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -2666,7 +2841,7 @@ window.ATLAS_DATA = {
       "name": "将星蒙恬",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -2676,7 +2851,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -2686,7 +2861,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -2706,7 +2881,7 @@ window.ATLAS_DATA = {
       "name": "李牧",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -2716,7 +2891,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -2726,7 +2901,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -2746,7 +2921,7 @@ window.ATLAS_DATA = {
       "name": "惊鲵",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -2756,7 +2931,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -2766,7 +2941,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -2786,7 +2961,7 @@ window.ATLAS_DATA = {
       "name": "秦二世",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -2796,7 +2971,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -2806,7 +2981,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -2826,7 +3001,7 @@ window.ATLAS_DATA = {
       "name": "相国李斯",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -2836,7 +3011,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -2846,7 +3021,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -2866,7 +3041,7 @@ window.ATLAS_DATA = {
       "name": "田光",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -2876,7 +3051,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -2886,7 +3061,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -2906,7 +3081,7 @@ window.ATLAS_DATA = {
       "name": "人宗逍遥子",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -2916,7 +3091,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -2926,7 +3101,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -2946,7 +3121,7 @@ window.ATLAS_DATA = {
       "name": "含光颜路",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -2956,7 +3131,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -2966,7 +3141,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -2986,7 +3161,7 @@ window.ATLAS_DATA = {
       "name": "娥皇女英",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -2996,7 +3171,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -3006,7 +3181,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -3026,7 +3201,7 @@ window.ATLAS_DATA = {
       "name": "无极东皇",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -3036,7 +3211,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -3046,7 +3221,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -3066,7 +3241,7 @@ window.ATLAS_DATA = {
       "name": "龙魂小黎",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -3076,7 +3251,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -3086,7 +3261,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -3106,7 +3281,7 @@ window.ATLAS_DATA = {
       "name": "楚王项羽",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -3116,7 +3291,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -3126,7 +3301,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -3146,7 +3321,7 @@ window.ATLAS_DATA = {
       "name": "力士大铁锤",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -3156,7 +3331,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -3166,7 +3341,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -3186,7 +3361,7 @@ window.ATLAS_DATA = {
       "name": "王离",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -3196,7 +3371,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -3206,7 +3381,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -3226,7 +3401,7 @@ window.ATLAS_DATA = {
       "name": "天宗晓梦",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -3236,7 +3411,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -3246,7 +3421,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -3266,7 +3441,7 @@ window.ATLAS_DATA = {
       "name": "流沙紫女",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -3276,7 +3451,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -3286,7 +3461,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -3306,7 +3481,7 @@ window.ATLAS_DATA = {
       "name": "素华少司命",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -3316,7 +3491,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -3326,7 +3501,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -3346,7 +3521,7 @@ window.ATLAS_DATA = {
       "name": "潜蛟韩信",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -3356,7 +3531,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -3366,7 +3541,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -3386,7 +3561,7 @@ window.ATLAS_DATA = {
       "name": "荼蘼田蜜",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -3396,7 +3571,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -3406,7 +3581,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -3426,7 +3601,7 @@ window.ATLAS_DATA = {
       "name": "霸道田虎",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -3436,7 +3611,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -3446,7 +3621,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -3466,7 +3641,7 @@ window.ATLAS_DATA = {
       "name": "秋水晓梦",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -3476,7 +3651,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -3486,7 +3661,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -3506,7 +3681,7 @@ window.ATLAS_DATA = {
       "name": "神·云中君",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -3516,7 +3691,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -3526,7 +3701,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -3546,7 +3721,7 @@ window.ATLAS_DATA = {
       "name": "神·东皇太一",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -3556,7 +3731,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -3566,7 +3741,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -3586,7 +3761,7 @@ window.ATLAS_DATA = {
       "name": "神·田仲",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -3596,7 +3771,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -3606,7 +3781,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -3626,7 +3801,7 @@ window.ATLAS_DATA = {
       "name": "神·田蜜",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -3636,7 +3811,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -3646,7 +3821,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -3666,7 +3841,7 @@ window.ATLAS_DATA = {
       "name": "神·田光",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -3676,7 +3851,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -3686,7 +3861,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -3706,7 +3881,7 @@ window.ATLAS_DATA = {
       "name": "神·王翦",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -3716,7 +3891,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -3726,7 +3901,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -3746,7 +3921,7 @@ window.ATLAS_DATA = {
       "name": "神·扶苏",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -3756,7 +3931,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -3766,7 +3941,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -3786,7 +3961,7 @@ window.ATLAS_DATA = {
       "name": "神·王离",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -3796,7 +3971,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -3806,7 +3981,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -3826,7 +4001,7 @@ window.ATLAS_DATA = {
       "name": "神·伏念",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -3836,7 +4011,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -3846,7 +4021,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -3866,7 +4041,7 @@ window.ATLAS_DATA = {
       "name": "神·张良",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -3876,7 +4051,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -3886,7 +4061,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -3906,7 +4081,7 @@ window.ATLAS_DATA = {
       "name": "神·颜路",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -3916,7 +4091,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -3926,7 +4101,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -3946,7 +4121,7 @@ window.ATLAS_DATA = {
       "name": "神·虞姬",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -3956,7 +4131,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -3966,7 +4141,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -3986,7 +4161,7 @@ window.ATLAS_DATA = {
       "name": "神·红莲赤练",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -3996,7 +4171,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -4006,7 +4181,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -4026,7 +4201,7 @@ window.ATLAS_DATA = {
       "name": "神·高月",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -4036,7 +4211,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -4046,7 +4221,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -4066,7 +4241,7 @@ window.ATLAS_DATA = {
       "name": "神·荆天明",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -4076,7 +4251,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -4086,7 +4261,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -4106,7 +4281,7 @@ window.ATLAS_DATA = {
       "name": "神·墨家雪女",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -4116,7 +4291,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -4126,7 +4301,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -4146,7 +4321,7 @@ window.ATLAS_DATA = {
       "name": "神·赵高",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -4156,7 +4331,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -4166,7 +4341,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -4186,7 +4361,7 @@ window.ATLAS_DATA = {
       "name": "神·掩日",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -4196,7 +4371,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -4206,7 +4381,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -4226,7 +4401,7 @@ window.ATLAS_DATA = {
       "name": "神·李牧",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -4236,7 +4411,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -4246,7 +4421,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -4266,7 +4441,7 @@ window.ATLAS_DATA = {
       "name": "神·小黎",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -4276,7 +4451,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -4286,7 +4461,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -4306,7 +4481,7 @@ window.ATLAS_DATA = {
       "name": "神·胡姬",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -4316,7 +4491,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -4326,7 +4501,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -4346,7 +4521,7 @@ window.ATLAS_DATA = {
       "name": "神·潜蛟韩信",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -4356,7 +4531,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -4366,7 +4541,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -4386,7 +4561,7 @@ window.ATLAS_DATA = {
       "name": "神·赤霄刘季",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -4396,7 +4571,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -4406,7 +4581,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -4426,7 +4601,7 @@ window.ATLAS_DATA = {
       "name": "神·荼蘼田蜜",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -4436,7 +4611,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -4446,7 +4621,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -4466,7 +4641,7 @@ window.ATLAS_DATA = {
       "name": "神·龙骧章邯",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -4476,7 +4651,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -4486,7 +4661,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -4506,7 +4681,7 @@ window.ATLAS_DATA = {
       "name": "神·侠道天明",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -4516,7 +4691,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -4526,7 +4701,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -4546,7 +4721,7 @@ window.ATLAS_DATA = {
       "name": "燕丹",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -4556,7 +4731,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -4566,7 +4741,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -4586,7 +4761,7 @@ window.ATLAS_DATA = {
       "name": "焱妃",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -4596,7 +4771,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -4606,7 +4781,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -4626,7 +4801,7 @@ window.ATLAS_DATA = {
       "name": "紫女",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -4636,7 +4811,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -4646,7 +4821,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -4666,7 +4841,7 @@ window.ATLAS_DATA = {
       "name": "戎装嬴政",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -4676,7 +4851,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -4686,7 +4861,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -4706,7 +4881,7 @@ window.ATLAS_DATA = {
       "name": "扶苏",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -4716,7 +4891,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -4726,7 +4901,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -4746,7 +4921,7 @@ window.ATLAS_DATA = {
       "name": "大司命",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -4756,7 +4931,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -4766,7 +4941,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -4786,7 +4961,7 @@ window.ATLAS_DATA = {
       "name": "少年卫庄",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -4796,7 +4971,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -4806,7 +4981,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -4826,7 +5001,7 @@ window.ATLAS_DATA = {
       "name": "晓梦大师",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -4836,7 +5011,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -4846,7 +5021,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -4866,7 +5041,7 @@ window.ATLAS_DATA = {
       "name": "小灵",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -4876,7 +5051,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -4886,7 +5061,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -4906,7 +5081,7 @@ window.ATLAS_DATA = {
       "name": "胜七",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -4916,7 +5091,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -4926,7 +5101,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -4946,7 +5121,7 @@ window.ATLAS_DATA = {
       "name": "花影",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -4956,7 +5131,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -4966,7 +5141,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -4986,7 +5161,7 @@ window.ATLAS_DATA = {
       "name": "弄玉",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -4996,7 +5171,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -5006,7 +5181,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -5026,7 +5201,7 @@ window.ATLAS_DATA = {
       "name": "盖聂",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -5036,7 +5211,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -5046,7 +5221,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -5066,7 +5241,7 @@ window.ATLAS_DATA = {
       "name": "田蜜",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -5076,7 +5251,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -5086,7 +5261,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -5106,7 +5281,7 @@ window.ATLAS_DATA = {
       "name": "司徒万里",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -5116,7 +5291,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -5126,7 +5301,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -5146,7 +5321,7 @@ window.ATLAS_DATA = {
       "name": "黑剑士胜七",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -5156,7 +5331,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -5166,7 +5341,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -5186,7 +5361,7 @@ window.ATLAS_DATA = {
       "name": "诺敏",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -5196,7 +5371,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -5206,7 +5381,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -5226,7 +5401,7 @@ window.ATLAS_DATA = {
       "name": "掩日",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -5236,7 +5411,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -5246,7 +5421,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -5266,7 +5441,7 @@ window.ATLAS_DATA = {
       "name": "秦王嬴政",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -5276,7 +5451,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -5286,7 +5461,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -5306,7 +5481,7 @@ window.ATLAS_DATA = {
       "name": "兵家王翦",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -5316,7 +5491,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -5326,7 +5501,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -5346,7 +5521,7 @@ window.ATLAS_DATA = {
       "name": "太子燕丹",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -5356,7 +5531,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -5366,7 +5541,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -5386,7 +5561,7 @@ window.ATLAS_DATA = {
       "name": "谋圣张良",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -5396,7 +5571,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -5406,7 +5581,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -5426,7 +5601,7 @@ window.ATLAS_DATA = {
       "name": "徐福",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -5436,7 +5611,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -5446,7 +5621,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -5466,7 +5641,7 @@ window.ATLAS_DATA = {
       "name": "燕月儿",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -5476,7 +5651,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -5486,7 +5661,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -5506,7 +5681,7 @@ window.ATLAS_DATA = {
       "name": "蚩魔卫庄",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -5516,7 +5691,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -5526,7 +5701,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -5546,7 +5721,7 @@ window.ATLAS_DATA = {
       "name": "水寒高渐离",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -5556,7 +5731,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -5566,7 +5741,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -5586,7 +5761,7 @@ window.ATLAS_DATA = {
       "name": "红莲赤练",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -5596,7 +5771,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -5606,7 +5781,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -5626,7 +5801,7 @@ window.ATLAS_DATA = {
       "name": "极诣星魂",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -5636,7 +5811,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -5646,7 +5821,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -5666,7 +5841,7 @@ window.ATLAS_DATA = {
       "name": "梅三娘",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -5676,7 +5851,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -5686,7 +5861,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -5706,7 +5881,7 @@ window.ATLAS_DATA = {
       "name": "医仙端木蓉",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -5716,7 +5891,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -5726,7 +5901,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -5746,7 +5921,7 @@ window.ATLAS_DATA = {
       "name": "月神",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -5756,7 +5931,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -5766,7 +5941,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -5786,7 +5961,7 @@ window.ATLAS_DATA = {
       "name": "红莲",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -5796,7 +5971,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -5806,7 +5981,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -5826,7 +6001,7 @@ window.ATLAS_DATA = {
       "name": "白凤凰",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -5836,7 +6011,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -5846,7 +6021,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -5866,7 +6041,7 @@ window.ATLAS_DATA = {
       "name": "章邯",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -5876,7 +6051,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -5886,7 +6061,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -5906,7 +6081,7 @@ window.ATLAS_DATA = {
       "name": "云中君",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -5916,7 +6091,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -5926,7 +6101,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -5946,7 +6121,7 @@ window.ATLAS_DATA = {
       "name": "湘君",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -5956,7 +6131,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -5966,7 +6141,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -5986,7 +6161,7 @@ window.ATLAS_DATA = {
       "name": "逍遥子",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -5996,7 +6171,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -6006,7 +6181,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -6026,7 +6201,7 @@ window.ATLAS_DATA = {
       "name": "季布",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -6036,7 +6211,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -6046,7 +6221,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -6066,7 +6241,7 @@ window.ATLAS_DATA = {
       "name": "虞子期",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -6076,7 +6251,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -6086,7 +6261,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -6106,7 +6281,7 @@ window.ATLAS_DATA = {
       "name": "韩信",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -6116,7 +6291,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -6126,7 +6301,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -6146,7 +6321,7 @@ window.ATLAS_DATA = {
       "name": "姬无夜",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -6156,7 +6331,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -6166,7 +6341,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -6186,7 +6361,7 @@ window.ATLAS_DATA = {
       "name": "小貅貅",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -6196,7 +6371,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -6206,7 +6381,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -6226,7 +6401,7 @@ window.ATLAS_DATA = {
       "name": "田仲",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -6236,7 +6411,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -6246,7 +6421,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -6266,7 +6441,7 @@ window.ATLAS_DATA = {
       "name": "军神韩信",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -6276,7 +6451,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -6286,7 +6461,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -6306,7 +6481,7 @@ window.ATLAS_DATA = {
       "name": "典庆",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -6316,7 +6491,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -6326,7 +6501,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -6346,7 +6521,7 @@ window.ATLAS_DATA = {
       "name": "公子扶苏",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -6356,7 +6531,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -6366,7 +6541,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -6386,7 +6561,7 @@ window.ATLAS_DATA = {
       "name": "肃杀真刚",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -6396,7 +6571,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -6406,7 +6581,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -6426,7 +6601,7 @@ window.ATLAS_DATA = {
       "name": "刺客荆轲",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -6436,7 +6611,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -6446,7 +6621,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -6466,7 +6641,7 @@ window.ATLAS_DATA = {
       "name": "东君焱妃",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -6476,7 +6651,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -6486,7 +6661,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -6506,7 +6681,7 @@ window.ATLAS_DATA = {
       "name": "荆天明",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -6516,7 +6691,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -6526,7 +6701,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -6546,7 +6721,7 @@ window.ATLAS_DATA = {
       "name": "寒蝉吴旷",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -6556,7 +6731,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -6566,7 +6741,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -6586,7 +6761,7 @@ window.ATLAS_DATA = {
       "name": "镜仙端木蓉",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -6596,7 +6771,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -6606,7 +6781,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -6626,7 +6801,7 @@ window.ATLAS_DATA = {
       "name": "森罗大司命",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -6636,7 +6811,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -6646,7 +6821,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -6666,7 +6841,7 @@ window.ATLAS_DATA = {
       "name": "赤霄刘季",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -6676,7 +6851,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -6686,7 +6861,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -6706,7 +6881,7 @@ window.ATLAS_DATA = {
       "name": "兰轩紫女",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -6716,7 +6891,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -6726,7 +6901,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -6746,7 +6921,7 @@ window.ATLAS_DATA = {
       "name": "神·焱妃",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -6756,7 +6931,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -6766,7 +6941,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -6786,7 +6961,7 @@ window.ATLAS_DATA = {
       "name": "神·典庆",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -6796,7 +6971,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -6806,7 +6981,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -6826,7 +7001,7 @@ window.ATLAS_DATA = {
       "name": "神·李斯",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -6836,7 +7011,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -6846,7 +7021,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -6866,7 +7041,7 @@ window.ATLAS_DATA = {
       "name": "神·紫女",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -6876,7 +7051,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -6886,7 +7061,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -6906,7 +7081,7 @@ window.ATLAS_DATA = {
       "name": "神·丽姬",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -6916,7 +7091,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -6926,7 +7101,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -6946,7 +7121,7 @@ window.ATLAS_DATA = {
       "name": "神·真刚",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -6956,7 +7131,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -6966,7 +7141,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -6986,7 +7161,7 @@ window.ATLAS_DATA = {
       "name": "神·梅三娘",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -6996,7 +7171,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -7006,7 +7181,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -7026,7 +7201,7 @@ window.ATLAS_DATA = {
       "name": "神·凤吟弄玉",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -7036,7 +7211,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -7046,7 +7221,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {
@@ -7066,7 +7241,7 @@ window.ATLAS_DATA = {
       "name": "神·王道少羽",
       "stages": [
         {
-          "key": "5--6",
+          "key": "5→6",
           "end": 6,
           "items": [
             {
@@ -7076,7 +7251,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "7--8",
+          "key": "7→8",
           "end": 8,
           "items": [
             {
@@ -7086,7 +7261,7 @@ window.ATLAS_DATA = {
           ]
         },
         {
-          "key": "9--10",
+          "key": "9→10",
           "end": 10,
           "items": [
             {

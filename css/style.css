@@ -101,7 +101,8 @@ header.top {
 #drop-search:focus,
 #prog-search:focus,
 #atlas-search:focus { border-color: var(--gold-dim); box-shadow: 0 0 0 2px rgba(212, 175, 55, .15); }
-#atlas-level-filter {
+#atlas-level-filter,
+#atlas-target-level {
   padding: 9px 12px;
   font-size: 15px;
   background: var(--bg2);
@@ -330,8 +331,16 @@ tr.hit-row td { background: rgba(212, 175, 55, .06); }
   border-radius: 6px;
 }
 .atlas-meta { display: flex; gap: 18px; flex-wrap: wrap; color: var(--muted); font-size: 13px; margin-bottom: 8px; }
+.atlas-group { color: var(--gold); background: rgba(212, 175, 55, .16); border: 1px solid rgba(212, 175, 55, .45); border-radius: 5px; padding: 1px 6px; font-weight: 700; }
 .atlas-stage { display: flex; align-items: baseline; gap: 10px; padding: 4px 0; font-size: 14px; }
 .atlas-stage-key { color: var(--gold-dim); min-width: 52px; white-space: nowrap; }
+.atlas-upgrade-summary, .atlas-upgrade { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 10px; margin-bottom: 10px; }
+.atlas-upgrade-summary { margin-bottom: 14px; }
+.atlas-upgrade.done { color: var(--gold); font-weight: 700; }
+.atlas-upgrade-title { color: var(--gold); font-weight: 700; margin-bottom: 7px; }
+.atlas-upgrade-cost { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 7px; }
+.atlas-upgrade-cost b { color: var(--gold); }
+.atlas-upgrade-equipment, .atlas-summary-equipment { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 7px; }
 .prog-equip {
   background: var(--bg2);
   border: 1px solid var(--line);

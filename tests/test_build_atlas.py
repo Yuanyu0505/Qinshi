@@ -2,7 +2,9 @@ import os
 import unittest
 from collections import Counter
 
-from tools.build_atlas import parse_sheet
+import openpyxl
+
+from tools.build_atlas import parse_sheet, parse_upgrade_stages
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 XLSX = os.path.join(ROOT, "秦时相关（更新贯侯钟离昧）20260618.xlsx")
@@ -29,9 +31,9 @@ class TestAtlas(unittest.TestCase):
         item = next(i for i in self.items if i["name"] == "琴师高渐离")
         self.assertEqual(item["atlas"], "攻")
         self.assertEqual(item["stages"], [
-            {"key": "5--6", "end": 6, "items": [{"n": "号钟琴", "q": "紫"}]},
-            {"key": "7--8", "end": 8, "items": [{"n": "水寒", "q": "紫"}]},
-            {"key": "9--10", "end": 10, "items": [{"n": "残虹", "q": "橙"}]},
+            {"key": "5→6", "end": 6, "items": [{"n": "号钟琴", "q": "紫"}]},
+            {"key": "7→8", "end": 8, "items": [{"n": "水寒", "q": "紫"}]},
+            {"key": "9→10", "end": 10, "items": [{"n": "残虹", "q": "橙"}]},
         ])
         self.assertEqual(item["acquire"], "棋阵/招募")
         self.assertEqual(item["group"], "非攻墨门")
@@ -70,6 +72,19 @@ class TestAtlas(unittest.TestCase):
         self.assertEqual(c[("内力", "橙")], 44)
         self.assertEqual(c[("防", "紫")], 61)
         self.assertEqual(c[("防", "橙")], 44)
+
+    def test_upgrade_stages(self):
+        wb = openpyxl.load_workbook(XLSX, data_only=True)
+        stages = parse_upgrade_stages(wb["图鉴汇总"])
+        self.assertEqual(len(stages), 19)
+        self.assertEqual(stages[0], {
+            "key": "1→2", "from": 1, "to": 2,
+            "knots": 35, "souls": 20, "needsEquipment": False, "growth": 1,
+        })
+        self.assertEqual(stages[4]["key"], "5→6")
+        self.assertTrue(stages[4]["needsEquipment"])
+        self.assertEqual(stages[13]["growth"], 0)
+        self.assertEqual(stages[-1]["key"], "19→20")
 
 
 if __name__ == "__main__":

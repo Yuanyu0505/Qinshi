@@ -219,8 +219,13 @@
             <option value="15">15级以下</option>
           </select>
         </div>
-        <div class="muted-tip">图鉴等级为个人进度（可直接修改）：等级 ≥ 10 表示已满无需装备；已超过的等级阶段装备自动隐藏。</div>
+        <div class="filter-row">
+          <span class="filter-label">目标等级</span>
+          <input id="atlas-target-level" type="number" min="1" step="1">
+        </div>
+        <div class="muted-tip">图鉴等级为个人进度（可直接修改）；达到目标等级即视为完成，14级后不再获得成长值。</div>
       </section>
+      <div id="atlas-upgrade-summary"></div>
       <div id="atlas-results"></div>
     </section>
   </main>

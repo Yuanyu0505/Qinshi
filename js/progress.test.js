@@ -5,17 +5,17 @@ const P = require("./progress.js");
 const item = {
   id: "f-0001", cat: "武器", name: "雷神锤", quality: "橙",
   stages: [
-    { stage: "0-1锻", tokens: [{ n: "非攻", q: "紫" }] },
-    { stage: "1-2锻", tokens: [{ n: "灭魂", q: "紫" }] },
-    { stage: "2-3锻", tokens: [{ n: "水寒", q: "紫" }] },
-    { stage: "3-4锻", tokens: [{ n: "凌虚", q: "紫" }, { n: "木剑", q: "紫" }] },
-    { stage: "4-5锻", tokens: [{ n: "三略", q: "紫" }] },
-    { stage: "5-6锻", tokens: [{ n: "墨眉", q: "橙" }] },
-    { stage: "6-7锻", tokens: [{ dash: true }] },
-    { stage: "7-8锻", tokens: [{ n: "鲨齿", q: "橙" }] },
-    { stage: "8-9锻", tokens: [{ n: "秋骊", q: "橙" }] },
-    { stage: "9-10锻", tokens: [{ n: "千面", q: "橙" }] },
-    { stage: "10锻-红金", tokens: [{ n: "赤霄", q: "橙" }] }
+    { stage: "0→1锻", tokens: [{ n: "非攻", q: "紫" }] },
+    { stage: "1→2锻", tokens: [{ n: "灭魂", q: "紫" }] },
+    { stage: "2→3锻", tokens: [{ n: "水寒", q: "紫" }] },
+    { stage: "3→4锻", tokens: [{ n: "凌虚", q: "紫" }, { n: "木剑", q: "紫" }] },
+    { stage: "4→5锻", tokens: [{ n: "三略", q: "紫" }] },
+    { stage: "5→6锻", tokens: [{ n: "墨眉", q: "橙" }] },
+    { stage: "6→7锻", tokens: [{ dash: true }] },
+    { stage: "7→8锻", tokens: [{ n: "鲨齿", q: "橙" }] },
+    { stage: "8→9锻", tokens: [{ n: "秋骊", q: "橙" }] },
+    { stage: "9→10锻", tokens: [{ n: "千面", q: "橙" }] },
+    { stage: "10锻→红金", tokens: [{ n: "赤霄", q: "橙" }] }
   ]
 };
 
@@ -25,16 +25,16 @@ test("remainingStages：按已完成阶段数取剩余阶段", () => {
   assert.strictEqual(P.remainingStages(item, 0).length, 11);
   const r = P.remainingStages(item, 3);
   assert.strictEqual(r.length, 8);
-  assert.strictEqual(r[0].stage, "3-4锻");
+  assert.strictEqual(r[0].stage, "3→4锻");
   assert.deepStrictEqual(P.remainingStages(item, 11), []);
   assert.deepStrictEqual(P.remainingStages(item, 99), []);
   assert.deepStrictEqual(P.remainingStages(null, 0), []);
 });
 
 test("nextStage：下一阶段及其材料", () => {
-  assert.strictEqual(P.nextStage(item, 0).stage, "0-1锻");
+  assert.strictEqual(P.nextStage(item, 0).stage, "0→1锻");
   assert.deepStrictEqual(P.nextStage(item, 0).tokens, [{ n: "非攻", q: "紫" }]);
-  assert.strictEqual(P.nextStage(item, 3).stage, "3-4锻");
+  assert.strictEqual(P.nextStage(item, 3).stage, "3→4锻");
   assert.strictEqual(P.nextStage(item, 11), null);
 });
 

@@ -15,6 +15,8 @@
   const PROG_STORE_KEY = "qinshi_forging_progress_v1";
   const ATLAS_DATA = window.ATLAS_DATA;
   const ATLAS = window.ATLAS;
+  const QUIZ_DATA = window.QUIZ_DATA;
+  const QUIZ = window.QUIZ;
   const ATLAS_LEVELS_KEY = "qinshi_atlas_levels_v1";
   const ATLAS_TARGET_LEVEL_KEY = "qinshi_atlas_target_level_v1";
 
@@ -64,7 +66,10 @@
     atlasLevelFilter: document.getElementById("atlas-level-filter"),
     atlasTargetLevel: document.getElementById("atlas-target-level"),
     atlasUpgradeSummary: document.getElementById("atlas-upgrade-summary"),
-    atlasResults: document.getElementById("atlas-results")
+    atlasResults: document.getElementById("atlas-results"),
+    quizSearch: document.getElementById("quiz-search"),
+    quizCount: document.getElementById("quiz-count"),
+    quizResults: document.getElementById("quiz-results")
   };
 
   const progState = {
@@ -81,6 +86,7 @@
     targetLevel: loadAtlasTargetLevel(),
     levels: loadAtlasLevels()
   };
+  const quizState = { query: "" };
 
   function init() {
     bindTabs();
@@ -88,6 +94,7 @@
     initDrops();
     initProgress();
     initAtlas();
+    initQuiz();
     if (!DATA || !Q) {
       el.error.hidden = false;
       return;
@@ -106,7 +113,8 @@
       loulan: document.getElementById("partition-loulan"),
       forging: document.getElementById("partition-forging"),
       drops: document.getElementById("partition-drops"),
-      atlas: document.getElementById("partition-atlas")
+      atlas: document.getElementById("partition-atlas"),
+      quiz: document.getElementById("partition-quiz")
     };
     tabs.forEach((btn) => {
       btn.addEventListener("click", () => {
@@ -253,6 +261,25 @@
       </div>
       ${upgradeHtml}
     </div>`;
+  }
+
+  function initQuiz() {
+    if (!QUIZ_DATA || !QUIZ) return;
+    el.quizSearch.addEventListener("input", function () {
+      quizState.query = el.quizSearch.value;
+      applyQuiz();
+    });
+    applyQuiz();
+  }
+
+  function applyQuiz() {
+    var items = QUIZ.search(QUIZ_DATA.items, quizState.query);
+    el.quizCount.textContent = "共 " + items.length + " 题";
+    el.quizResults.innerHTML = items.length
+      ? items.map(function (item) {
+          return `<article class="quiz-item"><div class="quiz-question">${escapeHtml(item.question)}</div><div class="quiz-answer"><span>正确答案</span>${escapeHtml(item.answer)}</div></article>`;
+        }).join("")
+      : '<div class="empty"><p>未找到匹配的题目</p></div>';
   }
 
   function atlasUpgradeSummaryHtml(summary) {

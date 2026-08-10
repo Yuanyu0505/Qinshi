@@ -139,11 +139,41 @@
     </section>
 
     <section id="partition-inscription" hidden>
-      <div class="partition-head">铭文</div>
-      <div id="inscription-modes" class="segs"><button class="seg active" data-mode="progress">个人进度</button><button class="seg" data-mode="query">查询筛选</button><button class="seg" data-mode="reference">资料图表</button></div>
-      <div id="inscription-progress"></div>
-      <div id="inscription-query" hidden><section class="panel"><div class="filter-row"><select id="ins-quality"><option value="">全部品质</option><option>普通橙色</option><option>红色神将</option></select><select id="ins-tian"><option value="">全部天位</option></select><select id="ins-shield"><option value="">全部盾位</option></select><input id="ins-search" type="search" placeholder="搜索弟子关键词"></div></section><div id="ins-results"></div></div>
-      <div id="inscription-reference" hidden></div>
+      <div class="partition-head">铭文 <span id="inscription-count" class="meta"></span></div>
+      <div id="inscription-modes" class="segs inscription-modes">
+        <button type="button" class="seg active" data-mode="progress">个人进度</button>
+        <button type="button" class="seg" data-mode="query">查询筛选</button>
+        <button type="button" class="seg" data-mode="reference">资料图表</button>
+      </div>
+
+      <section id="inscription-progress">
+        <section class="panel">
+          <div class="panel-title">新增弟子铭文</div>
+          <div class="filter-row ins-progress-toolbar">
+            <span class="filter-label">弟子关键词</span>
+            <input id="ins-progress-search" type="search" placeholder="如：将威">
+            <div id="ins-progress-suggestions" class="ins-suggestions" hidden></div>
+          </div>
+          <div class="muted-tip">选择弟子后自动带出全部天位·盾位；普通橙色为4个天位，红色神将为5个天位。</div>
+        </section>
+        <div id="ins-progress-editor"></div>
+        <div id="ins-progress-list"></div>
+      </section>
+
+      <section id="inscription-query" hidden>
+        <section class="panel">
+          <div class="panel-title">查询筛选</div>
+          <div class="ins-query-controls">
+            <select id="ins-quality"><option value="">全部品质</option><option value="普通橙色">普通橙色</option><option value="红色神将">红色神将</option></select>
+            <select id="ins-tian"><option value="">全部天位</option><option>天府</option><option>天相</option><option>天同</option><option>天梁</option><option>天机</option></select>
+            <select id="ins-shield"><option value="">全部盾位</option><option>天盾</option><option>地盾</option><option>人盾</option><option>神盾</option><option>鬼盾</option><option>龙盾</option><option>虎盾</option><option>风盾</option><option>云盾</option></select>
+            <input id="ins-search" type="search" placeholder="搜索弟子关键词，如：神扶苏">
+          </div>
+        </section>
+        <div id="ins-results"></div>
+      </section>
+
+      <section id="inscription-reference" hidden></section>
     </section>
 
     <section id="partition-forging" hidden>
@@ -278,6 +308,7 @@
 <script src="js/progress.js"></script>
 <script src="js/atlas.js"></script>
 <script src="js/quiz.js"></script>
+<script src="js/inscription.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>

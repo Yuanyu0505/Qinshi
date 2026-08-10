@@ -49,6 +49,9 @@
     forgeProgress: document.getElementById("forge-progress"),
     progAddDisciple: document.getElementById("prog-add-disciple"),
     progSaveTip: document.getElementById("prog-save-tip"),
+    progSearch: document.getElementById("prog-search"),
+    progSearchResults: document.getElementById("prog-search-results"),
+    progPager: document.getElementById("prog-pager"),
     progPrev: document.getElementById("prog-prev"),
     progNext: document.getElementById("prog-next"),
     progPageTitle: document.getElementById("prog-page-title"),
@@ -63,6 +66,7 @@
   const progState = {
     view: "query",
     page: 0,
+    query: "",
     disciples: loadProgress()
   };
   const PROG_CAT_ORDER = ["武器", "盔甲", "首饰", "典籍"];
@@ -255,6 +259,10 @@
       saveProgress();
       renderProgress();
     });
+    el.progSearch.addEventListener("input", () => {
+      progState.query = el.progSearch.value;
+      renderProgress();
+    });
     el.progPrev.addEventListener("click", () => {
       if (progState.page > 0) {
         progState.page -= 1;
@@ -385,7 +393,10 @@
     return tokens.map((tk) => forgingTokenHtml(tk, false)).join("");
   }
 
-  function equipmentHtml(d, it) {
+  function equipmentHtml(d, it, options) {
+    const opts = options || {};
+    const hitStageIndexes = opts.hitStageIndexes || new Set();
+    const readOnly = opts.readOnly === true;
     const item = PROG.findItem(FDATA, it.name);
     if (!item) {
       return `<div class="prog-equip"><span class="forge-name">${escapeHtml(it.name)}</span><span class="muted">（锻造数据缺失）</span></div>`;
@@ -394,8 +405,9 @@
       let cls = "prog-stage";
       if (i < it.progress) cls += " done";
       if (i === it.progress) cls += " next";
-      return `<button type="button" class="${cls}" data-act="set-stage" data-disciple="${d.id}" data-item="${it.id}" data-idx="${i}" title="点击设为当前锻造阶段：${st.stage}">${st.stage}</button>`;
-    }).join("") + `<button type="button" class="prog-stage done-all${it.progress >= item.stages.length ? " next" : ""}" data-act="set-stage" data-disciple="${d.id}" data-item="${it.id}" data-idx="${item.stages.length}" title="点击设为全部完成">全部完成</button>`;
+      if (hitStageIndexes.has(i)) cls += " search-hit";
+      return `<button type="button" class="${cls}" data-act="set-stage" data-disciple="${d.id}" data-item="${it.id}" data-idx="${i}" title="${readOnly ? st.stage : `点击设为当前锻造阶段：${st.stage}`}"${readOnly ? " disabled" : ""}>${st.stage}</button>`;
+    }).join("") + `<button type="button" class="prog-stage done-all${it.progress >= item.stages.length ? " next" : ""}" data-act="set-stage" data-disciple="${d.id}" data-item="${it.id}" data-idx="${item.stages.length}" title="${readOnly ? "全部完成" : "点击设为全部完成"}"${readOnly ? " disabled" : ""}>全部完成</button>`;
     const next = PROG.nextStage(item, it.progress);
     const remaining = PROG.remainingStages(item, it.progress);
     const nextHtml = next ? `${next.stage}：${stageTokensHtml(next.tokens)}` : "全部锻造完成";
@@ -406,7 +418,7 @@
         <span class="forge-name">${escapeHtml(item.name)}</span>
         <span class="q-badge ${item.quality === "紫" ? "q-purple" : "q-orange"}">${item.quality}色</span>
         <span class="muted">${it.progress}/${item.stages.length} 阶段</span>
-        <button type="button" class="seg danger" data-act="remove-item" data-disciple="${d.id}" data-item="${it.id}">移除</button>
+        ${readOnly ? "" : `<button type="button" class="seg danger" data-act="remove-item" data-disciple="${d.id}" data-item="${it.id}">移除</button>`}
       </div>
       <div class="prog-stages">${chips}</div>
       <div class="prog-next">下一阶段：${nextHtml}</div>
@@ -454,11 +466,62 @@
         : '<div class="muted-tip">暂无数据，添加弟子和装备后自动汇总</div>');
   }
 
+  function progressSearchSection(title, count, body, emptyText) {
+    return `<section class="prog-search-section">
+      <h3 class="drop-title">${title}<span class="drop-count">${count} 条</span></h3>
+      ${body || `<div class="muted-tip">${emptyText}</div>`}
+    </section>`;
+  }
+
+  function renderProgressSearch() {
+    const result = PROG.searchEquipment(FDATA, progState.disciples, progState.query);
+    if (!result.owned.length && !result.required.length) {
+      el.progSearchResults.innerHTML = '<div class="empty"><p>未找到匹配装备</p></div>';
+      return;
+    }
+
+    const ownedHtml = result.owned.map((entry) => `<div class="prog-search-relation">
+      <div class="prog-search-context">${escapeHtml(entry.disciple.name || "未命名弟子")} · 直接持有</div>
+      ${equipmentHtml(entry.disciple, entry.progressItem, { readOnly: true })}
+    </div>`).join("");
+
+    const requiredHtml = result.required.map((entry) => {
+      const hitsHtml = entry.hits.map((hit) => `<span class="prog-search-hit">
+        <b>${escapeHtml(hit.stage)}</b>
+        ${hit.tokens.map((tokenHit) => forgingTokenHtml(tokenHit.token, true)).join("")}
+      </span>`).join("");
+      return `<div class="prog-search-relation">
+        <div class="prog-search-context">${escapeHtml(entry.disciple.name || "未命名弟子")} · ${escapeHtml(entry.item.name)}需要该材料</div>
+        <div class="prog-search-hits">${hitsHtml}</div>
+        ${equipmentHtml(entry.disciple, entry.progressItem, {
+          readOnly: true,
+          hitStageIndexes: new Set(entry.hits.map((hit) => hit.stageIdx))
+        })}
+      </div>`;
+    }).join("");
+
+    el.progSearchResults.innerHTML =
+      progressSearchSection("弟子直接持有", result.owned.length, ownedHtml, "没有弟子直接持有匹配装备") +
+      progressSearchSection("尚未完成的锻造材料需求", result.required.length, requiredHtml, "没有尚未完成的材料需求");
+  }
+
   function renderProgress() {
     const total = progState.disciples.length;
     if (progState.page > total) progState.page = total;
     if (progState.page < 0) progState.page = 0;
     const page = progState.page;
+    const searching = progState.query.trim() !== "";
+    el.progPager.hidden = searching;
+    el.progSearchResults.hidden = !searching;
+    if (searching) {
+      el.progOverall.hidden = true;
+      el.progDisciples.hidden = true;
+      el.progOverall.innerHTML = "";
+      el.progDisciples.innerHTML = "";
+      renderProgressSearch();
+      return;
+    }
+    el.progSearchResults.innerHTML = "";
     el.progPageTitle.textContent = page === 0
       ? "全体弟子剩余材料汇总"
       : (progState.disciples[page - 1] ? progState.disciples[page - 1].name : "弟子");

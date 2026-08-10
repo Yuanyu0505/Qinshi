@@ -85,6 +85,7 @@ header.top {
 .summary-card table { min-width: 900px; }
 #forge-search,
 #drop-search,
+#prog-search,
 #atlas-search {
   padding: 12px 16px;
   font-size: 16px;
@@ -98,6 +99,7 @@ header.top {
 }
 #forge-search:focus,
 #drop-search:focus,
+#prog-search:focus,
 #atlas-search:focus { border-color: var(--gold-dim); box-shadow: 0 0 0 2px rgba(212, 175, 55, .15); }
 #atlas-level-filter {
   padding: 9px 12px;
@@ -200,6 +202,34 @@ tr.hit-row td { background: rgba(212, 175, 55, .06); }
   font-size: 14px;
 }
 .progress-toolbar { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; flex-wrap: wrap; }
+.prog-search-panel { margin-bottom: 14px; }
+.prog-search-section {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 14px;
+  margin-bottom: 14px;
+}
+.prog-search-relation {
+  background: rgba(16, 15, 13, .4);
+  border: 1px solid rgba(212, 175, 55, .24);
+  border-radius: 10px;
+  padding: 12px;
+  margin-top: 12px;
+}
+.prog-search-context { color: var(--gold); font-weight: 700; margin-bottom: 9px; }
+.prog-search-hits { display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 10px; }
+.prog-search-hit {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 9px;
+  color: var(--text);
+  background: rgba(176, 58, 46, .16);
+  border: 1px solid var(--red);
+  border-radius: 7px;
+  font-size: 13px;
+}
 .prog-pager {
   display: flex;
   align-items: center;
@@ -208,6 +238,7 @@ tr.hit-row td { background: rgba(212, 175, 55, .06); }
   margin-bottom: 14px;
   flex-wrap: wrap;
 }
+.prog-pager[hidden] { display: none; }
 .prog-page-title {
   font-size: 19px;
   font-weight: 700;
@@ -321,6 +352,8 @@ tr.hit-row td { background: rgba(212, 175, 55, .06); }
 }
 .prog-stage.done { color: var(--text); border-color: var(--gold-dim); }
 .prog-stage.next { color: #fff; background: var(--red); border-color: var(--red); font-weight: 700; }
+.prog-stage.search-hit { box-shadow: 0 0 0 2px var(--gold); border-color: var(--gold); }
+.prog-stage:disabled { cursor: default; }
 .prog-next { color: var(--gold); font-size: 14px; margin-bottom: 8px; }
 .prog-summary { margin-top: 10px; }
 .mini-table { width: 100%; border-collapse: collapse; }

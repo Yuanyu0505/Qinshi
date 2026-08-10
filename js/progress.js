@@ -11,6 +11,12 @@
 })(typeof self !== "undefined" ? self : this, function () {
   "use strict";
 
+  var CAT_ORDER = ["武器", "盔甲", "首饰", "典籍"];
+
+  function normalizeSearch(s) {
+    return String(s == null ? "" : s).trim().toLowerCase();
+  }
+
   function findItem(data, name) {
     var items = data && data.items;
     if (!items) return null;
@@ -68,12 +74,85 @@
     return aggregateMaterials(flat);
   }
 
+  function orderedProgressItems(items) {
+    return (Array.isArray(items) ? items : []).map(function (item, index) {
+      return { item: item, index: index };
+    }).sort(function (a, b) {
+      var ai = CAT_ORDER.indexOf(a.item && a.item.cat);
+      var bi = CAT_ORDER.indexOf(b.item && b.item.cat);
+      if (ai === -1) ai = CAT_ORDER.length;
+      if (bi === -1) bi = CAT_ORDER.length;
+      return ai - bi || a.index - b.index;
+    }).map(function (entry) {
+      return entry.item;
+    });
+  }
+
+  /**
+   * 跨全部弟子搜索个人进度中的装备关系。
+   * owned：弟子直接持有的装备；required：未完成阶段中的材料需求。
+   */
+  function searchEquipment(data, disciples, keyword) {
+    var q = normalizeSearch(keyword);
+    var result = { owned: [], required: [] };
+    if (!q) return result;
+
+    (Array.isArray(disciples) ? disciples : []).forEach(function (disciple) {
+      if (!disciple || typeof disciple !== "object") return;
+      orderedProgressItems(disciple.items).forEach(function (progressItem) {
+        if (!progressItem || typeof progressItem !== "object") return;
+        var savedName = String(progressItem.name == null ? "" : progressItem.name);
+        if (!savedName) return;
+
+        var item = findItem(data, savedName);
+        if (normalizeSearch(savedName).indexOf(q) !== -1) {
+          result.owned.push({
+            disciple: disciple,
+            progressItem: progressItem,
+            item: item
+          });
+        }
+
+        if (!item || !Array.isArray(item.stages)) return;
+        var progress = Math.max(0, Math.min(progressItem.progress | 0, item.stages.length));
+        var hits = [];
+        for (var si = progress; si < item.stages.length; si++) {
+          var stage = item.stages[si] || {};
+          var tokenHits = [];
+          (Array.isArray(stage.tokens) ? stage.tokens : []).forEach(function (token, tokenIdx) {
+            if (token && token.n && normalizeSearch(token.n).indexOf(q) !== -1) {
+              tokenHits.push({ tokenIdx: tokenIdx, token: token });
+            }
+          });
+          if (tokenHits.length) {
+            hits.push({
+              stageIdx: si,
+              stage: stage.stage || "",
+              tokens: tokenHits
+            });
+          }
+        }
+        if (hits.length) {
+          result.required.push({
+            disciple: disciple,
+            progressItem: progressItem,
+            item: item,
+            hits: hits
+          });
+        }
+      });
+    });
+
+    return result;
+  }
+
   return {
     findItem: findItem,
     remainingStages: remainingStages,
     nextStage: nextStage,
     aggregateMaterials: aggregateMaterials,
     discipleSummary: discipleSummary,
-    overallSummary: overallSummary
+    overallSummary: overallSummary,
+    searchEquipment: searchEquipment
   };
 });

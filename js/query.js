@@ -31,6 +31,11 @@
     return main == null || main === "" || item.main === main;
   }
 
+  /** 分类筛选：为空/未提供表示不限 */
+  function matchCategory(item, category) {
+    return category == null || category === "" || item.cat === category;
+  }
+
   /** 副属性命中：只查各档位 token，主属性不算 */
   function hasSubAttr(item, attr) {
     for (var i = 0; i < TIER_ORDER.length; i++) {
@@ -74,6 +79,7 @@
   function queryItems(items, opts) {
     opts = opts || {};
     var search = opts.search || "";
+    var category = opts.category == null ? "" : opts.category;
     var main = opts.main == null ? "" : opts.main;
     var filters = opts.filters || [];
     var sortAttr = opts.sortAttr || (filters.length ? filters[0] : null);
@@ -81,7 +87,7 @@
 
     var result = [];
     for (var i = 0; i < items.length; i++) {
-      if (matchSearch(items[i], search) && matchMain(items[i], main) && matchFilters(items[i], filters)) {
+      if (matchSearch(items[i], search) && matchCategory(items[i], category) && matchMain(items[i], main) && matchFilters(items[i], filters)) {
         result.push(items[i]);
       }
     }
@@ -106,6 +112,7 @@
     VALUE_SOURCES: VALUE_SOURCES,
     normalizeInput: normalizeInput,
     matchSearch: matchSearch,
+    matchCategory: matchCategory,
     matchMain: matchMain,
     hasSubAttr: hasSubAttr,
     matchFilters: matchFilters,

@@ -17,11 +17,12 @@
   const ATLAS = window.ATLAS;
   const ATLAS_LEVELS_KEY = "qinshi_atlas_levels_v1";
 
-  const state = { search: "", main: "", filters: [], sortAttr: null, valueSource: "max" };
+  const state = { search: "", category: "", main: "", filters: [], sortAttr: null, valueSource: "max" };
   const forgeState = { mode: "main", query: "" };
 
   const el = {
     search: document.getElementById("search"),
+    categoryBtns: document.getElementById("category-filter"),
     mainBtns: document.getElementById("main-filter"),
     chips: document.getElementById("chips"),
     sortPanel: document.getElementById("sort-panel"),
@@ -84,6 +85,7 @@
       return;
     }
     el.version.textContent = DATA.meta.version;
+    renderCategoryButtons();
     renderChips();
     bindEvents();
     apply();
@@ -584,9 +586,21 @@
       .join("");
   }
 
+  function renderCategoryButtons() {
+    const categories = Array.isArray(DATA.meta.categories) ? DATA.meta.categories : [];
+    el.categoryBtns.innerHTML = '<button type="button" class="seg" data-category="">不限</button>' +
+      categories.map((category) => `<button type="button" class="seg" data-category="${escapeHtml(category)}">${escapeHtml(category)}</button>`).join("");
+  }
+
   function bindEvents() {
     el.search.addEventListener("input", () => {
       state.search = el.search.value;
+      apply();
+    });
+    el.categoryBtns.addEventListener("click", (e) => {
+      const btn = e.target.closest("button[data-category]");
+      if (!btn) return;
+      state.category = btn.dataset.category;
       apply();
     });
     el.mainBtns.addEventListener("click", (e) => {
@@ -622,6 +636,7 @@
     });
     const clear = () => {
       state.search = "";
+      state.category = "";
       state.main = "";
       state.filters = [];
       state.sortAttr = null;
@@ -636,6 +651,7 @@
   function apply() {
     const items = Q.queryItems(DATA.items, {
       search: state.search,
+      category: state.category,
       main: state.main,
       filters: state.filters,
       sortAttr: state.sortAttr,
@@ -651,6 +667,9 @@
   }
 
   function renderControls() {
+    el.categoryBtns.querySelectorAll("button").forEach((btn) => {
+      btn.classList.toggle("active", btn.dataset.category === state.category);
+    });
     el.mainBtns.querySelectorAll("button").forEach((btn) => {
       btn.classList.toggle("active", btn.dataset.main === state.main);
     });

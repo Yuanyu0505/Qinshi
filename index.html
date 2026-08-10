@@ -162,7 +162,15 @@
           <button id="prog-add-disciple" type="button" class="seg">+ 添加弟子</button>
           <span id="prog-save-tip" class="muted-tip">进度自动保存在本机浏览器</span>
         </div>
-        <div class="prog-pager">
+        <section class="panel prog-search-panel">
+          <div class="filter-row">
+            <span class="filter-label">搜索装备</span>
+            <input id="prog-search" type="search" placeholder="搜索弟子持有装备或尚未完成的锻造材料…" autocomplete="off">
+          </div>
+          <div class="muted-tip">跨全部弟子搜索；材料需求只统计尚未完成的锻造阶段。</div>
+        </section>
+        <div id="prog-search-results" hidden></div>
+        <div id="prog-pager" class="prog-pager">
           <button id="prog-prev" type="button" class="seg" title="上一页">◀ 上一页</button>
           <span id="prog-page-title" class="prog-page-title">全体弟子剩余材料汇总</span>
           <button id="prog-next" type="button" class="seg" title="下一页">下一页 ▶</button>

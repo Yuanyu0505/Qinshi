@@ -18,7 +18,7 @@ def read_area(ws, start, end, quality):
         for index, shield in enumerate(SHIELDS):
             for col in (3 + index * 2, 4 + index * 2):
                 name = ws.cell(row, col).value
-                if name:
+                if name and str(name).strip() not in SHIELDS:
                     records.append({"name": str(name).strip(), "quality": quality, "tian": current, "shield": shield})
     return records
 

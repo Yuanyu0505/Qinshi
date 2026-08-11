@@ -382,6 +382,8 @@ td.hit-cell { background: rgba(212, 175, 55, .12); }
   font-weight: 700;
   box-shadow: 0 0 0 2px rgba(227, 72, 67, .14);
 }
+.mat.material-token.mat-purple.hit { color: #d9a0ff; }
+.mat.material-token.mat-orange.hit { color: #ffb04a; }
 .mat-dash { color: var(--status); font-style: italic; }
 tr.hit-row td { background: rgba(212, 175, 55, .06); }
 .summary-card .badge { white-space: nowrap; }

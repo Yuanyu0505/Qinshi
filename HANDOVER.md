@@ -1,15 +1,16 @@
-# 秦时 · 攻略查询工具 交接文档
+# 秦时攻略站 交接文档
 
 ## 1. 快照信息
 
-- 快照日期：2026-08-10
-- Git 分支：`master`
+- 快照日期：2026-08-11
+- 当前开发分支：`codex/atlas-upgrade-target`
+- 发布分支：远程 `main`
 - 检查点标签：`checkpoint-2026-08-10`
 - 用途：当前为重要检查节点，可随时回退到本快照
 
 ## 2. 项目简介
 
-完全离线的本地网页工具，用于查询秦时明月游戏攻略数据（装备、锻造、关卡掉落、图鉴）并记录个人进度。无需联网、无需安装依赖，浏览器直接打开即可使用。
+可本地运行并可安装为 PWA 的秦时明月攻略工具，用于查询装备、锻造、关卡掉落、图鉴、铭文、答题和楼兰棋阵数据并记录个人进度。Windows 可直接双击打开；Android、iPhone 和 iPad 通过 GitHub Pages 首次联网缓存后可完全离线使用。
 
 ## 3. 运行方式
 
@@ -24,6 +25,13 @@
 3. 手机浏览器打开窗口中显示的「手机访问」地址
 
 前置条件：本机需安装 Node.js（已安装 v24）。
+
+### PWA 在线安装
+
+- 正式地址：`https://yuanyu0505.github.io/Qinshi/`
+- Android：Chrome 菜单“安装应用”，或在“设置”分区点击“安装到设备”
+- iPhone/iPad：Safari“分享”→“添加到主屏幕”
+- 第一次联网完成全部资源缓存后，可离线使用全部分区和图片
 
 ## 4. 功能分区
 
@@ -40,6 +48,10 @@
 ```
 deepseek/
 ├─ index.html                      # 入口页面（双击打开）
+├─ manifest.webmanifest            # PWA 名称、主题、启动范围和图标
+├─ service-worker.js               # 完整离线预缓存与版本切换
+├─ icons/                          # Android/桌面/iOS 应用图标
+├─ .github/workflows/pages.yml     # GitHub Pages 自动部署
 ├─ css/style.css                   # 深色水墨主题 + 响应式样式
 ├─ js/
 │  ├─ app.js                       # 页面渲染与交互
@@ -48,6 +60,10 @@ deepseek/
 │  ├─ drops.js                     # 关卡掉落查询核心
 │  ├─ progress.js                  # 锻造个人进度核心
 │  ├─ atlas.js                     # 图鉴查询核心
+│  ├─ inscription.js               # 铭文查询和个人进度
+│  ├─ quiz.js                      # 只读题库搜索
+│  ├─ settings.js                  # 本机进度导出、导入与导入前备份
+│  ├─ pwa.js                       # 安装、离线状态和点击确认更新
 │  └─ *.test.js                    # 对应核心的单元测试（node:test）
 ├─ data/                           # 解析脚本生成的只读数据（勿手改）
 ├─ tools/                          # Excel → 数据解析脚本（Python）
@@ -87,13 +103,24 @@ $python = 'C:\Users\pghyl\.cache\codex-runtimes\codex-primary-runtime\dependenci
 | --- | --- |
 | `qinshi_forging_progress_v1` | 橙装锻造个人进度（弟子、装备、阶段） |
 | `qinshi_atlas_levels_v1` | 图鉴等级个人进度 |
+| `qinshi_atlas_target_level_v1` | 图鉴目标等级 |
+| `qinshi_inscription_progress_v2` | 铭文个人进度 |
+| `qinshi_quiz_items_v1` | 历史答题修订数据（兼容旧数据） |
 
 注意：
-- 换浏览器、清除浏览器数据、或换电脑会丢失进度
-- 当前版本未提供导出/导入功能（可后续补充）
+- 换浏览器、清除浏览器数据、或换设备前应在“设置”中导出备份
+- 导入备份会先自动下载当前数据，再整体替换所有 `qinshi_` 本机数据
 - 通过手机局域网访问时，进度保存在手机浏览器的本地存储中
 
-## 8. 测试
+## 8. PWA 更新与发布
+
+- `service-worker.js` 的缓存名格式为 `qinshi-site-<版本号>`；每次发布静态资源变更时必须同步提升该版本号。
+- `js/pwa.js` 中的 `APP_VERSION` 必须与 Service Worker 缓存版本一致。
+- 新 Service Worker 安装后保持等待状态，页面提示用户点击“立即更新”；确认后发送 `SKIP_WAITING` 并刷新一次。
+- GitHub Actions 从远程 `main` 组装 `_site`，只发布运行时 HTML、CSS、数据、脚本、图标和图片。
+- GitHub Pages 首次发布需要在仓库 `Settings → Pages → Source` 选择 `GitHub Actions`。
+
+## 9. 测试
 
 ```powershell
 $python = 'C:\Users\pghyl\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe'
@@ -103,7 +130,7 @@ node --test js/query.test.js js/forging.test.js js/drops.test.js js/progress.tes
 
 快照时全量测试通过：JS 60/60、Python 37/37。
 
-## 9. Git 快照与回退
+## 10. Git 快照与回退
 
 项目使用本地 git 仓库（分支 `master`），完整提交历史保留。
 
@@ -120,9 +147,9 @@ git -c safe.directory=C:/Users/pghyl/Desktop/deepseek log --oneline
 git -c safe.directory=C:/Users/pghyl/Desktop/deepseek tag -l
 ```
 
-## 10. 注意事项
+## 11. 注意事项
 
 - `index.html` 直接双击与 `启动服务.bat` 局域网访问共用同一套文件
 - Excel 文件若被 Excel 打开，会产生 `~$` 临时锁文件（已被 .gitignore 忽略，不影响）
 - 各解析脚本遇到无法识别的单元格会输出异常并中止生成，避免产出错误数据
-- 后续计划（未实现）：紫装锻造并入装备锻造、进度导出/导入、其他子表模块、跨表汇总查询
+- PWA 首次访问必须联网；完成预缓存后才具备完整离线能力

@@ -112,7 +112,11 @@
   }
 
   function bindTabs() {
-    const tabs = Array.prototype.slice.call(document.querySelectorAll(".tab"));
+    const partitionButtons = Array.prototype.slice.call(document.querySelectorAll("[data-partition]"));
+    const mobileMoreToggle = document.getElementById("mobile-more-toggle");
+    const mobileMoreLayer = document.getElementById("mobile-more-layer");
+    const mobileMoreClose = document.getElementById("mobile-more-close");
+    const secondaryPartitions = ["inscription", "quiz", "loulan", "settings"];
     const parts = {
       equipment: document.getElementById("partition-equipment"),
       loulan: document.getElementById("partition-loulan"),
@@ -120,16 +124,47 @@
       drops: document.getElementById("partition-drops"),
       atlas: document.getElementById("partition-atlas"),
       quiz: document.getElementById("partition-quiz"),
-      inscription: document.getElementById("partition-inscription")
+      inscription: document.getElementById("partition-inscription"),
+      settings: document.getElementById("partition-settings")
     };
-    tabs.forEach((btn) => {
-      btn.addEventListener("click", () => {
-        const name = btn.dataset.partition;
-        tabs.forEach((b) => b.classList.toggle("active", b === btn));
-        Object.keys(parts).forEach((key) => {
-          parts[key].hidden = key !== name;
-        });
+
+    function setMoreOpen(open) {
+      if (!mobileMoreLayer || !mobileMoreToggle) return;
+      mobileMoreLayer.hidden = !open;
+      mobileMoreToggle.setAttribute("aria-expanded", String(open));
+      document.body.classList.toggle("mobile-menu-open", open);
+    }
+
+    function switchPartition(name) {
+      if (!parts[name]) return;
+      partitionButtons.forEach((button) => {
+        button.classList.toggle("active", button.dataset.partition === name);
       });
+      Object.keys(parts).forEach((key) => {
+        parts[key].hidden = key !== name;
+      });
+      if (mobileMoreToggle) {
+        mobileMoreToggle.classList.toggle("active", secondaryPartitions.includes(name));
+      }
+      setMoreOpen(false);
+    }
+
+    partitionButtons.forEach((button) => {
+      button.addEventListener("click", () => switchPartition(button.dataset.partition));
+    });
+    if (mobileMoreToggle) {
+      mobileMoreToggle.addEventListener("click", () => {
+        setMoreOpen(mobileMoreToggle.getAttribute("aria-expanded") !== "true");
+      });
+    }
+    if (mobileMoreClose) mobileMoreClose.addEventListener("click", () => setMoreOpen(false));
+    if (mobileMoreLayer) {
+      mobileMoreLayer.addEventListener("click", (event) => {
+        if (event.target === mobileMoreLayer) setMoreOpen(false);
+      });
+    }
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") setMoreOpen(false);
     });
   }
 

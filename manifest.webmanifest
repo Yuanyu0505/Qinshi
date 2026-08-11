@@ -1,0 +1,25 @@
+{
+  "name": "秦时攻略站",
+  "short_name": "秦时攻略站",
+  "description": "图鉴、关卡掉落、装备属性、橙装锻造、铭文、答题与楼兰棋阵离线攻略工具",
+  "lang": "zh-CN",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#12100d",
+  "theme_color": "#12100d",
+  "icons": [
+    {
+      "src": "icons/app-icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/app-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

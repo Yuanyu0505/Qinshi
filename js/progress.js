@@ -38,7 +38,19 @@
     return rem.length ? rem[0] : null;
   }
 
-  /** 汇总一组阶段的所有材料（横杠除外），橙色优先，同品质按名称拼音升序 */
+  function compareMaterialTokens(a, b) {
+    var aMissing = !a || !a.n;
+    var bMissing = !b || !b.n;
+    if (aMissing || bMissing) return aMissing === bMissing ? 0 : (aMissing ? 1 : -1);
+    var qualityOrder = (a.q === "紫" ? 0 : 1) - (b.q === "紫" ? 0 : 1);
+    return qualityOrder || a.n.localeCompare(b.n, "zh-Hans-CN");
+  }
+
+  function sortMaterialTokens(tokens) {
+    return (Array.isArray(tokens) ? tokens : []).slice().sort(compareMaterialTokens);
+  }
+
+  /** 汇总一组阶段的所有材料（横杠除外），紫色优先，同品质按名称拼音升序 */
   function aggregateMaterials(stageList) {
     var map = {};
     (stageList || []).forEach(function (st) {
@@ -48,11 +60,7 @@
         map[tk.n].count += 1;
       });
     });
-    return Object.keys(map).map(function (k) { return map[k]; })
-      .sort(function (a, b) {
-        var qualityOrder = (a.q === "橙" ? 0 : 1) - (b.q === "橙" ? 0 : 1);
-        return qualityOrder || a.n.localeCompare(b.n, "zh-Hans-CN");
-      });
+    return Object.keys(map).map(function (k) { return map[k]; }).sort(compareMaterialTokens);
   }
 
   function discipleSummary(data, disciple) {
@@ -153,6 +161,7 @@
     findItem: findItem,
     remainingStages: remainingStages,
     nextStage: nextStage,
+    sortMaterialTokens: sortMaterialTokens,
     aggregateMaterials: aggregateMaterials,
     discipleSummary: discipleSummary,
     overallSummary: overallSummary,

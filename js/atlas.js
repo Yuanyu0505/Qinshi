@@ -33,6 +33,17 @@
     return typeof v === "number" ? v : item.level;
   }
 
+  function equipmentQualityRank(item) {
+    return item && item.q === "紫" ? 0 : 1;
+  }
+
+  function sortEquipment(items) {
+    return (Array.isArray(items) ? items : []).slice().sort(function (a, b) {
+      return equipmentQualityRank(a) - equipmentQualityRank(b) ||
+        normalize(a && a.n).localeCompare(normalize(b && b.n), "zh-Hans-CN");
+    });
+  }
+
   /** 需要装备的阶段：当前等级以下、目标等级以内的阶段才需要 */
   function neededStages(item, level, targetLevel) {
     var target = targetLevel == null ? Infinity : Number(targetLevel);
@@ -95,44 +106,73 @@
         });
       });
     });
-    summary.equipment = Object.keys(equipmentMap).map(function (key) { return equipmentMap[key]; })
-      .sort(function (a, b) {
-        var qualityOrder = (a.q === "紫" ? 0 : 1) - (b.q === "紫" ? 0 : 1);
-        return qualityOrder || a.n.localeCompare(b.n, "zh-Hans-CN");
-      });
+    summary.equipment = sortEquipment(Object.keys(equipmentMap).map(function (key) { return equipmentMap[key]; }));
     return summary;
   }
 
-  /** 关键词搜索：名称/获取途径/所属图鉴/道具/等级条件 */
-  function searchAtlas(items, query, levels) {
-    var q = normalize(query);
-    if (!q) return items.slice();
-    var lvl = parseLevelQuery(q);
-    return items.filter(function (item) {
-      var L = levelOf(item, levels);
-      if (lvl) {
-        if (lvl.op === "lt") return L < lvl.n;
-        if (lvl.op === "ge") return L >= lvl.n;
-        return L === lvl.n;
-      }
-      if (item.name.toLowerCase().indexOf(q) !== -1) return true;
-      if (item.acquire.toLowerCase().indexOf(q) !== -1) return true;
-      if (item.group.toLowerCase().indexOf(q) !== -1) return true;
-      return item.stages.some(function (st) {
-        return st.items.some(function (n) {
-          return n.n.toLowerCase().indexOf(q) !== -1;
-        });
+  function matchesLevelQuery(level, query) {
+    var parsed = parseLevelQuery(query);
+    if (parsed) {
+      if (parsed.op === "lt") return level < parsed.n;
+      if (parsed.op === "ge") return level >= parsed.n;
+      return level === parsed.n;
+    }
+    var text = normalize(query).replace(/级$/, "");
+    return /^\d+$/.test(text) && level === Number(text);
+  }
+
+  function equipmentContains(item, query) {
+    return (item.stages || []).some(function (stage) {
+      return (stage.items || []).some(function (token) {
+        return normalize(token && token.n).indexOf(query) !== -1;
       });
     });
+  }
+
+  /** 关键词搜索：可限定名称/获取途径/所属图鉴/装备/等级 */
+  function searchAtlas(items, query, levels, field) {
+    var q = normalize(query);
+    if (!q) return items.slice();
+    var scope = normalize(field) || "all";
+    return items.filter(function (item) {
+      var L = levelOf(item, levels);
+      var discipleMatch = normalize(item.name).indexOf(q) !== -1;
+      var atlasMatch = normalize(item.group).indexOf(q) !== -1 || normalize(item.atlas + "图鉴").indexOf(q) !== -1;
+      var equipmentMatch = equipmentContains(item, q);
+      var acquireMatch = normalize(item.acquire).indexOf(q) !== -1;
+      var levelMatch = matchesLevelQuery(L, q);
+      if (scope === "disciple") return discipleMatch;
+      if (scope === "atlas") return atlasMatch;
+      if (scope === "equipment") return equipmentMatch;
+      if (scope === "acquire") return acquireMatch;
+      if (scope === "level") return levelMatch;
+      return discipleMatch || atlasMatch || equipmentMatch || acquireMatch || levelMatch;
+    });
+  }
+
+  function filterAtlas(items, options) {
+    var opts = options || {};
+    var category = opts.category || "全部";
+    var minLevel = opts.minLevel == null ? 0 : Number(opts.minLevel);
+    var maxLevel = opts.maxLevel == null ? Infinity : Number(opts.maxLevel);
+    var result = (Array.isArray(items) ? items : []).filter(function (item) {
+      var level = levelOf(item, opts.levels);
+      var categoryMatch = category === "全部" || category === "" || item.atlas === category;
+      return categoryMatch && level >= minLevel && level <= maxLevel;
+    });
+    if (minLevel > maxLevel) return [];
+    return searchAtlas(result, opts.query, opts.levels, opts.field);
   }
 
   return {
     normalize: normalize,
     parseLevelQuery: parseLevelQuery,
     levelOf: levelOf,
+    sortEquipment: sortEquipment,
     neededStages: neededStages,
     upgradePlan: upgradePlan,
     summarizeUpgrade: summarizeUpgrade,
-    searchAtlas: searchAtlas
+    searchAtlas: searchAtlas,
+    filterAtlas: filterAtlas
   };
 });

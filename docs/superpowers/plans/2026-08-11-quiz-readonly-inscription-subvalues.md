@@ -1,6 +1,6 @@
 # Quiz Readonly and Inscription Subvalues Implementation Plan
 
-> 状态更新：Task 1 的答题只读改动已按用户要求单独回退；Task 2、Task 3 的铭文改动继续保留。
+> 状态更新：Task 1 的答题只读改动已按用户最新要求重新启用；Task 2、Task 3 的铭文改动继续保留。
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
@@ -77,4 +77,4 @@
 
 - [x] **Step 1:** 检查答题区不存在新增、编辑、保存、删除入口，且未清除历史数据读取。
 - [x] **Step 2:** 检查铭文旧存档兼容、基础词条判断和附加内容组合逻辑。
-- [ ] **Step 3:** 提交当前累计功能分支；不执行自动验证。
+- [x] **Step 3:** 提交当前累计功能分支；不执行自动验证。

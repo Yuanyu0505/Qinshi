@@ -130,14 +130,6 @@
         </div>
         <div class="muted-tip">仅匹配题目文字；结果只展示图片中标红的正确答案。</div>
       </section>
-      <section class="panel quiz-add-panel">
-        <div class="panel-title">新增题目</div>
-        <div class="quiz-editor-row">
-          <input id="quiz-add-question" type="text" placeholder="题目">
-          <input id="quiz-add-answer" type="text" placeholder="正确答案">
-          <button id="quiz-add" type="button" class="seg">添加</button>
-        </div>
-      </section>
       <div id="quiz-results" class="quiz-results"></div>
     </section>
 
@@ -264,7 +256,8 @@
         <div class="filter-row">
           <span class="filter-label">分区</span>
           <div id="atlas-tabs" class="segs">
-            <button type="button" class="seg active" data-atlas="攻">攻图鉴</button>
+            <button type="button" class="seg active" data-atlas="全部">全部</button>
+            <button type="button" class="seg" data-atlas="攻">攻图鉴</button>
             <button type="button" class="seg" data-atlas="血">血图鉴</button>
             <button type="button" class="seg" data-atlas="内力">内力图鉴</button>
             <button type="button" class="seg" data-atlas="防">防图鉴</button>
@@ -272,16 +265,23 @@
         </div>
         <div class="filter-row">
           <span class="filter-label">搜索</span>
-          <input id="atlas-search" type="search" placeholder="弟子名 / 获取途径 / 所属图鉴 / 道具 / 等级（如 9级、10级以下）" autocomplete="off">
+          <select id="atlas-search-field">
+            <option value="all">全部</option>
+            <option value="disciple">弟子</option>
+            <option value="atlas">图鉴</option>
+            <option value="equipment">装备</option>
+            <option value="acquire">获取途径</option>
+            <option value="level">等级</option>
+          </select>
+          <input id="atlas-search" type="search" placeholder="输入关键词；等级可输入 9、9级、10级以下" autocomplete="off">
         </div>
         <div class="filter-row">
           <span class="filter-label">等级筛选</span>
-          <select id="atlas-level-filter">
-            <option value="">全部</option>
-            <option value="5">5级以下</option>
-            <option value="10">10级以下</option>
-            <option value="15">15级以下</option>
-          </select>
+          <div class="atlas-level-range">
+            <input id="atlas-level-min" type="number" min="0" max="20" step="1" value="0" aria-label="最低图鉴等级">
+            <span>至</span>
+            <input id="atlas-level-max" type="number" min="0" max="20" step="1" value="20" aria-label="最高图鉴等级">
+          </div>
         </div>
         <div class="filter-row">
           <span class="filter-label">目标等级</span>

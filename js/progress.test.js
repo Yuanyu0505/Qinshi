@@ -38,15 +38,33 @@ test("nextStage：下一阶段及其材料", () => {
   assert.strictEqual(P.nextStage(item, 11), null);
 });
 
-test("aggregateMaterials：汇总数量并按橙色优先、同色拼音升序排列", () => {
+test("aggregateMaterials：汇总数量并按紫色优先、同色拼音升序排列", () => {
   const list = [item.stages[0], item.stages[3], item.stages[3], item.stages[5]];
   const r = P.aggregateMaterials(list);
   assert.deepStrictEqual(r, [
-    { n: "墨眉", q: "橙", count: 1 },
     { n: "非攻", q: "紫", count: 1 },
     { n: "凌虚", q: "紫", count: 2 },
-    { n: "木剑", q: "紫", count: 2 }
+    { n: "木剑", q: "紫", count: 2 },
+    { n: "墨眉", q: "橙", count: 1 }
   ]);
+});
+
+test("sortMaterialTokens：阶段材料按紫色优先排序且横杠置后", () => {
+  const tokens = [
+    { n: "鲨齿", q: "橙" },
+    { n: "木剑", q: "紫" },
+    { dash: true },
+    { n: "墨眉", q: "橙" },
+    { n: "凌虚", q: "紫" }
+  ];
+  assert.deepStrictEqual(P.sortMaterialTokens(tokens), [
+    { n: "凌虚", q: "紫" },
+    { n: "木剑", q: "紫" },
+    { n: "墨眉", q: "橙" },
+    { n: "鲨齿", q: "橙" },
+    { dash: true }
+  ]);
+  assert.strictEqual(tokens[0].n, "鲨齿");
 });
 
 test("aggregateMaterials：横杠不参与汇总", () => {

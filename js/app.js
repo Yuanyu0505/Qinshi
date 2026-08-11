@@ -63,17 +63,16 @@
     progOverall: document.getElementById("prog-overall"),
     progDisciples: document.getElementById("prog-disciples"),
     atlasTabs: document.getElementById("atlas-tabs"),
+    atlasSearchField: document.getElementById("atlas-search-field"),
     atlasSearch: document.getElementById("atlas-search"),
-    atlasLevelFilter: document.getElementById("atlas-level-filter"),
+    atlasLevelMin: document.getElementById("atlas-level-min"),
+    atlasLevelMax: document.getElementById("atlas-level-max"),
     atlasTargetLevel: document.getElementById("atlas-target-level"),
     atlasUpgradeSummary: document.getElementById("atlas-upgrade-summary"),
     atlasResults: document.getElementById("atlas-results"),
     quizSearch: document.getElementById("quiz-search"),
     quizCount: document.getElementById("quiz-count"),
-    quizResults: document.getElementById("quiz-results"),
-    quizAddQuestion: document.getElementById("quiz-add-question"),
-    quizAddAnswer: document.getElementById("quiz-add-answer"),
-    quizAdd: document.getElementById("quiz-add")
+    quizResults: document.getElementById("quiz-results")
   };
 
   const progState = {
@@ -84,9 +83,11 @@
   };
   const PROG_CAT_ORDER = ["武器", "盔甲", "首饰", "典籍"];
   const atlasState = {
-    tab: "攻",
+    tab: "全部",
     query: "",
-    levelFilter: "",
+    searchField: "all",
+    levelMin: 0,
+    levelMax: 20,
     targetLevel: loadAtlasTargetLevel(),
     levels: loadAtlasLevels()
   };
@@ -180,6 +181,12 @@
     return n;
   }
 
+  function normalizeAtlasFilterLevel(value, fallback) {
+    const n = Number(value);
+    if (!Number.isInteger(n)) return fallback;
+    return Math.max(0, Math.min(n, atlasMaxLevel()));
+  }
+
   function loadAtlasTargetLevel() {
     try {
       return normalizeAtlasTargetLevel(localStorage.getItem(ATLAS_TARGET_LEVEL_KEY));
@@ -198,6 +205,11 @@
 
   function initAtlas() {
     if (!ATLAS_DATA || !ATLAS) return;
+    atlasState.levelMax = atlasMaxLevel();
+    el.atlasLevelMin.max = String(atlasMaxLevel());
+    el.atlasLevelMax.max = String(atlasMaxLevel());
+    el.atlasLevelMin.value = String(atlasState.levelMin);
+    el.atlasLevelMax.value = String(atlasState.levelMax);
     el.atlasTargetLevel.min = "1";
     el.atlasTargetLevel.max = String(atlasMaxLevel());
     el.atlasTargetLevel.value = String(atlasState.targetLevel);
@@ -211,9 +223,20 @@
       atlasState.query = el.atlasSearch.value;
       applyAtlas();
     });
-    el.atlasLevelFilter.addEventListener("change", () => {
-      atlasState.levelFilter = el.atlasLevelFilter.value;
+    el.atlasSearchField.addEventListener("change", () => {
+      atlasState.searchField = el.atlasSearchField.value;
       applyAtlas();
+    });
+    [el.atlasLevelMin, el.atlasLevelMax].forEach((input) => {
+      input.addEventListener("input", () => {
+        atlasState.levelMin = normalizeAtlasFilterLevel(el.atlasLevelMin.value, 0);
+        atlasState.levelMax = normalizeAtlasFilterLevel(el.atlasLevelMax.value, atlasMaxLevel());
+        applyAtlas();
+      });
+      input.addEventListener("change", () => {
+        el.atlasLevelMin.value = String(atlasState.levelMin);
+        el.atlasLevelMax.value = String(atlasState.levelMax);
+      });
     });
     el.atlasTargetLevel.addEventListener("change", () => {
       atlasState.targetLevel = normalizeAtlasTargetLevel(el.atlasTargetLevel.value);
@@ -237,7 +260,7 @@
     const equipmentHtml = plan.equipmentStages.length
       ? `<div class="atlas-equipment-stage-list">${plan.equipmentStages.map((st) => `<div class="atlas-equipment-stage">
           <span class="atlas-stage-key">${st.key}</span>
-          <span class="atlas-equipment-items">${st.items.map((tk) => `<span class="mat ${tk.q === "紫" ? "mat-purple" : "mat-orange"}">${escapeHtml(tk.n)}</span>`).join("") || '<span class="mat-dash">无</span>'}</span>
+          <span class="atlas-equipment-items">${ATLAS.sortEquipment(st.items).map((tk) => `<span class="mat material-token ${tk.q === "紫" ? "mat-purple" : "mat-orange"}">${escapeHtml(tk.n)}</span>`).join("") || '<span class="mat-dash">无</span>'}</span>
         </div>`).join("")}</div>`
       : '<div class="muted-tip">该目标区间无需装备</div>';
     const upgradeHtml = plan.reached
@@ -257,7 +280,7 @@
         <span class="q-badge q-orange">${item.atlas}图鉴</span>
         <span class="forge-name">${escapeHtml(item.name)}</span>
         <label class="atlas-level-label">图鉴等级
-          <input type="number" class="atlas-level" data-id="${item.id}" value="${L}" min="0">
+          <input type="number" class="atlas-level" data-id="${item.id}" value="${L}" min="0" max="${atlasMaxLevel()}">
         </label>
       </div>
       <div class="atlas-meta">
@@ -274,25 +297,6 @@
       quizState.query = el.quizSearch.value;
       applyQuiz();
     });
-    el.quizAdd.addEventListener("click", addQuizItem);
-    el.quizResults.addEventListener("click", function (event) {
-      var btn = event.target.closest("button[data-quiz-action]");
-      if (!btn) return;
-      var item = quizState.items.find(function (entry) { return entry.id === btn.dataset.id; });
-      if (!item) return;
-      if (btn.dataset.quizAction === "delete") {
-        quizState.items = quizState.items.filter(function (entry) { return entry.id !== item.id; });
-      } else {
-        var card = btn.closest(".quiz-item");
-        var question = card.querySelector(".quiz-edit-question").value.trim();
-        var answer = card.querySelector(".quiz-edit-answer").value.trim();
-        if (!question || !answer) return;
-        item.question = question;
-        item.answer = answer;
-      }
-      saveQuizItems();
-      applyQuiz();
-    });
     applyQuiz();
   }
 
@@ -303,21 +307,6 @@
     return QUIZ.mergeItems(defaults, saved);
   }
 
-  function saveQuizItems() {
-    localStorage.setItem(QUIZ_STORE_KEY, JSON.stringify(quizState.items));
-  }
-
-  function addQuizItem() {
-    var question = el.quizAddQuestion.value.trim();
-    var answer = el.quizAddAnswer.value.trim();
-    if (!question || !answer) return;
-    quizState.items.unshift({ id: "custom-" + Date.now(), question: question, answer: answer });
-    el.quizAddQuestion.value = "";
-    el.quizAddAnswer.value = "";
-    saveQuizItems();
-    applyQuiz();
-  }
-
   function applyQuiz() {
     var items = QUIZ.search(quizState.items, quizState.query);
     el.quizCount.textContent = "共 " + items.length + " 题";
@@ -326,23 +315,20 @@
           return `<article class="quiz-item">
             <div class="quiz-question">${escapeHtml(item.question)}</div>
             <div class="quiz-answer"><span>正确答案</span>${escapeHtml(item.answer)}</div>
-            <div class="quiz-editor-row">
-              <input class="quiz-edit-question" type="text" value="${escapeHtml(item.question)}" aria-label="编辑题目">
-              <input class="quiz-edit-answer" type="text" value="${escapeHtml(item.answer)}" aria-label="编辑正确答案">
-              <button type="button" class="seg" data-quiz-action="save" data-id="${item.id}">保存</button>
-              <button type="button" class="link-btn quiz-delete" data-quiz-action="delete" data-id="${item.id}">删除</button>
-            </div>
           </article>`;
         }).join("")
       : '<div class="empty"><p>未找到匹配的题目</p></div>';
   }
 
   function atlasUpgradeSummaryHtml(summary) {
+    if (summary.total === 0) {
+      return '<div class="atlas-upgrade-summary"><div class="drop-item-title">当前筛选结果汇总</div><div class="muted-tip">当前条件下没有符合的图鉴</div></div>';
+    }
     if (summary.pending === 0) {
       return `<div class="atlas-upgrade-summary"><div class="drop-item-title">当前结果升至 ${summary.targetLevel} 级汇总</div><div class="muted-tip">当前结果已全部达到目标等级</div></div>`;
     }
     const equipment = summary.equipment.length
-      ? summary.equipment.map((item) => `<span class="mat ${item.q === "紫" ? "mat-purple" : "mat-orange"}">${escapeHtml(item.n)} ×${item.count}</span>`).join("")
+      ? summary.equipment.map((item) => `<span class="mat material-token ${item.q === "紫" ? "mat-purple" : "mat-orange"}">${escapeHtml(item.n)} ×${item.count}</span>`).join("")
       : '<span class="muted-tip">无需装备</span>';
     return `<div class="atlas-upgrade-summary">
       <div class="drop-item-title">当前结果升至 ${summary.targetLevel} 级汇总<span class="drop-count">${summary.pending}/${summary.total} 名未达标</span></div>
@@ -360,13 +346,14 @@
     el.atlasTabs.querySelectorAll("button").forEach((b) => {
       b.classList.toggle("active", b.dataset.atlas === atlasState.tab);
     });
-    const inTab = ATLAS_DATA.items.filter((i) => i.atlas === atlasState.tab);
-    let items = inTab;
-    if (atlasState.levelFilter) {
-      const n = Number(atlasState.levelFilter);
-      items = items.filter((i) => ATLAS.levelOf(i, atlasState.levels) < n);
-    }
-    items = ATLAS.searchAtlas(items, atlasState.query, atlasState.levels);
+    const items = ATLAS.filterAtlas(ATLAS_DATA.items, {
+      category: atlasState.tab,
+      minLevel: atlasState.levelMin,
+      maxLevel: atlasState.levelMax,
+      query: atlasState.query,
+      field: atlasState.searchField,
+      levels: atlasState.levels
+    });
     el.atlasUpgradeSummary.innerHTML = atlasUpgradeSummaryHtml(
       ATLAS.summarizeUpgrade(items, atlasState.levels, atlasState.targetLevel, ATLAS_DATA.meta.upgradeStages)
     );
@@ -552,11 +539,11 @@
   }
 
   function stageTokensHtml(tokens) {
-    return tokens.map((tk) => forgingTokenHtml(tk, false, true)).join("");
+    return PROG.sortMaterialTokens(tokens).map((tk) => forgingTokenHtml(tk, false, true)).join("");
   }
 
-  function progressSummaryHtml(materials) {
-    return `<div class="prog-material-grid">${materials.map((material) => {
+  function progressSummaryHtml(materials, overall) {
+    return `<div class="prog-material-grid${overall ? " prog-material-grid-overall" : ""}">${materials.map((material) => {
       const q = material.q === "紫" ? "mat-purple" : "mat-orange";
       return `<span class="mat material-token ${q}">${escapeHtml(material.n)} ×${material.count}</span>`;
     }).join("")}</div>`;
@@ -580,7 +567,7 @@
     const next = PROG.nextStage(item, it.progress);
     const remaining = PROG.remainingStages(item, it.progress);
     const nextHtml = next ? `${next.stage}：${stageTokensHtml(next.tokens)}` : "全部锻造完成";
-    const remRows = remaining.map((st) => `<tr><td>${st.stage}</td><td>${stageTokensHtml(st.tokens)}</td></tr>`).join("");
+    const remRows = remaining.map((st) => `<tr><td>${st.stage}</td><td><div class="prog-stage-materials">${stageTokensHtml(st.tokens)}</div></td></tr>`).join("");
     return `<div class="prog-equip">
       <div class="prog-equip-head">
         <span class="cat">${item.cat}</span>
@@ -631,7 +618,7 @@
     const mats = PROG.overallSummary(FDATA, progState.disciples);
     el.progOverall.innerHTML = `<div class="drop-item-title">全体弟子剩余材料汇总（${progState.disciples.length} 名弟子）</div>` +
       (mats.length
-        ? progressSummaryHtml(mats)
+        ? progressSummaryHtml(mats, true)
         : '<div class="muted-tip">暂无数据，添加弟子和装备后自动汇总</div>');
   }
 

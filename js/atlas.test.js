@@ -91,8 +91,22 @@ test("summarizeUpgrade：紫色优先且同色按装备名称拼音排序", () =
   );
   assert.deepStrictEqual(
     summary.equipment.map(item => `${item.q}:${item.n}`),
-    ["紫:冰魄戒", "紫:号钟琴", "紫:水寒", "紫:阴符经", "橙:残虹", "橙:罡星冠", "橙:黄帝内经", "橙:墨梅"]
+    ["紫:冰魄戒", "紫:号钟琴", "紫:水寒", "紫:星云法衣", "紫:阴符经", "橙:残虹", "橙:罡星戒", "橙:黄帝内经", "橙:墨眉"]
   );
+});
+
+test("sortEquipment：阶段装备按紫色优先、同色名称拼音升序", () => {
+  const equipment = [
+    { n: "鲨齿", q: "橙" },
+    { n: "木剑", q: "紫" },
+    { n: "墨眉", q: "橙" },
+    { n: "凌虚", q: "紫" }
+  ];
+  assert.deepStrictEqual(
+    A.sortEquipment(equipment).map(item => `${item.q}:${item.n}`),
+    ["紫:凌虚", "紫:木剑", "橙:墨眉", "橙:鲨齿"]
+  );
+  assert.deepStrictEqual(equipment.map(item => item.n), ["鲨齿", "木剑", "墨眉", "凌虚"]);
 });
 
 test("searchAtlas：按名称/获取途径/所属图鉴/道具/等级搜索", () => {
@@ -110,4 +124,37 @@ test("searchAtlas：按名称/获取途径/所属图鉴/道具/等级搜索", ()
 test("searchAtlas：空查询返回全部", () => {
   assert.strictEqual(A.searchAtlas(fixture, "", {}).length, 3);
   assert.strictEqual(A.searchAtlas(fixture, "   ", {}).length, 3);
+});
+
+test("searchAtlas：限定字段后只匹配对应信息", () => {
+  assert.deepStrictEqual(A.searchAtlas(fixture, "高渐离", {}, "disciple").map(i => i.id), ["t-0001"]);
+  assert.deepStrictEqual(A.searchAtlas(fixture, "非攻墨门", {}, "atlas").map(i => i.id), ["t-0001", "t-0003"]);
+  assert.deepStrictEqual(A.searchAtlas(fixture, "墨眉", {}, "equipment").map(i => i.id), ["t-0003"]);
+  assert.deepStrictEqual(A.searchAtlas(fixture, "庄园", {}, "acquire").map(i => i.id), ["t-0002"]);
+  assert.deepStrictEqual(A.searchAtlas(fixture, "5", {}, "level").map(i => i.id), ["t-0003"]);
+  assert.deepStrictEqual(A.searchAtlas(fixture, "非攻墨门", {}, "disciple"), []);
+});
+
+test("filterAtlas：分区、等级闭区间和限定搜索共同生效", () => {
+  const levels = { "t-0001": 19, "t-0002": 10, "t-0003": 5 };
+  assert.deepStrictEqual(A.filterAtlas(fixture, {
+    category: "攻",
+    minLevel: 5,
+    maxLevel: 10,
+    query: "庄园",
+    field: "acquire",
+    levels
+  }).map(i => i.id), ["t-0002"]);
+  assert.deepStrictEqual(A.filterAtlas(fixture, {
+    category: "全部",
+    minLevel: 0,
+    maxLevel: 5,
+    levels
+  }).map(i => i.id), ["t-0003"]);
+  assert.deepStrictEqual(A.filterAtlas(fixture, {
+    category: "全部",
+    minLevel: 10,
+    maxLevel: 5,
+    levels
+  }), []);
 });

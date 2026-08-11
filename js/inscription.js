@@ -12,6 +12,7 @@
     "天梁": { "1": "防+44300、血+177200", "2": "防+75300、血+301200" },
     "天机": { "1": "护盾+354400、内力+22150", "2": "护盾+602400、内力+37650" }
   };
+  var COMMON_SUBS = ["闪避", "招架", "治疗效果"];
   var SUBS = {
     "天盾": [{ n: "攻", x: true }, { n: "暴击伤害" }, { n: "技能减免" }, { n: "内力" }, { n: "追加伤害" }],
     "地盾": [{ n: "PVP速" }, { n: "暴击" }, { n: "PVP免伤" }, { n: "技能穿透", x: true }, { n: "防御" }],
@@ -23,6 +24,13 @@
     "风盾": [{ n: "攻" }, { n: "暴击" }, { n: "护盾" }, { n: "PVP免伤", x: true }, { n: "追加伤害" }],
     "云盾": [{ n: "护盾", x: true }, { n: "抗暴击", x: true }, { n: "PVP免伤" }, { n: "技能减免", x: true }, { n: "防御" }]
   };
+  SHIELDS.forEach(function (shield) {
+    COMMON_SUBS.forEach(function (name) {
+      if (!SUBS[shield].some(function (attr) { return attr.n === name; })) {
+        SUBS[shield].push({ n: name });
+      }
+    });
+  });
   var SHIELD_NOTES = {
     "龙盾": "可洗3/4/5速度；可洗血属性，最多双血",
     "鬼盾": "可洗3/4/5速度；可洗血属性，最多双血",

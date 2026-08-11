@@ -567,7 +567,7 @@
     const next = PROG.nextStage(item, it.progress);
     const remaining = PROG.remainingStages(item, it.progress);
     const nextHtml = next ? `${next.stage}：${stageTokensHtml(next.tokens)}` : "全部锻造完成";
-    const remRows = remaining.map((st) => `<tr><td>${st.stage}</td><td><div class="prog-stage-materials">${stageTokensHtml(st.tokens)}</div></td></tr>`).join("");
+    const remRows = remaining.map((st) => `<tr><td><div class="prog-stage-label">${st.stage}</div></td><td><div class="prog-stage-materials">${stageTokensHtml(st.tokens)}</div></td></tr>`).join("");
     return `<div class="prog-equip">
       <div class="prog-equip-head">
         <span class="cat">${item.cat}</span>

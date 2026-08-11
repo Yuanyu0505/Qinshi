@@ -38,7 +38,7 @@
     return rem.length ? rem[0] : null;
   }
 
-  /** 汇总一组阶段的所有材料（横杠除外），按数量倒序、名称升序 */
+  /** 汇总一组阶段的所有材料（横杠除外），橙色优先，同品质按名称拼音升序 */
   function aggregateMaterials(stageList) {
     var map = {};
     (stageList || []).forEach(function (st) {
@@ -49,7 +49,10 @@
       });
     });
     return Object.keys(map).map(function (k) { return map[k]; })
-      .sort(function (a, b) { return b.count - a.count || a.n.localeCompare(b.n); });
+      .sort(function (a, b) {
+        var qualityOrder = (a.q === "橙" ? 0 : 1) - (b.q === "橙" ? 0 : 1);
+        return qualityOrder || a.n.localeCompare(b.n, "zh-Hans-CN");
+      });
   }
 
   function discipleSummary(data, disciple) {

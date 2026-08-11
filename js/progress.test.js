@@ -38,13 +38,14 @@ test("nextStage：下一阶段及其材料", () => {
   assert.strictEqual(P.nextStage(item, 11), null);
 });
 
-test("aggregateMaterials：汇总材料数量并按数量倒序", () => {
-  const list = [item.stages[0], item.stages[3], item.stages[3]];
+test("aggregateMaterials：汇总数量并按橙色优先、同色拼音升序排列", () => {
+  const list = [item.stages[0], item.stages[3], item.stages[3], item.stages[5]];
   const r = P.aggregateMaterials(list);
   assert.deepStrictEqual(r, [
+    { n: "墨眉", q: "橙", count: 1 },
+    { n: "非攻", q: "紫", count: 1 },
     { n: "凌虚", q: "紫", count: 2 },
-    { n: "木剑", q: "紫", count: 2 },
-    { n: "非攻", q: "紫", count: 1 }
+    { n: "木剑", q: "紫", count: 2 }
   ]);
 });
 

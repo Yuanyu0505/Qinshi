@@ -560,7 +560,14 @@
   }
 
   function stageTokensHtml(tokens) {
-    return tokens.map((tk) => forgingTokenHtml(tk, false)).join("");
+    return tokens.map((tk) => forgingTokenHtml(tk, false, true)).join("");
+  }
+
+  function progressSummaryHtml(materials) {
+    return `<div class="prog-material-grid">${materials.map((material) => {
+      const q = material.q === "紫" ? "mat-purple" : "mat-orange";
+      return `<span class="mat material-token ${q}">${escapeHtml(material.n)} ×${material.count}</span>`;
+    }).join("")}</div>`;
   }
 
   function equipmentHtml(d, it, options) {
@@ -592,7 +599,10 @@
       </div>
       <div class="prog-stages">${chips}</div>
       <div class="prog-next">下一阶段：${nextHtml}</div>
-      <table class="mini-table"><tbody>${remRows || '<tr><td colspan="2">已完成全部阶段</td></tr>'}</tbody></table>
+      <table class="mini-table prog-material-table">
+        <colgroup><col class="prog-stage-col"><col class="prog-material-col"></colgroup>
+        <tbody>${remRows || '<tr><td colspan="2">已完成全部阶段</td></tr>'}</tbody>
+      </table>
     </div>`;
   }
 
@@ -603,9 +613,6 @@
       return (ia === -1 ? PROG_CAT_ORDER.length : ia) - (ib === -1 ? PROG_CAT_ORDER.length : ib);
     }).map((it) => equipmentHtml(d, it)).join("");
     const summary = PROG.discipleSummary(FDATA, d);
-    const sumHtml = summary.materials.length
-      ? summary.materials.map((m) => `<tr><td>${m.n}</td><td>${m.q}色</td><td>${m.count}</td></tr>`).join("")
-      : '<tr><td colspan="3">无</td></tr>';
     return `<div class="prog-disciple" data-disciple="${d.id}">
       <div class="prog-disciple-head">
         <input class="prog-name" data-disciple="${d.id}" value="${escapeHtml(d.name)}">
@@ -623,7 +630,7 @@
       ${itemsHtml || '<div class="muted-tip">该弟子还没有装备</div>'}
       <div class="prog-summary">
         <h4 class="drop-title">该弟子剩余材料汇总<span class="drop-count">${summary.materials.length} 种</span></h4>
-        <table class="mini-table"><thead><tr><th>材料</th><th>品质</th><th>数量</th></tr></thead><tbody>${sumHtml}</tbody></table>
+        ${summary.materials.length ? progressSummaryHtml(summary.materials) : '<div class="muted-tip">无</div>'}
       </div>
     </div>`;
   }
@@ -632,7 +639,7 @@
     const mats = PROG.overallSummary(FDATA, progState.disciples);
     el.progOverall.innerHTML = `<div class="drop-item-title">全体弟子剩余材料汇总（${progState.disciples.length} 名弟子）</div>` +
       (mats.length
-        ? `<table class="mini-table"><thead><tr><th>材料</th><th>品质</th><th>数量</th></tr></thead><tbody>${mats.map((m) => `<tr><td>${m.n}</td><td>${m.q}色</td><td>${m.count}</td></tr>`).join("")}</tbody></table>`
+        ? progressSummaryHtml(mats)
         : '<div class="muted-tip">暂无数据，添加弟子和装备后自动汇总</div>');
   }
 

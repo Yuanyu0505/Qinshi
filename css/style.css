@@ -377,10 +377,9 @@ td.hit-cell { background: rgba(212, 175, 55, .12); }
 .mat.material-token.mat-orange { border-color: #ff982f; background: #c96a18; }
 .mat.material-token.hit {
   color: #fff;
-  border: 2px solid #e34843;
+  border: 4px solid #e34843;
   background: #a92d2a;
   font-weight: 700;
-  box-shadow: 0 0 0 2px rgba(227, 72, 67, .14);
 }
 .mat.material-token.mat-purple.hit { color: #d9a0ff; }
 .mat.material-token.mat-orange.hit { color: #ffb04a; }

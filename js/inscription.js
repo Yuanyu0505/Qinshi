@@ -95,6 +95,9 @@
           var values = Array.isArray(slot.subs) ? slot.subs.slice(0, 3) : [slot.sub || ""];
           while (values.length < 3) values.push("");
           slot.subs = values.map(function (value) { return normalizeAttrName(slot.shield, value); });
+          var subValues = Array.isArray(slot.subValues) ? slot.subValues.slice(0, 3) : [];
+          while (subValues.length < 3) subValues.push("");
+          slot.subValues = subValues.map(function (value) { return String(value || "").trim(); });
           delete slot.sub;
         });
       });
@@ -142,12 +145,13 @@
   function renderEditor(item) {
     if (!item) { el.editor.innerHTML = ""; return; }
     var saved = progress[keyOf(item)];
-    el.editor.innerHTML = '<section class="ins-editor"><div class="ins-card-head"><div><span class="ins-quality ' + (item.quality === "红色神将" ? "red" : "orange") + '">' + item.quality + '</span><b>' + escapeHtml(item.name) + '</b></div><button type="button" class="link-btn" data-action="cancel">取消</button></div><div class="muted-tip ins-editor-tip">每个位置分别选择三条副属性；普通属性最多选择两条相同，标记为“极致”的属性允许三条相同。</div>' + item.slots.map(function (slot) {
+    el.editor.innerHTML = '<section class="ins-editor"><div class="ins-card-head"><div><span class="ins-quality ' + (item.quality === "红色神将" ? "red" : "orange") + '">' + item.quality + '</span><b>' + escapeHtml(item.name) + '</b></div><button type="button" class="link-btn" data-action="cancel">取消</button></div><div class="muted-tip ins-editor-tip">每个位置分别选择三条副属性并填写附加内容（如：+6%）；普通属性最多选择两条相同，标记为“极致”的属性允许三条相同。</div>' + item.slots.map(function (slot) {
       var old = saved && saved.slots && saved.slots.find(function (x) { return x.tian === slot.tian; });
       var quality = old ? old.quality : "橙色";
       var star = old ? old.star : "2";
       var subs = old && Array.isArray(old.subs) ? old.subs : ["", "", ""];
-      return '<div class="ins-editor-slot" data-tian="' + slot.tian + '" data-shield="' + slot.shield + '"><div class="ins-slot-title">' + slot.tian + ' · ' + slot.shield + extremeNoteHtml(slot.shield) + '</div><div class="ins-editor-layout"><div class="ins-core-controls"><label>品质<select class="ins-edit-quality"><option' + (quality === "橙色" ? " selected" : "") + '>橙色</option><option' + (quality === "紫色" ? " selected" : "") + '>紫色</option></select></label><label>星级<select class="ins-edit-star"><option value="2"' + (star === "2" ? " selected" : "") + '>2星</option><option value="1"' + (star === "1" ? " selected" : "") + '>1星</option></select></label><div class="ins-main-preview"></div></div><div class="ins-editor-controls">' + [0, 1, 2].map(function (index) { return '<label>副属性' + (index + 1) + '<select class="ins-edit-sub">' + subOptionsHtml(slot.shield, subs[index]) + '</select></label>'; }).join("") + '</div></div></div>';
+      var subValues = old && Array.isArray(old.subValues) ? old.subValues : ["", "", ""];
+      return '<div class="ins-editor-slot" data-tian="' + slot.tian + '" data-shield="' + slot.shield + '"><div class="ins-slot-title">' + slot.tian + ' · ' + slot.shield + extremeNoteHtml(slot.shield) + '</div><div class="ins-editor-layout"><div class="ins-core-controls"><label>品质<select class="ins-edit-quality"><option' + (quality === "橙色" ? " selected" : "") + '>橙色</option><option' + (quality === "紫色" ? " selected" : "") + '>紫色</option></select></label><label>星级<select class="ins-edit-star"><option value="2"' + (star === "2" ? " selected" : "") + '>2星</option><option value="1"' + (star === "1" ? " selected" : "") + '>1星</option></select></label><div class="ins-main-preview"></div></div><div class="ins-editor-controls">' + [0, 1, 2].map(function (index) { return subEditorHtml(slot.shield, subs[index], subValues[index], index); }).join("") + '</div></div></div>';
     }).join("") + '<div class="ins-editor-actions"><button type="button" class="seg active" data-action="save">保存</button></div></section>';
     refreshEditorMain();
   }
@@ -155,6 +159,12 @@
     return '<option value="">请选择</option>' + SUBS[shield].map(function (attr) {
       return '<option value="' + escapeHtml(attr.n) + '"' + (attr.n === selected ? " selected" : "") + '>' + attr.n + (attr.x ? "（极致可三条）" : "") + '</option>';
     }).join("");
+  }
+  function subEditorHtml(shield, selected, value, index) {
+    return '<label><span>副属性' + (index + 1) + '</span><span class="ins-sub-editor-fields"><select class="ins-edit-sub">' + subOptionsHtml(shield, selected) + '</select><input class="ins-edit-sub-value" type="text" value="' + escapeHtml(value || "") + '" placeholder="如：+6%" aria-label="副属性' + (index + 1) + '附加内容"></span></label>';
+  }
+  function subDisplayText(base, value) {
+    return base ? base + String(value || "").trim() : "";
   }
   function refreshEditorMain(event) {
     if (event && event.target.classList.contains("ins-edit-sub") && event.target.value) {
@@ -186,7 +196,9 @@
     var item = itemByKey(editingKey);
     if (!item) return;
     progress[editingKey] = { name: item.name, quality: item.quality, slots: Array.prototype.map.call(el.editor.querySelectorAll(".ins-editor-slot"), function (row) {
-      return { tian: row.dataset.tian, shield: row.dataset.shield, quality: row.querySelector(".ins-edit-quality").value, star: row.querySelector(".ins-edit-star").value, subs: Array.prototype.map.call(row.querySelectorAll(".ins-edit-sub"), function (select) { return select.value; }) };
+      var subs = Array.prototype.map.call(row.querySelectorAll(".ins-edit-sub"), function (select) { return select.value; });
+      var subValues = Array.prototype.map.call(row.querySelectorAll(".ins-edit-sub-value"), function (input, index) { return subs[index] ? input.value.trim() : ""; });
+      return { tian: row.dataset.tian, shield: row.dataset.shield, quality: row.querySelector(".ins-edit-quality").value, star: row.querySelector(".ins-edit-star").value, subs: subs, subValues: subValues };
     }) };
     saveProgress();
     editingKey = "";
@@ -205,7 +217,8 @@
   function savedSlotHtml(slot) {
     var main = slot.quality === "紫色" ? "主属性暂不展示" : MAIN[slot.tian][slot.star];
     var subs = Array.isArray(slot.subs) ? slot.subs : ["", "", ""];
-    return '<div class="ins-saved-slot"><div class="ins-saved-core"><b>' + slot.tian + ' · ' + slot.shield + extremeNoteHtml(slot.shield) + '</b><span>' + slot.quality + ' ' + slot.star + '星</span>' + mainStackHtml(main) + '</div><div class="ins-saved-substats">' + subs.map(function (sub, index) { return '<span class="ins-saved-sub' + (isExtremeAttr(slot.shield, sub) ? " extreme" : "") + '"><small>副属性' + (index + 1) + '</small><strong>' + (sub ? escapeHtml(sub) : "未设置") + '</strong></span>'; }).join("") + '</div></div>';
+    var subValues = Array.isArray(slot.subValues) ? slot.subValues : ["", "", ""];
+    return '<div class="ins-saved-slot"><div class="ins-saved-core"><b>' + slot.tian + ' · ' + slot.shield + extremeNoteHtml(slot.shield) + '</b><span>' + slot.quality + ' ' + slot.star + '星</span>' + mainStackHtml(main) + '</div><div class="ins-saved-substats">' + subs.map(function (sub, index) { var display = subDisplayText(sub, subValues[index]); return '<span class="ins-saved-sub' + (isExtremeAttr(slot.shield, sub) ? " extreme" : "") + '"><small>副属性' + (index + 1) + '</small><strong>' + (display ? escapeHtml(display) : "未设置") + '</strong></span>'; }).join("") + '</div></div>';
   }
   function mainStackHtml(main) { return '<span class="ins-main-stack">' + main.split("、").map(function (part) { return '<span>' + escapeHtml(part.trim()) + '</span>'; }).join("") + '</span>'; }
   function handleProgressAction(event) {
@@ -248,11 +261,21 @@
     return (!el.tian.value || slot.tian === el.tian.value) && (!el.shield.value || slot.shield === el.shield.value);
   }
   function queryCardHtml(item) {
-    var saved = Boolean(progress[keyOf(item)]);
+    var savedProgress = progress[keyOf(item)];
+    var saved = Boolean(savedProgress);
     var visibleSlots = item.slots.filter(slotMatchesFilter);
     return '<article class="ins-query-card' + (saved ? " saved" : "") + '"><div class="ins-card-head"><div><span class="ins-quality ' + (item.quality === "红色神将" ? "red" : "orange") + '">' + item.quality + '</span><b class="' + (saved ? "ins-saved-name" : "") + '">' + escapeHtml(item.name) + '</b>' + (saved ? '<span class="ins-saved-mark">个人进度已保存</span>' : "") + '</div></div><div class="ins-query-slots">' + visibleSlots.map(function (slot) {
-      return '<div class="ins-query-slot"><div class="ins-slot-title">' + slot.tian + ' · ' + slot.shield + extremeNoteHtml(slot.shield) + '</div><div class="ins-main-line"><span>橙色二星主属性</span>' + MAIN[slot.tian]["2"] + '</div><div class="ins-sub-list"><span class="ins-sub-label">可洗练副属性</span>' + SUBS[slot.shield].map(subTagHtml).join("") + '</div></div>';
+      var savedSlot = savedProgress && savedProgress.slots.find(function (entry) { return entry.tian === slot.tian && entry.shield === slot.shield; });
+      return '<div class="ins-query-slot"><div class="ins-slot-title">' + slot.tian + ' · ' + slot.shield + extremeNoteHtml(slot.shield) + '</div><div class="ins-main-line"><span>橙色二星主属性</span>' + MAIN[slot.tian]["2"] + '</div><div class="ins-query-substats"><div class="ins-sub-list"><span class="ins-sub-label">可洗练副属性</span>' + SUBS[slot.shield].map(subTagHtml).join("") + '</div>' + currentSubstatsHtml(savedSlot) + '</div></div>';
     }).join("") + '</div></article>';
+  }
+  function currentSubstatsHtml(savedSlot) {
+    if (!savedSlot) return "";
+    var subs = Array.isArray(savedSlot.subs) ? savedSlot.subs : ["", "", ""];
+    var subValues = Array.isArray(savedSlot.subValues) ? savedSlot.subValues : ["", "", ""];
+    var current = subs.map(function (sub, index) { return subDisplayText(sub, subValues[index]); }).filter(Boolean);
+    var values = current.length ? current.map(function (value) { return '<span class="ins-current-sub-tag">' + escapeHtml(value) + '</span>'; }).join("") : '<span class="ins-current-sub-tag empty">未设置</span>';
+    return '<div class="ins-current-substats"><span class="ins-current-sub-label">当前副属性</span>' + values + '</div>';
   }
   function subTagHtml(attr) { return '<span class="ins-sub-tag' + (attr.x ? " extreme" : "") + '">' + attr.n + (attr.x ? '<em>可三条</em>' : "") + '</span>'; }
   function isExtremeAttr(shield, name) { return SUBS[shield].some(function (attr) { return attr.x && attr.n === name; }); }

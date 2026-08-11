@@ -126,10 +126,6 @@ header.top {
 .quiz-question { font-size: 16px; color: var(--text); margin-bottom: 8px; }
 .quiz-answer { color: #e35d5b; font-size: 17px; font-weight: 700; }
 .quiz-answer span { display: inline-block; color: var(--gold-dim); font-size: 13px; margin-right: 10px; }
-.quiz-add-panel { margin-top: -4px; }
-.quiz-editor-row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 10px; }
-.quiz-editor-row input { flex: 1 1 220px; min-width: 0; padding: 8px 10px; font: inherit; color: var(--text); background: var(--bg2); border: 1px solid var(--line); border-radius: 6px; }
-.quiz-delete { color: #e35d5b; }
 .inscription-modes { margin-bottom: 14px; }
 .inscription-modes .seg { padding: 7px 18px; }
 .ins-progress-toolbar,
@@ -147,6 +143,7 @@ header.top {
 #ins-tian,
 #ins-shield,
 .ins-editor-controls select,
+.ins-editor-controls input,
 .ins-core-controls select {
   padding: 9px 11px;
   background: var(--bg2);
@@ -164,6 +161,7 @@ header.top {
 #ins-tian:focus,
 #ins-shield:focus,
 .ins-editor-controls select:focus,
+.ins-editor-controls input:focus,
 .ins-core-controls select:focus {
   border-color: var(--gold-dim);
   box-shadow: 0 0 0 2px rgba(212, 175, 55, .15);
@@ -258,7 +256,7 @@ header.top {
 }
 .ins-editor-layout {
   display: grid;
-  grid-template-columns: minmax(250px, .65fr) minmax(480px, 1.5fr);
+  grid-template-columns: minmax(230px, .55fr) minmax(720px, 1.8fr);
   gap: 12px;
   align-items: end;
 }
@@ -269,11 +267,14 @@ header.top {
 }
 .ins-editor-controls {
   display: grid;
-  grid-template-columns: repeat(3, minmax(150px, 1fr));
+  grid-template-columns: repeat(3, minmax(220px, 1fr));
   gap: 8px;
 }
 .ins-editor-controls label,
 .ins-core-controls label { display: grid; gap: 4px; color: var(--muted); font-size: 12px; }
+.ins-sub-editor-fields { display: grid; grid-template-columns: minmax(110px, 1.15fr) minmax(76px, .85fr); gap: 6px; }
+.ins-sub-editor-fields select,
+.ins-sub-editor-fields input { width: 100%; min-width: 0; box-sizing: border-box; }
 .ins-main-preview,
 .ins-main-line { color: var(--muted); font-size: 13px; }
 .ins-main-preview { grid-column: 1 / -1; min-height: 20px; }
@@ -304,6 +305,7 @@ header.top {
 .ins-saved-sub.extreme { border-color: var(--red); background: rgba(176, 58, 46, .15); }
 .ins-saved-sub.extreme strong { color: #ff8a80; }
 .ins-saved-name { color: #54d17a; text-shadow: 0 0 10px rgba(84, 209, 122, .22); }
+.ins-query-substats { display: grid; gap: 7px; }
 .ins-sub-list { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; }
 .ins-sub-label { color: var(--muted); font-size: 12px; }
 .ins-sub-tag {
@@ -321,6 +323,26 @@ header.top {
   background: rgba(176, 58, 46, .16);
   font-weight: 700;
 }
+.ins-current-substats {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 5px;
+  padding-top: 7px;
+  border-top: 1px dashed rgba(84, 209, 122, .28);
+}
+.ins-current-sub-label { color: #54d17a; font-size: 12px; font-weight: 700; }
+.ins-current-sub-tag {
+  display: inline-block;
+  padding: 2px 7px;
+  color: #54d17a;
+  background: rgba(84, 209, 122, .08);
+  border: 1px solid rgba(84, 209, 122, .55);
+  border-radius: 5px;
+  font-size: 12px;
+  font-weight: 700;
+}
+.ins-current-sub-tag.empty { opacity: .75; }
 .ins-sub-tag em { margin-left: 3px; font-size: 11px; font-style: normal; }
 .ins-reference-block h3 { margin: 0 0 10px; color: var(--gold); font-size: 17px; }
 .ins-reference-table { min-width: 920px; }
@@ -803,7 +825,7 @@ figcaption { color: var(--muted); font-size: 13px; margin-top: 8px; }
   .ins-editor-layout,
   .ins-saved-slot { grid-template-columns: 1fr; }
   .ins-query-slot { grid-template-columns: minmax(140px, .7fr) minmax(180px, 1fr); }
-  .ins-query-slot .ins-sub-list { grid-column: 1 / -1; }
+  .ins-query-slot .ins-query-substats { grid-column: 1 / -1; }
   .prog-material-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (max-width: 720px) {
@@ -818,7 +840,7 @@ figcaption { color: var(--muted); font-size: 13px; margin-top: 8px; }
   .ins-saved-substats { grid-template-columns: 1fr; }
   .ins-saved-slot,
   .ins-query-slot { grid-template-columns: 1fr; }
-  .ins-query-slot .ins-sub-list { grid-column: auto; }
+  .ins-query-slot .ins-query-substats { grid-column: auto; }
   .ins-suggestions { width: 100%; }
   .prog-material-grid { grid-template-columns: 1fr; }
 }

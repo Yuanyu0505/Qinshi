@@ -70,10 +70,7 @@
     atlasResults: document.getElementById("atlas-results"),
     quizSearch: document.getElementById("quiz-search"),
     quizCount: document.getElementById("quiz-count"),
-    quizResults: document.getElementById("quiz-results"),
-    quizAddQuestion: document.getElementById("quiz-add-question"),
-    quizAddAnswer: document.getElementById("quiz-add-answer"),
-    quizAdd: document.getElementById("quiz-add")
+    quizResults: document.getElementById("quiz-results")
   };
 
   const progState = {
@@ -274,25 +271,6 @@
       quizState.query = el.quizSearch.value;
       applyQuiz();
     });
-    el.quizAdd.addEventListener("click", addQuizItem);
-    el.quizResults.addEventListener("click", function (event) {
-      var btn = event.target.closest("button[data-quiz-action]");
-      if (!btn) return;
-      var item = quizState.items.find(function (entry) { return entry.id === btn.dataset.id; });
-      if (!item) return;
-      if (btn.dataset.quizAction === "delete") {
-        quizState.items = quizState.items.filter(function (entry) { return entry.id !== item.id; });
-      } else {
-        var card = btn.closest(".quiz-item");
-        var question = card.querySelector(".quiz-edit-question").value.trim();
-        var answer = card.querySelector(".quiz-edit-answer").value.trim();
-        if (!question || !answer) return;
-        item.question = question;
-        item.answer = answer;
-      }
-      saveQuizItems();
-      applyQuiz();
-    });
     applyQuiz();
   }
 
@@ -311,21 +289,6 @@
     });
   }
 
-  function saveQuizItems() {
-    localStorage.setItem(QUIZ_STORE_KEY, JSON.stringify(quizState.items));
-  }
-
-  function addQuizItem() {
-    var question = el.quizAddQuestion.value.trim();
-    var answer = el.quizAddAnswer.value.trim();
-    if (!question || !answer) return;
-    quizState.items.unshift({ id: "custom-" + Date.now(), question: question, answer: answer });
-    el.quizAddQuestion.value = "";
-    el.quizAddAnswer.value = "";
-    saveQuizItems();
-    applyQuiz();
-  }
-
   function applyQuiz() {
     var items = QUIZ.search(quizState.items, quizState.query);
     el.quizCount.textContent = "共 " + items.length + " 题";
@@ -334,12 +297,6 @@
           return `<article class="quiz-item">
             <div class="quiz-question">${escapeHtml(item.question)}</div>
             <div class="quiz-answer"><span>正确答案</span>${escapeHtml(item.answer)}</div>
-            <div class="quiz-editor-row">
-              <input class="quiz-edit-question" type="text" value="${escapeHtml(item.question)}" aria-label="编辑题目">
-              <input class="quiz-edit-answer" type="text" value="${escapeHtml(item.answer)}" aria-label="编辑正确答案">
-              <button type="button" class="seg" data-quiz-action="save" data-id="${item.id}">保存</button>
-              <button type="button" class="link-btn quiz-delete" data-quiz-action="delete" data-id="${item.id}">删除</button>
-            </div>
           </article>`;
         }).join("")
       : '<div class="empty"><p>未找到匹配的题目</p></div>';

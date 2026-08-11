@@ -764,14 +764,15 @@
     });
   }
 
-  function forgingTokenHtml(tk, hit) {
+  function forgingTokenHtml(tk, hit, materialMode) {
     if (tk.dash) return '<span class="mat-dash">—</span>';
     const q = tk.q === "紫" ? "mat-purple" : "mat-orange";
-    return `<span class="mat ${q}${hit ? " hit" : ""}">${tk.n}</span>`;
+    return `<span class="mat ${q}${materialMode ? " material-token" : ""}${hit ? " hit" : ""}">${tk.n}</span>`;
   }
 
   function forgingRowHtml(item, hits) {
     const eqClass = item.quality === "紫" ? "eq-purple" : "eq-orange";
+    const materialMode = Array.isArray(hits);
     const stageHit = hits ? new Set(hits.map((h) => h.stageIdx)) : null;
     const tokenHit = hits ? new Map(hits.map((h) => [`${h.stageIdx}:${h.tokenIdx}`, true])) : null;
     return `<tr${stageHit ? ' class="hit-row"' : ""}>
@@ -782,7 +783,7 @@
         const cellHit = stageHit ? stageHit.has(si) : false;
         return `<td${cellHit ? ' class="hit-cell"' : ""}>${st.tokens.map((tk, ti) => {
           const hit = tokenHit ? tokenHit.has(`${si}:${ti}`) : false;
-          return `<div class="mat-line">${forgingTokenHtml(tk, hit)}</div>`;
+          return `<div class="mat-line">${forgingTokenHtml(tk, hit, materialMode)}</div>`;
         }).join("")}</td>`;
       }).join("")}
     </tr>`;

@@ -368,10 +368,19 @@ td.hit-cell { background: rgba(212, 175, 55, .12); }
 }
 .mat-purple { color: #b78ae0; border-color: #7030a0; background: rgba(112, 48, 160, .15); }
 .mat-orange { color: #f0a04b; border-color: #f79646; background: rgba(247, 150, 70, .12); }
-.mat.hit {
+.mat.material-token {
+  color: #fff;
+  border-width: 2px;
+  font-weight: 600;
+}
+.mat.material-token.mat-purple { border-color: #9b4fce; background: #66308f; }
+.mat.material-token.mat-orange { border-color: #ff982f; background: #c96a18; }
+.mat.material-token.hit {
+  color: #fff;
+  border: 2px solid #e34843;
+  background: #a92d2a;
   font-weight: 700;
-  border: 10px solid var(--red);
-  padding: 4px;
+  box-shadow: 0 0 0 2px rgba(227, 72, 67, .14);
 }
 .mat-dash { color: var(--status); font-style: italic; }
 tr.hit-row td { background: rgba(212, 175, 55, .06); }

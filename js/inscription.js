@@ -13,16 +13,17 @@
     "天机": { "1": "护盾+354400、内力+22150", "2": "护盾+602400、内力+37650" }
   };
   var COMMON_SUBS = ["闪避", "招架", "治疗效果"];
+  var LEGACY_SUB_NAMES = { "防御": "防", "技能减免": "技伤减免" };
   var SUBS = {
-    "天盾": [{ n: "攻", x: true }, { n: "暴击伤害" }, { n: "技能减免" }, { n: "内力" }, { n: "追加伤害" }],
-    "地盾": [{ n: "PVP速" }, { n: "暴击" }, { n: "PVP免伤" }, { n: "技能穿透", x: true }, { n: "防御" }],
-    "人盾": [{ n: "血", x: true }, { n: "抗暴击" }, { n: "PVP伤害" }, { n: "技能穿透" }, { n: "防御" }],
+    "天盾": [{ n: "攻", x: true }, { n: "暴击伤害" }, { n: "技伤减免" }, { n: "内力" }, { n: "追加伤害" }],
+    "地盾": [{ n: "PVP速" }, { n: "暴击" }, { n: "PVP免伤" }, { n: "技能穿透", x: true }, { n: "防" }],
+    "人盾": [{ n: "血", x: true }, { n: "抗暴击" }, { n: "PVP伤害" }, { n: "技能穿透" }, { n: "防" }],
     "神盾": [{ n: "PVP速" }, { n: "攻", x: true }, { n: "PVP伤害", x: true }, { n: "技能穿透" }, { n: "内力" }],
-    "鬼盾": [{ n: "速", x: true }, { n: "血" }, { n: "护盾" }, { n: "暴击伤害" }, { n: "防御" }],
-    "龙盾": [{ n: "PVP速", x: true }, { n: "血" }, { n: "暴击", x: true }, { n: "PVP伤害" }, { n: "技能减免" }],
+    "鬼盾": [{ n: "速", x: true }, { n: "血" }, { n: "护盾" }, { n: "暴击伤害" }, { n: "防" }],
+    "龙盾": [{ n: "PVP速", x: true }, { n: "血" }, { n: "暴击", x: true }, { n: "PVP伤害" }, { n: "技伤减免" }],
     "虎盾": [{ n: "血", x: true }, { n: "暴击伤害" }, { n: "抗暴击" }, { n: "内力", x: true }, { n: "追加伤害" }],
     "风盾": [{ n: "攻" }, { n: "暴击" }, { n: "护盾" }, { n: "PVP免伤", x: true }, { n: "追加伤害" }],
-    "云盾": [{ n: "护盾", x: true }, { n: "抗暴击", x: true }, { n: "PVP免伤" }, { n: "技能减免", x: true }, { n: "防御" }]
+    "云盾": [{ n: "护盾", x: true }, { n: "抗暴击", x: true }, { n: "PVP免伤" }, { n: "技伤减免", x: true }, { n: "防" }]
   };
   SHIELDS.forEach(function (shield) {
     COMMON_SUBS.forEach(function (name) {
@@ -103,8 +104,10 @@
   function normalizeAttrName(shield, value) {
     value = String(value || "");
     var attrs = SUBS[shield] || [];
-    var withoutThree = value.replace(/^3/, "");
-    return attrs.some(function (attr) { return attr.x && attr.n === withoutThree; }) ? withoutThree : value;
+    var normalized = LEGACY_SUB_NAMES[value] || value;
+    var withoutThree = normalized.replace(/^3/, "");
+    withoutThree = LEGACY_SUB_NAMES[withoutThree] || withoutThree;
+    return attrs.some(function (attr) { return attr.x && attr.n === withoutThree; }) ? withoutThree : normalized;
   }
   function saveProgress() { localStorage.setItem(STORE_KEY, JSON.stringify(progress)); }
 

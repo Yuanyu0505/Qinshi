@@ -17,3 +17,21 @@ test("search：空关键词返回全部记录的副本", () => {
   assert.deepStrictEqual(result, items);
   assert.notStrictEqual(result, items);
 });
+
+test("mergeItems：默认题编辑后保留编辑结果，不补回原错误题目", () => {
+  const defaults = [
+    { question: "石门峡残月谷，是唯一人一剑，尽屠三百秦军？", answer: "盖聂" },
+    { question: "第二道默认题", answer: "答案二" }
+  ];
+  const saved = [
+    { id: "default-0", question: "石门以残月谷，是唯一一人一剑，尽屠三百秦兵的是？", answer: "盖聂" },
+    { id: "custom-1", question: "手动新增题", answer: "自定义答案" },
+    { id: "default-0", question: defaults[0].question, answer: defaults[0].answer }
+  ];
+
+  assert.deepStrictEqual(QUIZ.mergeItems(defaults, saved), [
+    saved[0],
+    saved[1],
+    { id: "default-1", question: "第二道默认题", answer: "答案二" }
+  ]);
+});

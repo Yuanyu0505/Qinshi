@@ -16,5 +16,28 @@
     });
   }
 
-  return { search: search };
+  function mergeItems(defaults, saved) {
+    var defaultItems = Array.isArray(defaults) ? defaults : [];
+    var savedItems = Array.isArray(saved) ? saved : [];
+    var merged = [];
+    var existingIds = {};
+
+    savedItems.forEach(function (item, index) {
+      var id = item.id || "custom-migrated-" + index;
+      if (existingIds[id]) return;
+      existingIds[id] = true;
+      merged.push({ id: id, question: item.question, answer: item.answer });
+    });
+
+    defaultItems.forEach(function (item, index) {
+      var id = "default-" + index;
+      if (existingIds[id]) return;
+      existingIds[id] = true;
+      merged.push({ id: id, question: item.question, answer: item.answer });
+    });
+
+    return merged;
+  }
+
+  return { search: search, mergeItems: mergeItems };
 });

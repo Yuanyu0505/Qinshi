@@ -593,7 +593,9 @@ tr.hit-row td { background: rgba(212, 175, 55, .06); }
 .atlas-upgrade-cost { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 7px; }
 .atlas-upgrade-cost b { color: var(--gold); }
 .atlas-upgrade-equipment, .atlas-summary-equipment { margin-top: 9px; }
-.atlas-summary-equipment-toggle { display: none; margin: 2px 0 4px; }
+.atlas-summary-equipment-toggle { display: inline-flex; margin: 2px 0 4px; }
+.atlas-summary-equipment { display: none; }
+.atlas-summary-equipment.is-expanded { display: block; }
 .atlas-equipment-title { color: var(--gold-dim); font-size: 14px; margin-bottom: 6px; }
 .atlas-equipment-stage-list, .atlas-summary-equipment-list { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; }
 .atlas-equipment-stage { display: inline-flex; align-items: center; gap: 6px; }
@@ -936,10 +938,6 @@ figcaption { color: var(--muted); font-size: 13px; margin-top: 8px; }
     justify-content: center;
     overflow-wrap: anywhere;
   }
-
-  .atlas-summary-equipment-toggle { display: inline-flex; }
-  .atlas-summary-equipment { display: none; }
-  .atlas-summary-equipment.is-expanded { display: block; }
 
   #partition-forging .summary-table-scroll,
   #partition-forging .forge-scroll,

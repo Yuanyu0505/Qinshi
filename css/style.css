@@ -1013,6 +1013,9 @@ figcaption { color: var(--muted); font-size: 13px; margin-top: 8px; }
     -webkit-overflow-scrolling: touch;
   }
 
+  #partition-forging .forge-scroll-material,
+  #inscription-reference .table-wrap { isolation: isolate; }
+
   #partition-forging .summary-table,
   #partition-forging .forge-scroll-material .forge-h-table,
   #inscription-reference .ins-reference-table {
@@ -1036,7 +1039,7 @@ figcaption { color: var(--muted); font-size: 13px; margin-top: 8px; }
     background-color: #191611;
     background-clip: padding-box;
     border-right: 1px solid var(--line);
-    box-shadow: 8px 0 10px -10px #000, 1px 0 0 var(--line);
+    box-shadow: 10px 0 12px -11px #000, 1px 0 0 var(--line);
   }
 
   #partition-forging .summary-table thead th:first-child,
@@ -1056,7 +1059,8 @@ figcaption { color: var(--muted); font-size: 13px; margin-top: 8px; }
   #partition-forging .forge-scroll-material .forge-h-table tr > :first-child { min-width: 200px; }
   #inscription-reference .ins-reference-table tr > :first-child { min-width: 118px; }
 }
-@media (max-width: 767px) {
+@media (max-width: 767px),
+       (max-width: 932px) and (max-height: 500px) and (orientation: landscape) {
   body { overflow-x: hidden; }
   body.mobile-menu-open { overflow: hidden; }
   .wrap { width: 100%; padding: 12px 10px calc(82px + env(safe-area-inset-bottom)); }
@@ -1133,6 +1137,11 @@ figcaption { color: var(--muted); font-size: 13px; margin-top: 8px; }
   .summary-card { padding: 10px; }
   #partition-equipment #table-wrap { display: none; }
   .cards { display: block; }
+  .atlas-summary-equipment-list,
+  .atlas-equipment-stage-list { max-width: 100%; gap: 6px; }
+  .atlas-summary-equipment-list > *,
+  .atlas-equipment-stage-list > *,
+  .equipment-name-badge { max-width: 100%; white-space: normal; overflow-wrap: anywhere; }
   .image-grid { grid-template-columns: 1fr; }
   .inscription-modes { display: flex; width: 100%; }
   .inscription-modes .seg { flex: 1; padding-left: 8px; padding-right: 8px; }
@@ -1150,9 +1159,28 @@ figcaption { color: var(--muted); font-size: 13px; margin-top: 8px; }
     white-space: normal;
     overflow-wrap: anywhere;
   }
+  .prog-search-section,
+  .prog-search-relation,
+  .prog-disciple,
+  .prog-equip { min-width: 0; max-width: 100%; }
+  .prog-search-hits,
+  .prog-stage-materials { max-width: 100%; overflow-wrap: anywhere; }
+  .ins-query-substats,
+  .ins-saved-substats,
+  .ins-reference-table td,
+  .answer-card,
+  .drop-item { min-width: 0; overflow-wrap: anywhere; }
   .settings-list > div { grid-template-columns: 1fr; gap: 3px; }
   .settings-actions .seg { min-height: 44px; }
 }
 @media (min-width: 768px) {
   .cards { display: none; }
+}
+@media (min-width: 768px) and (max-width: 932px) and (max-height: 500px) and (orientation: landscape) {
+  .wrap { padding-bottom: calc(64px + env(safe-area-inset-bottom)); }
+  .tabs { padding-top: 4px; padding-bottom: calc(4px + env(safe-area-inset-bottom)); }
+  .tab { min-height: 38px; }
+  .mobile-more-layer { padding-bottom: calc(62px + env(safe-area-inset-bottom)); }
+  #partition-equipment #table-wrap { display: none; }
+  #partition-equipment .cards { display: block; }
 }

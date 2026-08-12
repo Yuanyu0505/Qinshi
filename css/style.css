@@ -756,6 +756,17 @@ thead th {
 tbody td { padding: 9px 12px; border-bottom: 1px solid rgba(58, 49, 37, .55); vertical-align: middle; text-align: center; }
 tbody tr:hover { background: rgba(212, 175, 55, .05); }
 td.name { font-weight: 600; white-space: nowrap; }
+.equipment-name-badge {
+  display: inline-block;
+  padding: 4px 10px;
+  border: 2px solid currentColor;
+  border-radius: 6px;
+  color: #fff;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.equipment-name-purple { background: #7030a0; border-color: #7030a0; }
+.equipment-name-orange { background: #f79646; border-color: #f79646; }
 .cat { color: var(--gold-dim); font-size: 13px; white-space: nowrap; }
 .main { color: var(--red); font-weight: 600; }
 .tier-attr { white-space: nowrap; }
@@ -771,7 +782,9 @@ td.name { font-weight: 600; white-space: nowrap; }
 .book-stage-list { display: grid; height: 100%; min-height: 100%; }
 .book-stage-row {
   display: grid;
-  grid-template-columns: 42px minmax(0, 1fr);
+  grid-template-columns: max-content minmax(0, max-content);
+  justify-content: center;
+  column-gap: 6px;
   align-items: center;
   min-height: 38px;
   border-bottom: 1px dashed rgba(58, 49, 37, .62);
@@ -782,11 +795,19 @@ td.name { font-weight: 600; white-space: nowrap; }
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: 0 2px;
   color: var(--gold-dim);
   font-size: 12px;
-  border-right: 1px solid rgba(58, 49, 37, .62);
 }
-.book-stage-values { padding: 7px 8px; line-height: 1.45; }
+.book-stage-values {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: 5px 2px;
+  line-height: 1.45;
+}
+.book-stage-values .tier-attr,
+.book-stage-values .tier-status { display: block; text-align: left; }
 td.badge, th.badge { text-align: center; white-space: nowrap; color: var(--gold); font-weight: 600; }
 .cards { display: none; }
 .card {

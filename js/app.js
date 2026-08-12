@@ -21,7 +21,7 @@
   const ATLAS_TARGET_LEVEL_KEY = "qinshi_atlas_target_level_v1";
   const QUIZ_STORE_KEY = "qinshi_quiz_items_v1";
 
-  const state = { search: "", category: "", main: "", filters: [], sortAttr: null, valueSource: "max" };
+  const state = { search: "", category: null, main: null, filters: [], sortAttr: null, valueSource: "max", activated: false };
   const forgeState = { mode: "main", query: "" };
 
   const el = {
@@ -136,6 +136,7 @@
 
     function switchPartition(name) {
       if (!parts[name]) return;
+      if (name === "equipment") resetEquipmentView();
       partitionButtons.forEach((button) => {
         button.classList.toggle("active", button.dataset.partition === name);
       });
@@ -861,18 +862,21 @@
   function bindEvents() {
     el.search.addEventListener("input", () => {
       state.search = el.search.value;
+      state.activated = hasEquipmentConditions();
       apply();
     });
     el.categoryBtns.addEventListener("click", (e) => {
       const btn = e.target.closest("button[data-category]");
       if (!btn) return;
       state.category = btn.dataset.category;
+      state.activated = true;
       apply();
     });
     el.mainBtns.addEventListener("click", (e) => {
       const btn = e.target.closest("button[data-main]");
       if (!btn) return;
       state.main = btn.dataset.main;
+      state.activated = true;
       apply();
     });
     el.chips.addEventListener("click", (e) => {
@@ -888,6 +892,7 @@
       if (state.filters.indexOf(state.sortAttr) === -1) {
         state.sortAttr = state.filters.length ? state.filters[0] : null;
       }
+      state.activated = hasEquipmentConditions();
       apply();
     });
     el.sortAttrBtns.addEventListener("click", (e) => {
@@ -902,30 +907,43 @@
       state.valueSource = btn.dataset.tier;
       apply();
     });
-    const clear = () => {
-      state.search = "";
-      state.category = "";
-      state.main = "";
-      state.filters = [];
-      state.sortAttr = null;
-      state.valueSource = "max";
-      el.search.value = "";
-      apply();
-    };
-    el.clearAll.addEventListener("click", clear);
-    el.emptyClear.addEventListener("click", clear);
+    el.clearAll.addEventListener("click", resetEquipmentView);
+    el.emptyClear.addEventListener("click", resetEquipmentView);
+  }
+
+  function hasEquipmentConditions() {
+    return state.search.trim() !== "" || state.category !== null ||
+      state.main !== null || state.filters.length > 0;
+  }
+
+  function resetEquipmentView() {
+    state.search = "";
+    state.category = null;
+    state.main = null;
+    state.filters = [];
+    state.sortAttr = null;
+    state.valueSource = "max";
+    state.activated = false;
+    el.search.value = "";
+    apply();
   }
 
   function apply() {
+    renderControls();
+    if (!state.activated) {
+      el.results.hidden = true;
+      el.empty.hidden = true;
+      el.count.textContent = "等待筛选";
+      return;
+    }
     const items = Q.queryItems(DATA.items, {
       search: state.search,
-      category: state.category,
-      main: state.main,
+      category: state.category == null ? "" : state.category,
+      main: state.main == null ? "" : state.main,
       filters: state.filters,
       sortAttr: state.sortAttr,
       valueSource: state.valueSource
     });
-    renderControls();
     renderTable(items);
     renderCards(items);
     el.count.textContent = `共 ${items.length} 件`;
@@ -936,10 +954,10 @@
 
   function renderControls() {
     el.categoryBtns.querySelectorAll("button").forEach((btn) => {
-      btn.classList.toggle("active", btn.dataset.category === state.category);
+      btn.classList.toggle("active", state.category !== null && btn.dataset.category === state.category);
     });
     el.mainBtns.querySelectorAll("button").forEach((btn) => {
-      btn.classList.toggle("active", btn.dataset.main === state.main);
+      btn.classList.toggle("active", state.main !== null && btn.dataset.main === state.main);
     });
     document.querySelectorAll(".chip").forEach((btn) => {
       const attr = btn.dataset.attr;
@@ -956,13 +974,14 @@
     });
   }
 
-  function tokenHtml(tokens) {
+  function tokenHtml(tokens, separator) {
     if (!tokens || tokens.length === 0) return '<span class="tier-none">—</span>';
+    const joiner = separator === undefined ? '<span class="plus"> + </span>' : separator;
     return tokens.map((tk) => {
       if (tk.s) return `<span class="tier-status">${tk.s}</span>`;
       const hit = state.filters.some((attr) => Q.tokenMatches(tk, attr));
       return `<span class="tier-attr${hit ? " hit" : ""}">${tk.raw}</span>`;
-    }).join('<span class="plus"> + </span>');
+    }).join(joiner);
   }
 
   function sortBadge(item) {
@@ -980,7 +999,12 @@
   function bookStageHtml(item, tier) {
     const stages = item.stages && item.stages[tier] ? item.stages[tier] : [];
     if (!stages.length) return '<span class="tier-none">—</span>';
-    return `<div class="book-stage-list">${stages.map((stage) => `<div class="book-stage-row"><span class="book-stage-label">${stage.stage}阶</span><span class="book-stage-values">${tokenHtml(stage.tokens)}</span></div>`).join("")}</div>`;
+    return `<div class="book-stage-list">${stages.map((stage) => `<div class="book-stage-row"><span class="book-stage-label">${stage.stage}阶</span><span class="book-stage-values">${tokenHtml(stage.tokens, "")}</span></div>`).join("")}</div>`;
+  }
+
+  function equipmentNameHtml(item) {
+    const purple = item.bookGroup === "初始紫色典籍";
+    return `<span class="equipment-name-badge ${purple ? "equipment-name-purple" : "equipment-name-orange"}">${escapeHtml(item.name)}</span>`;
   }
 
   function equipmentTableHtml(items, tiers, title) {
@@ -988,7 +1012,7 @@
     if (!items.length) return "";
     const body = items.map((item) => `<tr>
       <td><span class="cat">${item.cat}</span></td>
-      <td class="name">${item.name}</td>
+      <td class="name">${equipmentNameHtml(item)}</td>
       <td class="main">${item.main}</td>
       ${tiers.map((tier) => `<td class="${item.bookGroup ? "book-tier-cell" : ""}">${item.bookGroup ? bookStageHtml(item, tier) : tokenHtml(item.tiers[tier])}</td>`).join("")}
       ${hasFilter ? `<td class="badge">${sortBadge(item)}</td>` : ""}
@@ -1018,7 +1042,7 @@
       return `<div class="card">
         <div class="card-head">
           <span class="cat">${item.cat}</span>
-          <span class="name">${item.name}</span>
+          ${equipmentNameHtml(item)}
           ${badge ? `<span class="badge">${badge}</span>` : ""}
         </div>
         <div class="card-main">主属性：<b>${item.main}</b></div>

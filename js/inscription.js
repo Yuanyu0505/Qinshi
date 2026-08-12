@@ -48,7 +48,6 @@
   function init() {
     if (!DATA || !document.getElementById("partition-inscription")) return;
     el.modes = document.getElementById("inscription-modes");
-    el.count = document.getElementById("inscription-count");
     el.progressSearch = document.getElementById("ins-progress-search");
     el.suggestions = document.getElementById("ins-progress-suggestions");
     el.editor = document.getElementById("ins-progress-editor");
@@ -209,7 +208,6 @@
 
   function renderProgressList() {
     var entries = Object.keys(progress).map(function (key) { return { key: key, saved: progress[key], item: itemByKey(key) }; }).filter(function (entry) { return entry.item; });
-    el.count.textContent = entries.length ? "已保存 " + entries.length + " 名弟子" : "";
     el.progressList.innerHTML = entries.length ? entries.map(function (entry) {
       return '<article class="ins-progress-card"><div class="ins-card-head"><div><span class="ins-quality ' + (entry.item.quality === "红色神将" ? "red" : "orange") + '">' + entry.item.quality + '</span><b>' + escapeHtml(entry.item.name) + '</b></div><div class="ins-progress-actions"><button type="button" class="seg" data-edit-key="' + encodeURIComponent(entry.key) + '">编辑</button><button type="button" class="seg danger" data-delete-key="' + encodeURIComponent(entry.key) + '">删除</button></div></div><div class="ins-saved-slots">' + entry.saved.slots.map(savedSlotHtml).join("") + '</div></article>';
     }).join("") : '<div class="empty ins-empty"><p>尚未保存弟子铭文</p></div>';

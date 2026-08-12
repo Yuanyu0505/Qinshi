@@ -72,16 +72,6 @@ header.top {
   background: var(--bg2);
   font-weight: 700;
 }
-.partition-head {
-  display: flex;
-  align-items: baseline;
-  gap: 12px;
-  margin: 0 0 14px;
-  font-size: 18px;
-  font-weight: 700;
-  letter-spacing: 1px;
-}
-.partition-head .meta { font-weight: 400; }
 .summary-card {
   background: var(--panel);
   border: 1px solid var(--line);

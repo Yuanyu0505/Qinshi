@@ -3,11 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>秦时攻略站</title>
+<title>图鉴</title>
 <meta name="theme-color" content="#12100d">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="秦时攻略站">
+<meta name="apple-mobile-web-app-title" content="Qin">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png">
 <link rel="stylesheet" href="css/style.css">
@@ -15,7 +15,7 @@
 <body>
 <div class="wrap">
   <header class="top">
-    <h1>秦时攻略站</h1>
+    <h1 id="page-title">图鉴</h1>
   </header>
 
   <div id="pwa-update-notice" class="pwa-update-notice" role="status" hidden>
@@ -42,11 +42,6 @@
 
       <main id="app">
     <section id="partition-equipment" hidden>
-      <div class="partition-head">
-        装备属性
-        <span class="meta"><span id="count">加载中…</span> · 版本 <span id="version">—</span></span>
-      </div>
-
       <input id="search" type="search" placeholder="输入装备名或分类，如：墨眉 / 武器 / 韩非子 / 神兵典籍" autocomplete="off">
 
       <section class="panel">
@@ -98,8 +93,6 @@
     </section>
 
     <section id="partition-loulan" hidden>
-      <div class="partition-head">楼兰棋阵 · 两个玩法</div>
-
       <div class="mode-block">
         <h2 class="mode-title">楼兰</h2>
         <div class="image-grid">
@@ -130,7 +123,6 @@
     </section>
 
     <section id="partition-quiz" hidden>
-      <div class="partition-head">答题 <span id="quiz-count" class="meta"></span></div>
       <section class="panel">
         <div class="panel-title">题目搜索</div>
         <div class="filter-row">
@@ -143,7 +135,6 @@
     </section>
 
     <section id="partition-inscription" hidden>
-      <div class="partition-head">铭文 <span id="inscription-count" class="meta"></span></div>
       <div id="inscription-modes" class="segs inscription-modes">
         <button type="button" class="seg active" data-mode="progress">个人进度</button>
         <button type="button" class="seg" data-mode="query">查询筛选</button>
@@ -181,8 +172,6 @@
     </section>
 
     <section id="partition-forging" hidden>
-      <div class="partition-head">橙装锻造</div>
-
       <section class="panel">
         <div class="panel-title">视图</div>
         <div class="filter-row">
@@ -248,7 +237,6 @@
     </section>
 
     <section id="partition-drops" hidden>
-      <div class="partition-head">关卡掉落</div>
       <section class="panel">
         <div class="panel-title">掉落查询</div>
         <div class="filter-row">
@@ -261,7 +249,6 @@
     </section>
 
     <section id="partition-atlas">
-      <div class="partition-head">图鉴</div>
       <section class="panel">
         <div class="panel-title">图鉴分区</div>
         <div class="filter-row">
@@ -305,8 +292,6 @@
     </section>
 
     <section id="partition-settings" hidden>
-      <div class="partition-head">设置</div>
-
       <section class="panel settings-panel">
         <div class="panel-title">应用与离线状态</div>
         <div class="settings-list">

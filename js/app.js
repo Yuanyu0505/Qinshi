@@ -20,6 +20,16 @@
   const ATLAS_LEVELS_KEY = "qinshi_atlas_levels_v1";
   const ATLAS_TARGET_LEVEL_KEY = "qinshi_atlas_target_level_v1";
   const QUIZ_STORE_KEY = "qinshi_quiz_items_v1";
+  const PARTITION_TITLES = {
+    atlas: "图鉴",
+    drops: "关卡掉落",
+    equipment: "装备属性",
+    forging: "橙装锻造",
+    inscription: "铭文",
+    quiz: "答题",
+    loulan: "楼兰棋阵",
+    settings: "设置"
+  };
 
   const state = { search: "", category: null, main: null, filters: [], sortAttr: null, valueSource: "max", activated: false };
   const forgeState = { mode: "main", query: "" };
@@ -32,8 +42,7 @@
     sortPanel: document.getElementById("sort-panel"),
     sortAttrBtns: document.getElementById("sort-attr"),
     sortTierBtns: document.getElementById("sort-tier"),
-    count: document.getElementById("count"),
-    version: document.getElementById("version"),
+    pageTitle: document.getElementById("page-title"),
     results: document.getElementById("results"),
     tableWrap: document.getElementById("table-wrap"),
     cards: document.getElementById("cards"),
@@ -70,7 +79,6 @@
     atlasUpgradeSummary: document.getElementById("atlas-upgrade-summary"),
     atlasResults: document.getElementById("atlas-results"),
     quizSearch: document.getElementById("quiz-search"),
-    quizCount: document.getElementById("quiz-count"),
     quizResults: document.getElementById("quiz-results")
   };
 
@@ -103,7 +111,6 @@
       el.error.hidden = false;
       return;
     }
-    el.version.textContent = DATA.meta.version;
     renderCategoryButtons();
     renderChips();
     bindEvents();
@@ -134,8 +141,15 @@
       document.body.classList.toggle("mobile-menu-open", open);
     }
 
+    function setPartitionTitle(name) {
+      const title = PARTITION_TITLES[name] || "图鉴";
+      if (el.pageTitle) el.pageTitle.textContent = title;
+      document.title = title;
+    }
+
     function switchPartition(name) {
       if (!parts[name]) return;
+      setPartitionTitle(name);
       if (name === "equipment") resetEquipmentView();
       partitionButtons.forEach((button) => {
         button.classList.toggle("active", button.dataset.partition === name);
@@ -356,7 +370,6 @@
 
   function applyQuiz() {
     var items = QUIZ.search(quizState.items, quizState.query);
-    el.quizCount.textContent = "共 " + items.length + " 题";
     el.quizResults.innerHTML = items.length
       ? items.map(function (item) {
           return `<article class="quiz-item">
@@ -960,7 +973,6 @@
     if (!state.activated) {
       el.results.hidden = true;
       el.empty.hidden = true;
-      el.count.textContent = "等待筛选";
       return;
     }
     const items = Q.queryItems(DATA.items, {
@@ -973,7 +985,6 @@
     });
     renderTable(items);
     renderCards(items);
-    el.count.textContent = `共 ${items.length} 件`;
     const isEmpty = items.length === 0;
     el.results.hidden = isEmpty;
     el.empty.hidden = !isEmpty;

@@ -836,6 +836,25 @@ td.badge, th.badge { text-align: center; white-space: nowrap; color: var(--gold)
   border-top: 1px dashed rgba(58, 49, 37, .6);
   font-size: 14px;
 }
+.book-card-tier { border-top: 1px dashed rgba(58, 49, 37, .6); }
+.book-card-tier summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 42px;
+  padding: 7px 2px;
+  color: var(--gold);
+  font-weight: 700;
+  cursor: pointer;
+}
+.book-card-tier summary::after { content: "展开"; color: var(--muted); font-size: 12px; font-weight: 400; }
+.book-card-tier[open] summary::after { content: "收起"; }
+.book-card-stage-content { min-width: 0; padding-bottom: 5px; }
+.book-card .book-stage-list { height: auto; min-height: 0; }
+.book-card .book-stage-row { grid-template-columns: 38px minmax(0, 1fr); justify-content: stretch; }
+.book-card .book-stage-values { width: auto; min-width: 0; }
+.book-card .book-stage-values .tier-attr,
+.book-card .book-stage-values .tier-status { white-space: normal; overflow-wrap: anywhere; }
 .tier-label { color: var(--muted); min-width: 38px; }
 .empty { text-align: center; padding: 48px 0; color: var(--muted); }
 .empty p { font-size: 16px; }

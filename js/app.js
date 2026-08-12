@@ -1041,6 +1041,27 @@
     return `<div class="book-stage-list" style="--book-stage-count:${rowCount}">${stages.map((stage) => `<div class="book-stage-row"><span class="book-stage-label">${stage.stage}阶</span><span class="book-stage-values">${tokenHtml(stage.tokens, "")}</span></div>`).join("")}</div>`;
   }
 
+  function bookDisplayTiers(item) {
+    const tiers = item.bookGroup === "初始紫色典籍"
+      ? ["紫色"].concat(Q.TIER_ORDER)
+      : Q.TIER_ORDER.slice();
+    return tiers.filter((tier) => Array.isArray(item.stages && item.stages[tier]) && item.stages[tier].length);
+  }
+
+  function defaultBookCardTier(item, tiers) {
+    if (state.valueSource !== "max" && tiers.includes(state.valueSource)) return state.valueSource;
+    return tiers[tiers.length - 1] || "";
+  }
+
+  function bookCardTiersHtml(item) {
+    const tiers = bookDisplayTiers(item);
+    const defaultTier = defaultBookCardTier(item, tiers);
+    return tiers.map((tier) => `<details class="book-card-tier"${tier === defaultTier ? " open" : ""}>
+      <summary>${tier}</summary>
+      <div class="book-card-stage-content">${bookStageHtml(item, tier)}</div>
+    </details>`).join("");
+  }
+
   function equipmentNameHtml(item) {
     const purple = item.bookGroup === "初始紫色典籍";
     return `<span class="equipment-name-badge ${purple ? "equipment-name-purple" : "equipment-name-orange"}">${escapeHtml(item.name)}</span>`;
@@ -1083,14 +1104,17 @@
     const hasFilter = state.filters.length > 0;
     el.cards.innerHTML = items.map((item) => {
       const badge = hasFilter ? sortBadge(item) : "";
-      return `<div class="card">
+      const tierHtml = item.bookGroup
+        ? bookCardTiersHtml(item)
+        : Q.TIER_ORDER.map((tier) => `<div class="card-tier"><span class="tier-label">${tier}</span>${tokenHtml(item.tiers[tier])}</div>`).join("");
+      return `<div class="card${item.bookGroup ? " book-card" : ""}">
         <div class="card-head">
           <span class="cat">${item.cat}</span>
           ${equipmentNameHtml(item)}
           ${badge ? `<span class="badge">${badge}</span>` : ""}
         </div>
         <div class="card-main">主属性：<b>${item.main}</b></div>
-        ${(item.bookGroup === "初始紫色典籍" ? ["紫色"].concat(Q.TIER_ORDER) : Q.TIER_ORDER).map((t) => `<div class="card-tier"><span class="tier-label">${t}</span>${item.bookGroup ? bookStageHtml(item, t) : tokenHtml(item.tiers[t])}</div>`).join("")}
+        ${tierHtml}
       </div>`;
     }).join("");
   }

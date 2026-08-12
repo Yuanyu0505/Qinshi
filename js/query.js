@@ -11,9 +11,10 @@
 })(typeof self !== "undefined" ? self : this, function () {
   "use strict";
 
-  var CATEGORY_ORDER = ["武器", "防具", "饰品", "神兵武器", "神兵防具", "神兵饰品"];
+  var CATEGORY_ORDER = ["武器", "防具", "饰品", "典籍", "神兵武器", "神兵防具", "神兵饰品", "神兵典籍"];
   var TIER_ORDER = ["橙色", "橙金", "红色", "红金"];
-  var VALUE_SOURCES = ["max", "红色", "红金"];
+  var VALUE_SOURCES = ["max", "橙金", "红色", "红金"];
+  var BOOK_CATEGORIES = ["典籍", "神兵典籍"];
 
   function normalizeInput(s) {
     return String(s == null ? "" : s).trim().toLowerCase();
@@ -28,20 +29,27 @@
 
   /** 主属性筛选：main 为空/未提供表示不限 */
   function matchMain(item, main) {
-    return main == null || main === "" || item.main === main;
+    return main == null || main === "" || (item.mainKey || item.main) === main;
   }
 
-  /** 分类筛选：为空/未提供表示不限 */
+  /** 分类筛选：为空/未提供表示“除典籍外” */
   function matchCategory(item, category) {
-    return category == null || category === "" || item.cat === category;
+    if (category == null || category === "") return BOOK_CATEGORIES.indexOf(item.cat) === -1;
+    return item.cat === category;
+  }
+
+  function tokenMatches(token, attr) {
+    return token.t === attr || (Array.isArray(token.matches) && token.matches.indexOf(attr) !== -1);
   }
 
   /** 副属性命中：只查各档位 token，主属性不算 */
   function hasSubAttr(item, attr) {
-    for (var i = 0; i < TIER_ORDER.length; i++) {
-      var tokens = item.tiers[TIER_ORDER[i]] || [];
+    var tiers = item.tiers || {};
+    var tierNames = Object.keys(tiers);
+    for (var i = 0; i < tierNames.length; i++) {
+      var tokens = tiers[tierNames[i]] || [];
       for (var j = 0; j < tokens.length; j++) {
-        if (tokens[j].t === attr) return true;
+        if (tokenMatches(tokens[j], attr)) return true;
       }
     }
     return false;
@@ -54,21 +62,27 @@
     return true;
   }
 
-  /** valueSource: "max" | "红色" | "红金"；无值返回 null */
-  function sortValue(item, attr, valueSource) {
-    if (valueSource === "max") {
-      var v = item.max && item.max[attr];
-      return typeof v === "number" ? v : null;
-    }
-    var tokens = item.tiers[valueSource] || [];
+  /** 返回用于排序的真实 token；无值返回 null。 */
+  function sortToken(item, attr, valueSource) {
+    var tiers = item.tiers || {};
+    var tierNames = valueSource === "max" ? Object.keys(tiers) : [valueSource];
     var best = null;
-    for (var i = 0; i < tokens.length; i++) {
-      var tk = tokens[i];
-      if (tk.t === attr && typeof tk.v === "number") {
-        best = best === null ? tk.v : Math.max(best, tk.v);
+    for (var i = 0; i < tierNames.length; i++) {
+      var tokens = tiers[tierNames[i]] || [];
+      for (var j = 0; j < tokens.length; j++) {
+        var tk = tokens[j];
+        if (tokenMatches(tk, attr) && typeof tk.v === "number" && (best === null || tk.v > best.v)) {
+          best = tk;
+        }
       }
     }
     return best;
+  }
+
+  /** valueSource: "max" | "橙金" | "红色" | "红金"；无值返回 null */
+  function sortValue(item, attr, valueSource) {
+    var token = sortToken(item, attr, valueSource);
+    return token ? token.v : null;
   }
 
   function catIndex(cat) {
@@ -101,6 +115,9 @@
       if (va !== null && vb !== null && va !== vb) return vb - va;
       if (va === null && vb !== null) return 1;
       if (vb === null && va !== null) return -1;
+      var orderA = typeof a.sourceOrder === "number" ? a.sourceOrder : null;
+      var orderB = typeof b.sourceOrder === "number" ? b.sourceOrder : null;
+      if (orderA !== null && orderB !== null && orderA !== orderB) return orderA - orderB;
       return catIndex(a.cat) - catIndex(b.cat) || a.id.localeCompare(b.id);
     });
     return result;
@@ -115,7 +132,9 @@
     matchCategory: matchCategory,
     matchMain: matchMain,
     hasSubAttr: hasSubAttr,
+    tokenMatches: tokenMatches,
     matchFilters: matchFilters,
+    sortToken: sortToken,
     sortValue: sortValue,
     queryItems: queryItems
   };

@@ -35,8 +35,7 @@
     count: document.getElementById("count"),
     version: document.getElementById("version"),
     results: document.getElementById("results"),
-    tableHead: document.getElementById("table-head"),
-    tableBody: document.getElementById("table-body"),
+    tableWrap: document.getElementById("table-wrap"),
     cards: document.getElementById("cards"),
     empty: document.getElementById("empty"),
     clearAll: document.getElementById("clear-all"),
@@ -855,7 +854,7 @@
 
   function renderCategoryButtons() {
     const categories = Array.isArray(DATA.meta.categories) ? DATA.meta.categories : [];
-    el.categoryBtns.innerHTML = '<button type="button" class="seg" data-category="">不限</button>' +
+    el.categoryBtns.innerHTML = '<button type="button" class="seg" data-category="">除典籍外</button>' +
       categories.map((category) => `<button type="button" class="seg" data-category="${escapeHtml(category)}">${escapeHtml(category)}</button>`).join("");
   }
 
@@ -878,15 +877,17 @@
     });
     el.chips.addEventListener("click", (e) => {
       const btn = e.target.closest(".chip");
-      if (!btn || btn.disabled) return;
+      if (!btn) return;
       const attr = btn.dataset.attr;
       const idx = state.filters.indexOf(attr);
       if (idx >= 0) {
         state.filters.splice(idx, 1);
-      } else if (state.filters.length < 2) {
+      } else {
         state.filters.push(attr);
       }
-      state.sortAttr = state.filters.length ? state.filters[0] : null;
+      if (state.filters.indexOf(state.sortAttr) === -1) {
+        state.sortAttr = state.filters.length ? state.filters[0] : null;
+      }
       apply();
     });
     el.sortAttrBtns.addEventListener("click", (e) => {
@@ -944,7 +945,6 @@
       const attr = btn.dataset.attr;
       const active = state.filters.indexOf(attr) >= 0;
       btn.classList.toggle("active", active);
-      btn.disabled = !active && state.filters.length >= 2;
     });
     const hasFilter = state.filters.length > 0;
     el.sortPanel.hidden = !hasFilter;
@@ -960,33 +960,55 @@
     if (!tokens || tokens.length === 0) return '<span class="tier-none">—</span>';
     return tokens.map((tk) => {
       if (tk.s) return `<span class="tier-status">${tk.s}</span>`;
-      const hit = state.filters.indexOf(tk.t) >= 0;
+      const hit = state.filters.some((attr) => Q.tokenMatches(tk, attr));
       return `<span class="tier-attr${hit ? " hit" : ""}">${tk.raw}</span>`;
     }).join('<span class="plus"> + </span>');
   }
 
   function sortBadge(item) {
     if (state.filters.length === 0) return "";
-    const v = Q.sortValue(item, state.sortAttr, state.valueSource);
-    return v === null ? "—" : `${state.sortAttr} ${v}%`;
+    const token = Q.sortToken(item, state.sortAttr, state.valueSource);
+    if (!token) return "—";
+    if (token.raw) return token.raw;
+    return token.t === "速" ? `${token.v}速` : `${token.v}%${token.t}`;
   }
 
-  function renderTable(items) {
+  function tableHeaderHtml(tiers, hasFilter) {
+    return `<tr><th>分类</th><th>装备名</th><th>主属性</th>${tiers.map((tier) => `<th>${tier}</th>`).join("")}${hasFilter ? '<th class="badge">排序值</th>' : ""}</tr>`;
+  }
+
+  function bookStageHtml(item, tier) {
+    const stages = item.stages && item.stages[tier] ? item.stages[tier] : [];
+    if (!stages.length) return '<span class="tier-none">—</span>';
+    return `<div class="book-stage-list">${stages.map((stage) => `<div class="book-stage-row"><span class="book-stage-label">${stage.stage}阶</span><span class="book-stage-values">${tokenHtml(stage.tokens)}</span></div>`).join("")}</div>`;
+  }
+
+  function equipmentTableHtml(items, tiers, title) {
     const hasFilter = state.filters.length > 0;
-    el.tableHead.innerHTML = `<tr>
-      <th>分类</th><th>装备名</th><th>主属性</th><th>橙色</th><th>橙金</th><th>红色</th><th>红金</th>
-      ${hasFilter ? '<th class="badge">排序值</th>' : ""}
-    </tr>`;
-    el.tableBody.innerHTML = items.map((item) => `<tr>
+    if (!items.length) return "";
+    const body = items.map((item) => `<tr>
       <td><span class="cat">${item.cat}</span></td>
       <td class="name">${item.name}</td>
       <td class="main">${item.main}</td>
-      <td>${tokenHtml(item.tiers["橙色"])}</td>
-      <td>${tokenHtml(item.tiers["橙金"])}</td>
-      <td>${tokenHtml(item.tiers["红色"])}</td>
-      <td>${tokenHtml(item.tiers["红金"])}</td>
+      ${tiers.map((tier) => `<td class="${item.bookGroup ? "book-tier-cell" : ""}">${item.bookGroup ? bookStageHtml(item, tier) : tokenHtml(item.tiers[tier])}</td>`).join("")}
       ${hasFilter ? `<td class="badge">${sortBadge(item)}</td>` : ""}
     </tr>`).join("");
+    return `<section class="equipment-result-group${title ? " book-result-group" : ""}">${title ? `<h3 class="equipment-group-title">${title}<span>${items.length} 件</span></h3>` : ""}<div class="table-wrap"><table class="${title ? "book-equipment-table" : ""}"><thead>${tableHeaderHtml(tiers, hasFilter)}</thead><tbody>${body}</tbody></table></div></section>`;
+  }
+
+  function renderTable(items) {
+    if (state.category === "典籍") {
+      const orangeBooks = items.filter((item) => item.bookGroup === "初始橙色典籍");
+      const purpleBooks = items.filter((item) => item.bookGroup === "初始紫色典籍");
+      el.tableWrap.innerHTML = equipmentTableHtml(orangeBooks, Q.TIER_ORDER, "初始橙色典籍") +
+        equipmentTableHtml(purpleBooks, ["紫色"].concat(Q.TIER_ORDER), "初始紫色典籍");
+      return;
+    }
+    if (state.category === "神兵典籍") {
+      el.tableWrap.innerHTML = equipmentTableHtml(items, Q.TIER_ORDER, "神兵典籍");
+      return;
+    }
+    el.tableWrap.innerHTML = equipmentTableHtml(items, Q.TIER_ORDER, "");
   }
 
   function renderCards(items) {
@@ -1000,7 +1022,7 @@
           ${badge ? `<span class="badge">${badge}</span>` : ""}
         </div>
         <div class="card-main">主属性：<b>${item.main}</b></div>
-        ${Q.TIER_ORDER.map((t) => `<div class="card-tier"><span class="tier-label">${t}</span>${tokenHtml(item.tiers[t])}</div>`).join("")}
+        ${(item.bookGroup === "初始紫色典籍" ? ["紫色"].concat(Q.TIER_ORDER) : Q.TIER_ORDER).map((t) => `<div class="card-tier"><span class="tier-label">${t}</span>${item.bookGroup ? bookStageHtml(item, t) : tokenHtml(item.tiers[t])}</div>`).join("")}
       </div>`;
     }).join("");
   }

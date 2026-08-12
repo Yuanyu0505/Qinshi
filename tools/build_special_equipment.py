@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""解析《特殊属性装备》Sheet，生成 data/special-equipment.js。
+"""解析《特殊属性装备》《典籍属性》Sheet，生成 data/special-equipment.js。
 
 用法：
     python tools/build_special_equipment.py [Excel路径]
@@ -26,10 +26,22 @@ BLOCKS = {
 }
 HEADER_NAMES = {"武器名称", "防具名称", "饰品名称", "神兵武器名称", "神兵防具名称", "神兵饰品名称"}
 ATTR_PAT = re.compile(r"^(\d+(?:\.\d+)?)%\s*(.+)$")
-NORMALIZE = {"血量": "血"}
+NORMALIZE = {"血量": "血", "减伤": "技伤减免", "减免": "技伤减免"}
 STATUSES = {"无", "暂未开放"}
-ATTR_ORDER = ["攻", "血", "防", "穿透", "暴击", "暴伤", "减伤", "抗暴", "减免"]
-CATEGORY_ORDER = ["武器", "防具", "饰品", "神兵武器", "神兵防具", "神兵饰品"]
+ATTR_ORDER = [
+    "攻", "血", "防", "攻防血", "穿透", "暴击", "暴伤", "技伤减免", "抗暴",
+    "速", "闪避", "招架", "敌方减攻", "敌方减防", "敌方减血",
+]
+CATEGORY_ORDER = ["武器", "防具", "饰品", "典籍", "神兵武器", "神兵防具", "神兵饰品", "神兵典籍"]
+BOOK_TIERS = {
+    "紫色": [(0, 3), (5, 4), (10, 5)],
+    "橙色": [(0, 6), (5, 7), (10, 8)],
+    "橙金": [(0, 9), (5, 10), (10, 11), (15, 12)],
+    "红色": [(0, 13), (5, 14), (10, 15), (15, 16)],
+    "红金": [(0, 17), (5, 18), (10, 19), (15, 20)],
+}
+SPEED_PAT = re.compile(r"^(\d+(?:\.\d+)?)\s*速$")
+ENEMY_PAT = re.compile(r"^敌方-\s*(\d+(?:\.\d+)?)%\s*(攻|防|血)$")
 
 
 def parse_cell(value):
@@ -44,14 +56,117 @@ def parse_cell(value):
     m = ATTR_PAT.match(s)
     if not m:
         return {"raw": s}
-    t = NORMALIZE.get(m.group(2).strip(), m.group(2).strip())
-    return {"t": t, "v": float(m.group(1)), "raw": s}
+    original_type = m.group(2).strip()
+    t = NORMALIZE.get(original_type, original_type)
+    raw = f"{m.group(1)}%{t}" if original_type in {"减伤", "减免"} else s
+    return {"t": t, "v": float(m.group(1)), "raw": raw}
+
+
+def parse_book_cell(value):
+    """典籍单元格 → token 列表；支持多行、速度、敌方减属性和复合攻防血。"""
+    if value is None:
+        return []
+    text = str(value).strip()
+    if not text or text == "-":
+        return []
+    tokens = []
+    for line in re.split(r"\r?\n", text):
+        s = line.strip()
+        if not s or s == "-":
+            continue
+        speed = SPEED_PAT.match(s)
+        if speed:
+            tokens.append({"t": "速", "v": float(speed.group(1)), "raw": f"{speed.group(1)}速"})
+            continue
+        enemy = ENEMY_PAT.match(s)
+        if enemy:
+            stat = enemy.group(2)
+            tokens.append({"t": f"敌方减{stat}", "v": float(enemy.group(1)), "raw": f"敌方-{enemy.group(1)}%{stat}"})
+            continue
+        token = parse_cell(s)
+        if token is None:
+            continue
+        if "raw" in token and "t" not in token:
+            tokens.append(token)
+            continue
+        if token.get("t") == "攻防血":
+            token["matches"] = ["攻", "防", "血", "攻防血"]
+        tokens.append(token)
+    return tokens
+
+
+def update_max_map(max_map, token):
+    """将 token 数值写入自身类型及复合匹配类型的最高值表。"""
+    if "t" not in token or not isinstance(token.get("v"), (int, float)):
+        return
+    for attr in token.get("matches", [token["t"]]):
+        max_map[attr] = max(max_map.get(attr, 0), token["v"])
+
+
+def parse_book_sheet(wb):
+    """解析“典籍属性”，返回 (items, anomalies)。"""
+    ws = wb["典籍属性"]
+    items = []
+    anomalies = []
+    for row_number in range(2, 54):
+        name = str(ws.cell(row_number, 1).value or "").strip()
+        if not name:
+            continue
+        main = str(ws.cell(row_number, 2).value or "").strip()
+        main_key = main.split("、", 1)[0].strip()
+        if row_number <= 19:
+            book_group = "初始紫色典籍"
+            category = "典籍"
+            tiers_to_read = BOOK_TIERS
+        elif row_number <= 40:
+            book_group = "初始橙色典籍"
+            category = "典籍"
+            tiers_to_read = {tier: columns for tier, columns in BOOK_TIERS.items() if tier != "紫色"}
+        else:
+            book_group = "神兵典籍"
+            category = "神兵典籍"
+            tiers_to_read = {tier: columns for tier, columns in BOOK_TIERS.items() if tier != "紫色"}
+
+        stages = {}
+        tiers = {}
+        max_map = {}
+        for tier, stage_columns in tiers_to_read.items():
+            stage_rows = []
+            flat_tokens = []
+            for stage, column in stage_columns:
+                tokens = parse_book_cell(ws.cell(row_number, column).value)
+                for token in tokens:
+                    if "raw" in token and "t" not in token:
+                        anomalies.append({
+                            "sheet": "典籍属性", "cell": ws.cell(row_number, column).coordinate,
+                            "cat": category, "name": name, "tier": tier, "value": token["raw"],
+                        })
+                    update_max_map(max_map, token)
+                stage_rows.append({"stage": stage, "tokens": tokens})
+                flat_tokens.extend(tokens)
+            stages[tier] = stage_rows
+            tiers[tier] = flat_tokens
+
+        prefix = "db" if category == "神兵典籍" else "b"
+        items.append({
+            "id": f"{prefix}-{len(items) + 1:04d}",
+            "cat": category,
+            "name": name,
+            "main": main,
+            "mainKey": main_key,
+            "bookGroup": book_group,
+            "sourceOrder": row_number - 2,
+            "tiers": tiers,
+            "stages": stages,
+            "max": max_map,
+        })
+    return items, anomalies
 
 
 def parse_sheet(path):
     """解析工作簿，返回 (items, anomalies)。"""
     wb = openpyxl.load_workbook(path, data_only=True, read_only=True)
-    ws = wb.worksheets[3]  # 特殊属性装备
+    ws = wb["特殊属性装备"]
     rows = list(ws.iter_rows(values_only=True))
     items = []
     anomalies = []
@@ -78,7 +193,7 @@ def parse_sheet(path):
                         continue
                     tokens.append(tok)
                     if "t" in tok:
-                        max_map[tok["t"]] = max(max_map.get(tok["t"], 0), tok["v"])
+                        update_max_map(max_map, tok)
                     elif "raw" in tok:
                         anomalies.append(
                             {"row": r, "cat": cat, "name": name, "tier": tier, "cell": tok["raw"]}
@@ -93,6 +208,10 @@ def parse_sheet(path):
                 "tiers": tiers,
                 "max": max_map,
             })
+    book_items, book_anomalies = parse_book_sheet(wb)
+    items.extend(book_items)
+    anomalies.extend(book_anomalies)
+    wb.close()
     return items, anomalies
 
 
@@ -111,7 +230,7 @@ def build_data(path, out_path):
     payload = {
         "meta": {
             "sourceFile": os.path.basename(path),
-            "sourceSheet": "特殊属性装备",
+            "sourceSheet": "特殊属性装备、典籍属性",
             "version": m.group(1) if m else "unknown",
             "generatedAt": date.today().isoformat(),
             "total": len(items),

@@ -934,6 +934,49 @@ figcaption { color: var(--muted); font-size: 13px; margin-top: 8px; }
   .app-shell { grid-template-columns: 128px minmax(0, 1fr); gap: 16px; }
   .tabs { padding-right: 8px; }
   .tab { padding: 9px 10px; font-size: 14px; }
+  #partition-equipment .equipment-table-groups,
+  #partition-equipment .equipment-result-group { min-width: 0; }
+  #partition-equipment .equipment-result-group .table-wrap {
+    max-width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    overscroll-behavior-x: contain;
+    -webkit-overflow-scrolling: touch;
+    isolation: isolate;
+  }
+  #partition-equipment .book-equipment-table {
+    border-collapse: separate;
+    border-spacing: 0;
+  }
+  #partition-equipment .book-equipment-table tr > :nth-child(1) {
+    position: sticky;
+    left: 0;
+    z-index: 2;
+  }
+  #partition-equipment .book-equipment-table tr > :nth-child(2) {
+    position: sticky;
+    left: 74px;
+    z-index: 2;
+  }
+  #partition-equipment .book-equipment-table tr > :nth-child(3) {
+    position: sticky;
+    left: 190px;
+    z-index: 2;
+    box-shadow: 9px 0 12px -11px #000, 1px 0 0 var(--line);
+  }
+  #partition-equipment .book-equipment-table tbody tr > :nth-child(-n+3) {
+    background-color: #191611;
+    background-clip: padding-box;
+  }
+  #partition-equipment .book-equipment-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 3;
+  }
+  #partition-equipment .book-equipment-table thead tr > :nth-child(-n+3) {
+    z-index: 5;
+    background-color: #221d16;
+  }
 }
 @media (max-width: 980px) {
   .ins-editor-layout,

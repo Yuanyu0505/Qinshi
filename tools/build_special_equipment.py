@@ -26,10 +26,16 @@ BLOCKS = {
 }
 HEADER_NAMES = {"武器名称", "防具名称", "饰品名称", "神兵武器名称", "神兵防具名称", "神兵饰品名称"}
 ATTR_PAT = re.compile(r"^(\d+(?:\.\d+)?)%\s*(.+)$")
-NORMALIZE = {"血量": "血", "减伤": "技伤减免", "减免": "技伤减免"}
+NORMALIZE = {
+    "血量": "血",
+    "减伤": "技免",
+    "减免": "技免",
+    "技能减免": "技免",
+    "技伤减免": "技免",
+}
 STATUSES = {"无", "暂未开放"}
 ATTR_ORDER = [
-    "攻", "血", "防", "攻防血", "穿透", "暴击", "暴伤", "技伤减免", "抗暴",
+    "攻", "血", "防", "攻防血", "穿透", "暴击", "暴伤", "技免", "抗暴",
     "速", "闪避", "招架", "敌方减攻", "敌方减防", "敌方减血",
 ]
 CATEGORY_ORDER = ["武器", "防具", "饰品", "典籍", "神兵武器", "神兵防具", "神兵饰品", "神兵典籍"]
@@ -58,7 +64,7 @@ def parse_cell(value):
         return {"raw": s}
     original_type = m.group(2).strip()
     t = NORMALIZE.get(original_type, original_type)
-    raw = f"{m.group(1)}%{t}" if original_type in {"减伤", "减免"} else s
+    raw = f"{m.group(1)}%{t}" if t == "技免" else s
     return {"t": t, "v": float(m.group(1)), "raw": raw}
 
 

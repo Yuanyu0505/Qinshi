@@ -28,8 +28,11 @@ class TestParseCell(unittest.TestCase):
         self.assertEqual(parse_cell("10%血量")["raw"], "10%血量")
 
     def test_damage_reduction_normalize(self):
-        self.assertEqual(parse_cell("20%减伤"), {"t": "技伤减免", "v": 20.0, "raw": "20%技伤减免"})
-        self.assertEqual(parse_cell("15%减免"), {"t": "技伤减免", "v": 15.0, "raw": "15%技伤减免"})
+        expected = {"t": "技免", "v": 20.0, "raw": "20%技免"}
+        self.assertEqual(parse_cell("20%减伤"), expected)
+        self.assertEqual(parse_cell("20%减免"), expected)
+        self.assertEqual(parse_cell("20%技能减免"), expected)
+        self.assertEqual(parse_cell("20%技伤减免"), expected)
 
 
 class TestParseBookCell(unittest.TestCase):
@@ -58,7 +61,7 @@ class TestParseBookCell(unittest.TestCase):
             parse_book_cell("12%攻防血\n25%减伤"),
             [
                 {"t": "攻防血", "v": 12.0, "raw": "12%攻防血", "matches": ["攻", "防", "血", "攻防血"]},
-                {"t": "技伤减免", "v": 25.0, "raw": "25%技伤减免"},
+                {"t": "技免", "v": 25.0, "raw": "25%技免"},
             ],
         )
 

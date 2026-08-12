@@ -41,12 +41,12 @@ const fixture = [
     max: { "血": 5 } },
   { id: "b-0001", cat: "典籍", name: "韩非子", main: "攻、内力", mainKey: "攻", bookGroup: "初始橙色典籍", sourceOrder: 29,
     tiers: {
-      "橙色": [{ t: "速", v: 130, raw: "130速" }, { t: "攻防血", v: 6.5, raw: "6.5%攻防血", matches: ["攻", "防", "血", "攻防血"] }, { t: "技伤减免", v: 16, raw: "16%技伤减免" }],
-      "橙金": [{ t: "速", v: 140, raw: "140速" }, { t: "攻防血", v: 10, raw: "10%攻防血", matches: ["攻", "防", "血", "攻防血"] }, { t: "技伤减免", v: 24, raw: "24%技伤减免" }],
+      "橙色": [{ t: "速", v: 130, raw: "130速" }, { t: "攻防血", v: 6.5, raw: "6.5%攻防血", matches: ["攻", "防", "血", "攻防血"] }, { t: "技免", v: 16, raw: "16%技免" }],
+      "橙金": [{ t: "速", v: 140, raw: "140速" }, { t: "攻防血", v: 10, raw: "10%攻防血", matches: ["攻", "防", "血", "攻防血"] }, { t: "技免", v: 24, raw: "24%技免" }],
       "红色": [{ t: "速", v: 145, raw: "145速" }, { t: "攻防血", v: 16, raw: "16%攻防血", matches: ["攻", "防", "血", "攻防血"] }],
       "红金": [{ t: "速", v: 148, raw: "148速" }, { t: "攻防血", v: 18, raw: "18%攻防血", matches: ["攻", "防", "血", "攻防血"] }]
     },
-    max: { "速": 148, "攻": 18, "防": 18, "血": 18, "攻防血": 18, "技伤减免": 24 } },
+    max: { "速": 148, "攻": 18, "防": 18, "血": 18, "攻防血": 18, "技免": 24 } },
   { id: "db-0001", cat: "神兵典籍", name: "神兵韩非子", main: "攻、内力", mainKey: "攻", bookGroup: "神兵典籍", sourceOrder: 40,
     tiers: {
       "橙色": [{ t: "速", v: 130, raw: "130速" }],
@@ -106,7 +106,7 @@ test("matchFilters：副属性 AND 语义", () => {
 
 test("matchFilters：攻防血可同时满足多个条件", () => {
   assert.strictEqual(Q.matchFilters(fixture[7], ["攻", "防", "血", "攻防血"]), true);
-  assert.strictEqual(Q.matchFilters(fixture[7], ["攻", "速", "技伤减免"]), true);
+  assert.strictEqual(Q.matchFilters(fixture[7], ["攻", "速", "技免"]), true);
   assert.strictEqual(Q.matchFilters(fixture[7], ["攻", "速", "穿透"]), false);
 });
 

@@ -856,9 +856,11 @@
       btn.classList.toggle("active", btn.dataset.mode === forgeState.mode);
     });
     if (!q) {
-      el.forgeResults.innerHTML = '<div class="empty"><p>输入装备名开始查询</p></div>';
+      el.forgeResults.innerHTML = "";
+      el.forgeResults.hidden = true;
       return;
     }
+    el.forgeResults.hidden = false;
     if (forgeState.mode === "main") {
       const items = FORG.findMain(FDATA.items, q);
       el.forgeResults.innerHTML = items.length

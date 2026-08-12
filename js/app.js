@@ -286,6 +286,18 @@
         applyAtlas();
       }
     });
+    el.atlasUpgradeSummary.addEventListener("click", (e) => {
+      const button = e.target.closest(".atlas-summary-equipment-toggle");
+      if (!button) return;
+      const summaryCard = button.closest(".atlas-upgrade-summary");
+      if (!summaryCard) return;
+      const equipment = summaryCard.querySelector(".atlas-summary-equipment");
+      if (!equipment) return;
+      const expanded = button.getAttribute("aria-expanded") === "true";
+      button.setAttribute("aria-expanded", String(!expanded));
+      button.textContent = expanded ? "展开所需装备" : "收起所需装备";
+      equipment.classList.toggle("is-expanded", !expanded);
+    });
     applyAtlas();
   }
 
@@ -362,7 +374,8 @@
     if (summary.pending === 0) {
       return `<div class="atlas-upgrade-summary"><div class="drop-item-title">当前结果升至 ${summary.targetLevel} 级汇总</div><div class="muted-tip">当前结果已全部达到目标等级</div></div>`;
     }
-    const equipment = summary.equipment.length
+    const hasEquipment = summary.equipment.length > 0;
+    const equipment = hasEquipment
       ? summary.equipment.map((item) => `<span class="mat material-token ${item.q === "紫" ? "mat-purple" : "mat-orange"}">${escapeHtml(item.n)} ×${item.count}</span>`).join("")
       : '<span class="muted-tip">无需装备</span>';
     return `<div class="atlas-upgrade-summary">
@@ -372,6 +385,7 @@
         <span>魂魄 <b>${summary.souls}</b></span>
         <span>成长值 <b>+${summary.growth}</b></span>
       </div>
+      ${hasEquipment ? '<button type="button" class="seg atlas-summary-equipment-toggle" aria-expanded="false">展开所需装备</button>' : ""}
       <div class="atlas-summary-equipment"><div class="atlas-equipment-title">所需装备</div><div class="atlas-summary-equipment-list">${equipment}</div></div>
       <div class="muted-tip">14级后不再获得成长值</div>
     </div>`;

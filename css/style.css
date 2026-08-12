@@ -593,6 +593,7 @@ tr.hit-row td { background: rgba(212, 175, 55, .06); }
 .atlas-upgrade-cost { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 7px; }
 .atlas-upgrade-cost b { color: var(--gold); }
 .atlas-upgrade-equipment, .atlas-summary-equipment { margin-top: 9px; }
+.atlas-summary-equipment-toggle { display: none; margin: 2px 0 4px; }
 .atlas-equipment-title { color: var(--gold-dim); font-size: 14px; margin-bottom: 6px; }
 .atlas-equipment-stage-list, .atlas-summary-equipment-list { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; }
 .atlas-equipment-stage { display: inline-flex; align-items: center; gap: 6px; }
@@ -862,6 +863,71 @@ figcaption { color: var(--muted); font-size: 13px; margin-top: 8px; }
   .ins-query-slot .ins-query-substats { grid-column: 1 / -1; }
   .prog-material-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
+@media (max-width: 1024px) {
+  .prog-material-table {
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    table-layout: fixed;
+  }
+  .prog-material-table .prog-stage-col { width: 34%; }
+  .prog-material-table .prog-material-col { width: 66%; }
+  .prog-material-table td { padding-left: 4px; padding-right: 4px; }
+  .prog-stage-label,
+  .prog-stage-materials { transform: none; }
+  .prog-stage-materials {
+    width: 100%;
+    min-width: 0;
+    justify-content: center;
+    overflow-wrap: anywhere;
+  }
+
+  .atlas-summary-equipment-toggle { display: inline-flex; }
+  .atlas-summary-equipment { display: none; }
+  .atlas-summary-equipment.is-expanded { display: block; }
+
+  #partition-forging .summary-card,
+  #partition-forging .forge-scroll,
+  #inscription-reference .table-wrap {
+    overflow: auto;
+    max-height: min(65vh, 720px);
+    overscroll-behavior: contain;
+  }
+
+  #partition-forging .summary-table,
+  #partition-forging .forge-h-table,
+  #inscription-reference .ins-reference-table {
+    border-collapse: separate;
+    border-spacing: 0;
+  }
+
+  #partition-forging .summary-table thead th,
+  #partition-forging .forge-h-table thead th,
+  #inscription-reference .ins-reference-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 3;
+    background: var(--panel);
+  }
+
+  #partition-forging .summary-table tbody > tr > :first-child,
+  #partition-forging .forge-h-table tbody > tr > :first-child,
+  #inscription-reference .ins-reference-table tbody > tr > :first-child {
+    position: sticky;
+    left: 0;
+    z-index: 2;
+    background: var(--bg2);
+    box-shadow: 1px 0 0 var(--line);
+  }
+
+  #partition-forging .summary-table thead th:first-child,
+  #partition-forging .forge-h-table thead th:first-child,
+  #inscription-reference .ins-reference-table thead th:first-child {
+    left: 0;
+    z-index: 4;
+    box-shadow: 1px 0 0 var(--line);
+  }
+}
 @media (max-width: 767px) {
   body { overflow-x: hidden; }
   body.mobile-menu-open { overflow: hidden; }
@@ -950,7 +1016,6 @@ figcaption { color: var(--muted); font-size: 13px; margin-top: 8px; }
   .ins-query-slot { grid-template-columns: 1fr; }
   .ins-query-slot .ins-query-substats { grid-column: auto; }
   .ins-suggestions { width: 100%; }
-  .prog-material-table { --prog-material-shift: clamp(24px, 8vw, 48px); }
   .prog-material-grid { grid-template-columns: 1fr; }
   .prog-material-grid-overall { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .settings-list > div { grid-template-columns: 1fr; gap: 3px; }

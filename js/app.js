@@ -1021,10 +1021,11 @@
     return `<tr><th>分类</th><th>装备名</th><th>主属性</th>${tiers.map((tier) => `<th>${tier}</th>`).join("")}${hasFilter ? '<th class="badge">排序值</th>' : ""}</tr>`;
   }
 
-  function bookStageHtml(item, tier) {
+  function bookStageHtml(item, tier, sharedStageCount) {
     const stages = item.stages && item.stages[tier] ? item.stages[tier] : [];
     if (!stages.length) return '<span class="tier-none">—</span>';
-    return `<div class="book-stage-list">${stages.map((stage) => `<div class="book-stage-row"><span class="book-stage-label">${stage.stage}阶</span><span class="book-stage-values">${tokenHtml(stage.tokens, "")}</span></div>`).join("")}</div>`;
+    const rowCount = stages.length === 1 ? 1 : sharedStageCount;
+    return `<div class="book-stage-list" style="--book-stage-count:${rowCount}">${stages.map((stage) => `<div class="book-stage-row"><span class="book-stage-label">${stage.stage}阶</span><span class="book-stage-values">${tokenHtml(stage.tokens, "")}</span></div>`).join("")}</div>`;
   }
 
   function equipmentNameHtml(item) {
@@ -1035,13 +1036,18 @@
   function equipmentTableHtml(items, tiers, title) {
     const hasFilter = state.filters.length > 0;
     if (!items.length) return "";
-    const body = items.map((item) => `<tr>
+    const body = items.map((item) => {
+      const sharedStageCount = item.bookGroup
+        ? Math.max(1, ...tiers.map((tier) => ((item.stages && item.stages[tier]) || []).length))
+        : 1;
+      return `<tr>
       <td><span class="cat">${item.cat}</span></td>
       <td class="name">${equipmentNameHtml(item)}</td>
       <td class="main">${item.main}</td>
-      ${tiers.map((tier) => `<td class="${item.bookGroup ? "book-tier-cell" : ""}">${item.bookGroup ? bookStageHtml(item, tier) : tokenHtml(item.tiers[tier])}</td>`).join("")}
+      ${tiers.map((tier) => `<td class="${item.bookGroup ? "book-tier-cell" : ""}">${item.bookGroup ? bookStageHtml(item, tier, sharedStageCount) : tokenHtml(item.tiers[tier])}</td>`).join("")}
       ${hasFilter ? `<td class="badge">${sortBadge(item)}</td>` : ""}
-    </tr>`).join("");
+    </tr>`;
+    }).join("");
     return `<section class="equipment-result-group${title ? " book-result-group" : ""}">${title ? `<h3 class="equipment-group-title">${title}<span>${items.length} 件</span></h3>` : ""}<div class="table-wrap"><table class="${title ? "book-equipment-table" : ""}"><thead>${tableHeaderHtml(tiers, hasFilter)}</thead><tbody>${body}</tbody></table></div></section>`;
   }
 

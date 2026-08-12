@@ -1,7 +1,7 @@
 (function () {
   "use strict";
 
-  var APP_VERSION = "1.0.2";
+  var APP_VERSION = "1.0.5";
   var registration = null;
   var waitingWorker = null;
   var deferredInstallPrompt = null;
@@ -93,7 +93,7 @@
     var installButton = byId("pwa-install");
     var help = byId("pwa-install-help");
     if (isStandalone()) {
-      if (help) help.textContent = "秦时攻略站已安装到当前设备。";
+      if (help) help.textContent = "Qin 已安装到当前设备。";
       return;
     }
     window.addEventListener("beforeinstallprompt", function (event) {
@@ -105,7 +105,7 @@
       deferredInstallPrompt = null;
       if (installButton) installButton.hidden = true;
       setModeStatus("已安装 · 可离线使用");
-      setStatus("秦时攻略站已安装到设备。", false);
+      setStatus("Qin 已安装到设备。", false);
     });
     if (installButton) {
       installButton.addEventListener("click", function () {

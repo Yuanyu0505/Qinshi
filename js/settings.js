@@ -1,7 +1,7 @@
 (function () {
   "use strict";
 
-  var APP_NAME = "秦时攻略站";
+  var APP_NAME = "Qin";
   var BACKUP_FORMAT_VERSION = 1;
   var STORAGE_PREFIX = "qinshi_";
 
@@ -27,7 +27,7 @@
   function backupFileName(reason) {
     var stamp = new Date().toISOString().replace(/[:.]/g, "-");
     var suffix = reason === "before-import" ? "before-import" : "manual";
-    return "qinshi-backup-" + suffix + "-" + stamp + ".json";
+    return "Qin-backup-" + suffix + "-" + stamp + ".json";
   }
 
   function downloadPayload(payload, reason) {

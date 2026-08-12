@@ -195,16 +195,6 @@
       </section>
 
       <div id="forge-query">
-        <div class="summary-card">
-          <h3 class="mode-title">锻造材料总览（四大类通用）</h3>
-          <div class="summary-table-scroll">
-            <table class="summary-table">
-              <thead id="forging-summary-head"></thead>
-              <tbody id="forging-summary"></tbody>
-            </table>
-          </div>
-        </div>
-
         <section class="panel">
           <div class="panel-title">查找方式</div>
           <div class="filter-row">
@@ -222,6 +212,16 @@
         </section>
 
         <div id="forge-results"></div>
+
+        <div class="summary-card">
+          <h3 class="mode-title">锻造材料总览（四大类通用）</h3>
+          <div class="summary-table-scroll">
+            <table class="summary-table">
+              <thead id="forging-summary-head"></thead>
+              <tbody id="forging-summary"></tbody>
+            </table>
+          </div>
+        </div>
       </div>
 
       <section id="forge-progress" hidden>
@@ -231,10 +231,10 @@
         </div>
         <section class="panel prog-search-panel">
           <div class="filter-row">
-            <span class="filter-label">搜索装备</span>
-            <input id="prog-search" type="search" placeholder="搜索弟子持有装备或尚未完成的锻造材料…" autocomplete="off">
+            <span class="filter-label">搜索</span>
+            <input id="prog-search" type="search" placeholder="搜索已保存弟子、弟子持有装备或尚未完成的锻造材料…" autocomplete="off">
           </div>
-          <div class="muted-tip">跨全部弟子搜索；材料需求只统计尚未完成的锻造阶段。</div>
+          <div class="muted-tip">支持搜索已保存弟子和跨弟子装备关系；材料需求只统计尚未完成的锻造阶段。</div>
         </section>
         <div id="prog-search-results" hidden></div>
         <div id="prog-pager" class="prog-pager">

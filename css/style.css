@@ -473,6 +473,12 @@ tr.hit-row td { background: rgba(212, 175, 55, .06); }
 }
 .prog-search-context { color: var(--gold); font-weight: 700; margin-bottom: 9px; }
 .prog-search-hits { display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 10px; }
+.prog-disciple-matches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
 .prog-search-hit {
   display: inline-flex;
   align-items: center;

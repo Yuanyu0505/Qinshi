@@ -458,8 +458,19 @@
       renderProgress();
     });
     el.progSearch.addEventListener("input", () => {
-      progState.query = el.progSearch.value;
+      const query = el.progSearch.value;
+      const exact = PROG.searchDisciples(progState.disciples, query).find((entry) => entry.exact);
+      if (exact) {
+        openProgressDisciple(exact.index);
+        return;
+      }
+      progState.query = query;
       renderProgress();
+    });
+    el.progSearchResults.addEventListener("click", (e) => {
+      const btn = e.target.closest("button[data-prog-disciple-index]");
+      if (!btn) return;
+      openProgressDisciple(Number(btn.dataset.progDiscipleIndex));
     });
     el.progPrev.addEventListener("click", () => {
       if (progState.page > 0) {
@@ -678,12 +689,26 @@
     </section>`;
   }
 
+  function openProgressDisciple(index) {
+    if (!Number.isInteger(index) || index < 0 || index >= progState.disciples.length) return;
+    progState.query = "";
+    el.progSearch.value = "";
+    progState.page = index + 1;
+    renderProgress();
+  }
+
   function renderProgressSearch() {
+    const disciples = PROG.searchDisciples(progState.disciples, progState.query);
     const result = PROG.searchEquipment(FDATA, progState.disciples, progState.query);
-    if (!result.owned.length && !result.required.length) {
-      el.progSearchResults.innerHTML = '<div class="empty"><p>未找到匹配装备</p></div>';
+    if (!disciples.length && !result.owned.length && !result.required.length) {
+      el.progSearchResults.innerHTML = '<div class="empty"><p>未找到匹配的弟子或装备</p></div>';
       return;
     }
+
+    const discipleHtml = disciples.length ? `<section class="prog-search-section prog-disciple-results">
+      <h3 class="drop-title">匹配弟子<span class="drop-count">${disciples.length} 名</span></h3>
+      <div class="prog-disciple-matches">${disciples.map((entry) => `<button type="button" class="seg" data-prog-disciple-index="${entry.index}">${escapeHtml(entry.disciple.name || "未命名弟子")}</button>`).join("")}</div>
+    </section>` : "";
 
     const ownedHtml = result.owned.map((entry) => `<div class="prog-search-relation">
       <div class="prog-search-context">${escapeHtml(entry.disciple.name || "未命名弟子")} · 直接持有</div>
@@ -705,7 +730,7 @@
       </div>`;
     }).join("");
 
-    el.progSearchResults.innerHTML =
+    el.progSearchResults.innerHTML = discipleHtml +
       progressSearchSection("弟子直接持有", result.owned.length, ownedHtml, "没有弟子直接持有匹配装备") +
       progressSearchSection("尚未完成的锻造材料需求", result.required.length, requiredHtml, "没有尚未完成的材料需求");
   }

@@ -157,6 +157,24 @@
     return result;
   }
 
+  function searchDisciples(disciples, keyword) {
+    var q = normalizeSearch(keyword);
+    if (!q) return [];
+    return (Array.isArray(disciples) ? disciples : []).map(function (disciple, index) {
+      var name = normalizeSearch(disciple && disciple.name);
+      return {
+        disciple: disciple,
+        index: index,
+        exact: name === q,
+        matched: name.indexOf(q) !== -1
+      };
+    }).filter(function (entry) {
+      return entry.disciple && entry.matched;
+    }).map(function (entry) {
+      return { disciple: entry.disciple, index: entry.index, exact: entry.exact };
+    });
+  }
+
   return {
     findItem: findItem,
     remainingStages: remainingStages,
@@ -165,6 +183,7 @@
     aggregateMaterials: aggregateMaterials,
     discipleSummary: discipleSummary,
     overallSummary: overallSummary,
+    searchDisciples: searchDisciples,
     searchEquipment: searchEquipment
   };
 });

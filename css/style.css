@@ -88,8 +88,8 @@ header.top {
   border-radius: 10px;
   padding: 12px 14px;
   margin-bottom: 16px;
-  overflow-x: auto;
 }
+.summary-table-scroll { overflow-x: auto; }
 .summary-card table { min-width: 900px; }
 #forge-search,
 #drop-search,
@@ -886,16 +886,17 @@ figcaption { color: var(--muted); font-size: 13px; margin-top: 8px; }
   .atlas-summary-equipment { display: none; }
   .atlas-summary-equipment.is-expanded { display: block; }
 
-  #partition-forging .summary-card,
+  #partition-forging .summary-table-scroll,
   #partition-forging .forge-scroll,
   #inscription-reference .table-wrap {
-    overflow: auto;
-    max-height: min(65vh, 720px);
-    overscroll-behavior: contain;
+    overflow-x: auto;
+    overflow-y: hidden;
+    overscroll-behavior-x: contain;
+    -webkit-overflow-scrolling: touch;
   }
 
   #partition-forging .summary-table,
-  #partition-forging .forge-h-table,
+  #partition-forging .forge-scroll-material .forge-h-table,
   #inscription-reference .ins-reference-table {
     border-collapse: separate;
     border-spacing: 0;
@@ -904,29 +905,38 @@ figcaption { color: var(--muted); font-size: 13px; margin-top: 8px; }
   #partition-forging .summary-table thead th,
   #partition-forging .forge-h-table thead th,
   #inscription-reference .ins-reference-table thead th {
-    position: sticky;
-    top: 0;
-    z-index: 3;
+    position: static;
     background: var(--panel);
   }
 
-  #partition-forging .summary-table tbody > tr > :first-child,
-  #partition-forging .forge-h-table tbody > tr > :first-child,
-  #inscription-reference .ins-reference-table tbody > tr > :first-child {
+  #partition-forging .summary-table tr > :first-child,
+  #partition-forging .forge-scroll-material .forge-h-table tr > :first-child,
+  #inscription-reference .ins-reference-table tr > :first-child {
     position: sticky;
     left: 0;
     z-index: 2;
-    background: var(--bg2);
-    box-shadow: 1px 0 0 var(--line);
+    background-color: #191611;
+    background-clip: padding-box;
+    border-right: 1px solid var(--line);
+    box-shadow: 8px 0 10px -10px #000, 1px 0 0 var(--line);
   }
 
   #partition-forging .summary-table thead th:first-child,
-  #partition-forging .forge-h-table thead th:first-child,
+  #partition-forging .forge-scroll-material .forge-h-table thead th:first-child,
   #inscription-reference .ins-reference-table thead th:first-child {
-    left: 0;
-    z-index: 4;
-    box-shadow: 1px 0 0 var(--line);
+    z-index: 3;
+    background-color: #221d16;
   }
+
+  #partition-forging .summary-table-scroll {
+    margin-left: -14px;
+    margin-right: -14px;
+    isolation: isolate;
+  }
+
+  #partition-forging .summary-table tr > :first-child { min-width: 116px; }
+  #partition-forging .forge-scroll-material .forge-h-table tr > :first-child { min-width: 200px; }
+  #inscription-reference .ins-reference-table tr > :first-child { min-width: 118px; }
 }
 @media (max-width: 767px) {
   body { overflow-x: hidden; }
@@ -1016,8 +1026,12 @@ figcaption { color: var(--muted); font-size: 13px; margin-top: 8px; }
   .ins-query-slot { grid-template-columns: 1fr; }
   .ins-query-slot .ins-query-substats { grid-column: auto; }
   .ins-suggestions { width: 100%; }
-  .prog-material-grid { grid-template-columns: 1fr; }
+  .prog-material-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .prog-material-grid-overall { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .prog-material-grid .mat {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
   .settings-list > div { grid-template-columns: 1fr; gap: 3px; }
   .settings-actions .seg { min-height: 44px; }
 }

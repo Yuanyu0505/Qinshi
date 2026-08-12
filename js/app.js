@@ -837,12 +837,12 @@
     if (forgeState.mode === "main") {
       const items = FORG.findMain(FDATA.items, q);
       el.forgeResults.innerHTML = items.length
-        ? `<div class="forge-scroll"><table class="forge-h-table"><thead>${tableHead}</thead><tbody>${items.map((i) => forgingRowHtml(i, null)).join("")}</tbody></table></div>`
+        ? `<div class="forge-scroll forge-scroll-main"><table class="forge-h-table"><thead>${tableHead}</thead><tbody>${items.map((i) => forgingRowHtml(i, null)).join("")}</tbody></table></div>`
         : '<div class="empty"><p>未找到该主锻造装备</p></div>';
     } else {
       const found = FORG.findAsMaterial(FDATA.items, q);
       el.forgeResults.innerHTML = found.length
-        ? `<div class="forge-scroll"><table class="forge-h-table"><thead>${tableHead}</thead><tbody>${found.map((r) => forgingRowHtml(r.item, r.hits)).join("")}</tbody></table></div>`
+        ? `<div class="forge-scroll forge-scroll-material"><table class="forge-h-table"><thead>${tableHead}</thead><tbody>${found.map((r) => forgingRowHtml(r.item, r.hits)).join("")}</tbody></table></div>`
         : '<div class="empty"><p>未找到使用该素材的主锻造装备</p></div>';
     }
   }

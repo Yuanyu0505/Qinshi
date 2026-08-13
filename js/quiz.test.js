@@ -18,6 +18,12 @@ test("search：空关键词返回全部记录的副本", () => {
   assert.notStrictEqual(result, items);
 });
 
+test("hasQuery：只有非空白关键词才进入结果展示状态", () => {
+  assert.strictEqual(QUIZ.hasQuery(""), false);
+  assert.strictEqual(QUIZ.hasQuery("   "), false);
+  assert.strictEqual(QUIZ.hasQuery("机关"), true);
+});
+
 test("mergeItems：默认题编辑后保留编辑结果，不补回原错误题目", () => {
   const defaults = [
     { question: "石门峡残月谷，是唯一人一剑，尽屠三百秦军？", answer: "盖聂" },

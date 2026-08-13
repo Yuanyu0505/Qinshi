@@ -402,6 +402,12 @@
   }
 
   function applyQuiz() {
+    if (!QUIZ.hasQuery(quizState.query)) {
+      el.quizResults.innerHTML = "";
+      el.quizResults.hidden = true;
+      return;
+    }
+    el.quizResults.hidden = false;
     var items = QUIZ.search(quizState.items, quizState.query);
     el.quizResults.innerHTML = items.length
       ? items.map(function (item) {

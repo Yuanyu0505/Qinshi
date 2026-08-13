@@ -20,6 +20,7 @@
 ### Task 1: 增加有效查询判断并控制结果容器
 
 **Files:**
+- Modify: `index.html`
 - Modify: `js/quiz.test.js`
 - Modify: `js/quiz.js`
 - Modify: `js/app.js`

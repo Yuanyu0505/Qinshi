@@ -8,6 +8,10 @@
     return String(value == null ? "" : value).trim().toLowerCase();
   }
 
+  function hasQuery(query) {
+    return normalize(query) !== "";
+  }
+
   function search(items, query) {
     var keyword = normalize(query);
     if (!keyword) return (items || []).slice();
@@ -39,5 +43,5 @@
     return merged;
   }
 
-  return { search: search, mergeItems: mergeItems };
+  return { hasQuery: hasQuery, search: search, mergeItems: mergeItems };
 });

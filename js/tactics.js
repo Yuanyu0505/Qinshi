@@ -70,6 +70,40 @@
     return { rank: 0, rehearsalSpent: 0, mantras: mantras };
   }
 
+  function actualMaximum(rehearsalInput) {
+    var rehearsal = object(rehearsalInput);
+    var singleHorn = integer(rehearsal.singleHorn, 0);
+    var guaranteeHorn = integer(rehearsal.guaranteeHorn, 0);
+    if (singleHorn <= 0 || guaranteeHorn <= 0) return 0;
+    return Math.ceil(guaranteeHorn / singleHorn) * singleHorn;
+  }
+
+  function normalizeRehearsalSpent(rehearsal, value) {
+    var singleHorn = integer(object(rehearsal).singleHorn, 0);
+    var maximum = actualMaximum(rehearsal);
+    if (!singleHorn || !maximum) return 0;
+    var spent = clamp(integer(value, 0), 0, maximum);
+    return Math.floor(spent / singleHorn) * singleHorn;
+  }
+
+  function validateRehearsalSpent(tactic, input) {
+    var raw = object(input);
+    var row = findRank(tactic, clamp(integer(raw.rank, 0), 0, 15));
+    var rehearsal = row && object(row.rehearsal);
+    var singleHorn = rehearsal ? integer(rehearsal.singleHorn, 0) : 0;
+    var maximum = actualMaximum(rehearsal);
+    if (!singleHorn || !maximum) return [];
+
+    var rawSpent = raw.rehearsalSpent == null ? 0 : raw.rehearsalSpent;
+    var spent = Number(rawSpent);
+    var blank = typeof rawSpent === "string" && rawSpent.trim() === "";
+    if (blank || !Number.isFinite(spent) || Math.trunc(spent) !== spent ||
+        spent < 0 || spent > maximum || spent % singleHorn !== 0) {
+      return ["本阶已消耗号角必须为0至" + maximum + "的" + singleHorn + "的倍数"];
+    }
+    return [];
+  }
+
   /**
    * 兼容历史本地数据：只保留已知字段，任何非法数值都会回落到安全范围。
    */
@@ -78,7 +112,6 @@
     var rank = clamp(integer(raw.rank, 0), 0, 15);
     var row = findRank(tactic, rank);
     var rehearsal = row && object(row.rehearsal);
-    var guarantee = rehearsal ? integer(rehearsal.guaranteeHorn, 0) : 0;
     var rawMantras = object(raw.mantras);
     var mantras = {};
 
@@ -90,7 +123,7 @@
 
     return {
       rank: rank,
-      rehearsalSpent: clamp(integer(raw.rehearsalSpent, 0), 0, guarantee),
+      rehearsalSpent: normalizeRehearsalSpent(rehearsal, raw.rehearsalSpent),
       mantras: mantras
     };
   }
@@ -110,7 +143,7 @@
   function validateState(tactic, startInput, targetInput) {
     var start = normalizeProgress(tactic, startInput);
     var target = normalizeProgress(tactic, targetInput);
-    var errors = [];
+    var errors = validateRehearsalSpent(tactic, startInput);
     if (target.rank < start.rank) errors.push("目标兵法阶数不能低于当前阶数");
     array(tactic && tactic.mantras).forEach(function (mantra) {
       if (!mantra || !mantra.id) return;
@@ -197,8 +230,9 @@
 
     var singleHorn = integer(rehearsal.singleHorn, 0);
     var guaranteeHorn = integer(rehearsal.guaranteeHorn, 0);
+    var maximum = actualMaximum(rehearsal);
     var carriedSpent = start.rank === target.rank
-      ? clamp(integer(start.rehearsalSpent, 0), 0, guaranteeHorn)
+      ? clamp(integer(start.rehearsalSpent, 0), 0, maximum)
       : 0;
     var remainingRuns = Math.ceil(Math.max(0, guaranteeHorn - carriedSpent) / singleHorn);
 
@@ -207,6 +241,7 @@
       proficiency: row.proficiency,
       singleHorn: singleHorn,
       guaranteeHorn: guaranteeHorn,
+      actualMaximumHorn: maximum,
       carriedSpent: carriedSpent,
       remainingRuns: remainingRuns,
       actualAdditionalHorn: remainingRuns * singleHorn
@@ -239,14 +274,16 @@
         targetValue: targetMap[key] ? targetMap[key].value : 0,
         delta: (targetMap[key] ? targetMap[key].value : 0) - (startMap[key] ? startMap[key].value : 0)
       };
+    }).filter(function (item) {
+      return item.delta !== 0;
     });
   }
 
   function calculatePlan(tactic, startInput, targetInput) {
+    var errors = validateState(tactic, startInput, targetInput);
+    if (errors.length) return { valid: false, errors: errors };
     var start = normalizeProgress(tactic, startInput);
     var target = normalizeProgress(tactic, targetInput);
-    var errors = validateState(tactic, start, target);
-    if (errors.length) return { valid: false, errors: errors };
 
     var steps = array(tactic && tactic.ranks).filter(function (row) {
       return row && row.rank > start.rank && row.rank <= target.rank;
@@ -276,6 +313,8 @@
   return {
     defaultProgress: defaultProgress,
     allowedMantraRank: allowedMantraRank,
+    actualMaximum: actualMaximum,
+    validateRehearsalSpent: validateRehearsalSpent,
     normalizeProgress: normalizeProgress,
     changeRank: changeRank,
     validateState: validateState,

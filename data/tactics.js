@@ -571,7 +571,7 @@ window.TACTICS_DATA = {
         {
           "id": "qi",
           "name": "齐",
-          "attribute": "防御",
+          "attribute": "防",
           "unit": "percent",
           "materialName": "齐真言碎片",
           "unlockTacticRank": 0,
@@ -642,7 +642,7 @@ window.TACTICS_DATA = {
         {
           "id": "biao",
           "name": "镖",
-          "attribute": "攻击",
+          "attribute": "攻",
           "unit": "percent",
           "materialName": "镖真言碎片",
           "unlockTacticRank": 0,

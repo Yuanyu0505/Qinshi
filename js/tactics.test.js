@@ -82,7 +82,7 @@ const forest = {
   mantras: [
     standardMantra("ling", "灵", "内力"),
     standardMantra("chan", "禅", "血"),
-    standardMantra("command", "统", "PVP速"),
+    standardMantra("tong", "统", "PVP速"),
     extreme
   ]
 };
@@ -104,22 +104,83 @@ const windRank4Fixture = {
   mantras: forest.mantras
 };
 
-const startAt5 = { rank: 5, rehearsalSpent: 0, mantras: { ling: -1, chan: -1, command: -1, extreme: -1 } };
-const targetAt8 = { rank: 8, rehearsalSpent: 0, mantras: { ling: -1, chan: -1, command: -1, extreme: -1 } };
-const startInactive = { rank: 3, rehearsalSpent: 0, mantras: { ling: -1, chan: -1, command: -1, extreme: -1 } };
-const targetMantra3 = { rank: 3, rehearsalSpent: 0, mantras: { ling: 3, chan: -1, command: -1, extreme: -1 } };
-const extremeAt0 = { rank: 15, rehearsalSpent: 0, mantras: { ling: -1, chan: -1, command: -1, extreme: 0 } };
-const extremeAt5 = { rank: 15, rehearsalSpent: 0, mantras: { ling: -1, chan: -1, command: -1, extreme: 5 } };
-const startAt4 = { rank: 4, rehearsalSpent: 0, mantras: { ling: -1, chan: -1, command: -1, extreme: -1 } };
-const startAt4ZeroSpent = { rank: 4, rehearsalSpent: 0, mantras: { ling: -1, chan: -1, command: -1, extreme: -1 } };
-const targetAt4 = { rank: 4, rehearsalSpent: 0, mantras: { ling: -1, chan: -1, command: -1, extreme: -1 } };
-const targetAt5 = { rank: 5, rehearsalSpent: 0, mantras: { ling: -1, chan: -1, command: -1, extreme: -1 } };
+const specialAdvance = [
+  [0, 0, 0], [20, 100, 2000], [30, 200, 2500], [40, 300, 3000],
+  [60, 400, 3500], [100, 700, 4000], [150, 1100, 4500], [220, 1600, 5000],
+  [400, 2800, 5500], [700, 4800, 6000], [1000, 6500, 6500], [1300, 8000, 7000],
+  [1600, 9500, 7500], [1900, 11000, 8000], [2200, 12500, 8500], [2500, 14000, 9000]
+];
+const specialFragments = [50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 150, 160, 170, 180, 190, 200];
+
+function specialFixture(config) {
+  return {
+    id: config.id,
+    name: config.name + "兵法",
+    kind: "special",
+    markName: config.name + "之印记",
+    ranks: specialAdvance.map((advance, rank) => ({
+      rank,
+      baseAttributes: config.baseNames.map(name => ({ name, value: 10 + rank, unit: "percent" })),
+      extraAttributes: [
+        { name: "护盾", value: rank * 100, unit: "flat" },
+        { name: config.extraName, value: rank, unit: "percent" }
+      ],
+      advance: { mark: advance[0], merit: advance[1], horn: advance[2] }
+    })),
+    mantras: [{
+      id: config.mantraId,
+      name: config.mantraName,
+      attribute: config.mantraAttribute,
+      unit: "percent",
+      materialName: config.mantraName + "真言碎片",
+      unlockTacticRank: 0,
+      maxRank: 15,
+      stages: specialFragments.map((fragments, rank) => ({
+        rank,
+        tacticRank: rank,
+        value: rank + 1,
+        fragments
+      }))
+    }]
+  };
+}
+
+const yin = specialFixture({
+  id: "yin",
+  name: "阴",
+  baseNames: ["攻", "防", "血", "追加伤害"],
+  extraName: "暴伤减免",
+  mantraId: "shang",
+  mantraName: "殇",
+  mantraAttribute: "真伤抵抗"
+});
+const thunder = specialFixture({
+  id: "thunder",
+  name: "雷",
+  baseNames: ["攻", "防", "血", "内力"],
+  extraName: "暴击伤害",
+  mantraId: "sheng",
+  mantraName: "盛",
+  mantraAttribute: "中级闪避"
+});
+
+const emptyStandardMantras = { ling: -1, chan: -1, tong: -1, extreme: -1 };
+const startAt5 = { rank: 5, rehearsalSpent: 0, mantras: { ...emptyStandardMantras } };
+const targetAt8 = { rank: 8, rehearsalSpent: 0, mantras: { ...emptyStandardMantras } };
+const startInactive = { rank: 3, rehearsalSpent: 0, mantras: { ...emptyStandardMantras } };
+const targetMantra3 = { rank: 3, rehearsalSpent: 0, mantras: { ...emptyStandardMantras, ling: 3 } };
+const extremeAt0 = { rank: 15, rehearsalSpent: 0, mantras: { ...emptyStandardMantras, extreme: 0 } };
+const extremeAt5 = { rank: 15, rehearsalSpent: 0, mantras: { ...emptyStandardMantras, extreme: 5 } };
+const startAt4 = { rank: 4, rehearsalSpent: 0, mantras: { ...emptyStandardMantras } };
+const startAt4ZeroSpent = { rank: 4, rehearsalSpent: 0, mantras: { ...emptyStandardMantras } };
+const targetAt4 = { rank: 4, rehearsalSpent: 0, mantras: { ...emptyStandardMantras } };
+const targetAt5 = { rank: 5, rehearsalSpent: 0, mantras: { ...emptyStandardMantras } };
 
 test("defaultProgress：六种真言均从未激活开始", () => {
   assert.deepStrictEqual(T.defaultProgress(forest), {
     rank: 0,
     rehearsalSpent: 0,
-    mantras: { ling: -1, chan: -1, command: -1, extreme: -1 }
+    mantras: { ling: -1, chan: -1, tong: -1, extreme: -1 }
   });
 });
 
@@ -140,17 +201,28 @@ test("normalizeProgress：容错补齐真言、丢弃未知字段并限制进度
   }), {
     rank: 15,
     rehearsalSpent: 13950,
-    mantras: { ling: 9, chan: -1, command: -1, extreme: -1 }
+    mantras: { ling: 9, chan: -1, tong: -1, extreme: -1 }
   });
+});
+
+test("actualMaximum：按完整演练次数计算950/7和2100/11的实际最大消耗", () => {
+  assert.strictEqual(T.actualMaximum({ singleHorn: 7, guaranteeHorn: 950 }), 952);
+  assert.strictEqual(T.actualMaximum({ singleHorn: 11, guaranteeHorn: 2100 }), 2101);
+});
+
+test("normalizeProgress：旧数据安全归一化但保留合法的952与2101", () => {
+  assert.strictEqual(T.normalizeProgress(forest, { rank: 4, rehearsalSpent: 952 }).rehearsalSpent, 952);
+  assert.strictEqual(T.normalizeProgress(forest, { rank: 6, rehearsalSpent: 2101 }).rehearsalSpent, 2101);
+  assert.strictEqual(T.normalizeProgress(forest, { rank: 4, rehearsalSpent: 950 }).rehearsalSpent, 945);
 });
 
 test("changeRank：兵法阶数变化重置本阶号角并收缩真言", () => {
   const changed = T.changeRank(forest, {
     rank: 15, rehearsalSpent: 250,
-    mantras: { ling: 9, chan: 9, command: 9, extreme: 5 }
+    mantras: { ling: 9, chan: 9, tong: 9, extreme: 5 }
   }, 8);
   assert.strictEqual(changed.rehearsalSpent, 0);
-  assert.deepStrictEqual(changed.mantras, { ling: 8, chan: 8, command: 8, extreme: -1 });
+  assert.deepStrictEqual(changed.mantras, { ling: 8, chan: 8, tong: 8, extreme: -1 });
 });
 
 test("validateState：拒绝倒退的兵法或真言目标", () => {
@@ -189,12 +261,77 @@ test("rehearsal：950阈值、单次7按952实际消耗", () => {
   const result = T.calculatePlan(windRank4Fixture, startAt4ZeroSpent, targetAt4);
   assert.deepStrictEqual(result.rehearsal, {
     rank: 4, proficiency: { min: 5.6, max: 7.5 }, singleHorn: 7,
-    guaranteeHorn: 950, carriedSpent: 0, remainingRuns: 136, actualAdditionalHorn: 952
+    guaranteeHorn: 950, actualMaximumHorn: 952, carriedSpent: 0,
+    remainingRuns: 136, actualAdditionalHorn: 952
   });
+});
+
+test("rehearsal：同阶已消耗945后只需1次7号角，952时无需新增", () => {
+  const at945 = T.calculatePlan(windRank4Fixture, { ...startAt4, rehearsalSpent: 945 }, targetAt4);
+  assert.strictEqual(at945.valid, true);
+  assert.strictEqual(at945.rehearsal.carriedSpent, 945);
+  assert.strictEqual(at945.rehearsal.actualAdditionalHorn, 7);
+
+  const at952 = T.calculatePlan(windRank4Fixture, { ...startAt4, rehearsalSpent: 952 }, targetAt4);
+  assert.strictEqual(at952.valid, true);
+  assert.strictEqual(at952.rehearsal.carriedSpent, 952);
+  assert.strictEqual(at952.rehearsal.remainingRuns, 0);
+  assert.strictEqual(at952.rehearsal.actualAdditionalHorn, 0);
+});
+
+test("rehearsal：拒绝950、951和超过952的输入且不静默归一化", () => {
+  [950, 951, 953].forEach(spent => {
+    const result = T.calculatePlan(windRank4Fixture, { ...startAt4, rehearsalSpent: spent }, targetAt4);
+    assert.strictEqual(result.valid, false, String(spent));
+    assert.deepStrictEqual(result.errors, ["本阶已消耗号角必须为0至952的7的倍数"]);
+  });
+});
+
+test("rehearsal：风6阶允许实际最大消耗2101", () => {
+  const at2101 = { rank: 6, rehearsalSpent: 2101, mantras: { ...emptyStandardMantras } };
+  const result = T.calculatePlan(wind, at2101, { ...at2101, rehearsalSpent: 0 });
+  assert.strictEqual(result.valid, true);
+  assert.strictEqual(result.rehearsal.actualMaximumHorn, 2101);
+  assert.strictEqual(result.rehearsal.carriedSpent, 2101);
+  assert.strictEqual(result.rehearsal.actualAdditionalHorn, 0);
 });
 
 test("rehearsal：升至新阶时不继承旧阶号角", () => {
   const result = T.calculatePlan(wind, { ...startAt4, rehearsalSpent: 945 }, targetAt5);
   assert.strictEqual(result.rehearsal.carriedSpent, 0);
   assert.strictEqual(result.rehearsal.actualAdditionalHorn, 1800);
+});
+
+test("attributeDeltas：过滤没有实际变化的属性", () => {
+  const result = T.calculatePlan(forest, extremeAt5, extremeAt5);
+  assert.deepStrictEqual(result.attributeDeltas, []);
+});
+
+test("阴雷：无演练计划且真言0–15阶与兵法一一对应", () => {
+  [yin, thunder].forEach(tactic => {
+    const mantra = tactic.mantras[0];
+    assert.deepStrictEqual(mantra.stages.map(stage => [stage.rank, stage.tacticRank]),
+      Array.from({ length: 16 }, (_, rank) => [rank, rank]));
+    for (let rank = 0; rank <= 15; rank++) {
+      assert.strictEqual(T.allowedMantraRank(tactic, mantra.id, rank), rank);
+    }
+    const initial = { rank: 0, rehearsalSpent: 0, mantras: { [mantra.id]: -1 } };
+    assert.strictEqual(T.calculatePlan(tactic, initial, initial).rehearsal, null);
+  });
+});
+
+test("阴雷：5→8阶累计进阶号角与各阶真言碎片", () => {
+  [yin, thunder].forEach(tactic => {
+    const mantraId = tactic.mantras[0].id;
+    const result = T.calculatePlan(
+      tactic,
+      { rank: 5, rehearsalSpent: 0, mantras: { [mantraId]: 5 } },
+      { rank: 8, rehearsalSpent: 0, mantras: { [mantraId]: 8 } }
+    );
+    assert.strictEqual(result.valid, true);
+    assert.deepStrictEqual(result.advance.steps.map(step => step.rank), [6, 7, 8]);
+    assert.strictEqual(result.advance.horn, 15000);
+    assert.deepStrictEqual(result.mantras[mantraId].steps.map(step => step.tacticRank), [6, 7, 8]);
+    assert.strictEqual(result.mantras[mantraId].fragments, 360);
+  });
 });

@@ -11,7 +11,8 @@
     progress: {},
     calculator: null,
     draft: null,
-    storageError: ""
+    storageError: "",
+    progressError: ""
   };
   var el = {};
 
@@ -106,7 +107,8 @@
     var guaranteeHorn = integer(rehearsal.guaranteeHorn, 0);
     if (!singleHorn || !guaranteeHorn) return null;
 
-    var spent = clamp(integer(progress && progress.rehearsalSpent, 0), 0, guaranteeHorn);
+    var inputMaximum = CORE.actualMaximum(rehearsal);
+    var spent = clamp(integer(progress && progress.rehearsalSpent, 0), 0, inputMaximum);
     var remainingRuns = Math.ceil(Math.max(0, guaranteeHorn - spent) / singleHorn);
     return {
       singleHorn: singleHorn,
@@ -114,7 +116,7 @@
       spent: spent,
       remainingRuns: remainingRuns,
       actualAdditionalHorn: remainingRuns * singleHorn,
-      inputMaximum: Math.ceil(guaranteeHorn / singleHorn) * singleHorn,
+      inputMaximum: inputMaximum,
       proficiency: row.proficiency
     };
   }
@@ -169,6 +171,7 @@
     state.selectedId = id;
     state.editing = false;
     state.draft = null;
+    state.progressError = "";
     state.referenceMode = "collapsed";
     resetCalculatorFromProgress();
     renderAll();
@@ -246,6 +249,7 @@
     var html = '<section class="panel tactics-progress-panel"><div class="ins-card-head"><div><div class="panel-title">个人进度</div><h2>' + escapeHtml(tactic.name) + "</h2></div>" +
       '<button type="button" class="seg" data-action="edit-progress">编辑进度</button></div>';
     if (state.storageError) html += '<div class="error" role="alert">' + escapeHtml(state.storageError) + "</div>";
+    if (state.progressError) html += '<div class="error" role="alert">' + escapeHtml(state.progressError) + "</div>";
     html += progressSummaryHtml(tactic, progress);
     if (state.editing && state.draft) html += progressEditorHtml(tactic, state.draft);
     el.progress.innerHTML = html + "</section>";
@@ -289,6 +293,18 @@
 
     var previous = cloneProgress(tactic, state.progress[tactic.id]);
     var nextRank = clamp(integer(state.draft.rank, previous.rank), 0, 15);
+    state.progressError = "";
+    if (nextRank === previous.rank) {
+      var rehearsalErrors = CORE.validateRehearsalSpent(tactic, {
+        rank: nextRank,
+        rehearsalSpent: state.draft.rehearsalSpent
+      });
+      if (rehearsalErrors.length) {
+        state.progressError = rehearsalErrors.join("；");
+        renderProgress();
+        return;
+      }
+    }
     var candidate = nextRank === previous.rank
       ? cloneProgress(tactic, previous)
       : CORE.changeRank(tactic, previous, nextRank);
@@ -331,10 +347,12 @@
       if (!tactic) return;
       state.editing = true;
       state.draft = cloneProgress(tactic, state.progress[tactic.id]);
+      state.progressError = "";
       renderProgress();
     } else if (button.dataset.action === "cancel-edit") {
       state.editing = false;
       state.draft = null;
+      state.progressError = "";
       renderProgress();
     } else if (button.dataset.action === "save-progress") {
       saveEditedProgress();
@@ -355,6 +373,7 @@
   function handleProgressInput(event) {
     if (!event.target.matches("[data-progress-field=\"rehearsalSpent\"]")) return;
     syncDraftFromForm();
+    state.progressError = "";
   }
 
   function calculatorMantraHtml(tactic, side, calculator, mantra) {
@@ -405,29 +424,13 @@
     renderCalculator();
   }
 
-  function rehearsalInputError(tactic) {
-    if (!isStandard(tactic)) return "";
-    var progress = state.calculator.start;
-    var info = rehearsalInfo(tactic, { rank: progress.rank, rehearsalSpent: 0 });
-    if (!info) return "";
-    var raw = progress.rehearsalSpent;
-    var number = Number(raw);
-    if (String(raw == null ? "" : raw).trim() === "" || !Number.isFinite(number) || Math.trunc(number) !== number || number < 0 || number > info.inputMaximum || number % info.singleHorn !== 0) {
-      return "本阶已消耗号角必须为0至" + formatNumber(info.inputMaximum) + "的" + formatNumber(info.singleHorn) + "的倍数";
-    }
-    return "";
-  }
-
   function calculatorOutcome(tactic) {
     var plan = CORE.calculatePlan(tactic, state.calculator.start, state.calculator.target);
-    var errors = plan.valid ? [] : plan.errors.slice();
-    var inputError = rehearsalInputError(tactic);
-    if (inputError) errors.push(inputError);
-    return { plan: plan, errors: errors };
+    return { plan: plan, errors: plan.valid ? [] : plan.errors.slice() };
   }
 
   function attributeDeltasHtml(plan) {
-    var values = plan.attributeDeltas || [];
+    var values = (plan.attributeDeltas || []).filter(function (item) { return item.delta !== 0; });
     if (!values.length) return "<p>当前没有属性变化。</p>";
     return "<ul>" + values.map(function (item) {
       var label = item.mantraName ? item.mantraName + "真言·" : "";
@@ -435,15 +438,49 @@
     }).join("") + "</ul>";
   }
 
+  function stateSummaryHtml(tactic, progress) {
+    var items = ["<li>兵法阶数：" + progress.rank + "阶</li>"];
+    tactic.mantras.forEach(function (mantra) {
+      items.push("<li>" + escapeHtml(mantra.name) + "真言：" + rankText(progress.mantras[mantra.id]) + "</li>");
+    });
+    if (isStandard(tactic)) {
+      items.push("<li>本阶已消耗号角：" + formatNumber(progress.rehearsalSpent) + "</li>");
+    }
+    return "<ul>" + items.join("") + "</ul>";
+  }
+
+  function attributeSnapshotHtml(attributes) {
+    if (!attributes || !attributes.length) return "<p>当前没有属性。</p>";
+    return "<ul>" + attributes.map(function (item) {
+      var prefix = item.mantraName ? item.mantraName + "真言·" : "";
+      return "<li>" + escapeHtml(prefix + formatAttribute(item)) + "</li>";
+    }).join("") + "</ul>";
+  }
+
+  function advanceStepsHtml(tactic, plan) {
+    if (!plan.advance.steps.length) return "<p>无需进阶。</p>";
+    var previousRank = plan.start.rank;
+    return '<p class="muted-tip">逐阶段路径</p><ul>' + plan.advance.steps.map(function (step) {
+      var advance = step.advance || {};
+      var path = previousRank + "→" + step.rank + "阶";
+      previousRank = step.rank;
+      return "<li>" + path + "：" + escapeHtml(tactic.markName) + " " + formatNumber(advance.mark || 0) +
+        "、功勋 " + formatNumber(advance.merit || 0) + "、号角 " + formatNumber(advance.horn || 0) + "</li>";
+    }).join("") + "</ul>";
+  }
+
   function materialsHtml(tactic, plan) {
-    var rehearsalHorn = plan.rehearsal ? plan.rehearsal.actualAdditionalHorn : 0;
-    var totalHorn = plan.advance.horn + rehearsalHorn;
-    return "<ul>" +
+    return advanceStepsHtml(tactic, plan) + '<p class="muted-tip">材料总计</p><ul>' +
       "<li>" + escapeHtml(tactic.markName) + "：" + formatNumber(plan.advance.mark) + "</li>" +
       "<li>功勋：" + formatNumber(plan.advance.merit) + "</li>" +
-      "<li>进阶号角：" + formatNumber(plan.advance.horn) + "</li>" +
-      "<li>演练号角：" + formatNumber(rehearsalHorn) + "</li>" +
-      "<li>号角总计：" + formatNumber(totalHorn) + "</li></ul>";
+      "<li>进阶号角：" + formatNumber(plan.advance.horn) + "</li></ul>";
+  }
+
+  function hornTotalsHtml(plan) {
+    var rehearsalHorn = plan.rehearsal ? plan.rehearsal.actualAdditionalHorn : 0;
+    return "<ul><li>进阶号角：" + formatNumber(plan.advance.horn) + "</li>" +
+      "<li>目标阶演练号角：" + formatNumber(rehearsalHorn) + "</li>" +
+      "<li>号角总计：" + formatNumber(plan.advance.horn + rehearsalHorn) + "</li></ul>";
   }
 
   function mantraPlanHtml(tactic, plan) {
@@ -468,16 +505,22 @@
     var proficiency = rehearsal.proficiency && rehearsal.proficiency.min != null && rehearsal.proficiency.max != null
       ? "（熟练度" + formatNumber(rehearsal.proficiency.min) + "–" + formatNumber(rehearsal.proficiency.max) + "）"
       : "";
-    return "<p>目标" + rehearsal.rank + "阶" + proficiency + "</p><p>本阶已消耗 " + formatNumber(rehearsal.carriedSpent) +
-      "号角｜保底阈值" + formatNumber(rehearsal.guaranteeHorn) + "｜再演练" + formatNumber(rehearsal.remainingRuns) +
+    return "<p>目标" + rehearsal.rank + "阶" + proficiency + "</p><p>单次演练" + formatNumber(rehearsal.singleHorn) +
+      "号角｜保底阈值" + formatNumber(rehearsal.guaranteeHorn) + "｜实际最多消耗" + formatNumber(rehearsal.actualMaximumHorn) +
+      "号角</p><p>本阶已消耗 " + formatNumber(rehearsal.carriedSpent) + "号角｜再演练" + formatNumber(rehearsal.remainingRuns) +
       "次｜实际还需" + formatNumber(rehearsal.actualAdditionalHorn) + "号角</p>";
   }
 
   function resultsHtml(tactic, plan) {
-    return '<div class="tactics-result-grid"><article><h3>属性提升</h3>' + attributeDeltasHtml(plan) + "</article>" +
+    return '<div class="tactics-result-grid"><article><h3>临时起点状态</h3>' + stateSummaryHtml(tactic, plan.start) + "</article>" +
+      "<article><h3>目标状态</h3>" + stateSummaryHtml(tactic, plan.target) + "</article>" +
+      "<article><h3>起点属性快照</h3>" + attributeSnapshotHtml(plan.startAttributes) + "</article>" +
+      "<article><h3>目标属性快照</h3>" + attributeSnapshotHtml(plan.targetAttributes) + "</article>" +
+      "<article><h3>属性变化</h3>" + attributeDeltasHtml(plan) + "</article>" +
       "<article><h3>兵法进阶材料</h3>" + materialsHtml(tactic, plan) + "</article>" +
       "<article><h3>真言碎片</h3>" + mantraPlanHtml(tactic, plan) + "</article>" +
-      "<article><h3>目标阶演练</h3>" + rehearsalPlanHtml(plan) + "</article></div>";
+      "<article><h3>目标阶演练</h3>" + rehearsalPlanHtml(plan) + "</article>" +
+      "<article><h3>号角总计</h3>" + hornTotalsHtml(plan) + "</article></div>";
   }
 
   function renderCalculatorResult() {
@@ -718,6 +761,8 @@
       typeof CORE.normalizeProgress === "function" &&
       typeof CORE.changeRank === "function" &&
       typeof CORE.allowedMantraRank === "function" &&
+      typeof CORE.actualMaximum === "function" &&
+      typeof CORE.validateRehearsalSpent === "function" &&
       typeof CORE.attributeSnapshot === "function" &&
       typeof CORE.calculatePlan === "function";
   }

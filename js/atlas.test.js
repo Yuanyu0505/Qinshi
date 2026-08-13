@@ -192,3 +192,39 @@ test("filterAtlas：分区、等级闭区间和限定搜索共同生效", () => 
     levels
   }), []);
 });
+
+test("filterAtlas：已收藏分类只展示收藏项并继续叠加筛选", () => {
+  assert.deepStrictEqual(A.filterAtlas(fixture, {
+    category: "已收藏",
+    minLevel: 0,
+    maxLevel: 20,
+    favorites: ["t-0001", "t-0003"]
+  }).map(i => i.id), ["t-0001", "t-0003"]);
+  assert.deepStrictEqual(A.filterAtlas(fixture, {
+    category: "已收藏",
+    minLevel: 0,
+    maxLevel: 10,
+    query: "墨眉",
+    field: "equipment",
+    targetLevel: 10,
+    levels: { "t-0003": 5 },
+    favorites: ["t-0001", "t-0003"]
+  }).map(i => i.id), ["t-0003"]);
+});
+
+test("filterAtlas：所有分区中收藏项优先且组内顺序不变", () => {
+  assert.deepStrictEqual(A.filterAtlas(fixture, {
+    category: "全部",
+    minLevel: 0,
+    maxLevel: 20,
+    favorites: ["t-0003", "t-0002"]
+  }).map(i => i.id), ["t-0002", "t-0003", "t-0001"]);
+  assert.deepStrictEqual(A.filterAtlas(fixture, {
+    category: "全部",
+    minLevel: 0,
+    maxLevel: 20,
+    query: "非攻墨门",
+    field: "atlas",
+    favorites: ["t-0003"]
+  }).map(i => i.id), ["t-0003", "t-0001"]);
+});

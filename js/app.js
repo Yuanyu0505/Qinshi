@@ -19,6 +19,7 @@
   const QUIZ = window.QUIZ;
   const ATLAS_LEVELS_KEY = "qinshi_atlas_levels_v1";
   const ATLAS_TARGET_LEVEL_KEY = "qinshi_atlas_target_level_v1";
+  const ATLAS_FAVORITES_KEY = "qinshi_atlas_favorites_v1";
   const QUIZ_STORE_KEY = "qinshi_quiz_items_v1";
   const PARTITION_TITLES = {
     atlas: "图鉴",
@@ -96,6 +97,7 @@
     levelMin: 0,
     levelMax: 20,
     targetLevel: loadAtlasTargetLevel(),
+    favorites: loadAtlasFavorites(),
     levels: loadAtlasLevels()
   };
   const quizState = { query: "", items: loadQuizItems() };
@@ -252,6 +254,24 @@
     }
   }
 
+  function loadAtlasFavorites() {
+    try {
+      const parsed = JSON.parse(localStorage.getItem(ATLAS_FAVORITES_KEY) || "[]");
+      if (!Array.isArray(parsed)) return [];
+      return Array.from(new Set(parsed.map((id) => String(id || "").trim()).filter(Boolean)));
+    } catch (e) {
+      return [];
+    }
+  }
+
+  function saveAtlasFavorites() {
+    try {
+      localStorage.setItem(ATLAS_FAVORITES_KEY, JSON.stringify(atlasState.favorites));
+    } catch (e) {
+      // 忽略存储失败
+    }
+  }
+
   function initAtlas() {
     if (!ATLAS_DATA || !ATLAS) return;
     atlasState.levelMax = atlasMaxLevel();
@@ -300,6 +320,16 @@
         applyAtlas();
       }
     });
+    el.atlasResults.addEventListener("click", (e) => {
+      const button = e.target.closest("button[data-atlas-favorite]");
+      if (!button) return;
+      const id = button.dataset.atlasFavorite;
+      const index = atlasState.favorites.indexOf(id);
+      if (index >= 0) atlasState.favorites.splice(index, 1);
+      else atlasState.favorites.push(id);
+      saveAtlasFavorites();
+      applyAtlas();
+    });
     el.atlasUpgradeSummary.addEventListener("click", (e) => {
       const button = e.target.closest(".atlas-summary-equipment-toggle");
       if (!button) return;
@@ -317,6 +347,8 @@
 
   function atlasItemHtml(item) {
     const L = ATLAS.levelOf(item, atlasState.levels);
+    const itemId = String(item.id);
+    const favorite = atlasState.favorites.includes(itemId);
     const plan = ATLAS.upgradePlan(item, L, atlasState.targetLevel, ATLAS_DATA.meta.upgradeStages);
     const equipmentHtml = plan.equipmentStages.length
       ? `<div class="atlas-equipment-stage-list">${plan.equipmentStages.map((st) => `<div class="atlas-equipment-stage">
@@ -336,10 +368,11 @@
           <div class="muted-tip">14级后不再获得成长值</div>
           <div class="atlas-upgrade-equipment"><div class="atlas-equipment-title">所需装备</div>${equipmentHtml}</div>
         </div>`;
-    return `<div class="atlas-item">
+    return `<div class="atlas-item${favorite ? " atlas-item-favorite" : ""}">
       <div class="atlas-head">
         <span class="q-badge q-orange">${item.atlas}图鉴</span>
         <span class="forge-name">${escapeHtml(item.name)}</span>
+        <button type="button" class="atlas-favorite-toggle${favorite ? " is-favorite" : ""}" data-atlas-favorite="${escapeHtml(itemId)}" aria-pressed="${favorite}" title="${favorite ? "取消收藏" : "收藏图鉴"}" aria-label="${favorite ? "取消收藏" : "收藏图鉴"}">★</button>
         <label class="atlas-level-label">图鉴等级
           <input type="number" class="atlas-level" data-id="${item.id}" value="${L}" min="0" max="${atlasMaxLevel()}">
         </label>
@@ -415,6 +448,7 @@
       query: atlasState.query,
       field: atlasState.searchField,
       targetLevel: atlasState.targetLevel,
+      favorites: atlasState.favorites,
       levels: atlasState.levels
     });
     el.atlasUpgradeSummary.innerHTML = atlasUpgradeSummaryHtml(

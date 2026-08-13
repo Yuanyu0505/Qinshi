@@ -44,6 +44,24 @@
     });
   }
 
+  function isFavorite(item, favorites) {
+    var id = normalize(item && item.id);
+    if (!id) return false;
+    if (Array.isArray(favorites)) {
+      return favorites.some(function (favoriteId) { return normalize(favoriteId) === id; });
+    }
+    return Boolean(favorites && favorites[id]);
+  }
+
+  function favoriteFirst(items, favorites) {
+    var favoriteItems = [];
+    var regularItems = [];
+    (Array.isArray(items) ? items : []).forEach(function (item) {
+      (isFavorite(item, favorites) ? favoriteItems : regularItems).push(item);
+    });
+    return favoriteItems.concat(regularItems);
+  }
+
   /** 需要装备的阶段：当前等级以下、目标等级以内的阶段才需要 */
   function neededStages(item, level, targetLevel) {
     var target = targetLevel == null ? Infinity : Number(targetLevel);
@@ -158,17 +176,24 @@
     var maxLevel = opts.maxLevel == null ? Infinity : Number(opts.maxLevel);
     var result = (Array.isArray(items) ? items : []).filter(function (item) {
       var level = levelOf(item, opts.levels);
-      var categoryMatch = category === "全部" || category === "" || item.atlas === category;
+      var categoryMatch = category === "已收藏"
+        ? isFavorite(item, opts.favorites)
+        : category === "全部" || category === "" || item.atlas === category;
       return categoryMatch && level >= minLevel && level <= maxLevel;
     });
     if (minLevel > maxLevel) return [];
-    return searchAtlas(result, opts.query, opts.levels, opts.field, opts.targetLevel);
+    return favoriteFirst(
+      searchAtlas(result, opts.query, opts.levels, opts.field, opts.targetLevel),
+      opts.favorites
+    );
   }
 
   return {
     normalize: normalize,
     parseLevelQuery: parseLevelQuery,
     levelOf: levelOf,
+    isFavorite: isFavorite,
+    favoriteFirst: favoriteFirst,
     sortEquipment: sortEquipment,
     neededStages: neededStages,
     upgradePlan: upgradePlan,

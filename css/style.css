@@ -568,7 +568,37 @@ tr.hit-row td { background: rgba(212, 175, 55, .06); }
   padding: 12px 14px;
   margin-bottom: 12px;
 }
+.atlas-item-favorite {
+  border-color: rgba(53, 208, 111, .72);
+  box-shadow: inset 3px 0 0 #35d06f;
+}
+.atlas-item-favorite .atlas-head .q-badge {
+  color: #35d06f;
+  background: rgba(53, 208, 111, .12);
+  border-color: rgba(53, 208, 111, .6);
+}
+.atlas-item-favorite .atlas-head .forge-name { color: #35d06f; }
 .atlas-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; }
+.atlas-favorite-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 32px;
+  padding: 0;
+  color: var(--gold);
+  background: transparent;
+  border: 2px solid var(--gold);
+  border-radius: 7px;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+}
+.atlas-favorite-toggle.is-favorite {
+  color: #fff;
+  background: var(--red);
+  border-color: var(--red);
+}
 .atlas-level-label { color: var(--muted); font-size: 13px; margin-left: auto; display: flex; align-items: center; gap: 6px; }
 .atlas-level {
   width: 74px;

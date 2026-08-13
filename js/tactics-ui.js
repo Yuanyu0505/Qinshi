@@ -502,6 +502,7 @@
     if (button.dataset.action === "restore-progress") {
       resetCalculatorFromProgress();
       renderCalculator();
+      renderReference();
     } else if (button.dataset.action === "maximize-target") {
       maximizeTargetMantras(tactic);
     }
@@ -519,6 +520,7 @@
         state.calculator[side].rank = clamp(integer(control.value, state.calculator[side].rank), 0, 15);
         clampCalculatorMantras(tactic, side);
         renderCalculator();
+        if (side === "target") renderReference();
       } else {
         state.calculator[side].mantras[control.dataset.mantraId] = integer(control.value, -1);
         renderCalculatorResult();
@@ -542,10 +544,149 @@
   }
 
   function handleReferenceClick(event) {
-    var button = event.target.closest("button[data-action=\"toggle-reference\"]");
+    var button = event.target.closest("button[data-action=\"set-reference-mode\"]");
     if (!button || !el.reference.contains(button)) return;
-    state.referenceMode = state.referenceMode === "collapsed" ? "expanded" : "collapsed";
+    var mode = button.dataset.referenceMode;
+    if (["collapsed", "current", "target", "all"].indexOf(mode) === -1) return;
+    state.referenceMode = mode;
+    renderReference();
+  }
+
+  function referenceRows(tactic) {
+    if (state.referenceMode === "current") {
+      return tactic.ranks.filter(function (row) { return row.rank === state.progress[tactic.id].rank; });
+    }
+    if (state.referenceMode === "target") {
+      return tactic.ranks.filter(function (row) { return row.rank === state.calculator.target.rank; });
+    }
+    return state.referenceMode === "all" ? tactic.ranks : [];
+  }
+
+  function rankRowClass(rank, currentRank, targetRank) {
+    if (rank === currentRank && rank === targetRank) return "is-current-target";
+    if (rank === currentRank) return "is-current";
+    if (rank === targetRank) return "is-target";
+    return "";
+  }
+
+  function referenceAttributesHtml(attributes) {
+    if (!Array.isArray(attributes) || !attributes.length) return '<span class="tactics-empty-value">—</span>';
+    return attributes.map(function (attribute) {
+      return "<div>" + escapeHtml(formatAttribute(attribute)) + "</div>";
+    }).join("");
+  }
+
+  function referenceAdvanceHtml(tactic, row) {
+    if (row.rank === 0) return "初始阶，无兵法进阶材料";
+    var advance = row.advance || {};
+    return "<div>" + escapeHtml(tactic.markName) + "：" + formatNumber(advance.mark) + "</div>" +
+      "<div>功勋：" + formatNumber(advance.merit) + "</div>" +
+      "<div>进阶号角：" + formatNumber(advance.horn) + "</div>";
+  }
+
+  function mantraStagesAtRank(tactic, rank) {
+    var result = [];
+    tactic.mantras.forEach(function (mantra) {
+      mantra.stages.forEach(function (stage) {
+        if (stage.tacticRank === rank) result.push({ mantra: mantra, stage: stage });
+      });
+    });
+    return result;
+  }
+
+  function referenceMantraAttributesHtml(tactic, rank) {
+    var stages = mantraStagesAtRank(tactic, rank);
+    if (!stages.length) return '<span class="tactics-empty-value">—</span>';
+    return stages.map(function (item) {
+      var attribute = formatAttribute({
+        name: item.mantra.attribute,
+        value: item.stage.value,
+        unit: item.mantra.unit
+      });
+      return "<div>" + escapeHtml(item.mantra.name + "真言：" + attribute) + "</div>";
+    }).join("");
+  }
+
+  function referenceMantraFragmentsHtml(tactic, rank) {
+    var stages = mantraStagesAtRank(tactic, rank);
+    if (!stages.length) return '<span class="tactics-empty-value">—</span>';
+    return stages.map(function (item) {
+      var previousRank = item.stage.rank - 1;
+      var path = rankText(previousRank) + "→" + rankText(item.stage.rank);
+      return "<div>" + escapeHtml(item.mantra.materialName + "：" + path + " · " + formatNumber(item.stage.fragments) + "片") + "</div>";
+    }).join("");
+  }
+
+  function referenceRankHtml(rank, currentRank, targetRank) {
+    var badge = "";
+    if (rank === currentRank && rank === targetRank) {
+      badge = '<span class="tactics-rank-badge is-current-target"><span>当前</span>/<span>目标</span></span>';
+    } else if (rank === currentRank) {
+      badge = '<span class="tactics-rank-badge is-current">当前</span>';
+    } else if (rank === targetRank) {
+      badge = '<span class="tactics-rank-badge is-target">目标</span>';
+    }
+    return '<span class="tactics-rank-value">' + rank + "阶</span>" + badge;
+  }
+
+  function standardReferenceRowHtml(tactic, row, currentRank, targetRank) {
+    var proficiency = row.proficiency && row.proficiency.min != null && row.proficiency.max != null
+      ? formatNumber(row.proficiency.min) + "–" + formatNumber(row.proficiency.max)
+      : '<span class="tactics-empty-value">—</span>';
+    var rehearsal = row.rehearsal || {};
+    var rowClass = rankRowClass(row.rank, currentRank, targetRank);
+    return '<tr class="' + rowClass + '"><th scope="row">' + referenceRankHtml(row.rank, currentRank, targetRank) + "</th>" +
+      "<td>" + referenceAttributesHtml(row.baseAttributes) + "</td>" +
+      "<td>" + proficiency + "</td>" +
+      "<td>" + referenceAdvanceHtml(tactic, row) + "</td>" +
+      "<td>" + (rehearsal.singleHorn == null ? '<span class="tactics-empty-value">—</span>' : formatNumber(rehearsal.singleHorn)) + "</td>" +
+      "<td>" + (rehearsal.guaranteeHorn == null ? '<span class="tactics-empty-value">—</span>' : formatNumber(rehearsal.guaranteeHorn)) + "</td>" +
+      "<td>" + referenceMantraAttributesHtml(tactic, row.rank) + "</td>" +
+      "<td>" + referenceMantraFragmentsHtml(tactic, row.rank) + "</td></tr>";
+  }
+
+  function specialReferenceRowHtml(tactic, row, currentRank, targetRank) {
+    var rowClass = rankRowClass(row.rank, currentRank, targetRank);
+    return '<tr class="' + rowClass + '"><th scope="row">' + referenceRankHtml(row.rank, currentRank, targetRank) + "</th>" +
+      "<td>" + referenceAttributesHtml(row.baseAttributes) + "</td>" +
+      "<td>" + referenceAttributesHtml(row.extraAttributes) + "</td>" +
+      "<td>" + referenceAdvanceHtml(tactic, row) + "</td>" +
+      "<td>" + referenceMantraAttributesHtml(tactic, row.rank) + "</td>" +
+      "<td>" + referenceMantraFragmentsHtml(tactic, row.rank) + "</td></tr>";
+  }
+
+  function referenceButtonHtml(mode, label) {
+    var active = state.referenceMode === mode;
+    return '<button type="button" class="seg' + (active ? " active" : "") + '" data-action="set-reference-mode" data-reference-mode="' + mode + '" aria-pressed="' + active + '">' + label + "</button>";
+  }
+
+  function renderReference() {
+    var tactic = selectedTactic();
+    if (!tactic || !el.reference || !state.calculator) return;
     el.reference.dataset.referenceMode = state.referenceMode;
+    var html = '<div class="tactics-reference-head"><div><div class="panel-title">资料查询</div><h2>' + escapeHtml(tactic.name) + " 0–15阶资料</h2></div>" +
+      '<div class="tactics-reference-actions">' + referenceButtonHtml("current", "仅看当前阶") +
+      referenceButtonHtml("target", "仅看目标阶") + referenceButtonHtml("all", "查看全部") +
+      referenceButtonHtml("collapsed", "收起资料") + "</div></div>";
+    if (state.referenceMode === "collapsed") {
+      el.reference.innerHTML = html;
+      return;
+    }
+
+    var currentRank = state.progress[tactic.id].rank;
+    var targetRank = state.calculator.target.rank;
+    var rows = referenceRows(tactic);
+    var headings = isStandard(tactic)
+      ? ["阶", "基础属性", "熟练度", "进阶材料", "单次演练号角", "完美保底阈值", "真言属性", "真言碎片"]
+      : ["阶", "组合基础属性", "额外属性", "进阶材料", "真言属性", "真言碎片"];
+    html += '<div class="tactics-table-scroll"><table class="tactics-reference-table"><thead><tr>' + headings.map(function (heading) {
+      return '<th scope="col">' + heading + "</th>";
+    }).join("") + "</tr></thead><tbody>" + rows.map(function (row) {
+      return isStandard(tactic)
+        ? standardReferenceRowHtml(tactic, row, currentRank, targetRank)
+        : specialReferenceRowHtml(tactic, row, currentRank, targetRank);
+    }).join("") + "</tbody></table></div>";
+    el.reference.innerHTML = html;
   }
 
   function renderSelector() {
@@ -563,11 +704,13 @@
       if (el.workspace) el.workspace.hidden = true;
       if (el.progress) el.progress.innerHTML = "";
       if (el.calculator) el.calculator.innerHTML = "";
+      if (el.reference) el.reference.innerHTML = "";
       return;
     }
     if (el.workspace) el.workspace.hidden = false;
     renderProgress();
     renderCalculator();
+    renderReference();
   }
 
   function validDependencies() {

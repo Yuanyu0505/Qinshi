@@ -30,6 +30,7 @@
       <button type="button" class="tab mobile-primary" data-partition="equipment">装备属性</button>
       <button type="button" class="tab mobile-primary" data-partition="forging">橙装锻造</button>
       <button type="button" class="tab mobile-secondary" data-partition="inscription">铭文</button>
+      <button type="button" class="tab mobile-secondary" data-partition="tactics">兵法</button>
       <button type="button" class="tab mobile-secondary" data-partition="quiz">答题</button>
       <button type="button" class="tab mobile-secondary" data-partition="loulan">楼兰棋阵</button>
       <button type="button" class="tab mobile-secondary" data-partition="settings">设置</button>
@@ -166,6 +167,20 @@
       </section>
 
       <section id="inscription-reference" hidden></section>
+    </section>
+
+    <section id="partition-tactics" hidden>
+      <section class="panel tactics-selector-panel">
+        <div class="filter-row">
+          <span class="filter-label">兵法策略</span>
+          <div id="tactics-selector" class="segs tactics-selector"></div>
+        </div>
+      </section>
+      <div id="tactics-workspace" hidden>
+        <section id="tactics-progress" class="tactics-section"></section>
+        <section id="tactics-calculator" class="tactics-section"></section>
+        <section id="tactics-reference" class="tactics-section"></section>
+      </div>
     </section>
 
     <section id="partition-forging" hidden>
@@ -328,6 +343,7 @@
     </div>
     <div class="mobile-more-grid">
       <button type="button" data-partition="inscription">铭文</button>
+      <button type="button" data-partition="tactics">兵法</button>
       <button type="button" data-partition="quiz">答题</button>
       <button type="button" data-partition="loulan">楼兰棋阵</button>
       <button type="button" data-partition="settings">设置</button>
@@ -335,6 +351,7 @@
   </div>
 </div>
 
+<script src="data/tactics.js"></script>
 <script src="data/special-equipment.js"></script>
 <script src="data/forging.js"></script>
 <script src="data/drops.js"></script>
@@ -350,6 +367,8 @@
 <script src="js/inscription.js"></script>
 <script src="js/settings.js"></script>
 <script src="js/pwa.js"></script>
+<script src="js/tactics.js"></script>
+<script src="js/tactics-ui.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>

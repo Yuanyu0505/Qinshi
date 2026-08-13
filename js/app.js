@@ -27,6 +27,7 @@
     equipment: "装备属性",
     forging: "橙装锻造",
     inscription: "铭文",
+    tactics: "兵法",
     quiz: "答题",
     loulan: "楼兰棋阵",
     settings: "设置"
@@ -125,7 +126,7 @@
     const mobileMoreToggle = document.getElementById("mobile-more-toggle");
     const mobileMoreLayer = document.getElementById("mobile-more-layer");
     const mobileMoreClose = document.getElementById("mobile-more-close");
-    const secondaryPartitions = ["inscription", "quiz", "loulan", "settings"];
+    const secondaryPartitions = ["inscription", "tactics", "quiz", "loulan", "settings"];
     const parts = {
       equipment: document.getElementById("partition-equipment"),
       loulan: document.getElementById("partition-loulan"),
@@ -134,6 +135,7 @@
       atlas: document.getElementById("partition-atlas"),
       quiz: document.getElementById("partition-quiz"),
       inscription: document.getElementById("partition-inscription"),
+      tactics: document.getElementById("partition-tactics"),
       settings: document.getElementById("partition-settings")
     };
 

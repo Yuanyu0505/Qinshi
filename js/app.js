@@ -414,6 +414,7 @@
       maxLevel: atlasState.levelMax,
       query: atlasState.query,
       field: atlasState.searchField,
+      targetLevel: atlasState.targetLevel,
       levels: atlasState.levels
     });
     el.atlasUpgradeSummary.innerHTML = atlasUpgradeSummaryHtml(

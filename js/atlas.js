@@ -121,8 +121,8 @@
     return /^\d+$/.test(text) && level === Number(text);
   }
 
-  function equipmentContains(item, query) {
-    return (item.stages || []).some(function (stage) {
+  function equipmentContains(item, query, currentLevel, targetLevel) {
+    return neededStages(item, currentLevel, targetLevel).some(function (stage) {
       return (stage.items || []).some(function (token) {
         return normalize(token && token.n).indexOf(query) !== -1;
       });
@@ -130,15 +130,16 @@
   }
 
   /** 关键词搜索：可限定名称/获取途径/所属图鉴/装备/等级 */
-  function searchAtlas(items, query, levels, field) {
+  function searchAtlas(items, query, levels, field, targetLevel) {
     var q = normalize(query);
     if (!q) return items.slice();
     var scope = normalize(field) || "all";
+    var target = targetLevel == null ? Infinity : Number(targetLevel);
     return items.filter(function (item) {
       var L = levelOf(item, levels);
       var discipleMatch = normalize(item.name).indexOf(q) !== -1;
       var atlasMatch = normalize(item.group).indexOf(q) !== -1 || normalize(item.atlas + "图鉴").indexOf(q) !== -1;
-      var equipmentMatch = equipmentContains(item, q);
+      var equipmentMatch = equipmentContains(item, q, L, target);
       var acquireMatch = normalize(item.acquire).indexOf(q) !== -1;
       var levelMatch = matchesLevelQuery(L, q);
       if (scope === "disciple") return discipleMatch;
@@ -161,7 +162,7 @@
       return categoryMatch && level >= minLevel && level <= maxLevel;
     });
     if (minLevel > maxLevel) return [];
-    return searchAtlas(result, opts.query, opts.levels, opts.field);
+    return searchAtlas(result, opts.query, opts.levels, opts.field, opts.targetLevel);
   }
 
   return {

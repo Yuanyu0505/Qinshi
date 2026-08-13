@@ -135,6 +135,40 @@ test("searchAtlas：限定字段后只匹配对应信息", () => {
   assert.deepStrictEqual(A.searchAtlas(fixture, "非攻墨门", {}, "disciple"), []);
 });
 
+test("searchAtlas：装备只匹配当前等级到目标等级之间的剩余阶段", () => {
+  assert.deepStrictEqual(
+    A.searchAtlas(fixture, "墨眉", { "t-0003": 8 }, "equipment", 8),
+    [],
+    "达到目标等级后不应再匹配历史装备"
+  );
+  assert.deepStrictEqual(
+    A.searchAtlas(fixture, "墨眉", { "t-0003": 8 }, "equipment", 10),
+    [],
+    "当前等级以下的已完成阶段不应匹配"
+  );
+  assert.deepStrictEqual(
+    A.searchAtlas(fixture, "墨眉", { "t-0003": 5 }, "equipment", 8).map(i => i.id),
+    ["t-0003"],
+    "当前等级到目标等级之间的装备应匹配"
+  );
+  assert.deepStrictEqual(
+    A.searchAtlas(fixture, "墨眉", { "t-0003": 5 }, "equipment", 7),
+    [],
+    "目标等级之后的未来阶段不应匹配"
+  );
+});
+
+test("searchAtlas：全部字段保留非装备匹配，但装备使用剩余需求语义", () => {
+  assert.deepStrictEqual(
+    A.searchAtlas(fixture, "医仙端木蓉", { "t-0003": 8 }, "all", 8).map(i => i.id),
+    ["t-0003"]
+  );
+  assert.deepStrictEqual(
+    A.searchAtlas(fixture, "墨眉", { "t-0003": 8 }, "all", 8),
+    []
+  );
+});
+
 test("filterAtlas：分区、等级闭区间和限定搜索共同生效", () => {
   const levels = { "t-0001": 19, "t-0002": 10, "t-0003": 5 };
   assert.deepStrictEqual(A.filterAtlas(fixture, {

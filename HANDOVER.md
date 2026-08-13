@@ -141,7 +141,7 @@ $python = 'C:\Users\pghyl\.cache\codex-runtimes\codex-primary-runtime\dependenci
 
 ```powershell
 $python = 'C:\Users\pghyl\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe'
-node --test js/query.test.js js/forging.test.js js/drops.test.js js/progress.test.js js/atlas.test.js serve.test.js
+node --test js/query.test.js js/forging.test.js js/drops.test.js js/progress.test.js js/atlas.test.js js/tactics.test.js serve.test.js
 & $python -m unittest discover -s tests
 ```
 

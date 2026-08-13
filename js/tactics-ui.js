@@ -133,10 +133,11 @@
     });
   }
 
-  function saveProgress() {
+  function saveProgress(progressById) {
+    var source = progressById || state.progress;
     var stored = {};
     orderedTactics().forEach(function (tactic) {
-      stored[tactic.id] = CORE.normalizeProgress(tactic, state.progress[tactic.id]);
+      stored[tactic.id] = CORE.normalizeProgress(tactic, source[tactic.id]);
     });
 
     try {
@@ -291,6 +292,9 @@
     var candidate = nextRank === previous.rank
       ? cloneProgress(tactic, previous)
       : CORE.changeRank(tactic, previous, nextRank);
+    var automaticReductions = nextRank < previous.rank
+      ? reductionsForSave(tactic, previous, candidate)
+      : [];
 
     candidate.rank = nextRank;
     tactic.mantras.forEach(function (mantra) {
@@ -299,12 +303,22 @@
     if (nextRank === previous.rank) candidate.rehearsalSpent = state.draft.rehearsalSpent;
     var next = CORE.normalizeProgress(tactic, candidate);
     var reductions = reductionsForSave(tactic, previous, next);
-    if (reductions.length && !window.confirm("降低兵法阶数将调整：" + reductions.join("、") + "。是否保存？")) return;
+    var confirmation = automaticReductions.length
+      ? "降低兵法阶数将调整：" + reductions.join("、") + "。是否保存？"
+      : "真言阶数将调整：" + reductions.join("、") + "。是否保存？";
+    if (reductions.length && !window.confirm(confirmation)) return;
 
+    var progressCandidate = {};
+    orderedTactics().forEach(function (item) {
+      progressCandidate[item.id] = item.id === tactic.id ? next : state.progress[item.id];
+    });
+    if (!saveProgress(progressCandidate)) {
+      renderProgress();
+      return;
+    }
     state.progress[tactic.id] = next;
     state.editing = false;
     state.draft = null;
-    saveProgress();
     resetCalculatorFromProgress();
     renderAll();
   }

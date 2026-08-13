@@ -56,18 +56,24 @@
 - **楼兰棋阵**：楼兰（5 张）与棋阵（11 张）两个玩法的本地攻略图片，点击顶部标签切换
 - **答题**：按题目关键词搜索答题图片中的题目，只展示每题标红的正确答案，不展示错误选项
 - **铭文**：个人进度、品质/天位/盾位查询筛选、天位主属性与盾位副属性资料图表
+- **兵法**：按风、林、火、山、阴、雷筛选；保存兵法及真言个人进度；自由设置计算起点和目标，汇总进阶材料、真言碎片和目标阶演练号角；查看0–15阶完整资料。
+
+桌面导航顺序为图鉴、关卡掉落、装备属性、橙装锻造、铭文、兵法、答题、楼兰棋阵、设置。手机端的前四项为主导航；兵法位于“更多”面板中，顺序在铭文之后、答题之前。
 
 ## 重新生成数据（Excel 更新后）
 
 需要 Python 3 + openpyxl：
 
-```bash
-python tools/build_special_equipment.py
+```powershell
+$python = 'python'
+& $python tools/build_special_equipment.py
+& $python tools/build_tactics.py
 ```
 
 ## 测试
 
-```bash
-node --test js/query.test.js serve.test.js
+```powershell
+node --test js/query.test.js js/tactics.test.js serve.test.js
 python -m unittest discover -s tests -v
+python -m unittest tests.test_build_tactics -v
 ```

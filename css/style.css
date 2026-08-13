@@ -595,7 +595,7 @@ tr.hit-row td { background: rgba(212, 175, 55, .06); }
   cursor: pointer;
 }
 .atlas-favorite-toggle.is-favorite {
-  color: #fff;
+  color: var(--gold);
   background: var(--red);
   border-color: var(--red);
 }

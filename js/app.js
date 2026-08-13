@@ -372,7 +372,7 @@
       <div class="atlas-head">
         <span class="q-badge q-orange">${item.atlas}图鉴</span>
         <span class="forge-name">${escapeHtml(item.name)}</span>
-        <button type="button" class="atlas-favorite-toggle${favorite ? " is-favorite" : ""}" data-atlas-favorite="${escapeHtml(itemId)}" aria-pressed="${favorite}" title="${favorite ? "取消收藏" : "收藏图鉴"}" aria-label="${favorite ? "取消收藏" : "收藏图鉴"}">★</button>
+        <button type="button" class="atlas-favorite-toggle${favorite ? " is-favorite" : ""}" data-atlas-favorite="${escapeHtml(itemId)}" aria-pressed="${favorite}" title="${favorite ? "取消收藏" : "收藏图鉴"}" aria-label="${favorite ? "取消收藏" : "收藏图鉴"}">${favorite ? "★" : "☆"}</button>
         <label class="atlas-level-label">图鉴等级
           <input type="number" class="atlas-level" data-id="${item.id}" value="${L}" min="0" max="${atlasMaxLevel()}">
         </label>

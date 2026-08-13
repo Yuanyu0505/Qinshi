@@ -1,7 +1,8 @@
 import os
 import unittest
+from pathlib import Path
 
-from tools.build_tactics import parse_sheet
+from tools.build_tactics import BOOK_NAME, default_xlsx, parse_sheet
 
 
 WORKTREE_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -10,6 +11,13 @@ XLSX = os.path.join(MAIN_ROOT, "秦时相关（更新贯侯钟离昧）20260618.
 
 
 class TestBuildTactics(unittest.TestCase):
+    def test_default_source_uses_main_repository_outside_worktree(self):
+        worktree_root = Path(r"C:\repo\.worktrees\tactics-section")
+        self.assertEqual(
+            default_xlsx(worktree_root),
+            Path(r"C:\repo") / BOOK_NAME,
+        )
+
     @classmethod
     def setUpClass(cls):
         cls.payload = parse_sheet(XLSX)

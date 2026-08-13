@@ -10,7 +10,15 @@ from openpyxl import load_workbook
 
 ROOT = Path(__file__).resolve().parents[1]
 BOOK_NAME = "秦时相关（更新贯侯钟离昧）20260618.xlsx"
-DEFAULT_XLSX = ROOT / BOOK_NAME
+
+
+def default_xlsx(root=ROOT):
+    """返回仓库主目录的默认 Excel；隔离工作树不使用自己的副本。"""
+    main_root = root.parent.parent if root.parent.name == ".worktrees" else root
+    return main_root / BOOK_NAME
+
+
+DEFAULT_XLSX = default_xlsx()
 OUT_JS = ROOT / "data" / "tactics.js"
 
 ORDER = ["风", "林", "火", "山", "阴", "雷"]

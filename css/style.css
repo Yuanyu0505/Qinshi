@@ -588,7 +588,7 @@ tr.hit-row td { background: rgba(212, 175, 55, .06); }
   padding: 0;
   color: var(--gold);
   background: transparent;
-  border: 2px solid var(--gold);
+  border: 2px solid transparent;
   border-radius: 7px;
   font-size: 20px;
   line-height: 1;
@@ -796,9 +796,9 @@ td.name { font-weight: 600; white-space: nowrap; }
 .equipment-name-purple { background: #7030a0; border-color: #7030a0; }
 .equipment-name-orange { background: #f79646; border-color: #f79646; }
 .cat { color: var(--gold-dim); font-size: 13px; white-space: nowrap; }
-.main { color: var(--red); font-weight: 600; }
+#partition-equipment .main { color: #fff; font-weight: 600; }
 .tier-attr { white-space: nowrap; }
-.tier-attr.hit { color: var(--gold); font-weight: 700; }
+#partition-equipment .tier-attr.hit { color: #ff4b4b; font-weight: 700; }
 .tier-status { color: var(--status); font-style: italic; }
 .tier-none { color: var(--status); }
 .plus { color: var(--status); margin: 0 2px; }
@@ -844,6 +844,7 @@ td.name { font-weight: 600; white-space: nowrap; }
 .book-stage-values .tier-attr,
 .book-stage-values .tier-status { display: block; text-align: left; }
 td.badge, th.badge { text-align: center; white-space: nowrap; color: var(--gold); font-weight: 600; }
+#partition-equipment td.badge { color: #ff4b4b; }
 .cards { display: none; }
 .card {
   background: var(--bg2);
@@ -855,8 +856,9 @@ td.badge, th.badge { text-align: center; white-space: nowrap; color: var(--gold)
 .card-head { display: flex; align-items: center; justify-content: center; gap: 8px; flex-wrap: wrap; }
 .card-head .name { font-weight: 700; font-size: 16px; }
 .card .badge { color: var(--gold); font-weight: 700; }
+#partition-equipment .card .badge { color: #ff4b4b; }
 .card-main { margin: 6px 0; color: var(--muted); font-size: 13px; text-align: center; }
-.card-main b { color: var(--red); }
+#partition-equipment .card-main b { color: #fff; }
 .card-tier {
   display: flex;
   justify-content: center;
@@ -888,14 +890,6 @@ td.badge, th.badge { text-align: center; white-space: nowrap; color: var(--gold)
 .tier-label { color: var(--muted); min-width: 38px; }
 .empty { text-align: center; padding: 48px 0; color: var(--muted); }
 .empty p { font-size: 16px; }
-.foot {
-  margin-top: 22px;
-  padding-top: 12px;
-  border-top: 1px solid var(--line);
-  color: var(--muted);
-  font-size: 12px;
-  text-align: center;
-}
 .mode-block { margin-bottom: 30px; }
 .mode-title {
   margin: 0 0 14px;

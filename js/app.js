@@ -91,6 +91,7 @@
   };
   const PROG_CAT_ORDER = ["武器", "盔甲", "首饰", "典籍"];
   const atlasState = {
+    activated: false,
     tab: "全部",
     query: "",
     searchField: "all",
@@ -285,19 +286,23 @@
     el.atlasTabs.addEventListener("click", (e) => {
       const btn = e.target.closest("button[data-atlas]");
       if (!btn) return;
+      atlasState.activated = true;
       atlasState.tab = btn.dataset.atlas;
       applyAtlas();
     });
     el.atlasSearch.addEventListener("input", () => {
       atlasState.query = el.atlasSearch.value;
+      if (atlasState.query.trim()) atlasState.activated = true;
       applyAtlas();
     });
     el.atlasSearchField.addEventListener("change", () => {
+      atlasState.activated = true;
       atlasState.searchField = el.atlasSearchField.value;
       applyAtlas();
     });
     [el.atlasLevelMin, el.atlasLevelMax].forEach((input) => {
       input.addEventListener("input", () => {
+        atlasState.activated = true;
         atlasState.levelMin = normalizeAtlasFilterLevel(el.atlasLevelMin.value, 0);
         atlasState.levelMax = normalizeAtlasFilterLevel(el.atlasLevelMax.value, atlasMaxLevel());
         applyAtlas();
@@ -308,6 +313,7 @@
       });
     });
     el.atlasTargetLevel.addEventListener("change", () => {
+      atlasState.activated = true;
       atlasState.targetLevel = normalizeAtlasTargetLevel(el.atlasTargetLevel.value);
       el.atlasTargetLevel.value = String(atlasState.targetLevel);
       saveAtlasTargetLevel();
@@ -447,6 +453,15 @@
     el.atlasTabs.querySelectorAll("button").forEach((b) => {
       b.classList.toggle("active", b.dataset.atlas === atlasState.tab);
     });
+    if (!atlasState.activated) {
+      el.atlasUpgradeSummary.innerHTML = "";
+      el.atlasResults.innerHTML = "";
+      el.atlasUpgradeSummary.hidden = true;
+      el.atlasResults.hidden = true;
+      return;
+    }
+    el.atlasUpgradeSummary.hidden = false;
+    el.atlasResults.hidden = false;
     const items = ATLAS.filterAtlas(ATLAS_DATA.items, {
       category: atlasState.tab,
       minLevel: atlasState.levelMin,

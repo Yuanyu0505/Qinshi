@@ -45,7 +45,6 @@
       <input id="search" type="search" placeholder="输入装备名或分类，如：墨眉 / 武器 / 韩非子 / 神兵典籍" autocomplete="off">
 
       <section class="panel">
-        <div class="panel-title">按属性筛选</div>
         <div class="filter-row">
           <span class="filter-label">装备分类</span>
           <div id="category-filter" class="segs"></div>
@@ -124,7 +123,6 @@
 
     <section id="partition-quiz" hidden>
       <section class="panel">
-        <div class="panel-title">题目搜索</div>
         <div class="filter-row">
           <span class="filter-label">关键词</span>
           <input id="quiz-search" type="search" placeholder="输入题目关键词，如：石兰 / 机关 / 墨家" autocomplete="off">
@@ -143,7 +141,6 @@
 
       <section id="inscription-progress">
         <section class="panel">
-          <div class="panel-title">新增弟子铭文</div>
           <div class="filter-row ins-progress-toolbar">
             <span class="filter-label">弟子关键词</span>
             <input id="ins-progress-search" type="search" placeholder="如：将威">
@@ -173,7 +170,6 @@
 
     <section id="partition-forging" hidden>
       <section class="panel">
-        <div class="panel-title">视图</div>
         <div class="filter-row">
           <span class="filter-label">模式</span>
           <div id="forge-view" class="segs">
@@ -238,7 +234,6 @@
 
     <section id="partition-drops" hidden>
       <section class="panel">
-        <div class="panel-title">掉落查询</div>
         <div class="filter-row">
           <span class="filter-label">道具名</span>
           <input id="drop-search" type="search" placeholder="输入道具关键字，如：银针 / 苍云甲 / 赤霄" autocomplete="off">
@@ -250,7 +245,6 @@
 
     <section id="partition-atlas">
       <section class="panel">
-        <div class="panel-title">图鉴分区</div>
         <div class="filter-row">
           <span class="filter-label">分区</span>
           <div id="atlas-tabs" class="segs">
@@ -288,8 +282,8 @@
         </div>
         <div class="muted-tip">图鉴等级为个人进度（可直接修改）；达到目标等级即视为完成，14级后不再获得成长值。</div>
       </section>
-      <div id="atlas-upgrade-summary"></div>
-      <div id="atlas-results"></div>
+      <div id="atlas-upgrade-summary" hidden></div>
+      <div id="atlas-results" hidden></div>
     </section>
 
     <section id="partition-settings" hidden>
@@ -322,9 +316,6 @@
     </section>
       </main>
 
-      <footer class="foot">
-        数据来源：秦时相关（更新贯侯钟离昧）20260618.xlsx · 本地离线运行
-      </footer>
     </div>
   </div>
 </div>

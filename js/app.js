@@ -1147,7 +1147,7 @@
   function closeBookDetailPopover() {
     if (!el.bookDetailPopover) return;
     if (activeBookDetail && activeBookDetail.trigger) {
-      activeBookDetail.trigger.textContent = "详情";
+      activeBookDetail.trigger.textContent = "进阶详情";
       activeBookDetail.trigger.setAttribute("aria-expanded", "false");
     }
     activeBookDetail = null;
@@ -1193,7 +1193,7 @@
   function bookTierDetailsHtml(item, tier) {
     const stages = item.stages && item.stages[tier];
     if (!Array.isArray(stages) || !stages.length) return "";
-    return `<button type="button" class="book-detail-toggle" data-book-id="${escapeHtml(item.id)}" data-tier="${escapeHtml(tier)}" aria-controls="book-detail-popover" aria-expanded="false">详情</button>`;
+    return `<button type="button" class="book-detail-toggle" data-book-id="${escapeHtml(item.id)}" data-tier="${escapeHtml(tier)}" aria-controls="book-detail-popover" aria-expanded="false">进阶详情</button>`;
   }
 
   function bookTierHtml(item, tier) {

@@ -111,6 +111,8 @@ test("典籍默认展示最高阶累计，并通过页面级气泡查看逐阶�
     assert.match(app.body, /阶累计/);
     assert.doesNotMatch(app.body, /<details class="book-tier-details"/);
     assert.match(app.body, /class="book-detail-toggle"/);
+    assert.match(app.body, /aria-expanded="false">进阶详情<\/button>/);
+    assert.match(app.body, /activeBookDetail\.trigger\.textContent = "进阶详情"/);
     assert.match(app.body, /data-book-id=/);
     assert.match(app.body, /data-tier=/);
     assert.match(app.body, /aria-expanded="false"/);
@@ -123,7 +125,10 @@ test("典籍默认展示最高阶累计，并通过页面级气泡查看逐阶�
     assert.match(app.body, /function equipmentTableHtml\(items, tiers, title\)[\s\S]*?bookTierHtml\(item, tier\)/);
     assert.match(app.body, /function bookCardTiersHtml\(item\)[\s\S]*?bookTierHtml\(item, tier\)/);
     assert.doesNotMatch(app.body, /bookStageHtml\(item, tier, sharedStageCount\)/);
-    assert.match(css.body, /#partition-equipment \.book-tier-summary/);
+    assert.match(css.body, /#partition-equipment \.book-tier-block\s*\{[\s\S]*?grid-template-columns:\s*max-content minmax\(0, max-content\)/);
+    assert.match(css.body, /#partition-equipment \.book-tier-summary\s*\{[\s\S]*?display:\s*contents/);
+    assert.match(css.body, /#partition-equipment \.book-detail-toggle\s*\{[\s\S]*?grid-column:\s*2[\s\S]*?grid-row:\s*2[\s\S]*?justify-self:\s*start/);
+    assert.match(css.body, /#partition-equipment \.book-card \.book-tier-block\s*\{[\s\S]*?grid-template-columns:\s*max-content minmax\(0, 1fr\)/);
     assert.match(css.body, /\.book-detail-popover[\s\S]*?position:\s*fixed/);
     assert.match(css.body, /\.book-detail-popover[\s\S]*?z-index:/);
     assert.match(css.body, /\.book-popover-stage-row/);

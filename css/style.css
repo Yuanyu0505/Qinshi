@@ -1160,6 +1160,205 @@ figcaption { color: var(--muted); font-size: 13px; margin-top: 8px; }
 #partition-tactics .tactics-rank-badge.is-current-target span:last-child { color: #ff4b4b; }
 #partition-tactics .tactics-empty-value { color: var(--muted); }
 
+/* 合阵 */
+#partition-formations { min-width: 0; }
+#partition-formations h2 { margin: 2px 0 0; color: var(--gold); font-size: 20px; }
+#partition-formations .formation-selector-row { align-items: flex-start; margin-bottom: 0; }
+#partition-formations .formation-selector { display: grid; gap: 10px; min-width: 0; flex: 1; }
+#partition-formations .formation-stone-group { display: flex; align-items: flex-start; gap: 12px; min-width: 0; }
+#partition-formations .formation-stone-group > strong { flex: 0 0 72px; padding-top: 5px; color: var(--gold-dim); font-size: 13px; }
+#partition-formations .formation-stone-group .segs { flex-wrap: wrap; }
+#partition-formations .formation-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+#partition-formations .formation-section-head .panel-title { margin: 0; }
+#partition-formations .formation-actions { display: flex; flex-wrap: wrap; gap: 7px; }
+#partition-formations .formation-actions-bottom { justify-content: flex-end; margin-top: 12px; padding-top: 12px; border-top: 1px dashed var(--line); }
+#partition-formations .formation-official-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+#partition-formations .formation-official-meta span {
+  padding: 6px 10px;
+  color: var(--muted);
+  background: var(--bg2);
+  border: 1px solid var(--line);
+  border-radius: 7px;
+}
+#partition-formations .formation-official-meta b { color: var(--text); }
+#partition-formations .formation-slot-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 8px;
+}
+#partition-formations .formation-slot-card {
+  min-width: 0;
+  padding: 10px 12px;
+  background: var(--bg2);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+#partition-formations .formation-slot-card > div { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+#partition-formations .formation-slot-card b { color: var(--gold); }
+#partition-formations .formation-slot-card span { color: var(--text); font-weight: 700; }
+#partition-formations .formation-slot-card > strong { display: block; margin-top: 5px; color: var(--muted); font-size: 13px; font-weight: 500; }
+#partition-formations .formation-reference,
+#partition-formations .formation-calculator-inputs { margin-top: 12px; }
+#partition-formations summary { color: var(--gold-dim); cursor: pointer; font-weight: 700; }
+#partition-formations .formation-reference-table {
+  margin-top: 9px;
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--bg2);
+}
+#partition-formations .formation-reference-table table { min-width: 680px; }
+#partition-formations .formation-reference-table th,
+#partition-formations .formation-reference-table td { padding: 8px 10px; }
+#partition-formations .formation-reference-cards { display: none; }
+#partition-formations .formation-progress-list { display: grid; gap: 8px; }
+#partition-formations .formation-progress-card {
+  min-width: 0;
+  padding: 11px 12px;
+  background: var(--bg2);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+#partition-formations .formation-progress-card.is-main { border-color: var(--gold-dim); box-shadow: inset 3px 0 0 var(--gold); }
+#partition-formations .formation-progress-card > div:first-child { display: flex; align-items: center; gap: 8px; }
+#partition-formations .formation-progress-card strong { font-size: 16px; }
+#partition-formations .formation-main-badge {
+  padding: 1px 7px;
+  color: #1c1507;
+  background: var(--gold);
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+}
+#partition-formations .formation-stat-line,
+#partition-formations .formation-progress-foot { display: flex; align-items: center; flex-wrap: wrap; gap: 7px 14px; margin-top: 7px; }
+#partition-formations .formation-stat-line span { white-space: nowrap; }
+#partition-formations .formation-reference-badge,
+#partition-formations .formation-actual-badge,
+#partition-formations .formation-complete,
+#partition-formations .formation-incomplete,
+#partition-formations .formation-invalid {
+  display: inline-block;
+  padding: 2px 7px;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+}
+#partition-formations .formation-reference-badge { color: var(--gold); }
+#partition-formations .formation-actual-badge,
+#partition-formations .formation-complete { color: #42d77d; }
+#partition-formations .formation-incomplete { color: #ffd447; }
+#partition-formations .formation-invalid { color: #ff6b66; }
+#partition-formations .formation-main-select {
+  display: flex;
+  align-items: end;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+  margin: 4px 0 12px;
+  padding: 10px 12px;
+  background: var(--bg2);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+#partition-formations .formation-main-select label { display: grid; gap: 5px; color: var(--muted); font-size: 12px; }
+#partition-formations .formation-main-select p { margin: 0 0 8px; }
+#partition-formations .formation-main-select select,
+#partition-formations .formation-member-fields input {
+  min-width: 0;
+  padding: 9px 10px;
+  color: var(--text);
+  background: var(--bg2);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  font: inherit;
+}
+#partition-formations .formation-main-select select:focus,
+#partition-formations .formation-member-fields input:focus { border-color: var(--gold-dim); outline: 2px solid rgba(212, 175, 55, .15); }
+#partition-formations .formation-member-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+#partition-formations .formation-member-editor {
+  min-width: 0;
+  padding: 10px 11px;
+  background: rgba(25, 22, 17, .56);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+#partition-formations .formation-member-editor.is-owned { background: var(--bg2); border-color: var(--gold-dim); }
+#partition-formations .formation-member-head { display: flex; align-items: center; justify-content: space-between; gap: 9px; }
+#partition-formations .formation-member-head em { color: var(--muted); font-size: 11px; font-style: normal; }
+#partition-formations .formation-owned-toggle { display: inline-flex; align-items: center; gap: 7px; color: var(--text); font-weight: 700; cursor: pointer; }
+#partition-formations .formation-owned-toggle input { accent-color: var(--red); }
+#partition-formations .formation-member-fields { display: grid; grid-template-columns: 72px repeat(3, minmax(90px, 1fr)); gap: 7px; margin-top: 9px; }
+#partition-formations .formation-member-fields label { display: grid; gap: 4px; color: var(--muted); font-size: 11px; }
+#partition-formations .formation-member-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 7px; margin-top: 9px; }
+#partition-formations .formation-member-actions .link-btn { margin: 0 0 0 auto; }
+#partition-formations .formation-calculator-inputs { padding: 10px 12px; background: rgba(25, 22, 17, .42); border: 1px solid var(--line); border-radius: 8px; }
+#partition-formations .formation-calculator-inputs > summary { margin-bottom: 10px; }
+#partition-formations .formation-excluded,
+#partition-formations .formation-warning { display: flex; flex-wrap: wrap; gap: 6px 12px; margin-top: 10px; color: #ffd447; font-size: 12px; }
+#partition-formations .formation-desktop-matrix { margin-top: 12px; max-width: 100%; overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; }
+#partition-formations .formation-matrix { min-width: 930px; background: var(--bg2); }
+#partition-formations .formation-matrix thead button { width: 100%; color: var(--gold-dim); background: none; border: 0; font: inherit; cursor: pointer; }
+#partition-formations .formation-matrix thead button small { display: block; margin-top: 3px; color: var(--muted); font-weight: 400; }
+#partition-formations .formation-matrix tbody th { padding: 9px 12px; border-bottom: 1px solid rgba(58, 49, 37, .55); white-space: nowrap; }
+#partition-formations .formation-matrix td span { display: block; font-weight: 700; }
+#partition-formations .formation-matrix td small { color: var(--muted); }
+#partition-formations .formation-matrix td.is-highest,
+#partition-formations .formation-ranking-list article.is-highest { color: #ff4b4b; box-shadow: inset 0 0 0 2px rgba(255, 75, 75, .7); }
+#partition-formations .formation-matrix td.is-second,
+#partition-formations .formation-ranking-list article.is-second { color: #ffd447; box-shadow: inset 0 0 0 2px rgba(255, 212, 71, .55); }
+#partition-formations .formation-mobile-ranking { display: none; }
+#partition-formations .formation-mobile-rule { margin: 10px 0 8px; color: var(--gold); font-weight: 700; }
+#partition-formations .formation-ranking-list { display: grid; gap: 6px; }
+#partition-formations .formation-ranking-list article {
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr) max-content;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 9px 10px;
+  background: var(--bg2);
+  border: 1px solid var(--line);
+  border-radius: 7px;
+}
+#partition-formations .formation-ranking-list article > span { color: var(--muted); }
+#partition-formations .formation-ranking-list article > strong { min-width: 0; overflow-wrap: anywhere; }
+#partition-formations .formation-main-result { display: flex; align-items: baseline; flex-wrap: wrap; gap: 8px 14px; padding: 11px 12px; background: var(--bg2); border: 1px solid var(--gold-dim); border-radius: 8px; }
+#partition-formations .formation-main-result > span { color: var(--muted); }
+#partition-formations .formation-main-result > strong { color: var(--gold); font-size: 18px; }
+#partition-formations .formation-main-result > em { color: var(--muted); font-size: 12px; font-style: normal; }
+#partition-formations .formation-recommend-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(175px, 1fr)); gap: 8px; margin-top: 10px; }
+#partition-formations .formation-recommend-card { display: grid; gap: 4px; min-width: 0; padding: 10px 11px; background: var(--bg2); border: 1px solid var(--line); border-radius: 8px; }
+#partition-formations .formation-recommend-card > b { color: var(--gold); }
+#partition-formations .formation-recommend-card > span,
+#partition-formations .formation-recommend-card > small { color: var(--muted); }
+#partition-formations .formation-recommend-card > em { color: var(--text); font-style: normal; font-weight: 700; overflow-wrap: anywhere; }
+#partition-formations .formation-recommend-card.is-missing { border-color: #8c3d35; }
+#partition-formations .formation-total-grid { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+#partition-formations .formation-total-grid span { display: inline-flex; gap: 7px; padding: 7px 10px; background: rgba(212, 175, 55, .08); border: 1px solid var(--gold-dim); border-radius: 7px; }
+#partition-formations .formation-total-grid b { color: var(--gold); }
+#partition-formations .formation-empty { padding: 12px; }
+#partition-formations .formation-empty p { margin: 0; }
+#partition-formations button:focus-visible,
+#partition-formations input:focus-visible,
+#partition-formations select:focus-visible,
+#partition-formations summary:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+
+@media (max-width: 1099px) {
+  #partition-formations .formation-desktop-matrix { display: none; }
+  #partition-formations .formation-mobile-ranking { display: block; margin-top: 12px; }
+  #partition-formations .formation-position-tabs { display: flex; flex-wrap: wrap; }
+  #partition-formations .formation-member-grid { grid-template-columns: 1fr; }
+  #partition-formations .formation-recommend-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
 @media (min-width: 768px) and (max-width: 1024px) {
   header.top { margin-left: 144px; }
   .app-shell { grid-template-columns: 128px minmax(0, 1fr); gap: 16px; }
@@ -1230,6 +1429,10 @@ figcaption { color: var(--muted); font-size: 13px; margin-top: 8px; }
     min-height: 44px;
     touch-action: manipulation;
   }
+  #partition-formations .seg,
+  #partition-formations button,
+  #partition-formations select,
+  #partition-formations input { min-height: 44px; touch-action: manipulation; }
   #partition-tactics .tactics-selector { flex-wrap: wrap; }
   #partition-tactics .tactics-form-grid,
   #partition-tactics .tactics-result-grid { grid-template-columns: 1fr; }
@@ -1474,6 +1677,17 @@ figcaption { color: var(--muted); font-size: 13px; margin-top: 8px; }
   .drop-item { min-width: 0; overflow-wrap: anywhere; }
   .settings-list > div { grid-template-columns: 1fr; gap: 3px; }
   .settings-actions .seg { min-height: 44px; }
+  #partition-formations .formation-stone-group { display: grid; gap: 4px; }
+  #partition-formations .formation-stone-group > strong { flex-basis: auto; padding-top: 0; }
+  #partition-formations .formation-slot-grid,
+  #partition-formations .formation-recommend-grid { grid-template-columns: 1fr; }
+  #partition-formations .formation-reference-table { display: none; }
+  #partition-formations .formation-reference-cards { display: grid; gap: 7px; margin-top: 8px; }
+  #partition-formations .formation-reference-card { display: grid; grid-template-columns: minmax(100px, 1fr) repeat(3, max-content); gap: 5px 10px; align-items: center; padding: 9px 10px; background: var(--bg2); border: 1px solid var(--line); border-radius: 7px; }
+  #partition-formations .formation-reference-card > em { grid-column: 1 / -1; color: var(--muted); font-size: 11px; font-style: normal; }
+  #partition-formations .formation-member-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  #partition-formations .formation-member-actions .link-btn { margin-left: 0; }
+  #partition-formations .formation-section-head { align-items: flex-start; }
 }
 @media (min-width: 768px) {
   .cards { display: none; }

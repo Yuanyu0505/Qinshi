@@ -116,6 +116,19 @@ test("合阵在桌面导航和移动更多菜单中均位于兵法之后答题�
   });
 });
 
+test("合阵样式同时提供桌面矩阵和无横向滚动的移动单位置排行榜", async () => {
+  await withServer(async (port) => {
+    const css = await get(port, "/css/style.css");
+    assert.strictEqual(css.status, 200);
+    assert.match(css.body, /#partition-formations/);
+    assert.match(css.body, /\.formation-desktop-matrix/);
+    assert.match(css.body, /\.formation-mobile-ranking/);
+    assert.match(css.body, /@media \(max-width: 1099px\)/);
+    assert.match(css.body, /\.formation-desktop-matrix\s*\{\s*display:\s*none/);
+    assert.match(css.body, /\.formation-mobile-ranking\s*\{\s*display:\s*block/);
+  });
+});
+
 test("装备未选择分类时分别展示普通装备与各类典籍结果", async () => {
   await withServer(async (port) => {
     const app = await get(port, "/js/app.js");

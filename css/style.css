@@ -835,21 +835,27 @@ td.name { font-weight: 600; white-space: nowrap; }
   justify-items: center;
   width: 100%;
 }
-#partition-equipment .book-tier-summary,
 #partition-equipment .book-stage-row {
   display: grid;
   grid-template-columns: 34px minmax(0, max-content);
   justify-content: center;
   column-gap: 4px;
 }
-#partition-equipment .book-tier-summary { gap: 5px; align-items: start; }
+#partition-equipment .book-tier-summary {
+  display: grid;
+  grid-template-columns: max-content minmax(0, max-content);
+  justify-content: center;
+  column-gap: 4px;
+  gap: 5px;
+  align-items: start;
+}
 #partition-equipment .book-tier-summary-label,
 #partition-equipment .book-stage-label {
   color: var(--gold-dim);
   font-size: 12px;
   text-align: right;
 }
-#partition-equipment .book-tier-summary-label { padding-top: 5px; }
+#partition-equipment .book-tier-summary-label { padding-top: 5px; white-space: nowrap; }
 #partition-equipment .book-stage-values {
   display: flex;
   flex-direction: column;
@@ -919,7 +925,7 @@ td.badge, th.badge { text-align: center; white-space: nowrap; color: var(--gold)
   color: var(--gold);
   font-weight: 700;
 }
-#partition-equipment .book-card .book-tier-summary,
+#partition-equipment .book-card .book-tier-summary { grid-template-columns: max-content minmax(0, 1fr); justify-content: stretch; }
 #partition-equipment .book-card .book-stage-row { grid-template-columns: 38px minmax(0, 1fr); justify-content: stretch; }
 #partition-equipment .book-card .book-tier-details { width: 100%; }
 #partition-equipment .book-card .book-stage-values { width: auto; min-width: 0; }

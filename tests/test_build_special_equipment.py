@@ -113,9 +113,26 @@ class TestParseSheet(unittest.TestCase):
         self.assertEqual(item["max"]["血"], 10.0)
         self.assertEqual(item["max"]["穿透"], 15.0)
 
-    def test_sample_empty_tiers(self):
-        item = next(i for i in self.items if i["name"] == "神兵破阵弓")
-        self.assertEqual(item["tiers"]["红金"], [])
+    def test_divine_equipment_name_normalization(self):
+        names = {item["name"] for item in self.items}
+        self.assertIn("神兵月狼锦纱", names)
+        self.assertIn("神兵月华袍", names)
+        self.assertIn("神兵火魅耳环", names)
+        self.assertNotIn("神兵月狼", names)
+        self.assertNotIn("神兵月华", names)
+        self.assertNotIn("神兵火魅", names)
+
+    def test_new_divine_equipment_tiers(self):
+        bow = next(i for i in self.items if i["name"] == "神兵破阵弓")
+        robe = next(i for i in self.items if i["name"] == "神兵月华袍")
+        self.assertEqual(
+            [[t["raw"] for t in bow["tiers"][tier]] for tier in ("橙色", "橙金", "红色", "红金")],
+            [["5%暴伤", "10%抗暴"], ["10%暴伤", "10%抗暴"], ["10%暴伤", "10%抗暴"], ["15%暴伤", "10%抗暴"]],
+        )
+        self.assertEqual(
+            [[t["raw"] for t in robe["tiers"][tier]] for tier in ("橙色", "橙金", "红色", "红金")],
+            [["6%穿透", "6%暴伤"], ["8%穿透", "8%暴伤"], ["10%穿透", "10%暴伤"], ["10%穿透", "15%暴伤"]],
+        )
 
     def test_status_token(self):
         item = next(i for i in self.items if i["name"] == "秦时周年历")
@@ -146,6 +163,11 @@ class TestParseSheet(unittest.TestCase):
     def test_book_source_order(self):
         books = [i for i in self.items if i["cat"] in {"典籍", "神兵典籍"}]
         self.assertEqual([i["sourceOrder"] for i in books], list(range(52)))
+
+    def test_book_max_uses_final_cumulative_value(self):
+        book = next(i for i in self.items if i["name"] == "神兵鬼谷子")
+        self.assertEqual(book["max"]["暴击"], 41.0)
+        self.assertEqual(book["max"]["抗暴"], 35.0)
 
 
 if __name__ == "__main__":

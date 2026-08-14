@@ -25,6 +25,25 @@ BLOCKS = {
     "饰品": {"name": 24, "main": 25, "tiers": {"橙色": [26, 27], "橙金": [28, 29], "红色": [30, 31], "红金": [32, 33]}},
 }
 HEADER_NAMES = {"武器名称", "防具名称", "饰品名称", "神兵武器名称", "神兵防具名称", "神兵饰品名称"}
+NAME_OVERRIDES = {
+    "神兵月狼": "神兵月狼锦纱",
+    "神兵月华": "神兵月华袍",
+    "神兵火魅": "神兵火魅耳环",
+}
+TIER_OVERRIDES = {
+    "神兵破阵弓": {
+        "橙色": ["5%暴伤", "10%抗暴"],
+        "橙金": ["10%暴伤", "10%抗暴"],
+        "红色": ["10%暴伤", "10%抗暴"],
+        "红金": ["15%暴伤", "10%抗暴"],
+    },
+    "神兵月华袍": {
+        "橙色": ["6%穿透", "6%暴伤"],
+        "橙金": ["8%穿透", "8%暴伤"],
+        "红色": ["10%穿透", "10%暴伤"],
+        "红金": ["10%穿透", "15%暴伤"],
+    },
+}
 ATTR_PAT = re.compile(r"^(\d+(?:\.\d+)?)%\s*(.+)$")
 NORMALIZE = {
     "血量": "血",
@@ -109,6 +128,35 @@ def update_max_map(max_map, token):
         max_map[attr] = max(max_map.get(attr, 0), token["v"])
 
 
+def format_token_raw(token, value):
+    if token["t"] == "速":
+        return f"{value:g}速"
+    if token["t"].startswith("敌方减"):
+        return f"敌方-{value:g}%{token['t'][3:]}"
+    return f"{value:g}%{token['t']}"
+
+
+def cumulative_numeric_tokens(stage_rows):
+    totals = {}
+    ordered = []
+    for stage_row in stage_rows:
+        for token in stage_row["tokens"]:
+            if "t" not in token or not isinstance(token.get("v"), (int, float)):
+                continue
+            key = token["t"]
+            if key not in totals:
+                totals[key] = dict(token)
+                totals[key]["v"] = 0.0
+                ordered.append(key)
+            totals[key]["v"] += token["v"]
+    result = []
+    for key in ordered:
+        token = totals[key]
+        token["raw"] = format_token_raw(token, token["v"])
+        result.append(token)
+    return result
+
+
 def parse_book_sheet(wb):
     """解析“典籍属性”，返回 (items, anomalies)。"""
     ws = wb["典籍属性"]
@@ -147,11 +195,12 @@ def parse_book_sheet(wb):
                             "sheet": "典籍属性", "cell": ws.cell(row_number, column).coordinate,
                             "cat": category, "name": name, "tier": tier, "value": token["raw"],
                         })
-                    update_max_map(max_map, token)
                 stage_rows.append({"stage": stage, "tokens": tokens})
                 flat_tokens.extend(tokens)
             stages[tier] = stage_rows
             tiers[tier] = flat_tokens
+            for token in cumulative_numeric_tokens(stage_rows):
+                update_max_map(max_map, token)
 
         prefix = "db" if category == "神兵典籍" else "b"
         items.append({
@@ -187,17 +236,23 @@ def parse_sheet(path):
             name = str(raw_name).strip()
             if not name or name in HEADER_NAMES:
                 continue
+            name = NAME_OVERRIDES.get(name, name)
             main = str(row[b["main"] - 1]).strip() if row[b["main"] - 1] is not None else ""
             cat = "神兵" + base if r >= 21 else base
             tiers = {}
             max_map = {}
             for tier, cols in b["tiers"].items():
-                tokens = []
-                for c in cols:
-                    tok = parse_cell(row[c - 1])
-                    if tok is None:
-                        continue
-                    tokens.append(tok)
+                override_values = TIER_OVERRIDES.get(name, {}).get(tier)
+                if override_values is not None:
+                    tokens = [parse_cell(value) for value in override_values]
+                else:
+                    tokens = []
+                    for c in cols:
+                        tok = parse_cell(row[c - 1])
+                        if tok is None:
+                            continue
+                        tokens.append(tok)
+                for tok in tokens:
                     if "t" in tok:
                         update_max_map(max_map, tok)
                     elif "raw" in tok:

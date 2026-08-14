@@ -1094,11 +1094,26 @@
     return `<tr><th>分类</th><th>装备名</th><th>主属性</th>${tiers.map((tier) => `<th>${tier}</th>`).join("")}${hasFilter ? '<th class="badge">排序值</th>' : ""}</tr>`;
   }
 
-  function bookStageHtml(item, tier, sharedStageCount) {
-    const stages = item.stages && item.stages[tier] ? item.stages[tier] : [];
-    if (!stages.length) return '<span class="tier-none">—</span>';
-    const rowCount = stages.length === 1 ? 1 : sharedStageCount;
-    return `<div class="book-stage-list" style="--book-stage-count:${rowCount}">${stages.map((stage) => `<div class="book-stage-row"><span class="book-stage-label">${stage.stage}阶</span><span class="book-stage-values">${tokenHtml(stage.tokens, "")}</span></div>`).join("")}</div>`;
+  function bookStageRowsHtml(stages) {
+    return `<div class="book-stage-list">${stages.map((stage) =>
+      `<div class="book-stage-row"><span class="book-stage-label">${stage.stage}阶</span><span class="book-stage-values">${tokenHtml(stage.tokens, "")}</span></div>`
+    ).join("")}</div>`;
+  }
+
+  function bookTierSummaryHtml(item, tier) {
+    const finalStage = Q.finalBookStage(item, tier);
+    if (!finalStage) return '<span class="tier-none">—</span>';
+    return `<div class="book-tier-summary"><span class="book-tier-summary-label">${finalStage.stage}阶累计</span><span class="book-stage-values">${tokenHtml(finalStage.tokens, "")}</span></div>`;
+  }
+
+  function bookTierDetailsHtml(item, tier) {
+    const stages = Q.cumulativeBookStages(item, tier);
+    if (!stages.length) return "";
+    return `<details class="book-tier-details"><summary><span class="details-open">详情</span><span class="details-close">收起</span></summary>${bookStageRowsHtml(stages)}</details>`;
+  }
+
+  function bookTierHtml(item, tier) {
+    return `<div class="book-tier-block">${bookTierSummaryHtml(item, tier)}${bookTierDetailsHtml(item, tier)}</div>`;
   }
 
   function bookDisplayTiers(item) {
@@ -1108,18 +1123,12 @@
     return tiers.filter((tier) => Array.isArray(item.stages && item.stages[tier]) && item.stages[tier].length);
   }
 
-  function defaultBookCardTier(item, tiers) {
-    if (state.valueSource !== "max" && tiers.includes(state.valueSource)) return state.valueSource;
-    return tiers[tiers.length - 1] || "";
-  }
-
   function bookCardTiersHtml(item) {
     const tiers = bookDisplayTiers(item);
-    const defaultTier = defaultBookCardTier(item, tiers);
-    return tiers.map((tier) => `<details class="book-card-tier"${tier === defaultTier ? " open" : ""}>
-      <summary>${tier}</summary>
-      <div class="book-card-stage-content">${bookStageHtml(item, tier)}</div>
-    </details>`).join("");
+    return tiers.map((tier) => `<div class="book-card-tier">
+      <div class="book-card-tier-label">${tier}</div>
+      ${bookTierHtml(item, tier)}
+    </div>`).join("");
   }
 
   function equipmentNameHtml(item) {
@@ -1131,14 +1140,11 @@
     const hasFilter = state.filters.length > 0;
     if (!items.length) return "";
     const body = items.map((item) => {
-      const sharedStageCount = item.bookGroup
-        ? Math.max(1, ...tiers.map((tier) => ((item.stages && item.stages[tier]) || []).length))
-        : 1;
       return `<tr>
       <td><span class="cat">${item.cat}</span></td>
       <td class="name">${equipmentNameHtml(item)}</td>
       <td class="main">${item.main}</td>
-      ${tiers.map((tier) => `<td class="${item.bookGroup ? "book-tier-cell" : ""}">${item.bookGroup ? bookStageHtml(item, tier, sharedStageCount) : tokenHtml(item.tiers[tier])}</td>`).join("")}
+      ${tiers.map((tier) => `<td class="${item.bookGroup ? "book-tier-cell" : ""}">${item.bookGroup ? bookTierHtml(item, tier) : tokenHtml(item.tiers[tier])}</td>`).join("")}
       ${hasFilter ? `<td class="badge">${sortBadge(item)}</td>` : ""}
     </tr>`;
     }).join("");

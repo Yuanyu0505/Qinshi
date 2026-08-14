@@ -81,6 +81,26 @@ test("GET /css/style.css 返回 200 且为 CSS", async () => {
   });
 });
 
+test("典籍默认展示最高阶累计，并可按品质展开成长详情", async () => {
+  await withServer(async (port) => {
+    const [app, css] = await Promise.all([
+      get(port, "/js/app.js"),
+      get(port, "/css/style.css")
+    ]);
+    assert.strictEqual(app.status, 200);
+    assert.strictEqual(css.status, 200);
+    assert.match(app.body, /Q\.finalBookStage\(item, tier\)/);
+    assert.match(app.body, /Q\.cumulativeBookStages\(item, tier\)/);
+    assert.match(app.body, /阶累计/);
+    assert.match(app.body, /<details class="book-tier-details">/);
+    assert.match(app.body, /details-open">详情/);
+    assert.match(app.body, /details-close">收起/);
+    assert.doesNotMatch(app.body, /bookStageHtml\(item, tier, sharedStageCount\)/);
+    assert.match(css.body, /#partition-equipment \.book-tier-summary/);
+    assert.match(css.body, /#partition-equipment \.book-tier-details/);
+  });
+});
+
 test("首页包含楼兰棋阵分区与两个玩法的图片引用", async () => {
   await withServer(async (port) => {
     const r = await get(port, "/");

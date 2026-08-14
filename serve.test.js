@@ -192,9 +192,17 @@ test("关卡掉落首页包含固定橙装普通关卡表", async () => {
       ["月华战袍", "52-7"],
       ["管事", "52-5"]
     ];
-    expected.forEach(([item, stages]) => {
-      assert.match(r.body, new RegExp(`<span class="mat material-token mat-orange">${item}<\\/span>[\\s\\S]*?${stages}`));
+    const section = r.body.match(/<section\b[^>]*\bid="drop-default-orange"[^>]*>([\s\S]*?)<\/section>/);
+    assert.ok(section, "应找到默认橙装表容器");
+    const tbody = section[1].match(/<tbody>([\s\S]*?)<\/tbody>/);
+    assert.ok(tbody, "默认橙装表应包含 tbody");
+    const rows = [...tbody[1].matchAll(/<tr\b[^>]*>([\s\S]*?)<\/tr>/g)].map(([, row], index) => {
+      const cells = [...row.matchAll(/<td\b[^>]*>([\s\S]*?)<\/td>/g)]
+        .map(([, cell]) => cell.replace(/<[^>]+>/g, "").trim());
+      assert.strictEqual(cells.length, 2, `第 ${index + 1} 行应恰好包含两列`);
+      return cells;
     });
+    assert.deepStrictEqual(rows, expected);
   });
 });
 

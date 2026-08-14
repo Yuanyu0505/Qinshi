@@ -323,10 +323,12 @@ test("关卡掉落搜索会隐藏默认表并保留完整查询", async () => {
   });
 });
 
-test("PWA 1.0.9 覆盖手机 1.0.6 后的功能并同步缓存与页面版本", async () => {
+test("PWA 1.0.10 覆盖手机 1.0.6 后的功能并同步缓存与页面版本", async () => {
   const pagesWorkflow = fs.readFileSync(path.join(__dirname, ".github", "workflows", "pages.yml"), "utf8");
   assert.match(pagesWorkflow, /js\/tactics\.js/);
   assert.match(pagesWorkflow, /js\/tactics-ui\.js/);
+  assert.match(pagesWorkflow, /js\/formations\.js/);
+  assert.match(pagesWorkflow, /js\/formations-ui\.js/);
   await withServer(async (port) => {
     const [index, worker, pwa, css] = await Promise.all([
       get(port, "/"),
@@ -338,12 +340,15 @@ test("PWA 1.0.9 覆盖手机 1.0.6 后的功能并同步缓存与页面版本", 
     assert.strictEqual(worker.status, 200);
     assert.strictEqual(pwa.status, 200);
     assert.strictEqual(css.status, 200);
-    assert.match(index.body, /id="pwa-version">1\.0\.9<\/strong>/);
-    assert.match(worker.body, /CACHE_NAME\s*=\s*CACHE_PREFIX\s*\+\s*"1\.0\.9"/);
-    assert.match(pwa.body, /APP_VERSION\s*=\s*"1\.0\.9"/);
+    assert.match(index.body, /id="pwa-version">1\.0\.10<\/strong>/);
+    assert.match(worker.body, /CACHE_NAME\s*=\s*CACHE_PREFIX\s*\+\s*"1\.0\.10"/);
+    assert.match(pwa.body, /APP_VERSION\s*=\s*"1\.0\.10"/);
     assert.match(worker.body, /"\.\/data\/tactics\.js"/);
     assert.match(worker.body, /"\.\/js\/tactics\.js"/);
     assert.match(worker.body, /"\.\/js\/tactics-ui\.js"/);
+    assert.match(worker.body, /"\.\/data\/formations\.js"/);
+    assert.match(worker.body, /"\.\/js\/formations\.js"/);
+    assert.match(worker.body, /"\.\/js\/formations-ui\.js"/);
     assert.match(css.body, /@media \(max-width: 1024px\)[\s\S]*?\.atlas-favorite-toggle\s*\{[\s\S]*?width:\s*44px;[\s\S]*?height:\s*44px;/);
     assert.match(css.body, /#partition-tactics \.tactics-selector \.seg,[\s\S]*?#partition-equipment \.book-detail-toggle\s*\{[\s\S]*?min-height:\s*44px;/);
     assert.match(css.body, /#partition-tactics \.tactics-form-grid select,[\s\S]*?#partition-tactics \.tactics-form-grid input\s*\{[\s\S]*?font-size:\s*16px;/);

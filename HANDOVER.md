@@ -138,6 +138,7 @@ $python = 'C:\Users\pghyl\.cache\codex-runtimes\codex-primary-runtime\dependenci
 
 - `service-worker.js` 的缓存名格式为 `qinshi-site-<版本号>`；每次发布静态资源变更时必须同步提升该版本号。
 - `js/pwa.js` 中的 `APP_VERSION` 必须与 Service Worker 缓存版本一致。
+- `1.0.10` 新增合阵分区，并将合阵资料、计算核心和手机/平板响应式界面纳入离线预缓存与 GitHub Pages 发布清单。
 - `1.0.9` 面向仍停留在 `1.0.6` 的手机和平板：包含图鉴收藏与延迟展示、答题搜索后展示、兵法分区、关卡掉落默认橙装表，以及神兵/典籍数据修正、累计属性、混合搜索和进阶详情气泡；同时补强收藏、兵法表单与按钮、典籍卡片和气泡的窄屏触控与布局。
 - `1.0.8` 用于刷新关卡掉落默认橙装表涉及的 HTML、CSS 和应用脚本；预缓存资源列表不变。
 - 新 Service Worker 安装后保持等待状态，页面提示用户点击“立即更新”；确认后发送 `SKIP_WAITING` 并刷新一次。

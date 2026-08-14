@@ -150,11 +150,22 @@ test("sortValue：红色/红金档", () => {
 
 test("cumulativeBookStages：典籍同品质按阶段累计且保留复合匹配", () => {
   const stages = Q.cumulativeBookStages(fixture[7], "红金");
+  const valuesAtStage = stage => Object.fromEntries(stage.tokens.map(token => [token.t, token.v]));
   assert.deepStrictEqual(stages.map(stage => stage.stage), [0, 5, 10, 15]);
+  assert.deepStrictEqual(valuesAtStage(stages[0]), { "速": 150 });
   assert.deepStrictEqual(
-    Object.fromEntries(stages[stages.length - 1].tokens.map(token => [token.t, token.v])),
+    valuesAtStage(stages[1]),
+    { "速": 150, "攻防血": 12, "技免": 25, "抗暴": 12 }
+  );
+  assert.deepStrictEqual(
+    valuesAtStage(stages[2]),
+    { "速": 150, "攻防血": 28, "技免": 60, "抗暴": 12, "暴击": 16 }
+  );
+  assert.deepStrictEqual(
+    valuesAtStage(stages[3]),
     { "速": 150, "攻防血": 51, "技免": 60, "抗暴": 35, "暴击": 41, "暴伤": 28 }
   );
+  assert.strictEqual(Q.finalBookStage(fixture[7], "红金").stage, 15);
   assert.deepStrictEqual(
     Q.finalBookStage(fixture[7], "红金").tokens.find(token => token.t === "攻防血").matches,
     ["攻", "防", "血", "攻防血"]

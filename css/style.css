@@ -1217,13 +1217,28 @@ figcaption { color: var(--muted); font-size: 13px; margin-top: 8px; }
   .prog-material-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (max-width: 1024px) {
+  .atlas-favorite-toggle {
+    width: 44px;
+    height: 44px;
+    touch-action: manipulation;
+  }
+  #partition-tactics .tactics-selector .seg,
+  #partition-tactics .tactics-editor-actions .seg,
+  #partition-tactics .tactics-calculator-actions .seg,
+  #partition-tactics .tactics-reference-actions .seg,
+  #partition-equipment .book-detail-toggle {
+    min-height: 44px;
+    touch-action: manipulation;
+  }
   #partition-tactics .tactics-selector { flex-wrap: wrap; }
   #partition-tactics .tactics-form-grid,
   #partition-tactics .tactics-result-grid { grid-template-columns: 1fr; }
   #partition-tactics .tactics-table-scroll {
     overflow-x: auto;
     overflow-y: visible;
+    overscroll-behavior-x: contain;
     -webkit-overflow-scrolling: touch;
+    isolation: isolate;
   }
   #partition-tactics .tactics-reference-table { min-width: 980px; }
   #partition-tactics .tactics-reference-table tr > :first-child {
@@ -1395,14 +1410,29 @@ figcaption { color: var(--muted); font-size: 13px; margin-top: 8px; }
   .segs { max-width: 100%; flex-wrap: wrap; }
   .summary-card { padding: 10px; }
   #partition-equipment #table-wrap { display: none; }
+  #partition-equipment .book-card .book-tier-block {
+    grid-template-columns: 64px minmax(0, 1fr);
+  }
   .book-detail-popover {
+    box-sizing: border-box;
     width: calc(100vw - 24px);
     min-width: 0;
     max-width: calc(100vw - 24px);
+    max-height: calc(100vh - 24px);
+    max-height: calc(100dvh - 24px);
     padding: 11px 12px 12px;
+  }
+  .book-detail-popover-body {
+    max-height: calc(100vh - 104px);
+    max-height: calc(100dvh - 104px);
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
   }
   .book-popover-stage-row { gap: 4px; padding: 6px 0; }
   .book-popover-stage-values { line-height: 1.5; overflow-wrap: anywhere; }
+  #partition-tactics .tactics-form-grid select,
+  #partition-tactics .tactics-form-grid input,
+  .atlas-level { min-height: 44px; font-size: 16px; }
   .cards { display: block; }
   .atlas-summary-equipment-list,
   .atlas-equipment-stage-list { max-width: 100%; gap: 6px; }

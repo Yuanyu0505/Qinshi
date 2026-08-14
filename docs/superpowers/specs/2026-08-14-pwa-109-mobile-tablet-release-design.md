@@ -17,7 +17,8 @@
 - 版本统一提升为 `1.0.9`：`index.html` 初始版本、`js/pwa.js` 显示版本、`service-worker.js` 缓存版本必须一致。
 - 预缓存清单继续包含全部运行时 HTML、CSS、数据脚本、业务脚本、图标和楼兰棋阵图片；兵法资源必须在清单中。
 - 新 Service Worker 激活后清理旧 `qinshi-site-*` 缓存。
-- 推送本地 `master` 到 GitHub `origin/main`，由既有 GitHub Pages 工作流部署。
+- GitHub Pages 工作流必须把 `js/tactics.js` 与 `js/tactics-ui.js` 复制进 `_site/js`，保证兵法分区在线加载及 Service Worker 预缓存均不会出现 404。
+- 推送本地 `master` 到 GitHub `origin/main`，由 GitHub Pages 工作流部署。
 
 ## 不在范围内
 

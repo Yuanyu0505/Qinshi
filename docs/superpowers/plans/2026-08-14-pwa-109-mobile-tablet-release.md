@@ -55,6 +55,7 @@
 - Modify: `js/pwa.js`
 - Modify: `service-worker.js`
 - Modify: `HANDOVER.md`
+- Modify: `.github/workflows/pages.yml`
 
 **Interfaces:**
 - Consumes: 当前完整运行时预缓存清单。
@@ -62,8 +63,9 @@
 
 - [ ] **Step 1:** 将三个版本源统一改为 `1.0.9`。
 - [ ] **Step 2:** 核对预缓存清单包含兵法和全部既有运行时资源；不缓存设计文档和测试文件。
-- [ ] **Step 3:** 在交接文档记录 `1.0.9` 覆盖 `1.0.6` 后的移动适配及典籍功能。
-- [ ] **Step 4:** 只读检查改动范围，提交发布分支。
+- [ ] **Step 3:** 修复 GitHub Pages 静态站点组装命令，将 `js/tactics.js` 和 `js/tactics-ui.js` 复制进 `_site/js`。
+- [ ] **Step 4:** 在交接文档记录 `1.0.9` 覆盖 `1.0.6` 后的移动适配及典籍功能。
+- [ ] **Step 5:** 只读检查改动范围，提交发布分支。
 
 ### Task 4: 合并并部署 GitHub Pages
 

@@ -34,7 +34,7 @@ jobs:
           mkdir -p _site/js
           cp index.html manifest.webmanifest service-worker.js .nojekyll _site/
           cp -R css data images icons _site/
-          cp js/app.js js/atlas.js js/drops.js js/forging.js js/inscription.js js/progress.js js/pwa.js js/query.js js/quiz.js js/settings.js _site/js/
+          cp js/app.js js/atlas.js js/drops.js js/forging.js js/inscription.js js/progress.js js/pwa.js js/query.js js/quiz.js js/settings.js js/tactics.js js/tactics-ui.js _site/js/
 
       - name: Upload GitHub Pages artifact
         uses: actions/upload-pages-artifact@v4

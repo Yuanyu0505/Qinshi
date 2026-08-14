@@ -46,7 +46,31 @@ const fixture = [
       "红色": [{ t: "速", v: 145, raw: "145速" }, { t: "攻防血", v: 16, raw: "16%攻防血", matches: ["攻", "防", "血", "攻防血"] }],
       "红金": [{ t: "速", v: 148, raw: "148速" }, { t: "攻防血", v: 18, raw: "18%攻防血", matches: ["攻", "防", "血", "攻防血"] }]
     },
-    max: { "速": 148, "攻": 18, "防": 18, "血": 18, "攻防血": 18, "技免": 24 } },
+    stages: {
+      "橙色": [{ stage: 10, tokens: [{ t: "速", v: 130, raw: "130速" }, { t: "攻防血", v: 6.5, raw: "6.5%攻防血", matches: ["攻", "防", "血", "攻防血"] }, { t: "技免", v: 16, raw: "16%技免" }] }],
+      "橙金": [{ stage: 15, tokens: [{ t: "速", v: 140, raw: "140速" }, { t: "攻防血", v: 10, raw: "10%攻防血", matches: ["攻", "防", "血", "攻防血"] }, { t: "技免", v: 24, raw: "24%技免" }] }],
+      "红色": [{ stage: 15, tokens: [{ t: "速", v: 145, raw: "145速" }, { t: "攻防血", v: 16, raw: "16%攻防血", matches: ["攻", "防", "血", "攻防血"] }] }],
+      "红金": [
+        { stage: 0, tokens: [{ t: "速", v: 150, raw: "150速" }] },
+        { stage: 5, tokens: [
+          { t: "攻防血", v: 12, raw: "12%攻防血", matches: ["攻", "防", "血", "攻防血"] },
+          { t: "技免", v: 25, raw: "25%技免" },
+          { t: "抗暴", v: 12, raw: "12%抗暴" }
+        ] },
+        { stage: 10, tokens: [
+          { t: "攻防血", v: 16, raw: "16%攻防血", matches: ["攻", "防", "血", "攻防血"] },
+          { t: "技免", v: 35, raw: "35%技免" },
+          { t: "暴击", v: 16, raw: "16%暴击" }
+        ] },
+        { stage: 15, tokens: [
+          { t: "攻防血", v: 23, raw: "23%攻防血", matches: ["攻", "防", "血", "攻防血"] },
+          { t: "抗暴", v: 23, raw: "23%抗暴" },
+          { t: "暴伤", v: 28, raw: "28%暴伤" },
+          { t: "暴击", v: 25, raw: "25%暴击" }
+        ] }
+      ]
+    },
+    max: { "速": 150, "攻": 51, "防": 51, "血": 51, "攻防血": 51, "技免": 60, "抗暴": 35, "暴击": 41, "暴伤": 28 } },
   { id: "db-0001", cat: "神兵典籍", name: "神兵韩非子", main: "攻、内力", mainKey: "攻", bookGroup: "神兵典籍", sourceOrder: 40,
     tiers: {
       "橙色": [{ t: "速", v: 130, raw: "130速" }],
@@ -124,13 +148,30 @@ test("sortValue：红色/红金档", () => {
   assert.strictEqual(Q.sortValue(fixture[6], "血", "红色"), null);
 });
 
-test("sortToken：典籍按档次全部阶次取最大真实词条", () => {
+test("cumulativeBookStages：典籍同品质按阶段累计且保留复合匹配", () => {
+  const stages = Q.cumulativeBookStages(fixture[7], "红金");
+  assert.deepStrictEqual(stages.map(stage => stage.stage), [0, 5, 10, 15]);
+  assert.deepStrictEqual(
+    Object.fromEntries(stages[stages.length - 1].tokens.map(token => [token.t, token.v])),
+    { "速": 150, "攻防血": 51, "技免": 60, "抗暴": 35, "暴击": 41, "暴伤": 28 }
+  );
+  assert.deepStrictEqual(
+    Q.finalBookStage(fixture[7], "红金").tokens.find(token => token.t === "攻防血").matches,
+    ["攻", "防", "血", "攻防血"]
+  );
+});
+
+test("sortToken：典籍按档次最高阶累计值排序", () => {
   assert.deepStrictEqual(Q.sortToken(fixture[7], "攻", "橙金"), {
     t: "攻防血", v: 10, raw: "10%攻防血", matches: ["攻", "防", "血", "攻防血"]
   });
   assert.deepStrictEqual(Q.sortToken(fixture[7], "攻", "max"), {
-    t: "攻防血", v: 18, raw: "18%攻防血", matches: ["攻", "防", "血", "攻防血"]
+    t: "攻防血", v: 51, raw: "51%攻防血", matches: ["攻", "防", "血", "攻防血"]
   });
+  assert.strictEqual(Q.sortValue(fixture[7], "攻", "红金"), 51);
+  assert.strictEqual(Q.sortValue(fixture[7], "技免", "红金"), 60);
+  assert.strictEqual(Q.sortValue(fixture[7], "暴击", "红金"), 41);
+  assert.strictEqual(Q.sortToken(fixture[7], "暴击", "红金").raw, "41%暴击");
   assert.strictEqual(Q.sortToken(fixture[8], "攻", "红金"), null);
 });
 

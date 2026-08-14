@@ -62,8 +62,67 @@
     return true;
   }
 
+  function numberText(value) {
+    return String(Number(value));
+  }
+
+  function cumulativeRaw(token, value) {
+    if (token.t === "速") return numberText(value) + "速";
+    if (token.t.indexOf("敌方减") === 0) {
+      return "敌方-" + numberText(value) + "%" + token.t.slice(3);
+    }
+    return numberText(value) + "%" + token.t;
+  }
+
+  /**
+   * 返回典籍同一品质逐阶累计后的快照；源数据与不同品质均保持不变。
+   * 仅数值词条参与累计，首次出现的词条顺序和复合属性 matches 会被保留。
+   */
+  function cumulativeBookStages(item, tier) {
+    var source = item && item.stages && item.stages[tier] || [];
+    var totals = Object.create(null);
+    var order = [];
+    return source.map(function (stage) {
+      (stage.tokens || []).forEach(function (token) {
+        if (!token.t || typeof token.v !== "number") return;
+        if (!totals[token.t]) {
+          totals[token.t] = Object.assign({}, token, { v: 0 });
+          order.push(token.t);
+        }
+        totals[token.t].v += token.v;
+        totals[token.t].raw = cumulativeRaw(totals[token.t], totals[token.t].v);
+      });
+      return {
+        stage: stage.stage,
+        tokens: order.map(function (key) { return Object.assign({}, totals[key]); })
+      };
+    });
+  }
+
+  function finalBookStage(item, tier) {
+    var stages = cumulativeBookStages(item, tier);
+    return stages.length ? stages[stages.length - 1] : null;
+  }
+
   /** 返回用于排序的真实 token；无值返回 null。 */
   function sortToken(item, attr, valueSource) {
+    if (item.bookGroup) {
+      var stageTiers = item.stages || {};
+      var bookTierNames = valueSource === "max" ? Object.keys(stageTiers) : [valueSource];
+      var bookBest = null;
+      for (var bookTierIndex = 0; bookTierIndex < bookTierNames.length; bookTierIndex++) {
+        var finalStage = finalBookStage(item, bookTierNames[bookTierIndex]);
+        var finalTokens = finalStage ? finalStage.tokens : [];
+        for (var bookTokenIndex = 0; bookTokenIndex < finalTokens.length; bookTokenIndex++) {
+          var bookToken = finalTokens[bookTokenIndex];
+          if (tokenMatches(bookToken, attr) && (bookBest === null || bookToken.v > bookBest.v)) {
+            bookBest = bookToken;
+          }
+        }
+      }
+      return bookBest;
+    }
+
     var tiers = item.tiers || {};
     var tierNames = valueSource === "max" ? Object.keys(tiers) : [valueSource];
     var best = null;
@@ -134,6 +193,8 @@
     hasSubAttr: hasSubAttr,
     tokenMatches: tokenMatches,
     matchFilters: matchFilters,
+    cumulativeBookStages: cumulativeBookStages,
+    finalBookStage: finalBookStage,
     sortToken: sortToken,
     sortValue: sortValue,
     queryItems: queryItems

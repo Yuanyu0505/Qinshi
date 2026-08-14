@@ -2,15 +2,15 @@
 
 ## 1. 快照信息
 
-- 快照日期：2026-08-11
-- 当前开发分支：`codex/atlas-upgrade-target`
+- 快照日期：2026-08-14
+- 当前本地集成分支：`master`
 - 发布分支：远程 `main`
 - 检查点标签：`checkpoint-2026-08-10`
 - 用途：当前为重要检查节点，可随时回退到本快照
 
 ## 2. 项目简介
 
-可本地运行并可安装为 PWA 的秦时明月攻略工具，用于查询装备、锻造、关卡掉落、图鉴、铭文、答题和楼兰棋阵数据并记录个人进度。Windows 可直接双击打开；Android、iPhone 和 iPad 通过 GitHub Pages 首次联网缓存后可完全离线使用。
+可本地运行并可安装为 PWA 的秦时明月攻略工具，用于查询装备、锻造、关卡掉落、图鉴、铭文、兵法、合阵、答题和楼兰棋阵数据并记录个人进度。Windows 可直接双击打开；Android、iPhone 和 iPad 通过 GitHub Pages 首次联网缓存后可完全离线使用。
 
 ## 3. 运行方式
 
@@ -44,9 +44,10 @@
 | 楼兰棋阵 | 楼兰 5 张、棋阵 11 张本地图片展示 | `images/` |
 | 铭文 | 个人进度、品质/天位/盾位查询筛选、天位主属性与盾位副属性资料图表 | `data/inscription.js` |
 | 兵法 | 风、林、火、山、阴、雷选择；个人进度、材料计算和 0–15 阶资料查询 | `data/tactics.js` |
+| 合阵 | 19 个合阵官方资料；个人弟子等级与当前攻/血/防保存；自由试算、各助阵位置独立排序、主将/助阵精确联合推荐和转化属性汇总 | `data/formations.js` |
 | 答题 | 按题目关键词查询标红正确答案 | `data/quiz.js` |
 
-桌面导航顺序为图鉴、关卡掉落、装备属性、橙装锻造、铭文、兵法、答题、楼兰棋阵、设置。手机端的图鉴、关卡掉落、装备属性、橙装锻造为主导航；兵法在“更多”面板中，位于铭文之后、答题之前。
+桌面导航顺序为图鉴、关卡掉落、装备属性、橙装锻造、铭文、兵法、合阵、答题、楼兰棋阵、设置。手机端的图鉴、关卡掉落、装备属性、橙装锻造为主导航；兵法和合阵位于“更多”面板中，合阵在兵法之后、答题之前。
 
 ## 5. 文件结构
 
@@ -66,6 +67,8 @@ deepseek/
 │  ├─ progress.js                  # 锻造个人进度核心
 │  ├─ atlas.js                     # 图鉴查询核心
 │  ├─ inscription.js               # 铭文查询和个人进度
+│  ├─ formations.js                # 合阵输入、矩阵、排序和精确推荐核心
+│  ├─ formations-ui.js             # 合阵个人进度、自由试算与响应式页面
 │  ├─ quiz.js                      # 只读题库搜索
 │  ├─ settings.js                  # 本机进度导出、导入与导入前备份
 │  ├─ pwa.js                       # 安装、离线状态和点击确认更新
@@ -94,6 +97,7 @@ $python = 'C:\Users\pghyl\.cache\codex-runtimes\codex-primary-runtime\dependenci
 & $python tools/build_drops.py               # → data/drops.js
 & $python tools/build_atlas.py               # → data/atlas.js
 & $python tools/build_tactics.py             # → data/tactics.js
+& $python tools/build_formations.py          # → data/formations.js
 ```
 
 解析规则要点：
@@ -101,6 +105,7 @@ $python = 'C:\Users\pghyl\.cache\codex-runtimes\codex-primary-runtime\dependenci
 - 橙装锻造：主行为橙色装备；素材品质按字体颜色（紫=紫装、橙=橙装）；`-` 表示该阶段无需装备材料；关卡掉落/图鉴按各自表头与底色规则解析（详见各脚本注释）
 - 图鉴：装备品质按单元格底色（theme:7 紫 / theme:9 橙）
 - 兵法：`data/tactics.js` 只能由 `tools/build_tactics.py` 从“新兵法”工作表生成，禁止手改。六个固定数据区域是 `B2:P20`、`B24:P42`、`B45:P63`、`B66:P84`、`S2:AD20`、`S24:AD42`。业务修正包括：常规真言按显示百分比解析且统真言为固定值；阴、雷小数百分比换算为显示百分比；火之印记由兵法名称生成以避开错误表头；风兵法 6 阶防属性修正为 240。
+- 合阵：`data/formations.js` 只能由 `tools/build_formations.py` 从“合阵”工作表生成，禁止手改。资料区为 `B1:I59`、`K1:R71`、`U1:AB17`，官方主将/助阵汇总为 `J76:R95`。生成器严格校验 19 个合阵、144 条候选弟子、连续 5/6 个助阵位置、转换规则、推荐弟子关联和名称标准化；“神·弟子”统一显示为“神弟子”。
 
 ## 7. 个人进度存储
 
@@ -114,6 +119,7 @@ $python = 'C:\Users\pghyl\.cache\codex-runtimes\codex-primary-runtime\dependenci
 | `qinshi_inscription_progress_v2` | 铭文个人进度 |
 | `qinshi_quiz_items_v1` | 历史答题修订数据（兼容旧数据） |
 | `qinshi_tactics_progress_v1` | 兵法个人进度：按兵法 ID 保存 `{ rank, rehearsalSpent, mantras }` |
+| `qinshi_formation_progress_v1` | 合阵个人进度：按合阵 ID 保存已拥有弟子、等级、当前攻/血/防、参考值状态和玩家指定主将 |
 
 注意：
 - 换浏览器、清除浏览器数据、或换设备前应在“设置”中导出备份
@@ -142,11 +148,18 @@ $python = 'C:\Users\pghyl\.cache\codex-runtimes\codex-primary-runtime\dependenci
 
 ```powershell
 $python = 'C:\Users\pghyl\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe'
-node --test js/query.test.js js/forging.test.js js/drops.test.js js/progress.test.js js/atlas.test.js js/tactics.test.js serve.test.js
+node --test js/query.test.js js/forging.test.js js/drops.test.js js/progress.test.js js/atlas.test.js js/tactics.test.js js/formations.test.js serve.test.js
 & $python -m unittest discover -s tests
 ```
 
-快照时全量测试通过：JS 60/60、Python 37/37。
+合阵新增测试可单独手动运行：
+
+```powershell
+node --test js/formations.test.js serve.test.js
+& $python -m unittest tests.test_build_formations -v
+```
+
+按项目约定，本轮合阵实现的测试、lint、格式检查及浏览器设备验收由用户手动执行，AI 未主动运行上述命令。
 
 ## 10. Git 快照与回退
 
@@ -189,3 +202,12 @@ git -c safe.directory=C:/Users/pghyl/Desktop/deepseek tag -l
 - 铭文资料图表仅冻结第一列，表头随页面正常上下移动。
 - 手机端“该弟子剩余材料汇总”和“全体弟子剩余材料汇总”均为两列。
 - 上述规则仅作用于不超过 `1024px` 的视口；桌面端保持不变。PWA 缓存和显示版本提升为 `1.0.2`。
+
+## 14. 2026-08-14 合阵分区
+
+- 从最新 Excel“合阵”工作表固化 19 个合阵、144 名候选弟子、官方主将/助阵和全部位置转换规则；源工作簿未被修改。
+- 每个合阵支持独立个人进度：已拥有/参与开关、等级、当前攻/血/防、1级参考值恢复和可选玩家主将。等级只记录，不参与公式。
+- 自由试算与已保存进度完全隔离；转换统一使用 `floor(当前来源属性 × 转换比例)`，每个助阵位置独立排序，最高不同值档标红、第二档标黄。
+- 自动推荐使用精确记忆化搜索：优先填满助阵位置，再最大化位置归一化总分；同一弟子只能担任一次主将或占一个助阵位。未指定主将时按排除后的助阵机会成本联合推荐主将。
+- 桌面显示完整矩阵；手机和平板显示单位置排行榜、纵向资料卡和推荐卡，无需缩放或页面级左右滑动。
+- 本轮没有提升 PWA 版本、修改预缓存资源或推送 GitHub；需要手机安装版同步时再单独更新 PWA。

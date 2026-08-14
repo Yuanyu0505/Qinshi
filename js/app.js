@@ -35,6 +35,7 @@
 
   const state = { search: "", category: null, main: null, filters: [], sortAttr: null, valueSource: "max", activated: false };
   const forgeState = { mode: "main", query: "" };
+  let activeBookDetail = null;
 
   const el = {
     search: document.getElementById("search"),
@@ -51,6 +52,10 @@
     empty: document.getElementById("empty"),
     clearAll: document.getElementById("clear-all"),
     emptyClear: document.getElementById("empty-clear"),
+    bookDetailPopover: document.getElementById("book-detail-popover"),
+    bookDetailTitle: document.getElementById("book-detail-popover-title"),
+    bookDetailBody: document.getElementById("book-detail-popover-body"),
+    bookDetailClose: document.querySelector(".book-detail-close"),
     error: document.getElementById("data-error"),
     forgeMode: document.getElementById("forge-mode"),
     forgeSearch: document.getElementById("forge-search"),
@@ -155,6 +160,7 @@
 
     function switchPartition(name) {
       if (!parts[name]) return;
+      closeBookDetailPopover();
       setPartitionTitle(name);
       if (name === "equipment") resetEquipmentView();
       partitionButtons.forEach((button) => {
@@ -1009,6 +1015,22 @@
     });
     el.clearAll.addEventListener("click", resetEquipmentView);
     el.emptyClear.addEventListener("click", resetEquipmentView);
+    el.results.addEventListener("click", (event) => {
+      const button = event.target.closest(".book-detail-toggle");
+      if (!button) return;
+      event.stopPropagation();
+      toggleBookDetailPopover(button);
+    });
+    el.bookDetailClose.addEventListener("click", closeBookDetailPopover);
+    el.bookDetailPopover.addEventListener("click", (event) => event.stopPropagation());
+    document.addEventListener("click", (event) => {
+      if (!event.target.closest(".book-detail-toggle")) closeBookDetailPopover();
+    });
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") closeBookDetailPopover();
+    });
+    window.addEventListener("resize", closeBookDetailPopover);
+    window.addEventListener("scroll", closeBookDetailPopover, true);
   }
 
   function hasEquipmentConditions() {
@@ -1029,6 +1051,7 @@
   }
 
   function apply() {
+    closeBookDetailPopover();
     renderControls();
     if (!state.activated) {
       el.results.hidden = true;
@@ -1094,10 +1117,71 @@
     return `<tr><th>分类</th><th>装备名</th><th>主属性</th>${tiers.map((tier) => `<th>${tier}</th>`).join("")}${hasFilter ? '<th class="badge">排序值</th>' : ""}</tr>`;
   }
 
-  function bookStageRowsHtml(stages) {
-    return `<div class="book-stage-list">${stages.map((stage) =>
-      `<div class="book-stage-row"><span class="book-stage-label">${stage.stage}阶</span><span class="book-stage-values">${tokenHtml(stage.tokens, "")}</span></div>`
+  function bookPopoverStageRowsHtml(stages) {
+    return `<div class="book-popover-stage-list">${stages.map((stage) =>
+      `<div class="book-popover-stage-row"><span class="book-popover-stage-label">${stage.stage}阶：</span><span class="book-popover-stage-values">${tokenHtml(stage.tokens, "、")}</span></div>`
     ).join("")}</div>`;
+  }
+
+  function positionBookDetailPopover(trigger) {
+    const margin = 12;
+    const gap = 10;
+    const triggerRect = trigger.getBoundingClientRect();
+    const popoverRect = el.bookDetailPopover.getBoundingClientRect();
+    let placement = "top";
+    let top = triggerRect.top - popoverRect.height - gap;
+    if (top < margin) {
+      placement = "bottom";
+      top = triggerRect.bottom + gap;
+    }
+    top = Math.max(margin, Math.min(top, window.innerHeight - popoverRect.height - margin));
+    let left = triggerRect.left + triggerRect.width / 2 - popoverRect.width / 2;
+    left = Math.max(margin, Math.min(left, window.innerWidth - popoverRect.width - margin));
+    const arrowLeft = Math.max(18, Math.min(triggerRect.left + triggerRect.width / 2 - left, popoverRect.width - 18));
+    el.bookDetailPopover.dataset.placement = placement;
+    el.bookDetailPopover.style.top = `${Math.round(top)}px`;
+    el.bookDetailPopover.style.left = `${Math.round(left)}px`;
+    el.bookDetailPopover.style.setProperty("--book-arrow-left", `${Math.round(arrowLeft)}px`);
+  }
+
+  function closeBookDetailPopover() {
+    if (!el.bookDetailPopover) return;
+    if (activeBookDetail && activeBookDetail.trigger) {
+      activeBookDetail.trigger.textContent = "详情";
+      activeBookDetail.trigger.setAttribute("aria-expanded", "false");
+    }
+    activeBookDetail = null;
+    el.bookDetailPopover.hidden = true;
+    el.bookDetailPopover.style.visibility = "";
+    el.bookDetailPopover.style.top = "";
+    el.bookDetailPopover.style.left = "";
+    el.bookDetailPopover.style.removeProperty("--book-arrow-left");
+  }
+
+  function openBookDetailPopover(button) {
+    const item = DATA.items.find((entry) => entry.id === button.dataset.bookId);
+    const tier = button.dataset.tier;
+    if (!item || !tier) return;
+    const stages = Q.cumulativeBookStages(item, tier);
+    if (!stages.length) return;
+    closeBookDetailPopover();
+    activeBookDetail = { itemId: item.id, tier: tier, trigger: button };
+    button.textContent = "收起";
+    button.setAttribute("aria-expanded", "true");
+    el.bookDetailTitle.textContent = `${item.name} · ${tier}`;
+    el.bookDetailBody.innerHTML = bookPopoverStageRowsHtml(stages);
+    el.bookDetailPopover.style.visibility = "hidden";
+    el.bookDetailPopover.hidden = false;
+    positionBookDetailPopover(button);
+    el.bookDetailPopover.style.visibility = "visible";
+  }
+
+  function toggleBookDetailPopover(button) {
+    if (activeBookDetail && activeBookDetail.trigger === button) {
+      closeBookDetailPopover();
+      return;
+    }
+    openBookDetailPopover(button);
   }
 
   function bookTierSummaryHtml(item, tier) {
@@ -1107,9 +1191,9 @@
   }
 
   function bookTierDetailsHtml(item, tier) {
-    const stages = Q.cumulativeBookStages(item, tier);
-    if (!stages.length) return "";
-    return `<details class="book-tier-details"><summary><span class="details-open">详情</span><span class="details-close">收起</span></summary>${bookStageRowsHtml(stages)}</details>`;
+    const stages = item.stages && item.stages[tier];
+    if (!Array.isArray(stages) || !stages.length) return "";
+    return `<button type="button" class="book-detail-toggle" data-book-id="${escapeHtml(item.id)}" data-tier="${escapeHtml(tier)}" aria-controls="book-detail-popover" aria-expanded="false">详情</button>`;
   }
 
   function bookTierHtml(item, tier) {
@@ -1152,6 +1236,17 @@
   }
 
   function renderTable(items) {
+    if (state.category === null) {
+      const nonBooks = items.filter((item) => !item.bookGroup);
+      const orangeBooks = items.filter((item) => item.bookGroup === "初始橙色典籍");
+      const purpleBooks = items.filter((item) => item.bookGroup === "初始紫色典籍");
+      const divineBooks = items.filter((item) => item.bookGroup === "神兵典籍");
+      el.tableWrap.innerHTML = equipmentTableHtml(nonBooks, Q.TIER_ORDER, "") +
+        equipmentTableHtml(orangeBooks, Q.TIER_ORDER, "初始橙色典籍") +
+        equipmentTableHtml(purpleBooks, ["紫色"].concat(Q.TIER_ORDER), "初始紫色典籍") +
+        equipmentTableHtml(divineBooks, Q.TIER_ORDER, "神兵典籍");
+      return;
+    }
     if (state.category === "典籍") {
       const orangeBooks = items.filter((item) => item.bookGroup === "初始橙色典籍");
       const purpleBooks = items.filter((item) => item.bookGroup === "初始紫色典籍");

@@ -81,26 +81,52 @@ test("GET /css/style.css 返回 200 且为 CSS", async () => {
   });
 });
 
-test("典籍默认展示最高阶累计，并可按品质展开成长详情", async () => {
+test("装备未选择分类时分别展示普通装备与各类典籍结果", async () => {
   await withServer(async (port) => {
-    const [app, css] = await Promise.all([
+    const app = await get(port, "/js/app.js");
+    assert.strictEqual(app.status, 200);
+    assert.match(app.body, /if \(state\.category === null\)/);
+    assert.match(app.body, /const nonBooks = items\.filter/);
+    assert.match(app.body, /初始橙色典籍/);
+    assert.match(app.body, /初始紫色典籍/);
+    assert.match(app.body, /神兵典籍/);
+  });
+});
+
+test("典籍默认展示最高阶累计，并通过页面级气泡查看逐阶成长", async () => {
+  await withServer(async (port) => {
+    const [index, app, css] = await Promise.all([
+      get(port, "/"),
       get(port, "/js/app.js"),
       get(port, "/css/style.css")
     ]);
+    assert.strictEqual(index.status, 200);
     assert.strictEqual(app.status, 200);
     assert.strictEqual(css.status, 200);
+    assert.strictEqual((index.body.match(/id="book-detail-popover"/g) || []).length, 1);
+    assert.match(index.body, /id="book-detail-popover"[\s\S]*?hidden/);
+    assert.match(index.body, /class="book-detail-close"[^>]*>收起</);
     assert.match(app.body, /Q\.finalBookStage\(item, tier\)/);
     assert.match(app.body, /Q\.cumulativeBookStages\(item, tier\)/);
     assert.match(app.body, /阶累计/);
-    assert.match(app.body, /<details class="book-tier-details">/);
-    assert.doesNotMatch(app.body, /<details class="book-tier-details"\s+open\b/);
-    assert.match(app.body, /details-open">详情/);
-    assert.match(app.body, /details-close">收起/);
+    assert.doesNotMatch(app.body, /<details class="book-tier-details"/);
+    assert.match(app.body, /class="book-detail-toggle"/);
+    assert.match(app.body, /data-book-id=/);
+    assert.match(app.body, /data-tier=/);
+    assert.match(app.body, /aria-expanded="false"/);
+    assert.match(app.body, /book-popover-stage-row/);
+    assert.match(app.body, /tokenHtml\(stage\.tokens, "、"\)/);
+    assert.match(app.body, /document\.addEventListener\("click"/);
+    assert.match(app.body, /event\.key === "Escape"/);
+    assert.match(app.body, /window\.addEventListener\("resize", closeBookDetailPopover\)/);
+    assert.match(app.body, /window\.addEventListener\("scroll", closeBookDetailPopover, true\)/);
     assert.match(app.body, /function equipmentTableHtml\(items, tiers, title\)[\s\S]*?bookTierHtml\(item, tier\)/);
     assert.match(app.body, /function bookCardTiersHtml\(item\)[\s\S]*?bookTierHtml\(item, tier\)/);
     assert.doesNotMatch(app.body, /bookStageHtml\(item, tier, sharedStageCount\)/);
     assert.match(css.body, /#partition-equipment \.book-tier-summary/);
-    assert.match(css.body, /#partition-equipment \.book-tier-details/);
+    assert.match(css.body, /\.book-detail-popover[\s\S]*?position:\s*fixed/);
+    assert.match(css.body, /\.book-detail-popover[\s\S]*?z-index:/);
+    assert.match(css.body, /\.book-popover-stage-row/);
   });
 });
 

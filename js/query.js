@@ -32,9 +32,10 @@
     return main == null || main === "" || (item.mainKey || item.main) === main;
   }
 
-  /** 分类筛选：为空/未提供表示“除典籍外” */
+  /** 分类筛选：null/undefined 表示全部，空字符串表示“除典籍外” */
   function matchCategory(item, category) {
-    if (category == null || category === "") return BOOK_CATEGORIES.indexOf(item.cat) === -1;
+    if (category == null) return true;
+    if (category === "") return BOOK_CATEGORIES.indexOf(item.cat) === -1;
     return item.cat === category;
   }
 
@@ -152,7 +153,7 @@
   function queryItems(items, opts) {
     opts = opts || {};
     var search = opts.search || "";
-    var category = opts.category == null ? "" : opts.category;
+    var category = opts.category;
     var main = opts.main == null ? "" : opts.main;
     var filters = opts.filters || [];
     var sortAttr = opts.sortAttr || (filters.length ? filters[0] : null);

@@ -107,7 +107,13 @@ test("matchMain：主属性精确匹配，不限通过", () => {
   assert.strictEqual(Q.matchMain(fixture[7], "血"), false);
 });
 
-test("matchCategory：空分类为除典籍外", () => {
+test("matchCategory：未选择分类时包含全部装备", () => {
+  assert.strictEqual(Q.matchCategory(fixture[0], null), true);
+  assert.strictEqual(Q.matchCategory(fixture[7], null), true);
+  assert.strictEqual(Q.matchCategory(fixture[8], undefined), true);
+});
+
+test("matchCategory：空字符串为除典籍外", () => {
   assert.strictEqual(Q.matchCategory(fixture[0], ""), true);
   assert.strictEqual(Q.matchCategory(fixture[7], ""), false);
   assert.strictEqual(Q.matchCategory(fixture[8], ""), false);
@@ -186,39 +192,47 @@ test("sortToken：典籍按档次最高阶累计值排序", () => {
   assert.strictEqual(Q.sortToken(fixture[8], "攻", "红金"), null);
 });
 
-test("queryItems：无筛选按分类顺序", () => {
+test("queryItems：未选择分类时按全部分类顺序返回", () => {
   const r = Q.queryItems(fixture, {});
-  assert.deepStrictEqual(r.map(i => i.name), ["朔日辉光", "吉祥如意", "月光耳坠", "神兵破阵弓", "测试防具", "测试饰品", "神兵月光"]);
+  assert.deepStrictEqual(r.map(i => i.name), ["朔日辉光", "吉祥如意", "月光耳坠", "韩非子", "神兵破阵弓", "测试防具", "测试饰品", "神兵月光", "神兵韩非子"]);
 });
 
-test("queryItems：典籍必须明确选择分类", () => {
-  assert.deepStrictEqual(Q.queryItems(fixture, { search: "韩非子" }).map(i => i.name), []);
+test("queryItems：仅搜索且未选择分类时同时查询典籍和其他装备", () => {
+  assert.deepStrictEqual(
+    Q.queryItems(fixture, { category: null, search: "神兵" }).map(i => i.name),
+    ["神兵破阵弓", "测试防具", "测试饰品", "神兵月光", "神兵韩非子"]
+  );
+  assert.deepStrictEqual(Q.queryItems(fixture, { search: "韩非子" }).map(i => i.name), ["韩非子", "神兵韩非子"]);
+});
+
+test("queryItems：明确选择除典籍外或具体典籍分类", () => {
+  assert.deepStrictEqual(Q.queryItems(fixture, { category: "", search: "韩非子" }).map(i => i.name), []);
   assert.deepStrictEqual(Q.queryItems(fixture, { category: "典籍", search: "韩非子" }).map(i => i.name), ["韩非子"]);
   assert.deepStrictEqual(Q.queryItems(fixture, { category: "神兵典籍", search: "韩非子" }).map(i => i.name), ["神兵韩非子"]);
 });
 
 test("queryItems：副属性筛选不包含仅主属性", () => {
-  const r = Q.queryItems(fixture, { filters: ["攻"] });
+  const r = Q.queryItems(fixture, { category: "", filters: ["攻"] });
   assert.deepStrictEqual(r.map(i => i.name), []);
 });
 
 test("queryItems：主属性筛选", () => {
-  const r = Q.queryItems(fixture, { main: "血" });
+  const r = Q.queryItems(fixture, { category: "", main: "血" });
   assert.deepStrictEqual(r.map(i => i.name), ["月光耳坠", "测试饰品", "神兵月光"]);
 });
 
 test("queryItems：主属性 + 副属性 AND", () => {
-  const r = Q.queryItems(fixture, { main: "血", filters: ["血"] });
+  const r = Q.queryItems(fixture, { category: "", main: "血", filters: ["血"] });
   assert.deepStrictEqual(r.map(i => i.name), ["月光耳坠", "神兵月光"]);
 });
 
 test("queryItems：筛选后按最高值倒序", () => {
-  const r = Q.queryItems(fixture, { filters: ["血"] });
+  const r = Q.queryItems(fixture, { category: "", filters: ["血"] });
   assert.deepStrictEqual(r.map(i => i.name), ["月光耳坠", "神兵月光", "朔日辉光", "测试防具"]);
 });
 
 test("queryItems：红色档排序且无值排最后", () => {
-  const r = Q.queryItems(fixture, { filters: ["血"], valueSource: "红色" });
+  const r = Q.queryItems(fixture, { category: "", filters: ["血"], valueSource: "红色" });
   assert.deepStrictEqual(r.map(i => i.name), ["月光耳坠", "神兵月光", "朔日辉光", "测试防具"]);
 });
 

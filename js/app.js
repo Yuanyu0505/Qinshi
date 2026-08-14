@@ -1037,7 +1037,7 @@
     }
     const items = Q.queryItems(DATA.items, {
       search: state.search,
-      category: state.category == null ? "" : state.category,
+      category: state.category,
       main: state.main == null ? "" : state.main,
       filters: state.filters,
       sortAttr: state.sortAttr,

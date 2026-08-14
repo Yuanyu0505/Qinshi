@@ -102,6 +102,20 @@ test("首页提供合阵工作台及其数据、核心和界面脚本", async ()
   });
 });
 
+test("合阵在桌面导航和移动更多菜单中均位于兵法之后答题之前", async () => {
+  await withServer(async (port) => {
+    const page = await get(port, "/");
+    const nav = page.body.match(/<nav class="tabs"[\s\S]*?<\/nav>/);
+    const more = page.body.match(/<div class="mobile-more-grid">[\s\S]*?<\/div>/);
+    assert.ok(nav);
+    assert.ok(more);
+    [nav[0], more[0]].forEach(fragment => {
+      assert.ok(fragment.indexOf('data-partition="tactics"') < fragment.indexOf('data-partition="formations"'));
+      assert.ok(fragment.indexOf('data-partition="formations"') < fragment.indexOf('data-partition="quiz"'));
+    });
+  });
+});
+
 test("装备未选择分类时分别展示普通装备与各类典籍结果", async () => {
   await withServer(async (port) => {
     const app = await get(port, "/js/app.js");

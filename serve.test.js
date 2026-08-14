@@ -210,3 +210,16 @@ test("关卡掉落搜索会隐藏默认表并保留完整查询", async () => {
     assert.match(r.body, /dropSectionHtml\("声望奖励"/);
   });
 });
+
+test("PWA 缓存与页面版本同步为 1.0.8", async () => {
+  await withServer(async (port) => {
+    const [worker, pwa] = await Promise.all([
+      get(port, "/service-worker.js"),
+      get(port, "/js/pwa.js")
+    ]);
+    assert.strictEqual(worker.status, 200);
+    assert.strictEqual(pwa.status, 200);
+    assert.match(worker.body, /CACHE_NAME\s*=\s*CACHE_PREFIX\s*\+\s*"1\.0\.8"/);
+    assert.match(pwa.body, /APP_VERSION\s*=\s*"1\.0\.8"/);
+  });
+});

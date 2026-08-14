@@ -1,7 +1,7 @@
 (function () {
   "use strict";
 
-  var APP_VERSION = "1.0.7";
+  var APP_VERSION = "1.0.8";
   var registration = null;
   var waitingWorker = null;
   var deferredInstallPrompt = null;

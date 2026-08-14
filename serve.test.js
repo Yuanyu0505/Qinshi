@@ -93,8 +93,11 @@ test("典籍默认展示最高阶累计，并可按品质展开成长详情", as
     assert.match(app.body, /Q\.cumulativeBookStages\(item, tier\)/);
     assert.match(app.body, /阶累计/);
     assert.match(app.body, /<details class="book-tier-details">/);
+    assert.doesNotMatch(app.body, /<details class="book-tier-details"\s+open\b/);
     assert.match(app.body, /details-open">详情/);
     assert.match(app.body, /details-close">收起/);
+    assert.match(app.body, /function equipmentTableHtml\(items, tiers, title\)[\s\S]*?bookTierHtml\(item, tier\)/);
+    assert.match(app.body, /function bookCardTiersHtml\(item\)[\s\S]*?bookTierHtml\(item, tier\)/);
     assert.doesNotMatch(app.body, /bookStageHtml\(item, tier, sharedStageCount\)/);
     assert.match(css.body, /#partition-equipment \.book-tier-summary/);
     assert.match(css.body, /#partition-equipment \.book-tier-details/);

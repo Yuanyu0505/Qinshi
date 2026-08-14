@@ -174,3 +174,39 @@ test("GET /data/atlas.js 返回 200 且为 JS", async () => {
     assert.match(r.headers["content-type"], /javascript/);
   });
 });
+
+test("关卡掉落首页包含固定橙装普通关卡表", async () => {
+  await withServer(async (port) => {
+    const r = await get(port, "/");
+    assert.match(r.body, /id="drop-default-orange"/);
+    assert.match(r.body, /<th[^>]*>道具名称<\/th>\s*<th[^>]*>普通关卡<\/th>/);
+    const expected = [
+      ["白羽绸衣", "56-7、51-7"],
+      ["天问", "56-5、51-5"],
+      ["醉梦", "55-7、50-7"],
+      ["巨阙", "55-5、50-5"],
+      ["纵横战袍", "54-7、49-7"],
+      ["秋骊", "54-5、49-5"],
+      ["苍云甲", "53-7、48-7"],
+      ["墨眉", "53-5、48-5"],
+      ["月华战袍", "52-7"],
+      ["管事", "52-5"]
+    ];
+    expected.forEach(([item, stages]) => {
+      assert.match(r.body, new RegExp(`<span class="mat material-token mat-orange">${item}<\\/span>[\\s\\S]*?${stages}`));
+    });
+  });
+});
+
+test("关卡掉落搜索会隐藏默认表并保留完整查询", async () => {
+  await withServer(async (port) => {
+    const r = await get(port, "/js/app.js");
+    assert.strictEqual(r.status, 200);
+    assert.match(r.body, /dropDefaultOrange:\s*document\.getElementById\("drop-default-orange"\)/);
+    assert.match(r.body, /dropDefaultOrange\.hidden\s*=\s*Boolean\(q\)/);
+    assert.match(r.body, /DROPS\.groupDrops\(DROP_DATA, q\)/);
+    assert.match(r.body, /dropSectionHtml\("普通关卡"/);
+    assert.match(r.body, /dropSectionHtml\("英雄关卡"/);
+    assert.match(r.body, /dropSectionHtml\("声望奖励"/);
+  });
+});

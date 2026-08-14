@@ -58,6 +58,7 @@
     forgeSummaryHead: document.getElementById("forging-summary-head"),
     forgeSummary: document.getElementById("forging-summary"),
     dropSearch: document.getElementById("drop-search"),
+    dropDefaultOrange: document.getElementById("drop-default-orange"),
     dropResults: document.getElementById("drop-results"),
     forgeView: document.getElementById("forge-view"),
     forgeQuery: document.getElementById("forge-query"),
@@ -863,8 +864,9 @@
 
   function applyDrops() {
     const q = DROPS.normalize(el.dropSearch.value);
+    el.dropDefaultOrange.hidden = Boolean(q);
     if (!q) {
-      el.dropResults.innerHTML = '<div class="empty"><p>输入道具关键字开始查询</p></div>';
+      el.dropResults.innerHTML = "";
       return;
     }
     const groups = DROPS.groupDrops(DROP_DATA, q);

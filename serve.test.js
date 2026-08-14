@@ -127,6 +127,8 @@ test("典籍默认展示最高阶累计，并通过页面级气泡查看逐阶�
     assert.match(css.body, /\.book-detail-popover[\s\S]*?position:\s*fixed/);
     assert.match(css.body, /\.book-detail-popover[\s\S]*?z-index:/);
     assert.match(css.body, /\.book-popover-stage-row/);
+    assert.match(css.body, /\.book-popover-stage-row\s*\{[\s\S]*?grid-template-columns:\s*46px minmax\(0, 1fr\)/);
+    assert.match(css.body, /\.book-popover-stage-label\s*\{[\s\S]*?text-align:\s*right/);
   });
 });
 

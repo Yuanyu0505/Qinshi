@@ -917,7 +917,7 @@ td.name { font-weight: 600; white-space: nowrap; }
 .book-popover-stage-list { display: grid; }
 .book-popover-stage-row {
   display: grid;
-  grid-template-columns: max-content minmax(0, 1fr);
+  grid-template-columns: 46px minmax(0, 1fr);
   align-items: baseline;
   gap: 6px;
   padding: 7px 0;
@@ -927,6 +927,7 @@ td.name { font-weight: 600; white-space: nowrap; }
 .book-popover-stage-label {
   color: var(--gold-dim);
   font-size: 13px;
+  text-align: right;
   white-space: nowrap;
 }
 .book-popover-stage-values {

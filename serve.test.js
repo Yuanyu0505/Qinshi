@@ -83,6 +83,25 @@ test("GET /css/style.css 返回 200 且为 CSS", async () => {
   });
 });
 
+test("首页提供合阵工作台及其数据、核心和界面脚本", async () => {
+  await withServer(async (port) => {
+    const page = await get(port, "/");
+    assert.strictEqual(page.status, 200);
+    assert.match(page.body, /id="partition-formations"/);
+    assert.match(page.body, /id="formation-selector"/);
+    assert.match(page.body, /id="formation-workspace"/);
+    assert.match(page.body, /<script src="data\/formations\.js"><\/script>/);
+    assert.match(page.body, /<script src="js\/formations\.js"><\/script>/);
+    assert.match(page.body, /<script src="js\/formations-ui\.js"><\/script>/);
+
+    for (const resource of ["/data/formations.js", "/js/formations.js", "/js/formations-ui.js"]) {
+      const response = await get(port, resource);
+      assert.strictEqual(response.status, 200, resource);
+      assert.match(response.headers["content-type"], /javascript/, resource);
+    }
+  });
+});
+
 test("装备未选择分类时分别展示普通装备与各类典籍结果", async () => {
   await withServer(async (port) => {
     const app = await get(port, "/js/app.js");

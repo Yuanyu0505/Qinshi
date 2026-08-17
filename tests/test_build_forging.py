@@ -2,7 +2,7 @@ import os
 import unittest
 from collections import Counter
 
-from tools.build_forging import parse_sheet
+from tools.build_forging import normalize_text, parse_sheet
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 XLSX = os.path.join(ROOT, "秦时相关（更新贯侯钟离昧）20260618.xlsx")
@@ -67,6 +67,16 @@ class TestForgingSummary(unittest.TestCase):
         item = next(i for i in self.items if i["name"] == "雷神锤")
         self.assertEqual(item["stages"][0]["stage"], "0→1锻")
         self.assertEqual(item["stages"][10]["stage"], "10锻→红金")
+
+    def test_typo_normalization(self):
+        self.assertEqual(normalize_text(" 惊倪 "), "惊鲵")
+        self.assertEqual(normalize_text("惊鲵"), "惊鲵")
+        self.assertFalse(any(
+            token.get("n") == "惊倪"
+            for item in self.items
+            for stage in item["stages"]
+            for token in stage["tokens"]
+        ))
 
 
 if __name__ == "__main__":

@@ -32,7 +32,7 @@
 const summary = A.summarizeUpgrade(fixture, { "t-0001": 5, "t-0002": 5, "t-0003": 5 }, 10, upgradeStages);
 assert.deepStrictEqual(
   summary.equipment.map(item => `${item.q}:${item.n}`),
-  ["紫:冰魄戒", "紫:号钟琴", "紫:水寒", "紫:阴符经", "橙:残虹", "橙:罡星冠", "橙:黄帝内经", "橙:墨梅"]
+  ["紫:冰魄戒", "紫:号钟琴", "紫:水寒", "紫:阴符经", "橙:残虹", "橙:罡星冠", "橙:黄帝内经", "橙:墨眉"]
 );
 ```
 

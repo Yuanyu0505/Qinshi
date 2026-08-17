@@ -27,12 +27,21 @@ STAGES = [("5→6", 6), ("7→8", 8), ("9→10", 10)]
 UPGRADE_START_ROW = 51
 UPGRADE_END_ROW = 69
 UPGRADE_COLS = (20, 21, 22, 23, 24)  # T..X
+TYPO_FIXES = {
+    "墨梅": "墨眉",
+    "惊倪": "惊鲵",
+}
+
+
+def normalize_text(value):
+    if value is None:
+        return ""
+    text = str(value).strip()
+    return TYPO_FIXES.get(text, text)
 
 
 def cell_text(value):
-    if value is None:
-        return ""
-    return str(value).strip()
+    return normalize_text(value)
 
 
 def int_value(value):
@@ -81,8 +90,8 @@ def parse_sheet(path):
                     "key": key,
                     "end": stage_end,
                     "items": [
-                        {"n": p.strip(), "q": cell_quality(ws.cell(row=r, column=name_col + 1 + idx))}
-                        for p in raw.replace("、", ",").split(",") if p.strip()
+                        {"n": normalize_text(p), "q": cell_quality(ws.cell(row=r, column=name_col + 1 + idx))}
+                        for p in raw.replace("、", ",").split(",") if normalize_text(p)
                     ],
                 })
             acquire = cell_text(rows[r - 1][name_col + 3])

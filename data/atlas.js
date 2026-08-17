@@ -4,7 +4,7 @@ window.ATLAS_DATA = {
     "sourceFile": "秦时相关（更新贯侯钟离昧）20260618.xlsx",
     "sourceSheet": "图鉴汇总",
     "version": "20260618",
-    "generatedAt": "2026-08-10",
+    "generatedAt": "2026-08-17",
     "total": 177,
     "atlasOrder": [
       "攻",
@@ -4705,7 +4705,7 @@ window.ATLAS_DATA = {
           "end": 10,
           "items": [
             {
-              "n": "墨梅",
+              "n": "墨眉",
               "q": "橙"
             }
           ]

@@ -29,6 +29,17 @@ STAGE_NAMES = [
 ]
 STAGE_COLS = list(range(3, 14))  # C..M
 SPLIT_RE = re.compile(r"[、,，]")
+TYPO_FIXES = {
+    "墨梅": "墨眉",
+    "惊倪": "惊鲵",
+}
+
+
+def normalize_text(value):
+    if value is None:
+        return ""
+    text = str(value).strip()
+    return TYPO_FIXES.get(text, text)
 
 
 def cell_quality(cell):
@@ -55,10 +66,10 @@ def cell_quality(cell):
 def parse_tokens(raw, quality):
     if raw is None:
         return [{"dash": True}]
-    s = str(raw).strip()
+    s = normalize_text(raw)
     if not s or s == "-":
         return [{"dash": True}]
-    return [{"n": part.strip(), "q": quality} for part in SPLIT_RE.split(s) if part.strip()]
+    return [{"n": normalize_text(part), "q": quality} for part in SPLIT_RE.split(s) if normalize_text(part)]
 
 
 def parse_sheet(path):
@@ -67,14 +78,14 @@ def parse_sheet(path):
     ws = wb["橙装锻造"]
     summary = []
     for r in range(3, 7):
-        cat = str(ws.cell(row=r, column=2).value).strip()
+        cat = normalize_text(ws.cell(row=r, column=2).value)
         summary.append({
             "cat": cat,
             "stages": [
-                str(ws.cell(row=r, column=c).value).strip()
+                normalize_text(ws.cell(row=r, column=c).value)
                 for c in STAGE_COLS
             ],
-            "total": str(ws.cell(row=r, column=14).value).strip(),
+            "total": normalize_text(ws.cell(row=r, column=14).value),
         })
     items = []
     for cat, start, end in SECTIONS:
@@ -83,7 +94,7 @@ def parse_sheet(path):
             raw_name = name_cell.value
             if raw_name is None:
                 continue
-            name = str(raw_name).strip()
+            name = normalize_text(raw_name)
             if not name:
                 continue
             stages = []

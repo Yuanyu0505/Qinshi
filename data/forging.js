@@ -4,7 +4,7 @@ window.FORGING_DATA = {
     "sourceFile": "秦时相关（更新贯侯钟离昧）20260618.xlsx",
     "sourceSheet": "橙装锻造",
     "version": "20260618",
-    "generatedAt": "2026-08-10",
+    "generatedAt": "2026-08-17",
     "total": 156,
     "summaryTotal": 4,
     "stageNames": [
@@ -5664,7 +5664,7 @@ window.FORGING_DATA = {
           "stage": "7→8锻",
           "tokens": [
             {
-              "n": "惊倪",
+              "n": "惊鲵",
               "q": "橙"
             }
           ]

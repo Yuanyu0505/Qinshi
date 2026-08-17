@@ -4,7 +4,7 @@ from collections import Counter
 
 import openpyxl
 
-from tools.build_atlas import parse_sheet, parse_upgrade_stages
+from tools.build_atlas import normalize_text, parse_sheet, parse_upgrade_stages
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 XLSX = os.path.join(ROOT, "秦时相关（更新贯侯钟离昧）20260618.xlsx")
@@ -54,6 +54,18 @@ class TestAtlas(unittest.TestCase):
             [{"n": "墨眉", "q": "橙"}],
             [{"n": "独黑斗篷", "q": "橙"}],
         ])
+
+    def test_typo_normalization(self):
+        self.assertEqual(normalize_text(" 墨梅 "), "墨眉")
+        self.assertEqual(normalize_text("墨眉"), "墨眉")
+        self.assertFalse(any(
+            token["n"] == "墨梅"
+            for item in self.items
+            for stage in item["stages"]
+            for token in stage["items"]
+        ))
+        item = next(item for item in self.items if item["name"] == "神·侠道天明")
+        self.assertEqual(item["stages"][2]["items"][0]["n"], "墨眉")
 
     def test_blood_sample(self):
         item = next(i for i in self.items if i["name"] == "木剑盖聂")

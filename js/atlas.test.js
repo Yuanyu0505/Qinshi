@@ -228,3 +228,39 @@ test("filterAtlas：所有分区中收藏项优先且组内顺序不变", () => 
     favorites: ["t-0003"]
   }).map(i => i.id), ["t-0003", "t-0001"]);
 });
+
+test("equipmentRecordKey：同名装备按阶段和位置独立保存", () => {
+  assert.strictEqual(A.equipmentRecordKey("9→10", 0), "9→10|0");
+  assert.notStrictEqual(A.equipmentRecordKey("7→8", 0), A.equipmentRecordKey("9→10", 0));
+  assert.notStrictEqual(A.equipmentRecordKey("9→10", 0), A.equipmentRecordKey("9→10", 1));
+});
+
+test("soulInventoryStatus：区分未填写、还差和库存达标", () => {
+  assert.deepStrictEqual(A.soulInventoryStatus(765, 760), { state: "short", owned: 760, missing: 5 });
+  assert.deepStrictEqual(A.soulInventoryStatus(765, 765), { state: "enough", owned: 765, missing: 0 });
+  assert.deepStrictEqual(A.soulInventoryStatus(765, 900), { state: "enough", owned: 900, missing: 0 });
+  assert.deepStrictEqual(A.soulInventoryStatus(765, null), { state: "unset", owned: null, missing: 765 });
+  assert.deepStrictEqual(A.soulInventoryStatus(765, ""), { state: "unset", owned: null, missing: 765 });
+});
+
+test("normalizeInventoryRecord：只保留合法魂魄和装备记录", () => {
+  assert.deepStrictEqual(A.normalizeInventoryRecord({
+    soulsOwned: "760",
+    equipment: {
+      "9→10|0": { name: " 墨眉 ", owned: true, note: " 已有一件 " },
+      "9→10|1": { name: "鲨齿", owned: false, note: 123 },
+      broken: null
+    },
+    ignored: true
+  }), {
+    soulsOwned: 760,
+    equipment: {
+      "9→10|0": { name: "墨眉", owned: true, note: "已有一件" },
+      "9→10|1": { name: "鲨齿", owned: false, note: "123" }
+    }
+  });
+  assert.deepStrictEqual(A.normalizeInventoryRecord({ soulsOwned: "", equipment: [] }), {
+    soulsOwned: null,
+    equipment: {}
+  });
+});

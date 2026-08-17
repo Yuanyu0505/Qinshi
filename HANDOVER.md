@@ -117,6 +117,8 @@ $python = 'C:\Users\pghyl\.cache\codex-runtimes\codex-primary-runtime\dependenci
 | `qinshi_forging_progress_v1` | 橙装锻造个人进度（弟子、装备、阶段） |
 | `qinshi_atlas_levels_v1` | 图鉴等级个人进度 |
 | `qinshi_atlas_target_level_v1` | 图鉴目标等级 |
+| `qinshi_atlas_favorites_v1` | 已收藏图鉴 ID |
+| `qinshi_atlas_inventory_v1` | 已收藏图鉴个人库存：按图鉴 ID 保存已有魂魄及“阶段+位置”装备拥有状态/备注；取消收藏时保留但隐藏 |
 | `qinshi_inscription_progress_v2` | 铭文个人进度 |
 | `qinshi_quiz_items_v1` | 历史答题修订数据（兼容旧数据） |
 | `qinshi_tactics_progress_v1` | 兵法个人进度：按兵法 ID 保存 `{ rank, rehearsalSpent, mantras }` |

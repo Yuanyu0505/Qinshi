@@ -20,6 +20,7 @@
   const ATLAS_LEVELS_KEY = "qinshi_atlas_levels_v1";
   const ATLAS_TARGET_LEVEL_KEY = "qinshi_atlas_target_level_v1";
   const ATLAS_FAVORITES_KEY = "qinshi_atlas_favorites_v1";
+  const ATLAS_INVENTORY_KEY = "qinshi_atlas_inventory_v1";
   const QUIZ_STORE_KEY = "qinshi_quiz_items_v1";
   const PARTITION_TITLES = {
     atlas: "图鉴",
@@ -107,7 +108,11 @@
     levelMax: 20,
     targetLevel: loadAtlasTargetLevel(),
     favorites: loadAtlasFavorites(),
-    levels: loadAtlasLevels()
+    levels: loadAtlasLevels(),
+    inventory: loadAtlasInventory(),
+    inventoryEditingId: "",
+    inventoryDraft: null,
+    inventoryError: ""
   };
   const quizState = { query: "", items: loadQuizItems() };
 
@@ -285,6 +290,34 @@
     }
   }
 
+  function loadAtlasInventory() {
+    try {
+      const parsed = JSON.parse(localStorage.getItem(ATLAS_INVENTORY_KEY) || "{}");
+      if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return {};
+      return Object.keys(parsed).reduce((result, id) => {
+        const cleanId = String(id || "").trim();
+        if (cleanId) result[cleanId] = ATLAS.normalizeInventoryRecord(parsed[id]);
+        return result;
+      }, {});
+    } catch (e) {
+      return {};
+    }
+  }
+
+  function saveAtlasInventory() {
+    try {
+      localStorage.setItem(ATLAS_INVENTORY_KEY, JSON.stringify(atlasState.inventory));
+    } catch (e) {
+      // 忽略存储失败
+    }
+  }
+
+  function closeAtlasInventoryEditor() {
+    atlasState.inventoryEditingId = "";
+    atlasState.inventoryDraft = null;
+    atlasState.inventoryError = "";
+  }
+
   function initAtlas() {
     if (!ATLAS_DATA || !ATLAS) return;
     atlasState.levelMax = atlasMaxLevel();
@@ -325,6 +358,7 @@
       });
     });
     el.atlasTargetLevel.addEventListener("change", () => {
+      closeAtlasInventoryEditor();
       atlasState.activated = true;
       atlasState.targetLevel = normalizeAtlasTargetLevel(el.atlasTargetLevel.value);
       el.atlasTargetLevel.value = String(atlasState.targetLevel);
@@ -333,20 +367,76 @@
     });
     el.atlasResults.addEventListener("change", (e) => {
       if (e.target.classList.contains("atlas-level")) {
+        closeAtlasInventoryEditor();
         atlasState.levels[e.target.dataset.id] = parseInt(e.target.value, 10) || 0;
         saveAtlasLevels();
         applyAtlas();
+        return;
+      }
+      if (e.target.matches("[data-atlas-inventory-owned]")) {
+        const key = e.target.dataset.atlasInventoryOwned;
+        if (atlasState.inventoryDraft && atlasState.inventoryDraft.equipment[key]) {
+          atlasState.inventoryDraft.equipment[key].owned = e.target.value === "owned";
+          if (atlasState.inventoryDraft.equipment[key].owned) atlasState.inventoryDraft.equipment[key].note = "";
+          applyAtlas();
+        }
+      }
+    });
+    el.atlasResults.addEventListener("input", (e) => {
+      if (!atlasState.inventoryDraft) return;
+      if (e.target.matches("[data-atlas-inventory-souls]")) {
+        atlasState.inventoryDraft.soulsOwned = e.target.value;
+      } else if (e.target.matches("[data-atlas-inventory-note]")) {
+        const key = e.target.dataset.atlasInventoryNote;
+        if (atlasState.inventoryDraft.equipment[key]) atlasState.inventoryDraft.equipment[key].note = e.target.value;
       }
     });
     el.atlasResults.addEventListener("click", (e) => {
-      const button = e.target.closest("button[data-atlas-favorite]");
-      if (!button) return;
-      const id = button.dataset.atlasFavorite;
-      const index = atlasState.favorites.indexOf(id);
-      if (index >= 0) atlasState.favorites.splice(index, 1);
-      else atlasState.favorites.push(id);
-      saveAtlasFavorites();
-      applyAtlas();
+      const favoriteButton = e.target.closest("button[data-atlas-favorite]");
+      if (favoriteButton) {
+        const id = favoriteButton.dataset.atlasFavorite;
+        const index = atlasState.favorites.indexOf(id);
+        if (index >= 0) {
+          atlasState.favorites.splice(index, 1);
+          if (atlasState.inventoryEditingId === id) closeAtlasInventoryEditor();
+        } else {
+          atlasState.favorites.push(id);
+        }
+        saveAtlasFavorites();
+        applyAtlas();
+        return;
+      }
+      const editButton = e.target.closest("button[data-atlas-inventory-edit]");
+      if (editButton) {
+        const id = editButton.dataset.atlasInventoryEdit;
+        const item = ATLAS_DATA.items.find((candidate) => String(candidate.id) === id);
+        if (!item || !atlasState.favorites.includes(id)) return;
+        const plan = ATLAS.upgradePlan(item, ATLAS.levelOf(item, atlasState.levels), atlasState.targetLevel, ATLAS_DATA.meta.upgradeStages);
+        atlasState.inventoryEditingId = id;
+        atlasState.inventoryDraft = makeAtlasInventoryDraft(id, plan);
+        atlasState.inventoryError = "";
+        applyAtlas();
+        return;
+      }
+      if (e.target.closest("button[data-atlas-inventory-cancel]")) {
+        closeAtlasInventoryEditor();
+        applyAtlas();
+        return;
+      }
+      const saveButton = e.target.closest("button[data-atlas-inventory-save]");
+      if (saveButton && atlasState.inventoryDraft) {
+        const rawSouls = String(atlasState.inventoryDraft.soulsOwned == null ? "" : atlasState.inventoryDraft.soulsOwned).trim();
+        if (rawSouls && !/^\d+$/.test(rawSouls)) {
+          atlasState.inventoryError = "已有魂魄只能填写大于或等于 0 的整数";
+          applyAtlas();
+          return;
+        }
+        const id = saveButton.dataset.atlasInventorySave;
+        atlasState.inventory[id] = ATLAS.normalizeInventoryRecord(atlasState.inventoryDraft);
+        saveAtlasInventory();
+        closeAtlasInventoryEditor();
+        applyAtlas();
+      }
     });
     el.atlasUpgradeSummary.addEventListener("click", (e) => {
       const button = e.target.closest(".atlas-summary-equipment-toggle");
@@ -363,34 +453,111 @@
     applyAtlas();
   }
 
+  function atlasIndexedEquipment(items) {
+    return ATLAS.sortEquipment((items || []).map((token, index) => ({ ...token, inventoryIndex: index })));
+  }
+
+  function makeAtlasInventoryDraft(itemId, plan) {
+    const saved = ATLAS.normalizeInventoryRecord(atlasState.inventory[itemId]);
+    const draft = {
+      soulsOwned: saved.soulsOwned == null ? "" : String(saved.soulsOwned),
+      equipment: {}
+    };
+    plan.equipmentStages.forEach((stage) => {
+      (stage.items || []).forEach((token, index) => {
+        const key = ATLAS.equipmentRecordKey(stage.key, index);
+        const prior = saved.equipment[key];
+        draft.equipment[key] = prior && prior.name === token.n
+          ? { name: token.n, owned: prior.owned === true, note: prior.note || "" }
+          : { name: token.n, owned: false, note: "" };
+      });
+    });
+    return draft;
+  }
+
+  function atlasInventoryEquipmentStatus(itemId, stage, token, favorite) {
+    if (!favorite) return "";
+    const record = ATLAS.normalizeInventoryRecord(atlasState.inventory[itemId]);
+    const key = ATLAS.equipmentRecordKey(stage.key, token.inventoryIndex);
+    const saved = record.equipment[key];
+    if (!saved || saved.name !== token.n) return "";
+    if (saved.owned) return '<strong class="atlas-equipment-owned" title="已拥有">√</strong>';
+    return `<span class="atlas-equipment-note">${escapeHtml(saved.note || "未拥有")}</span>`;
+  }
+
+  function atlasEquipmentHtml(itemId, plan, favorite) {
+    if (!plan.equipmentStages.length) return '<div class="muted-tip">该目标区间无需装备</div>';
+    return `<div class="atlas-equipment-stage-list">${plan.equipmentStages.map((stage) => `<div class="atlas-equipment-stage">
+      <span class="atlas-stage-key">${escapeHtml(stage.key)}</span>
+      <span class="atlas-equipment-items">${atlasIndexedEquipment(stage.items).map((token) => `<span class="atlas-equipment-entry"><span class="mat material-token ${token.q === "紫" ? "mat-purple" : "mat-orange"}">${escapeHtml(token.n)}</span>${atlasInventoryEquipmentStatus(itemId, stage, token, favorite)}</span>`).join("") || '<span class="mat-dash">无</span>'}</span>
+    </div>`).join("")}</div>`;
+  }
+
+  function atlasInventoryEditorHtml(itemId, plan) {
+    if (atlasState.inventoryEditingId !== itemId || !atlasState.inventoryDraft) return "";
+    const draft = atlasState.inventoryDraft;
+    const equipmentRows = plan.equipmentStages.flatMap((stage) => atlasIndexedEquipment(stage.items).map((token) => {
+      const key = ATLAS.equipmentRecordKey(stage.key, token.inventoryIndex);
+      const value = draft.equipment[key] || { name: token.n, owned: false, note: "" };
+      draft.equipment[key] = value;
+      return `<div class="atlas-inventory-equipment-row">
+        <span class="atlas-stage-key">${escapeHtml(stage.key)}</span>
+        <span class="mat material-token ${token.q === "紫" ? "mat-purple" : "mat-orange"}">${escapeHtml(token.n)}</span>
+        <select data-atlas-inventory-owned="${escapeHtml(key)}" aria-label="${escapeHtml(token.n)}拥有状态">
+          <option value="missing"${value.owned ? "" : " selected"}>未拥有</option>
+          <option value="owned"${value.owned ? " selected" : ""}>已拥有</option>
+        </select>
+        <input type="text" data-atlas-inventory-note="${escapeHtml(key)}" value="${escapeHtml(value.note)}" placeholder="未拥有备注（可选）"${value.owned ? " hidden" : ""}>
+      </div>`;
+    })).join("");
+    return `<div class="atlas-inventory-editor">
+      <div class="atlas-inventory-title">个人库存</div>
+      <label class="atlas-inventory-souls">已有魂魄
+        <input type="number" min="0" step="1" data-atlas-inventory-souls value="${escapeHtml(draft.soulsOwned)}" placeholder="未填写">
+      </label>
+      <div class="atlas-inventory-equipment-list">${equipmentRows || '<span class="muted-tip">当前目标区间没有所需装备</span>'}</div>
+      ${atlasState.inventoryError ? `<div class="atlas-inventory-error">${escapeHtml(atlasState.inventoryError)}</div>` : ""}
+      <div class="atlas-inventory-actions">
+        <button type="button" class="seg active" data-atlas-inventory-save="${escapeHtml(itemId)}">保存库存</button>
+        <button type="button" class="seg" data-atlas-inventory-cancel>取消</button>
+      </div>
+    </div>`;
+  }
+
+  function atlasSoulHtml(itemId, souls, favorite) {
+    const base = `魂魄 <b>${souls}</b>`;
+    if (!favorite) return base;
+    const record = ATLAS.normalizeInventoryRecord(atlasState.inventory[itemId]);
+    const status = ATLAS.soulInventoryStatus(souls, record.soulsOwned);
+    if (status.state === "unset") return base;
+    if (status.state === "enough") return `${base}<span class="atlas-inventory-suffix">（库存达标）</span>`;
+    return `${base}<span class="atlas-inventory-suffix">（已有${status.owned}，还差${status.missing}）</span>`;
+  }
+
   function atlasItemHtml(item) {
     const L = ATLAS.levelOf(item, atlasState.levels);
     const itemId = String(item.id);
     const favorite = atlasState.favorites.includes(itemId);
     const plan = ATLAS.upgradePlan(item, L, atlasState.targetLevel, ATLAS_DATA.meta.upgradeStages);
-    const equipmentHtml = plan.equipmentStages.length
-      ? `<div class="atlas-equipment-stage-list">${plan.equipmentStages.map((st) => `<div class="atlas-equipment-stage">
-          <span class="atlas-stage-key">${st.key}</span>
-          <span class="atlas-equipment-items">${ATLAS.sortEquipment(st.items).map((tk) => `<span class="mat material-token ${tk.q === "紫" ? "mat-purple" : "mat-orange"}">${escapeHtml(tk.n)}</span>`).join("") || '<span class="mat-dash">无</span>'}</span>
-        </div>`).join("")}</div>`
-      : '<div class="muted-tip">该目标区间无需装备</div>';
+    const equipmentHtml = atlasEquipmentHtml(itemId, plan, favorite);
     const upgradeHtml = plan.reached
       ? `<div class="atlas-upgrade done">已达到目标等级（${plan.currentLevel} / ${plan.targetLevel}级）</div>`
       : `<div class="atlas-upgrade">
           <div class="atlas-upgrade-title">升至 ${plan.targetLevel} 级</div>
           <div class="atlas-upgrade-cost">
             <span>明鬼绳结 <b>${plan.knots}</b></span>
-            <span>魂魄 <b>${plan.souls}</b></span>
+            <span>${atlasSoulHtml(itemId, plan.souls, favorite)}</span>
             <span>成长值 <b>+${plan.growth}</b></span>
           </div>
           <div class="muted-tip">14级后不再获得成长值</div>
           <div class="atlas-upgrade-equipment"><div class="atlas-equipment-title">所需装备</div>${equipmentHtml}</div>
         </div>`;
-    return `<div class="atlas-item${favorite ? " atlas-item-favorite" : ""}">
+    return `<div class="atlas-item${favorite ? " atlas-item-favorite" : ""}" data-atlas-item="${escapeHtml(itemId)}">
       <div class="atlas-head">
         <span class="q-badge q-orange">${item.atlas}图鉴</span>
         <span class="forge-name">${escapeHtml(item.name)}</span>
         <button type="button" class="atlas-favorite-toggle${favorite ? " is-favorite" : ""}" data-atlas-favorite="${escapeHtml(itemId)}" aria-pressed="${favorite}" title="${favorite ? "取消收藏" : "收藏图鉴"}" aria-label="${favorite ? "取消收藏" : "收藏图鉴"}">${favorite ? "★" : "☆"}</button>
+        ${favorite ? `<button type="button" class="seg atlas-inventory-edit" data-atlas-inventory-edit="${escapeHtml(itemId)}">编辑库存</button>` : ""}
         <label class="atlas-level-label">图鉴等级
           <input type="number" class="atlas-level" data-id="${item.id}" value="${L}" min="0" max="${atlasMaxLevel()}">
         </label>
@@ -400,6 +567,7 @@
         <span>所属图鉴：${item.group ? `<span class="atlas-group">${escapeHtml(item.group)}</span>` : "—"}</span>
       </div>
       ${upgradeHtml}
+      ${atlasInventoryEditorHtml(itemId, plan)}
     </div>`;
   }
 

@@ -279,6 +279,24 @@ test("GET /data/atlas.js 返回 200 且为 JS", async () => {
   });
 });
 
+test("已收藏图鉴可保存魂魄和逐件装备库存，未收藏不展示编辑入口", async () => {
+  await withServer(async (port) => {
+    const [app, atlas, css, index] = await Promise.all([
+      get(port, "/js/app.js"),
+      get(port, "/js/atlas.js"),
+      get(port, "/css/style.css"),
+      get(port, "/")
+    ]);
+    assert.match(app.body, /ATLAS_INVENTORY_KEY\s*=\s*"qinshi_atlas_inventory_v1"/);
+    assert.match(app.body, /favorite\s*\?\s*`<button[^`]*data-atlas-inventory-edit/);
+    assert.match(app.body, /equipmentRecordKey\(stage\.key, token\.inventoryIndex\)/);
+    assert.match(app.body, /库存达标/);
+    assert.match(atlas.body, /function soulInventoryStatus/);
+    assert.match(css.body, /\.atlas-equipment-owned/);
+    assert.match(index.body, /图鉴等级与收藏库存/);
+  });
+});
+
 test("关卡掉落首页包含固定橙装普通关卡表", async () => {
   await withServer(async (port) => {
     const r = await get(port, "/");

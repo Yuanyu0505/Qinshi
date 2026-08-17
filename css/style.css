@@ -650,6 +650,46 @@ tr.hit-row td { background: rgba(212, 175, 55, .06); }
 .atlas-equipment-stage { display: inline-flex; align-items: center; gap: 6px; }
 .atlas-equipment-stage .atlas-stage-key { min-width: 0; }
 .atlas-equipment-items { display: inline-flex; flex-wrap: wrap; gap: 4px; }
+.atlas-equipment-entry { display: inline-flex; align-items: center; gap: 4px; max-width: 100%; }
+.atlas-equipment-owned {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  min-height: 22px;
+  padding: 0 5px;
+  color: #fff;
+  background: #198f46;
+  border: 2px solid #35d06f;
+  border-radius: 5px;
+  font-weight: 900;
+  line-height: 1;
+}
+.atlas-equipment-note { color: #ffb0a8; font-size: 12px; overflow-wrap: anywhere; }
+.atlas-inventory-suffix { color: #35d06f; font-weight: 700; margin-left: 2px; }
+.atlas-inventory-edit { margin-left: 2px; }
+.atlas-inventory-editor {
+  margin-top: 10px;
+  padding: 12px;
+  background: rgba(0, 0, 0, .18);
+  border: 1px solid rgba(53, 208, 111, .45);
+  border-radius: 8px;
+}
+.atlas-inventory-title { color: #35d06f; font-weight: 700; margin-bottom: 10px; }
+.atlas-inventory-souls { display: flex; align-items: center; gap: 8px; color: var(--muted); margin-bottom: 10px; }
+.atlas-inventory-souls input { width: 160px; }
+.atlas-inventory-equipment-list { display: grid; gap: 7px; }
+.atlas-inventory-equipment-row {
+  display: grid;
+  grid-template-columns: 62px max-content 112px minmax(180px, 1fr);
+  align-items: center;
+  gap: 8px;
+}
+.atlas-inventory-equipment-row select,
+.atlas-inventory-equipment-row input { min-width: 0; width: 100%; box-sizing: border-box; }
+.atlas-inventory-equipment-row input[hidden] { display: none; }
+.atlas-inventory-error { color: #ff6d63; margin-top: 8px; font-size: 13px; }
+.atlas-inventory-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
 .prog-equip {
   background: var(--bg2);
   border: 1px solid var(--line);
@@ -1421,6 +1461,15 @@ figcaption { color: var(--muted); font-size: 13px; margin-top: 8px; }
     height: 44px;
     touch-action: manipulation;
   }
+  .atlas-inventory-edit,
+  .atlas-inventory-actions .seg { min-height: 44px; touch-action: manipulation; }
+  .atlas-inventory-souls { align-items: stretch; flex-direction: column; }
+  .atlas-inventory-souls input { width: 100%; min-height: 44px; box-sizing: border-box; }
+  .atlas-inventory-equipment-row {
+    grid-template-columns: minmax(58px, auto) minmax(90px, max-content) minmax(104px, .7fr) minmax(150px, 1fr);
+  }
+  .atlas-inventory-equipment-row select,
+  .atlas-inventory-equipment-row input { min-height: 44px; font-size: 16px; }
   #partition-tactics .tactics-selector .seg,
   #partition-tactics .tactics-editor-actions .seg,
   #partition-tactics .tactics-calculator-actions .seg,
@@ -1642,6 +1691,14 @@ figcaption { color: var(--muted); font-size: 13px; margin-top: 8px; }
   .atlas-summary-equipment-list > *,
   .atlas-equipment-stage-list > *,
   .equipment-name-badge { max-width: 100%; white-space: normal; overflow-wrap: anywhere; }
+  .atlas-equipment-entry { flex-wrap: wrap; }
+  .atlas-inventory-equipment-row {
+    grid-template-columns: minmax(56px, auto) minmax(0, 1fr);
+    padding: 8px 0;
+    border-bottom: 1px dashed var(--line);
+  }
+  .atlas-inventory-equipment-row select,
+  .atlas-inventory-equipment-row input { grid-column: 1 / -1; }
   .image-grid { grid-template-columns: 1fr; }
   .inscription-modes { display: flex; width: 100%; }
   .inscription-modes .seg { flex: 1; padding-left: 8px; padding-right: 8px; }

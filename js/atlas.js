@@ -62,6 +62,52 @@
     return favoriteItems.concat(regularItems);
   }
 
+  function equipmentRecordKey(stageKey, index) {
+    var position = Math.max(0, Math.trunc(Number(index) || 0));
+    return String(stageKey == null ? "" : stageKey) + "|" + position;
+  }
+
+  function inventoryInteger(value) {
+    if (value === "" || value == null) return null;
+    var n = Number(value);
+    return Number.isInteger(n) && n >= 0 ? n : null;
+  }
+
+  function soulInventoryStatus(requiredInput, ownedInput) {
+    var required = Math.max(0, inventoryInteger(requiredInput) || 0);
+    var owned = inventoryInteger(ownedInput);
+    if (owned == null) return { state: "unset", owned: null, missing: required };
+    var missing = Math.max(0, required - owned);
+    return {
+      state: missing > 0 ? "short" : "enough",
+      owned: owned,
+      missing: missing
+    };
+  }
+
+  function normalizeInventoryRecord(record) {
+    var source = record && typeof record === "object" && !Array.isArray(record) ? record : {};
+    var rawEquipment = source.equipment && typeof source.equipment === "object" && !Array.isArray(source.equipment)
+      ? source.equipment
+      : {};
+    var equipment = {};
+    Object.keys(rawEquipment).forEach(function (key) {
+      var value = rawEquipment[key];
+      if (!key || !value || typeof value !== "object" || Array.isArray(value)) return;
+      var name = String(value.name == null ? "" : value.name).trim();
+      if (!name) return;
+      equipment[key] = {
+        name: name,
+        owned: value.owned === true,
+        note: String(value.note == null ? "" : value.note).trim()
+      };
+    });
+    return {
+      soulsOwned: inventoryInteger(source.soulsOwned),
+      equipment: equipment
+    };
+  }
+
   /** 需要装备的阶段：当前等级以下、目标等级以内的阶段才需要 */
   function neededStages(item, level, targetLevel) {
     var target = targetLevel == null ? Infinity : Number(targetLevel);
@@ -194,6 +240,9 @@
     levelOf: levelOf,
     isFavorite: isFavorite,
     favoriteFirst: favoriteFirst,
+    equipmentRecordKey: equipmentRecordKey,
+    soulInventoryStatus: soulInventoryStatus,
+    normalizeInventoryRecord: normalizeInventoryRecord,
     sortEquipment: sortEquipment,
     neededStages: neededStages,
     upgradePlan: upgradePlan,

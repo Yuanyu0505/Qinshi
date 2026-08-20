@@ -1199,6 +1199,74 @@ figcaption { color: var(--muted); font-size: 13px; margin-top: 8px; }
 #partition-tactics .tactics-rank-badge.is-current-target span:first-child { color: #35d06f; }
 #partition-tactics .tactics-rank-badge.is-current-target span:last-child { color: #ff4b4b; }
 #partition-tactics .tactics-empty-value { color: var(--muted); }
+#partition-tactics .tactics-modes { margin-bottom: 14px; }
+#partition-tactics .tactics-cost-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+#partition-tactics .tactics-cost-tactics,
+#partition-tactics .tactics-cost-results { margin-top: 16px; }
+#partition-tactics .tactics-cost-tactics > h2,
+#partition-tactics .tactics-cost-results > h2 { margin: 0 0 10px; color: var(--gold); font-size: 19px; }
+#partition-tactics .tactics-cost-tactic-grid,
+#partition-tactics .tactics-cost-result-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+#partition-tactics .tactics-cost-tactic,
+#partition-tactics .tactics-cost-result-card,
+#partition-tactics .tactics-cost-combined {
+  min-width: 0;
+  padding: 13px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 9px;
+}
+#partition-tactics .tactics-cost-tactic.is-selected { border-color: rgba(212, 175, 55, .72); box-shadow: inset 3px 0 0 var(--gold); }
+#partition-tactics .tactics-cost-tactic-head { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+#partition-tactics .tactics-cost-tactic-head h3 { margin: 0; color: var(--gold); }
+#partition-tactics .tactics-cost-check { display: inline-flex; align-items: center; gap: 5px; color: var(--text); }
+#partition-tactics .tactics-cost-config-grid { display: grid; grid-template-columns: repeat(3, minmax(130px, 1fr)); gap: 9px; }
+#partition-tactics .tactics-cost-config-grid label,
+#partition-tactics .tactics-cost-material-row label { display: grid; gap: 4px; color: var(--muted); font-size: 12px; }
+#partition-tactics .tactics-cost-config-grid select,
+#partition-tactics .tactics-cost-config-grid input,
+#partition-tactics .tactics-cost-material-row input {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  padding: 8px 9px;
+  color: var(--text);
+  background: var(--bg2);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  font: inherit;
+}
+#partition-tactics .tactics-cost-materials { margin-top: 16px; }
+#partition-tactics .tactics-cost-material-head,
+#partition-tactics .tactics-cost-material-row {
+  display: grid;
+  grid-template-columns: minmax(190px, 1.35fr) repeat(3, minmax(120px, 1fr));
+  gap: 10px;
+  align-items: center;
+}
+#partition-tactics .tactics-cost-material-head { padding: 8px 10px; color: var(--gold-dim); border-bottom: 1px solid var(--line); }
+#partition-tactics .tactics-cost-material-row { padding: 8px 10px; border-bottom: 1px dashed rgba(58, 49, 37, .7); }
+#partition-tactics .tactics-cost-material-row:last-child { border-bottom: 0; }
+#partition-tactics .tactics-cost-material-name { display: grid; gap: 2px; }
+#partition-tactics .tactics-cost-material-name span { color: var(--muted); font-size: 12px; }
+#partition-tactics .tactics-cost-result-card h3,
+#partition-tactics .tactics-cost-result-card h4,
+#partition-tactics .tactics-cost-combined h2,
+#partition-tactics .tactics-cost-combined h4 { margin: 0 0 8px; color: var(--gold); }
+#partition-tactics .tactics-cost-requirements { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr); gap: 0 14px; }
+#partition-tactics .tactics-cost-requirements h4 { grid-column: auto; }
+#partition-tactics .tactics-cost-requirements ul,
+#partition-tactics .tactics-rehearsal-steps { margin: 0 0 12px; padding-left: 20px; }
+#partition-tactics .tactics-cost-purchase-list { display: grid; gap: 6px; }
+#partition-tactics .tactics-cost-purchase-list > div { display: grid; grid-template-columns: minmax(110px, .45fr) minmax(0, 1fr); gap: 8px; padding: 7px 8px; background: var(--bg2); border-radius: 6px; }
+#partition-tactics .tactics-cost-purchase-list span { overflow-wrap: anywhere; }
+#partition-tactics .tactics-cost-unpriced { color: #ff6d63; font-weight: 700; }
+#partition-tactics .tactics-cost-price { display: flex; flex-wrap: wrap; gap: 8px 14px; margin-top: 10px; padding: 10px; border-radius: 7px; }
+#partition-tactics .tactics-cost-price.is-complete { color: #35d06f; background: rgba(53, 208, 111, .1); border: 1px solid rgba(53, 208, 111, .45); }
+#partition-tactics .tactics-cost-price.is-incomplete { color: #ffb0a8; background: rgba(204, 58, 48, .12); border: 1px solid rgba(204, 58, 48, .55); }
+#partition-tactics .tactics-cost-price b { font-size: 18px; }
+#partition-tactics .tactics-cost-combined { margin-top: 14px; border-color: var(--gold-dim); }
+#partition-tactics .tactics-cost-result-empty { margin-top: 16px; }
 
 /* 合阵 */
 #partition-formations { min-width: 0; }
@@ -1471,6 +1539,8 @@ figcaption { color: var(--muted); font-size: 13px; margin-top: 8px; }
   .atlas-inventory-equipment-row select,
   .atlas-inventory-equipment-row input { min-height: 44px; font-size: 16px; }
   #partition-tactics .tactics-selector .seg,
+  #partition-tactics .tactics-modes .seg,
+  #partition-tactics .tactics-cost-actions .seg,
   #partition-tactics .tactics-editor-actions .seg,
   #partition-tactics .tactics-calculator-actions .seg,
   #partition-tactics .tactics-reference-actions .seg,
@@ -1484,7 +1554,17 @@ figcaption { color: var(--muted); font-size: 13px; margin-top: 8px; }
   #partition-formations input { min-height: 44px; touch-action: manipulation; }
   #partition-tactics .tactics-selector { flex-wrap: wrap; }
   #partition-tactics .tactics-form-grid,
-  #partition-tactics .tactics-result-grid { grid-template-columns: 1fr; }
+  #partition-tactics .tactics-result-grid,
+  #partition-tactics .tactics-cost-tactic-grid,
+  #partition-tactics .tactics-cost-result-grid,
+  #partition-tactics .tactics-cost-requirements { grid-template-columns: 1fr; }
+  #partition-tactics .tactics-cost-config-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  #partition-tactics .tactics-cost-material-head { display: none; }
+  #partition-tactics .tactics-cost-material-row { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  #partition-tactics .tactics-cost-material-name { grid-column: 1 / -1; }
+  #partition-tactics .tactics-cost-config-grid select,
+  #partition-tactics .tactics-cost-config-grid input,
+  #partition-tactics .tactics-cost-material-row input { min-height: 44px; font-size: 16px; }
   #partition-tactics .tactics-table-scroll {
     overflow-x: auto;
     overflow-y: visible;
@@ -1685,6 +1765,10 @@ figcaption { color: var(--muted); font-size: 13px; margin-top: 8px; }
   #partition-tactics .tactics-form-grid select,
   #partition-tactics .tactics-form-grid input,
   .atlas-level { min-height: 44px; font-size: 16px; }
+  #partition-tactics .tactics-cost-config-grid,
+  #partition-tactics .tactics-cost-material-row { grid-template-columns: 1fr; }
+  #partition-tactics .tactics-cost-material-name { grid-column: auto; }
+  #partition-tactics .tactics-cost-purchase-list > div { grid-template-columns: 1fr; }
   .cards { display: block; }
   .atlas-summary-equipment-list,
   .atlas-equipment-stage-list { max-width: 100%; gap: 6px; }

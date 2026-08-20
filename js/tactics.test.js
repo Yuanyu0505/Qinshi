@@ -257,26 +257,27 @@ test("attributeSnapshot：输出稳定属性键并包含当前真言", () => {
   });
 });
 
-test("rehearsal：950阈值、单次7按952实际消耗", () => {
-  const result = T.calculatePlan(windRank4Fixture, startAt4ZeroSpent, targetAt4);
-  assert.deepStrictEqual(result.rehearsal, {
-    rank: 4, proficiency: { min: 5.6, max: 7.5 }, singleHorn: 7,
-    guaranteeHorn: 950, actualMaximumHorn: 952, carriedSpent: 0,
-    remainingRuns: 136, actualAdditionalHorn: 952
+test("rehearsalAdvancePlan：950阈值、单次7按952实际消耗", () => {
+  const result = T.rehearsalAdvancePlan(windRank4Fixture, 4, 5, 0);
+  assert.deepStrictEqual(result, {
+    steps: [{
+      rank: 4, proficiency: { min: 5.6, max: 7.5 }, singleHorn: 7,
+      guaranteeHorn: 950, actualMaximumHorn: 952, spent: 0,
+      remainingRuns: 136, horn: 952
+    }],
+    totalHorn: 952
   });
 });
 
-test("rehearsal：同阶已消耗945后只需1次7号角，952时无需新增", () => {
-  const at945 = T.calculatePlan(windRank4Fixture, { ...startAt4, rehearsalSpent: 945 }, targetAt4);
-  assert.strictEqual(at945.valid, true);
-  assert.strictEqual(at945.rehearsal.carriedSpent, 945);
-  assert.strictEqual(at945.rehearsal.actualAdditionalHorn, 7);
+test("rehearsalAdvancePlan：起点已消耗945后只需1次7号角，952时无需新增", () => {
+  const at945 = T.rehearsalAdvancePlan(windRank4Fixture, 4, 5, 945);
+  assert.strictEqual(at945.steps[0].spent, 945);
+  assert.strictEqual(at945.steps[0].horn, 7);
 
-  const at952 = T.calculatePlan(windRank4Fixture, { ...startAt4, rehearsalSpent: 952 }, targetAt4);
-  assert.strictEqual(at952.valid, true);
-  assert.strictEqual(at952.rehearsal.carriedSpent, 952);
-  assert.strictEqual(at952.rehearsal.remainingRuns, 0);
-  assert.strictEqual(at952.rehearsal.actualAdditionalHorn, 0);
+  const at952 = T.rehearsalAdvancePlan(windRank4Fixture, 4, 5, 952);
+  assert.strictEqual(at952.steps[0].spent, 952);
+  assert.strictEqual(at952.steps[0].remainingRuns, 0);
+  assert.strictEqual(at952.steps[0].horn, 0);
 });
 
 test("rehearsal：拒绝950、951和超过952的输入且不静默归一化", () => {
@@ -287,19 +288,19 @@ test("rehearsal：拒绝950、951和超过952的输入且不静默归一化", ()
   });
 });
 
-test("rehearsal：风6阶允许实际最大消耗2101", () => {
-  const at2101 = { rank: 6, rehearsalSpent: 2101, mantras: { ...emptyStandardMantras } };
-  const result = T.calculatePlan(wind, at2101, { ...at2101, rehearsalSpent: 0 });
-  assert.strictEqual(result.valid, true);
-  assert.strictEqual(result.rehearsal.actualMaximumHorn, 2101);
-  assert.strictEqual(result.rehearsal.carriedSpent, 2101);
-  assert.strictEqual(result.rehearsal.actualAdditionalHorn, 0);
+test("rehearsalAdvancePlan：风6阶允许实际最大消耗2101", () => {
+  const result = T.rehearsalAdvancePlan(wind, 6, 7, 2101);
+  assert.strictEqual(result.steps[0].actualMaximumHorn, 2101);
+  assert.strictEqual(result.steps[0].spent, 2101);
+  assert.strictEqual(result.steps[0].horn, 0);
 });
 
-test("rehearsal：升至新阶时不继承旧阶号角", () => {
-  const result = T.calculatePlan(wind, { ...startAt4, rehearsalSpent: 945 }, targetAt5);
-  assert.strictEqual(result.rehearsal.carriedSpent, 0);
-  assert.strictEqual(result.rehearsal.actualAdditionalHorn, 1800);
+test("rehearsalAdvancePlan：5到8阶累计5、6、7阶，只有起点继承已消耗", () => {
+  const result = T.rehearsalAdvancePlan(wind, 5, 8, 10);
+  assert.deepStrictEqual(result.steps.map(step => step.rank), [5, 6, 7]);
+  assert.deepStrictEqual(result.steps.map(step => step.spent), [10, 0, 0]);
+  assert.strictEqual(result.steps.some(step => step.rank === 8), false);
+  assert.strictEqual(T.rehearsalAdvancePlan(wind, 8, 8, 0).totalHorn, 0);
 });
 
 test("attributeDeltas：过滤没有实际变化的属性", () => {
@@ -316,8 +317,36 @@ test("阴雷：无演练计划且真言0–15阶与兵法一一对应", () => {
       assert.strictEqual(T.allowedMantraRank(tactic, mantra.id, rank), rank);
     }
     const initial = { rank: 0, rehearsalSpent: 0, mantras: { [mantra.id]: -1 } };
-    assert.strictEqual(T.calculatePlan(tactic, initial, initial).rehearsal, null);
+    assert.deepStrictEqual(T.calculatePlan(tactic, initial, initial).rehearsal, { steps: [], totalHorn: 0 });
   });
+});
+
+test("materialKeyForMantra：统和极共享，其余真言按兵法独立", () => {
+  assert.strictEqual(T.materialKeyForMantra(wind, wind.mantras[2]), T.materialKeyForMantra(forest, forest.mantras[2]));
+  assert.strictEqual(T.materialKeyForMantra(wind, extreme), T.materialKeyForMantra(forest, extreme));
+  assert.notStrictEqual(T.materialKeyForMantra(wind, wind.mantras[0]), T.materialKeyForMantra(forest, forest.mantras[0]));
+});
+
+test("estimatePurchases：按整包向上取整并计算余量", () => {
+  assert.deepStrictEqual(T.estimatePurchases(21, 0, { packSize: 10, packPrice: 80 }), {
+    demand: 21, stock: 0, shortage: 21, packs: 3, yuan: 240, leftover: 9, priced: true
+  });
+  assert.strictEqual(T.estimatePurchases(21, 0, { packSize: 10, packPrice: "" }).priced, false);
+});
+
+test("aggregateCostPlans：单项各用完整共享库存，合计只扣一次", () => {
+  const progress = { wind: T.defaultProgress(wind), forest: T.defaultProgress(forest) };
+  const raw = T.normalizeCostState([wind, forest], {}, progress);
+  raw.configs.wind.target.rank = 5;
+  raw.configs.forest.target.rank = 5;
+  raw.materials["shared:merit"] = { stock: 2000, packSize: 500, packPrice: 100 };
+  raw.materials["shared:horn"] = { stock: 999999, packSize: 1, packPrice: 0 };
+  raw.materials[T.materialKeyForMark(wind)] = { stock: 999999, packSize: 1, packPrice: 0 };
+  raw.materials[T.materialKeyForMark(forest)] = { stock: 999999, packSize: 1, packPrice: 0 };
+  const result = T.aggregateCostPlans([wind, forest], raw, progress);
+  assert.strictEqual(result.individual.length, 2);
+  assert.strictEqual(result.individual.every(item => item.purchase.rows.find(row => row.key === "shared:merit").shortage === 0), true);
+  assert.strictEqual(result.combined.purchase.rows.find(row => row.key === "shared:merit").shortage, 1400);
 });
 
 test("阴雷：5→8阶累计进阶号角与各阶真言碎片", () => {

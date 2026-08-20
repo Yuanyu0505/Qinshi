@@ -43,7 +43,7 @@
 | 图鉴 | 攻/血/内力/防四个图鉴分区；按弟子名、获取途径、所属图鉴、道具、等级（如 9级、10级以下）搜索；等级筛选（全部/5级以下/10级以下/15级以下）；图鉴等级为个人进度，等级 ≥ 10 无需装备，已超阶段自动隐藏；装备按紫/橙底色区分品质 | `data/atlas.js` |
 | 楼兰棋阵 | 楼兰 5 张、棋阵 11 张本地图片展示 | `images/` |
 | 铭文 | 个人进度、品质/天位/盾位查询筛选、天位主属性与盾位副属性资料图表 | `data/inscription.js` |
-| 兵法 | 风、林、火、山、阴、雷选择；个人进度、材料计算和 0–15 阶资料查询 | `data/tactics.js` |
+| 兵法 | “兵法详情”保留六兵法个人进度、单项材料计算和 0–15 阶资料；“计算”统一配置六兵法起止进度、材料库存、整包价格，并展示单项及合计元宝 | `data/tactics.js` |
 | 合阵 | 19 个合阵官方资料；个人弟子等级与当前攻/血/防保存；自由试算、各助阵位置独立排序、主将/助阵精确联合推荐和转化属性汇总 | `data/formations.js` |
 | 答题 | 按题目关键词查询标红正确答案 | `data/quiz.js` |
 
@@ -122,6 +122,7 @@ $python = 'C:\Users\pghyl\.cache\codex-runtimes\codex-primary-runtime\dependenci
 | `qinshi_inscription_progress_v2` | 铭文个人进度 |
 | `qinshi_quiz_items_v1` | 历史答题修订数据（兼容旧数据） |
 | `qinshi_tactics_progress_v1` | 兵法个人进度：按兵法 ID 保存 `{ rank, rehearsalSpent, mantras }` |
+| `qinshi_tactics_cost_calculator_v1` | 兵法综合计算：六兵法参与状态、起止兵法/真言阶、起点号角、全部材料库存及整包数量/元宝价格 |
 | `qinshi_formation_progress_v1` | 合阵个人进度：按合阵 ID 保存已拥有弟子、等级、当前攻/血/防、参考值状态和玩家指定主将 |
 
 注意：
@@ -135,7 +136,8 @@ $python = 'C:\Users\pghyl\.cache\codex-runtimes\codex-primary-runtime\dependenci
 
 - 起点和目标的兵法阶、每种真言阶均不能倒退。风、林、火、山的普通真言随兵法 0–9 阶解锁至 0–9 阶，极真言在兵法 10–15 阶解锁至 0–5 阶；阴、雷的单一真言随兵法 0–15 阶解锁。
 - 兵法进阶材料累计区间为 `(当前兵法阶, 目标兵法阶]`；每种真言碎片累计区间为 `(当前真言阶, 目标真言阶]`，因此“未激活→0阶”包含 0 阶碎片。
-- 仅风、林、火、山有目标阶演练号角。令目标阶单次号角为 `singleHorn`、完美保底为 `guaranteeHorn`、可继承已消耗号角为 `carriedSpent`，则 `carriedSpent` 仅在起点和目标同阶时继承，否则为 0；`remainingRuns = ceil(max(0, guaranteeHorn - carriedSpent) / singleHorn)`，实际还需号角为 `remainingRuns * singleHorn`。阴、雷不计算目标阶演练。
+- 风、林、火、山从起点 `start` 进阶至目标 `target` 前，必须依次完成 `start` 至 `target - 1` 阶演练；只在起点阶扣除已消耗号角，后续各阶从 0 开始，目标阶本身不演练。每阶 `remainingRuns = ceil(max(0, guaranteeHorn - spent) / singleHorn)`，实际号角为 `remainingRuns × singleHorn`；阴、雷无演练。
+- 综合计算的功勋、号角为共享库存；风林火山的统、极真言碎片也分别共享，其余印记和真言碎片独立。缺口按 `ceil(缺口 / 每包数量) × 每包元宝` 购买；缺价格时显示“总价未完整”。单兵法结果各自使用完整共享库存，所有兵法合计则先汇总需求、再对共享库存只抵扣一次。
 
 ## 8. PWA 更新与发布
 

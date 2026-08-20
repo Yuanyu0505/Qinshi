@@ -4,7 +4,9 @@
   var DATA = window.TACTICS_DATA;
   var CORE = window.TACTICS;
   var STORE_KEY = "qinshi_tactics_progress_v1";
+  var COST_STORE_KEY = "qinshi_tactics_cost_calculator_v1";
   var state = {
+    mode: "detail",
     selectedId: "",
     editing: false,
     referenceMode: "collapsed",
@@ -12,7 +14,10 @@
     calculator: null,
     draft: null,
     storageError: "",
-    progressError: ""
+    progressError: "",
+    cost: null,
+    costOutcome: null,
+    costError: ""
   };
   var el = {};
 
@@ -148,6 +153,27 @@
       return true;
     } catch (error) {
       state.storageError = "保存个人进度失败，请检查浏览器存储权限。";
+      return false;
+    }
+  }
+
+  function loadCostState() {
+    var parsed = {};
+    try {
+      parsed = JSON.parse(localStorage.getItem(COST_STORE_KEY) || "{}");
+    } catch (error) {
+      parsed = {};
+    }
+    state.cost = CORE.normalizeCostState(orderedTactics(), parsed, state.progress);
+  }
+
+  function saveCostState() {
+    try {
+      localStorage.setItem(COST_STORE_KEY, JSON.stringify(state.cost));
+      state.costError = "";
+      return true;
+    } catch (error) {
+      state.costError = "保存兵法计算设置失败，请检查浏览器存储权限。";
       return false;
     }
   }
@@ -477,9 +503,9 @@
   }
 
   function hornTotalsHtml(plan) {
-    var rehearsalHorn = plan.rehearsal ? plan.rehearsal.actualAdditionalHorn : 0;
+    var rehearsalHorn = plan.rehearsal ? plan.rehearsal.totalHorn : 0;
     return "<ul><li>进阶号角：" + formatNumber(plan.advance.horn) + "</li>" +
-      "<li>目标阶演练号角：" + formatNumber(rehearsalHorn) + "</li>" +
+      "<li>进阶前逐阶演练号角：" + formatNumber(rehearsalHorn) + "</li>" +
       "<li>号角总计：" + formatNumber(plan.advance.horn + rehearsalHorn) + "</li></ul>";
   }
 
@@ -500,15 +526,13 @@
   }
 
   function rehearsalPlanHtml(plan) {
-    if (!plan.rehearsal) return "<p>该兵法无需目标阶演练。</p>";
-    var rehearsal = plan.rehearsal;
-    var proficiency = rehearsal.proficiency && rehearsal.proficiency.min != null && rehearsal.proficiency.max != null
-      ? "（熟练度" + formatNumber(rehearsal.proficiency.min) + "–" + formatNumber(rehearsal.proficiency.max) + "）"
-      : "";
-    return "<p>目标" + rehearsal.rank + "阶" + proficiency + "</p><p>单次演练" + formatNumber(rehearsal.singleHorn) +
-      "号角｜保底阈值" + formatNumber(rehearsal.guaranteeHorn) + "｜实际最多消耗" + formatNumber(rehearsal.actualMaximumHorn) +
-      "号角</p><p>本阶已消耗 " + formatNumber(rehearsal.carriedSpent) + "号角｜再演练" + formatNumber(rehearsal.remainingRuns) +
-      "次｜实际还需" + formatNumber(rehearsal.actualAdditionalHorn) + "号角</p>";
+    var rehearsal = plan.rehearsal || { steps: [], totalHorn: 0 };
+    if (!rehearsal.steps.length) return "<p>当前不需要为进阶补充演练号角。</p>";
+    return '<ul class="tactics-rehearsal-steps">' + rehearsal.steps.map(function (step) {
+      return "<li>" + step.rank + "阶：已消耗" + formatNumber(step.spent) + "｜单次" + formatNumber(step.singleHorn) +
+        "｜保底" + formatNumber(step.guaranteeHorn) + "｜剩余" + formatNumber(step.remainingRuns) +
+        "次｜还需" + formatNumber(step.horn) + "号角</li>";
+    }).join("") + "</ul><p><b>逐阶演练共需 " + formatNumber(rehearsal.totalHorn) + " 号角</b></p>";
   }
 
   function resultsHtml(tactic, plan) {
@@ -519,7 +543,7 @@
       "<article><h3>属性变化</h3>" + attributeDeltasHtml(plan) + "</article>" +
       "<article><h3>兵法进阶材料</h3>" + materialsHtml(tactic, plan) + "</article>" +
       "<article><h3>真言碎片</h3>" + mantraPlanHtml(tactic, plan) + "</article>" +
-      "<article><h3>目标阶演练</h3>" + rehearsalPlanHtml(plan) + "</article>" +
+      "<article><h3>进阶前逐阶演练</h3>" + rehearsalPlanHtml(plan) + "</article>" +
       "<article><h3>号角总计</h3>" + hornTotalsHtml(plan) + "</article></div>";
   }
 
@@ -732,6 +756,208 @@
     el.reference.innerHTML = html;
   }
 
+  function costMantraFieldsHtml(tactic, config, mantra) {
+    return '<label><span>' + escapeHtml(mantra.name) + '真言起点</span><select data-cost-tactic-id="' + escapeHtml(tactic.id) +
+      '" data-cost-side="start" data-cost-field="mantra" data-mantra-id="' + escapeHtml(mantra.id) + '">' +
+      mantraOptions(tactic, mantra, config.start.rank, config.start.mantras[mantra.id]) + '</select></label>' +
+      '<label><span>' + escapeHtml(mantra.name) + '真言终点</span><select data-cost-tactic-id="' + escapeHtml(tactic.id) +
+      '" data-cost-side="target" data-cost-field="mantra" data-mantra-id="' + escapeHtml(mantra.id) + '">' +
+      mantraOptions(tactic, mantra, config.target.rank, config.target.mantras[mantra.id]) + '</select></label>';
+  }
+
+  function costTacticCardHtml(tactic) {
+    var config = state.cost.configs[tactic.id];
+    var selected = state.cost.selected[tactic.id] !== false;
+    var row = findRank(tactic, config.start.rank);
+    var rehearsal = row && row.rehearsal;
+    var html = '<article class="tactics-cost-tactic' + (selected ? ' is-selected' : '') + '"><div class="tactics-cost-tactic-head">' +
+      '<label class="tactics-cost-check"><input type="checkbox" data-cost-selected="' + escapeHtml(tactic.id) + '"' + (selected ? ' checked' : '') + '>参与合计</label>' +
+      '<h3>' + escapeHtml(tactic.name) + '</h3></div><div class="tactics-cost-config-grid">' +
+      '<label><span>兵法起点</span><select data-cost-tactic-id="' + escapeHtml(tactic.id) + '" data-cost-side="start" data-cost-field="rank">' + rankOptions(config.start.rank) + '</select></label>' +
+      '<label><span>兵法终点</span><select data-cost-tactic-id="' + escapeHtml(tactic.id) + '" data-cost-side="target" data-cost-field="rank">' + rankOptions(config.target.rank) + '</select></label>';
+    if (isStandard(tactic) && rehearsal) {
+      html += '<label><span>起点阶已消耗号角</span><input type="number" min="0" step="' + escapeHtml(rehearsal.singleHorn || 1) + '" max="' +
+        escapeHtml(CORE.actualMaximum(rehearsal)) + '" value="' + escapeHtml(config.start.rehearsalSpent) + '" data-cost-tactic-id="' +
+        escapeHtml(tactic.id) + '" data-cost-side="start" data-cost-field="rehearsalSpent"></label>';
+    }
+    html += tactic.mantras.map(function (mantra) { return costMantraFieldsHtml(tactic, config, mantra); }).join('') + '</div></article>';
+    return html;
+  }
+
+  function costMaterialRowHtml(material) {
+    var value = state.cost.materials[material.key] || { stock: 0, packSize: null, packPrice: null };
+    return '<div class="tactics-cost-material-row"><div class="tactics-cost-material-name"><b>' + escapeHtml(material.name) + '</b><span>' + escapeHtml(material.group) + '</span></div>' +
+      '<label><span>库存</span><input type="number" min="0" step="1" value="' + escapeHtml(value.stock) + '" data-cost-material="' + escapeHtml(material.key) + '" data-cost-material-field="stock"></label>' +
+      '<label><span>每包数量</span><input type="number" min="1" step="1" value="' + escapeHtml(value.packSize == null ? '' : value.packSize) + '" placeholder="未设置" data-cost-material="' + escapeHtml(material.key) + '" data-cost-material-field="packSize"></label>' +
+      '<label><span>每包元宝</span><input type="number" min="0" step="1" value="' + escapeHtml(value.packPrice == null ? '' : value.packPrice) + '" placeholder="未设置" data-cost-material="' + escapeHtml(material.key) + '" data-cost-material-field="packPrice"></label></div>';
+  }
+
+  function costRequirementHtml(item) {
+    var tactic = item.tactic;
+    var plan = item.plan;
+    var mantraRows = tactic.mantras.map(function (mantra) {
+      var value = plan.mantras[mantra.id];
+      return '<li>' + escapeHtml(mantra.materialName || mantra.name + '真言碎片') + '：' + formatNumber(value && value.fragments) + '</li>';
+    }).join('');
+    var rehearsalRows = plan.rehearsal && plan.rehearsal.steps.length
+      ? '<ul class="tactics-rehearsal-steps">' + plan.rehearsal.steps.map(function (step) {
+          return '<li>' + step.rank + '阶：已消耗' + formatNumber(step.spent) + '，剩余' + formatNumber(step.remainingRuns) + '次，共' + formatNumber(step.horn) + '号角</li>';
+        }).join('') + '</ul>'
+      : '<p class="muted-tip">无需补充进阶前演练号角</p>';
+    return '<div class="tactics-cost-requirements"><h4>材料需求</h4><ul><li>' + escapeHtml(tactic.markName) + '：' + formatNumber(plan.advance.mark) +
+      '</li><li>功勋：' + formatNumber(plan.advance.merit) + '</li><li>表格进阶号角：' + formatNumber(plan.advance.horn) +
+      '</li><li>逐阶演练号角：' + formatNumber(plan.rehearsal ? plan.rehearsal.totalHorn : 0) + '</li>' + mantraRows + '</ul><h4>逐阶演练</h4>' + rehearsalRows + '</div>';
+  }
+
+  function costPurchaseRowsHtml(purchase) {
+    if (!purchase.rows.length) return '<p class="muted-tip">当前起点到终点无需额外材料。</p>';
+    return '<div class="tactics-cost-purchase-list">' + purchase.rows.map(function (row) {
+      var buying = row.priced
+        ? '购买' + formatNumber(row.packs) + '包，' + formatNumber(row.yuan) + '元宝，购买后余' + formatNumber(row.leftover)
+        : '<span class="tactics-cost-unpriced">价格未设置</span>';
+      return '<div><b>' + escapeHtml(row.name) + '</b><span>需求' + formatNumber(row.demand) + '｜库存' + formatNumber(row.stock) + '｜缺口' + formatNumber(row.shortage) + '｜' + buying + '</span></div>';
+    }).join('') + '</div>';
+  }
+
+  function costPriceSummaryHtml(purchase) {
+    if (purchase.complete) {
+      return '<div class="tactics-cost-price is-complete">预计消耗 <b>' + formatNumber(purchase.pricedSubtotal) + '</b> 元宝</div>';
+    }
+    var names = purchase.rows.filter(function (row) { return !row.priced; }).map(function (row) { return row.name; });
+    return '<div class="tactics-cost-price is-incomplete"><b>总价未完整</b><span>已定价小计 ' + formatNumber(purchase.pricedSubtotal) + ' 元宝</span><span>未设置：' + escapeHtml(names.join('、')) + '</span></div>';
+  }
+
+  function costResultsHtml() {
+    if (!state.costOutcome) return '<section class="panel tactics-cost-result-empty"><p>填写起止进度、库存和购买包价格后，点击“计算元宝”。</p></section>';
+    var outcome = state.costOutcome;
+    var individual = outcome.individual.length
+      ? outcome.individual.map(function (item) {
+          return '<article class="tactics-cost-result-card"><h3>' + escapeHtml(item.tactic.name) + '</h3><p class="muted-tip">该单项独立使用全部共享库存估算。</p>' +
+            costRequirementHtml(item) + '<h4>按当前库存购买</h4>' + costPurchaseRowsHtml(item.purchase) + costPriceSummaryHtml(item.purchase) + '</article>';
+        }).join('')
+      : '<p class="muted-tip">尚未选择参与计算的兵法。</p>';
+    return '<section class="tactics-cost-results"><h2>各兵法单独估算</h2><div class="tactics-cost-result-grid">' + individual + '</div>' +
+      '<article class="tactics-cost-combined"><h2>所有已选兵法合计</h2><p class="muted-tip">合计先汇总全部需求，再对功勋、号角、统真言和极真言等共享库存各抵扣一次；不是各单项价格相加。</p>' +
+      costPurchaseRowsHtml(outcome.combined.purchase) + costPriceSummaryHtml(outcome.combined.purchase) + '</article></section>';
+  }
+
+  function renderCostMode() {
+    if (!el.costMode || !state.cost) return;
+    var catalog = CORE.materialCatalog(orderedTactics());
+    el.costMode.innerHTML = '<section class="panel tactics-cost-toolbar"><div><div class="panel-title">综合材料与元宝计算</div><p class="muted-tip">功勋、号角、统真言碎片、极真言碎片为共享库存；其他材料分别计算。</p></div>' +
+      '<div class="tactics-cost-actions"><button type="button" class="seg" data-cost-action="select-all">全选</button><button type="button" class="seg" data-cost-action="clear-all">清空</button>' +
+      '<button type="button" class="seg" data-cost-action="restore-progress">从个人进度重新读取</button><button type="button" class="seg active" data-cost-action="calculate">计算元宝</button></div>' +
+      (state.costError ? '<div class="error" role="alert">' + escapeHtml(state.costError) + '</div>' : '') + '</section>' +
+      '<section class="tactics-cost-tactics"><h2>六兵法起点与终点</h2><div class="tactics-cost-tactic-grid">' + orderedTactics().map(costTacticCardHtml).join('') + '</div></section>' +
+      '<section class="panel tactics-cost-materials"><div class="panel-title">库存与购买包价格</div><div class="tactics-cost-material-head"><span>材料</span><span>库存</span><span>每包数量</span><span>每包元宝</span></div>' +
+      catalog.map(costMaterialRowHtml).join('') + '</section>' + costResultsHtml();
+  }
+
+  function setTacticsMode(mode) {
+    state.mode = mode === 'cost' ? 'cost' : 'detail';
+    if (el.modes) {
+      el.modes.querySelectorAll('[data-tactics-mode]').forEach(function (button) {
+        button.classList.toggle('active', button.dataset.tacticsMode === state.mode);
+      });
+    }
+    if (el.detailMode) el.detailMode.hidden = state.mode !== 'detail';
+    if (el.costMode) el.costMode.hidden = state.mode !== 'cost';
+    if (state.mode === 'cost') renderCostMode();
+  }
+
+  function saveAndRenderCost() {
+    state.cost = CORE.normalizeCostState(orderedTactics(), state.cost, state.progress);
+    state.costOutcome = null;
+    saveCostState();
+    renderCostMode();
+  }
+
+  function handleCostModeClick(event) {
+    var actionButton = event.target.closest('[data-cost-action]');
+    if (!actionButton || !state.cost) return;
+    var action = actionButton.dataset.costAction;
+    if (action === 'select-all' || action === 'clear-all') {
+      orderedTactics().forEach(function (tactic) { state.cost.selected[tactic.id] = action === 'select-all'; });
+      saveAndRenderCost();
+    } else if (action === 'restore-progress') {
+      state.cost = CORE.resetCostStartsFromProgress(orderedTactics(), state.cost, state.progress);
+      state.costOutcome = null;
+      saveCostState();
+      renderCostMode();
+    } else if (action === 'calculate') {
+      state.costOutcome = CORE.aggregateCostPlans(orderedTactics(), state.cost, state.progress);
+      renderCostMode();
+    }
+  }
+
+  function showCostError(message) {
+    state.costError = message;
+    if (!el.costMode) return;
+    var toolbar = el.costMode.querySelector('.tactics-cost-toolbar');
+    if (!toolbar) return;
+    var error = toolbar.querySelector('.error');
+    if (!error) {
+      error = document.createElement('div');
+      error.className = 'error';
+      error.setAttribute('role', 'alert');
+      toolbar.appendChild(error);
+    }
+    error.textContent = message;
+  }
+
+  function validCostInteger(value, allowBlank, positive) {
+    var text = String(value == null ? '' : value).trim();
+    if (!text) return allowBlank ? null : 0;
+    if (!/^\d+$/.test(text)) return false;
+    var number = Number(text);
+    if (positive && number <= 0) return false;
+    return number;
+  }
+
+  function handleCostModeChange(event) {
+    var control = event.target;
+    if (!state.cost) return;
+    if (control.matches('[data-cost-selected]')) {
+      state.cost.selected[control.dataset.costSelected] = control.checked;
+      saveAndRenderCost();
+      return;
+    }
+    if (control.matches('[data-cost-material]')) {
+      var materialKey = control.dataset.costMaterial;
+      var materialField = control.dataset.costMaterialField;
+      var value = validCostInteger(control.value, materialField !== 'stock', materialField === 'packSize');
+      if (value === false) {
+        showCostError(materialField === 'packSize' ? '每包数量必须为空或填写大于0的整数' : '库存和每包元宝必须填写非负整数');
+        return;
+      }
+      state.cost.materials[materialKey][materialField] = value;
+      state.costError = '';
+      saveAndRenderCost();
+      return;
+    }
+    if (!control.matches('[data-cost-tactic-id]')) return;
+    var tactic = tacticById(control.dataset.costTacticId);
+    if (!tactic) return;
+    var config = state.cost.configs[tactic.id];
+    var side = control.dataset.costSide;
+    var field = control.dataset.costField;
+    if (field === 'rank') {
+      var nextRank = clamp(integer(control.value, config[side].rank), 0, 15);
+      config[side] = CORE.changeRank(tactic, config[side], nextRank);
+    } else if (field === 'mantra') {
+      config[side].mantras[control.dataset.mantraId] = integer(control.value, -1);
+    } else if (field === 'rehearsalSpent') {
+      var errors = CORE.validateRehearsalSpent(tactic, { rank: config.start.rank, rehearsalSpent: control.value });
+      if (errors.length) {
+        showCostError(errors.join('；'));
+        return;
+      }
+      config.start.rehearsalSpent = integer(control.value, 0);
+    }
+    state.costError = '';
+    saveAndRenderCost();
+  }
+
   function renderSelector() {
     if (!el.selector) return;
     el.selector.innerHTML = orderedTactics().map(function (tactic) {
@@ -764,7 +990,9 @@
       typeof CORE.actualMaximum === "function" &&
       typeof CORE.validateRehearsalSpent === "function" &&
       typeof CORE.attributeSnapshot === "function" &&
-      typeof CORE.calculatePlan === "function";
+      typeof CORE.calculatePlan === "function" &&
+      typeof CORE.normalizeCostState === "function" &&
+      typeof CORE.aggregateCostPlans === "function";
   }
 
   function showDataError() {
@@ -777,12 +1005,15 @@
     var partition = document.getElementById("partition-tactics");
     if (!partition) return;
     el.selector = document.getElementById("tactics-selector");
+    el.modes = document.getElementById("tactics-modes");
+    el.detailMode = document.getElementById("tactics-detail-mode");
+    el.costMode = document.getElementById("tactics-cost-mode");
     el.workspace = document.getElementById("tactics-workspace");
     el.progress = document.getElementById("tactics-progress");
     el.calculator = document.getElementById("tactics-calculator");
     el.reference = document.getElementById("tactics-reference");
 
-    if (!el.selector || !el.workspace || !el.progress || !el.calculator || !el.reference || !validDependencies()) {
+    if (!el.selector || !el.modes || !el.detailMode || !el.costMode || !el.workspace || !el.progress || !el.calculator || !el.reference || !validDependencies()) {
       showDataError();
       return;
     }
@@ -795,9 +1026,17 @@
     el.calculator.addEventListener("change", handleCalculatorChange);
     el.calculator.addEventListener("input", handleCalculatorInput);
     el.reference.addEventListener("click", handleReferenceClick);
+    el.modes.addEventListener("click", function (event) {
+      var button = event.target.closest("[data-tactics-mode]");
+      if (button) setTacticsMode(button.dataset.tacticsMode);
+    });
+    el.costMode.addEventListener("click", handleCostModeClick);
+    el.costMode.addEventListener("change", handleCostModeChange);
 
     loadProgress();
+    loadCostState();
     renderAll();
+    setTacticsMode("detail");
   }
 
   document.addEventListener("DOMContentLoaded", init);

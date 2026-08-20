@@ -341,6 +341,29 @@ test("关卡掉落搜索会隐藏默认表并保留完整查询", async () => {
   });
 });
 
+test("兵法包含详情与综合计算子分区，并保存计算配置", async () => {
+  await withServer(async (port) => {
+    const [index, core, ui, css] = await Promise.all([
+      get(port, "/"),
+      get(port, "/js/tactics.js"),
+      get(port, "/js/tactics-ui.js"),
+      get(port, "/css/style.css")
+    ]);
+    assert.match(index.body, /data-tactics-mode="detail">兵法详情/);
+    assert.match(index.body, /data-tactics-mode="cost">计算/);
+    assert.match(index.body, /id="tactics-cost-mode"/);
+    assert.match(ui.body, /COST_STORE_KEY\s*=\s*"qinshi_tactics_cost_calculator_v1"/);
+    assert.match(ui.body, /data-cost-action="select-all"/);
+    assert.match(ui.body, /data-cost-action="clear-all"/);
+    assert.match(ui.body, /从个人进度重新读取/);
+    assert.match(ui.body, /总价未完整/);
+    assert.match(core.body, /function rehearsalAdvancePlan/);
+    assert.match(core.body, /mantra:shared:tong/);
+    assert.match(core.body, /mantra:shared:extreme/);
+    assert.match(css.body, /\.tactics-cost-tactic-grid/);
+  });
+});
+
 test("PWA 1.0.10 覆盖手机 1.0.6 后的功能并同步缓存与页面版本", async () => {
   const pagesWorkflow = fs.readFileSync(path.join(__dirname, ".github", "workflows", "pages.yml"), "utf8");
   assert.match(pagesWorkflow, /js\/tactics\.js/);

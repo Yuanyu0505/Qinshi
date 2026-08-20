@@ -24,6 +24,22 @@
     return Number.isFinite(number) ? Math.trunc(number) : fallback;
   }
 
+  function nonNegativeInteger(value, fallback) {
+    var number = integer(value, fallback);
+    return Number.isInteger(number) && number >= 0 ? number : fallback;
+  }
+
+  function positiveInteger(value, fallback) {
+    var number = integer(value, fallback);
+    return Number.isInteger(number) && number > 0 ? number : fallback;
+  }
+
+  function optionalNonNegativeInteger(value) {
+    if (value === "" || value == null) return null;
+    var number = Number(value);
+    return Number.isFinite(number) && Math.trunc(number) === number && number >= 0 ? number : null;
+  }
+
   function clamp(value, min, max) {
     return Math.min(max, Math.max(min, value));
   }
@@ -223,29 +239,37 @@
     return plans;
   }
 
-  function rehearsalPlan(tactic, start, target) {
-    var row = findRank(tactic, target.rank);
-    var rehearsal = row && object(row.rehearsal);
-    if (!rehearsal || !integer(rehearsal.singleHorn, 0) || !integer(rehearsal.guaranteeHorn, 0)) return null;
-
-    var singleHorn = integer(rehearsal.singleHorn, 0);
-    var guaranteeHorn = integer(rehearsal.guaranteeHorn, 0);
-    var maximum = actualMaximum(rehearsal);
-    var carriedSpent = start.rank === target.rank
-      ? clamp(integer(start.rehearsalSpent, 0), 0, maximum)
-      : 0;
-    var remainingRuns = Math.ceil(Math.max(0, guaranteeHorn - carriedSpent) / singleHorn);
-
-    return {
-      rank: target.rank,
-      proficiency: row.proficiency,
-      singleHorn: singleHorn,
-      guaranteeHorn: guaranteeHorn,
-      actualMaximumHorn: maximum,
-      carriedSpent: carriedSpent,
-      remainingRuns: remainingRuns,
-      actualAdditionalHorn: remainingRuns * singleHorn
-    };
+  function rehearsalAdvancePlan(tactic, startInput, targetInput, startSpentInput) {
+    if (!tactic || tactic.kind !== "standard") return { steps: [], totalHorn: 0 };
+    var start = clamp(integer(startInput, 0), 0, 15);
+    var target = clamp(integer(targetInput, start), start, 15);
+    var steps = [];
+    var totalHorn = 0;
+    for (var rank = start; rank < target; rank += 1) {
+      var row = findRank(tactic, rank);
+      var rehearsal = row && object(row.rehearsal);
+      var singleHorn = positiveInteger(rehearsal && rehearsal.singleHorn, 0);
+      var guaranteeHorn = nonNegativeInteger(rehearsal && rehearsal.guaranteeHorn, 0);
+      if (!singleHorn || !guaranteeHorn) continue;
+      var maximum = actualMaximum(rehearsal);
+      var spent = rank === start
+        ? normalizeRehearsalSpent(rehearsal, startSpentInput)
+        : 0;
+      var remainingRuns = Math.ceil(Math.max(0, guaranteeHorn - spent) / singleHorn);
+      var horn = remainingRuns * singleHorn;
+      steps.push({
+        rank: rank,
+        proficiency: row.proficiency,
+        singleHorn: singleHorn,
+        guaranteeHorn: guaranteeHorn,
+        actualMaximumHorn: maximum,
+        spent: spent,
+        remainingRuns: remainingRuns,
+        horn: horn
+      });
+      totalHorn += horn;
+    }
+    return { steps: steps, totalHorn: totalHorn };
   }
 
   function attributeDeltas(tactic, start, target) {
@@ -303,10 +327,214 @@
       target: target,
       advance: advance,
       mantras: mantraPlans(tactic, start.mantras, target.mantras),
-      rehearsal: rehearsalPlan(tactic, start, target),
+      rehearsal: rehearsalAdvancePlan(tactic, start.rank, target.rank, start.rehearsalSpent),
       startAttributes: attributeSnapshot(tactic, start),
       targetAttributes: attributeSnapshot(tactic, target),
       attributeDeltas: attributeDeltas(tactic, start, target)
+    };
+  }
+
+  function materialKeyForMark(tactic) {
+    return "mark:" + String(tactic && tactic.id || "");
+  }
+
+  function materialKeyForMantra(tactic, mantra) {
+    var mantraId = String(mantra && mantra.id || "");
+    if (mantraId === "tong") return "mantra:shared:tong";
+    if (mantraId === "extreme") return "mantra:shared:extreme";
+    return "mantra:" + String(tactic && tactic.id || "") + ":" + mantraId;
+  }
+
+  function materialCatalog(tactics) {
+    var result = [
+      { key: "shared:merit", name: "功勋", group: "共享材料" },
+      { key: "shared:horn", name: "号角", group: "共享材料" }
+    ];
+    var seen = { "shared:merit": true, "shared:horn": true };
+    array(tactics).forEach(function (tactic) {
+      if (!tactic || !tactic.id) return;
+      var markKey = materialKeyForMark(tactic);
+      if (!seen[markKey]) {
+        seen[markKey] = true;
+        result.push({ key: markKey, name: tactic.markName || tactic.name + "印记", group: "兵法印记", tacticId: tactic.id });
+      }
+      array(tactic.mantras).forEach(function (mantra) {
+        if (!mantra || !mantra.id) return;
+        var key = materialKeyForMantra(tactic, mantra);
+        if (seen[key]) return;
+        seen[key] = true;
+        result.push({
+          key: key,
+          name: mantra.materialName || mantra.name + "真言碎片",
+          group: key.indexOf("mantra:shared:") === 0 ? "共享真言碎片" : "独立真言碎片",
+          tacticId: key.indexOf("mantra:shared:") === 0 ? "" : tactic.id,
+          mantraId: mantra.id
+        });
+      });
+    });
+    return result;
+  }
+
+  function normalizeCostConfig(tactic, rawConfig, progress) {
+    var raw = object(rawConfig);
+    var current = normalizeProgress(tactic, progress);
+    var start = normalizeProgress(tactic, raw.start && typeof raw.start === "object" ? raw.start : current);
+    var target = normalizeProgress(tactic, raw.target && typeof raw.target === "object" ? raw.target : start);
+    if (target.rank < start.rank) target.rank = start.rank;
+    array(tactic.mantras).forEach(function (mantra) {
+      var allowed = allowedMantraRank(tactic, mantra.id, target.rank);
+      target.mantras[mantra.id] = clamp(
+        Math.max(target.mantras[mantra.id], start.mantras[mantra.id]),
+        -1,
+        allowed
+      );
+    });
+    target.rehearsalSpent = 0;
+    return { start: start, target: target };
+  }
+
+  function normalizeCostState(tactics, rawInput, progressInput) {
+    var raw = object(rawInput);
+    var progress = object(progressInput);
+    var rawSelected = object(raw.selected);
+    var rawConfigs = object(raw.configs);
+    var selected = {};
+    var configs = {};
+    array(tactics).forEach(function (tactic) {
+      if (!tactic || !tactic.id) return;
+      selected[tactic.id] = Object.prototype.hasOwnProperty.call(rawSelected, tactic.id)
+        ? rawSelected[tactic.id] !== false
+        : true;
+      configs[tactic.id] = normalizeCostConfig(tactic, rawConfigs[tactic.id], progress[tactic.id]);
+    });
+    var rawMaterials = object(raw.materials);
+    var materials = {};
+    materialCatalog(tactics).forEach(function (material) {
+      var value = object(rawMaterials[material.key]);
+      materials[material.key] = {
+        stock: nonNegativeInteger(value.stock, 0),
+        packSize: positiveInteger(value.packSize, null),
+        packPrice: optionalNonNegativeInteger(value.packPrice)
+      };
+    });
+    return { selected: selected, configs: configs, materials: materials };
+  }
+
+  function resetCostStartsFromProgress(tactics, costInput, progressInput) {
+    var cost = normalizeCostState(tactics, costInput, progressInput);
+    var progress = object(progressInput);
+    array(tactics).forEach(function (tactic) {
+      if (!tactic || !tactic.id) return;
+      var start = normalizeProgress(tactic, progress[tactic.id]);
+      var target = cost.configs[tactic.id].target;
+      if (target.rank < start.rank) target.rank = start.rank;
+      array(tactic.mantras).forEach(function (mantra) {
+        var allowed = allowedMantraRank(tactic, mantra.id, target.rank);
+        target.mantras[mantra.id] = clamp(Math.max(target.mantras[mantra.id], start.mantras[mantra.id]), -1, allowed);
+      });
+      cost.configs[tactic.id].start = start;
+      cost.configs[tactic.id].target = target;
+    });
+    return cost;
+  }
+
+  function addDemand(demand, key, value) {
+    var amount = nonNegativeInteger(value, 0);
+    if (!key || !amount) return;
+    demand[key] = (demand[key] || 0) + amount;
+  }
+
+  function planDemand(tactic, config) {
+    var plan = calculatePlan(tactic, config.start, config.target);
+    var demand = {};
+    if (!plan.valid) return { plan: plan, demand: demand };
+    addDemand(demand, materialKeyForMark(tactic), plan.advance.mark);
+    addDemand(demand, "shared:merit", plan.advance.merit);
+    addDemand(demand, "shared:horn", plan.advance.horn + (plan.rehearsal ? plan.rehearsal.totalHorn : 0));
+    array(tactic.mantras).forEach(function (mantra) {
+      var mantraPlan = plan.mantras[mantra.id];
+      addDemand(demand, materialKeyForMantra(tactic, mantra), mantraPlan && mantraPlan.fragments);
+    });
+    return { plan: plan, demand: demand };
+  }
+
+  function estimatePurchases(demandInput, stockInput, packInput) {
+    var demand = nonNegativeInteger(demandInput, 0);
+    var stock = nonNegativeInteger(stockInput, 0);
+    var shortage = Math.max(0, demand - stock);
+    var size = positiveInteger(packInput && packInput.packSize, 0);
+    var price = optionalNonNegativeInteger(packInput && packInput.packPrice);
+    if (!shortage) {
+      return { demand: demand, stock: stock, shortage: 0, packs: 0, yuan: 0, leftover: stock - demand, priced: true };
+    }
+    if (!size || price === null) {
+      return { demand: demand, stock: stock, shortage: shortage, packs: null, yuan: null, leftover: null, priced: false };
+    }
+    var packs = Math.ceil(shortage / size);
+    return {
+      demand: demand,
+      stock: stock,
+      shortage: shortage,
+      packs: packs,
+      yuan: packs * price,
+      leftover: stock + packs * size - demand,
+      priced: true
+    };
+  }
+
+  function priceDemand(demand, materials, catalog) {
+    var definitions = {};
+    array(catalog).forEach(function (material) { definitions[material.key] = material; });
+    var rows = Object.keys(demand).map(function (key) {
+      var setting = object(object(materials)[key]);
+      var estimate = estimatePurchases(demand[key], setting.stock, setting);
+      return {
+        key: key,
+        name: definitions[key] ? definitions[key].name : key,
+        demand: estimate.demand,
+        stock: estimate.stock,
+        shortage: estimate.shortage,
+        packs: estimate.packs,
+        yuan: estimate.yuan,
+        leftover: estimate.leftover,
+        priced: estimate.priced
+      };
+    });
+    var unpricedKeys = rows.filter(function (row) { return !row.priced; }).map(function (row) { return row.key; });
+    return {
+      rows: rows,
+      complete: unpricedKeys.length === 0,
+      unpricedKeys: unpricedKeys,
+      pricedSubtotal: rows.reduce(function (sum, row) { return sum + (row.yuan == null ? 0 : row.yuan); }, 0)
+    };
+  }
+
+  function aggregateCostPlans(tactics, costInput, progressInput) {
+    var cost = normalizeCostState(tactics, costInput, progressInput);
+    var catalog = materialCatalog(tactics);
+    var combinedDemand = {};
+    var individual = [];
+    array(tactics).forEach(function (tactic) {
+      if (!tactic || !tactic.id || !cost.selected[tactic.id]) return;
+      var calculated = planDemand(tactic, cost.configs[tactic.id]);
+      Object.keys(calculated.demand).forEach(function (key) {
+        addDemand(combinedDemand, key, calculated.demand[key]);
+      });
+      individual.push({
+        tactic: tactic,
+        plan: calculated.plan,
+        demand: calculated.demand,
+        purchase: priceDemand(calculated.demand, cost.materials, catalog)
+      });
+    });
+    return {
+      state: cost,
+      catalog: catalog,
+      individual: individual,
+      combined: {
+        demand: combinedDemand,
+        purchase: priceDemand(combinedDemand, cost.materials, catalog)
+      }
     };
   }
 
@@ -319,6 +547,15 @@
     changeRank: changeRank,
     validateState: validateState,
     attributeSnapshot: attributeSnapshot,
-    calculatePlan: calculatePlan
+    calculatePlan: calculatePlan,
+    rehearsalAdvancePlan: rehearsalAdvancePlan,
+    materialKeyForMark: materialKeyForMark,
+    materialKeyForMantra: materialKeyForMantra,
+    materialCatalog: materialCatalog,
+    normalizeCostState: normalizeCostState,
+    resetCostStartsFromProgress: resetCostStartsFromProgress,
+    estimatePurchases: estimatePurchases,
+    planDemand: planDemand,
+    aggregateCostPlans: aggregateCostPlans
   };
 });

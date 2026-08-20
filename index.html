@@ -180,17 +180,24 @@
     </section>
 
     <section id="partition-tactics" hidden>
-      <section class="panel tactics-selector-panel">
-        <div class="filter-row">
-          <span class="filter-label">兵法策略</span>
-          <div id="tactics-selector" class="segs tactics-selector"></div>
-        </div>
-      </section>
-      <div id="tactics-workspace" hidden>
-        <section id="tactics-progress" class="tactics-section"></section>
-        <section id="tactics-calculator" class="tactics-section"></section>
-        <section id="tactics-reference" class="tactics-section"></section>
+      <div id="tactics-modes" class="segs tactics-modes">
+        <button type="button" class="seg active" data-tactics-mode="detail">兵法详情</button>
+        <button type="button" class="seg" data-tactics-mode="cost">计算</button>
       </div>
+      <div id="tactics-detail-mode">
+        <section class="panel tactics-selector-panel">
+          <div class="filter-row">
+            <span class="filter-label">兵法策略</span>
+            <div id="tactics-selector" class="segs tactics-selector"></div>
+          </div>
+        </section>
+        <div id="tactics-workspace" hidden>
+          <section id="tactics-progress" class="tactics-section"></section>
+          <section id="tactics-calculator" class="tactics-section"></section>
+          <section id="tactics-reference" class="tactics-section"></section>
+        </div>
+      </div>
+      <div id="tactics-cost-mode" hidden></div>
     </section>
 
     <section id="partition-formations" hidden>
@@ -358,7 +365,7 @@
 
       <section class="panel settings-panel">
         <div class="panel-title">本机进度备份</div>
-        <p class="settings-copy">备份包含本机保存的图鉴等级与收藏库存、橙装锻造进度、铭文进度、兵法进度、合阵个人进度及历史答题修订数据，不包含工具自带题库和查询数据。</p>
+        <p class="settings-copy">备份包含本机保存的图鉴等级与收藏库存、橙装锻造进度、铭文进度、兵法进度与计算设置、合阵个人进度及历史答题修订数据，不包含工具自带题库和查询数据。</p>
         <div class="settings-actions">
           <button id="settings-export" type="button" class="seg active">导出备份</button>
           <button id="settings-import-trigger" type="button" class="seg">导入备份</button>

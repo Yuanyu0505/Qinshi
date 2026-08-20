@@ -757,12 +757,13 @@
   }
 
   function costMantraFieldsHtml(tactic, config, mantra) {
-    return '<label><span>' + escapeHtml(mantra.name) + '真言起点</span><select data-cost-tactic-id="' + escapeHtml(tactic.id) +
+    return '<div class="tactics-cost-range-row"><div class="tactics-cost-range-name">' + escapeHtml(mantra.name) + '真言</div>' +
+      '<label><span>起点</span><select data-cost-tactic-id="' + escapeHtml(tactic.id) +
       '" data-cost-side="start" data-cost-field="mantra" data-mantra-id="' + escapeHtml(mantra.id) + '">' +
       mantraOptions(tactic, mantra, config.start.rank, config.start.mantras[mantra.id]) + '</select></label>' +
-      '<label><span>' + escapeHtml(mantra.name) + '真言终点</span><select data-cost-tactic-id="' + escapeHtml(tactic.id) +
+      '<label><span>终点</span><select data-cost-tactic-id="' + escapeHtml(tactic.id) +
       '" data-cost-side="target" data-cost-field="mantra" data-mantra-id="' + escapeHtml(mantra.id) + '">' +
-      mantraOptions(tactic, mantra, config.target.rank, config.target.mantras[mantra.id]) + '</select></label>';
+      mantraOptions(tactic, mantra, config.target.rank, config.target.mantras[mantra.id]) + '</select></label></div>';
   }
 
   function costTacticCardHtml(tactic) {
@@ -773,12 +774,13 @@
     var html = '<article class="tactics-cost-tactic' + (selected ? ' is-selected' : '') + '"><div class="tactics-cost-tactic-head">' +
       '<label class="tactics-cost-check"><input type="checkbox" data-cost-selected="' + escapeHtml(tactic.id) + '"' + (selected ? ' checked' : '') + '>参与合计</label>' +
       '<h3>' + escapeHtml(tactic.name) + '</h3></div><div class="tactics-cost-config-grid">' +
-      '<label><span>兵法起点</span><select data-cost-tactic-id="' + escapeHtml(tactic.id) + '" data-cost-side="start" data-cost-field="rank">' + rankOptions(config.start.rank) + '</select></label>' +
-      '<label><span>兵法终点</span><select data-cost-tactic-id="' + escapeHtml(tactic.id) + '" data-cost-side="target" data-cost-field="rank">' + rankOptions(config.target.rank) + '</select></label>';
+      '<div class="tactics-cost-range-row"><div class="tactics-cost-range-name">兵法</div>' +
+      '<label><span>起点</span><select data-cost-tactic-id="' + escapeHtml(tactic.id) + '" data-cost-side="start" data-cost-field="rank">' + rankOptions(config.start.rank) + '</select></label>' +
+      '<label><span>终点</span><select data-cost-tactic-id="' + escapeHtml(tactic.id) + '" data-cost-side="target" data-cost-field="rank">' + rankOptions(config.target.rank) + '</select></label></div>';
     if (isStandard(tactic) && rehearsal) {
-      html += '<label><span>起点阶已消耗号角</span><input type="number" min="0" step="' + escapeHtml(rehearsal.singleHorn || 1) + '" max="' +
+      html += '<div class="tactics-cost-range-row is-spent"><div class="tactics-cost-range-name"></div><label class="tactics-cost-spent"><span>起点阶已消耗号角</span><input type="number" min="0" step="' + escapeHtml(rehearsal.singleHorn || 1) + '" max="' +
         escapeHtml(CORE.actualMaximum(rehearsal)) + '" value="' + escapeHtml(config.start.rehearsalSpent) + '" data-cost-tactic-id="' +
-        escapeHtml(tactic.id) + '" data-cost-side="start" data-cost-field="rehearsalSpent"></label>';
+        escapeHtml(tactic.id) + '" data-cost-side="start" data-cost-field="rehearsalSpent"></label></div>';
     }
     html += tactic.mantras.map(function (mantra) { return costMantraFieldsHtml(tactic, config, mantra); }).join('') + '</div></article>';
     return html;

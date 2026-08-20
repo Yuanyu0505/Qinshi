@@ -1220,7 +1220,24 @@ figcaption { color: var(--muted); font-size: 13px; margin-top: 8px; }
 #partition-tactics .tactics-cost-tactic-head { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
 #partition-tactics .tactics-cost-tactic-head h3 { margin: 0; color: var(--gold); }
 #partition-tactics .tactics-cost-check { display: inline-flex; align-items: center; gap: 5px; color: var(--text); }
-#partition-tactics .tactics-cost-config-grid { display: grid; grid-template-columns: repeat(3, minmax(130px, 1fr)); gap: 9px; }
+#partition-tactics .tactics-cost-config-grid { display: grid; gap: 9px; }
+#partition-tactics .tactics-cost-range-row {
+  display: grid;
+  grid-template-columns: minmax(72px, .36fr) minmax(0, 1fr) minmax(0, 1fr);
+  gap: 9px 10px;
+  align-items: end;
+}
+#partition-tactics .tactics-cost-range-name {
+  align-self: center;
+  min-width: 0;
+  color: var(--gold);
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+#partition-tactics .tactics-cost-spent {
+  grid-column: 2 / 3;
+  width: 100%;
+}
 #partition-tactics .tactics-cost-config-grid label,
 #partition-tactics .tactics-cost-material-row label { display: grid; gap: 4px; color: var(--muted); font-size: 12px; }
 #partition-tactics .tactics-cost-config-grid select,
@@ -1558,7 +1575,7 @@ figcaption { color: var(--muted); font-size: 13px; margin-top: 8px; }
   #partition-tactics .tactics-cost-tactic-grid,
   #partition-tactics .tactics-cost-result-grid,
   #partition-tactics .tactics-cost-requirements { grid-template-columns: 1fr; }
-  #partition-tactics .tactics-cost-config-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  #partition-tactics .tactics-cost-range-row { grid-template-columns: minmax(60px, .32fr) minmax(0, 1fr) minmax(0, 1fr); }
   #partition-tactics .tactics-cost-material-head { display: none; }
   #partition-tactics .tactics-cost-material-row { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   #partition-tactics .tactics-cost-material-name { grid-column: 1 / -1; }
@@ -1765,8 +1782,10 @@ figcaption { color: var(--muted); font-size: 13px; margin-top: 8px; }
   #partition-tactics .tactics-form-grid select,
   #partition-tactics .tactics-form-grid input,
   .atlas-level { min-height: 44px; font-size: 16px; }
-  #partition-tactics .tactics-cost-config-grid,
   #partition-tactics .tactics-cost-material-row { grid-template-columns: 1fr; }
+  #partition-tactics .tactics-cost-range-row { grid-template-columns: 1fr 1fr; }
+  #partition-tactics .tactics-cost-range-name { grid-column: 1 / -1; }
+  #partition-tactics .tactics-cost-spent { grid-column: 1 / -1; }
   #partition-tactics .tactics-cost-material-name { grid-column: auto; }
   #partition-tactics .tactics-cost-purchase-list > div { grid-template-columns: 1fr; }
   .cards { display: block; }

@@ -357,10 +357,16 @@ test("兵法包含详情与综合计算子分区，并保存计算配置", async
     assert.match(ui.body, /data-cost-action="clear-all"/);
     assert.match(ui.body, /从个人进度重新读取/);
     assert.match(ui.body, /总价未完整/);
+    assert.match(ui.body, /class="tactics-cost-range-row"/);
+    assert.match(ui.body, /class="tactics-cost-range-name">兵法/);
+    assert.match(ui.body, /<span>起点<\/span><select[\s\S]*?data-cost-side="start"/);
+    assert.match(ui.body, /<span>终点<\/span><select[\s\S]*?data-cost-side="target"/);
+    assert.match(ui.body, /class="tactics-cost-range-row is-spent"/);
     assert.match(core.body, /function rehearsalAdvancePlan/);
     assert.match(core.body, /mantra:shared:tong/);
     assert.match(core.body, /mantra:shared:extreme/);
     assert.match(css.body, /\.tactics-cost-tactic-grid/);
+    assert.match(css.body, /\.tactics-cost-range-row[\s\S]*?grid-template-columns:\s*minmax\(72px, \.36fr\) minmax\(0, 1fr\) minmax\(0, 1fr\)/);
   });
 });
 

@@ -815,7 +815,7 @@
     if (!purchase.rows.length) return '<p class="muted-tip">当前起点到终点无需额外材料。</p>';
     return '<div class="tactics-cost-purchase-list">' + purchase.rows.map(function (row) {
       var buying = row.priced
-        ? '购买' + formatNumber(row.packs) + '包，' + formatNumber(row.yuan) + '元宝，购买后余' + formatNumber(row.leftover)
+        ? '<span class="tactics-cost-buying">购买' + formatNumber(row.packs) + '包，' + formatNumber(row.yuan) + '元宝，购买后余' + formatNumber(row.leftover) + '</span>'
         : '<span class="tactics-cost-unpriced">价格未设置</span>';
       return '<div><b>' + escapeHtml(row.name) + '</b><span>需求' + formatNumber(row.demand) + '｜库存' + formatNumber(row.stock) + '｜缺口' + formatNumber(row.shortage) + '｜' + buying + '</span></div>';
     }).join('') + '</div>';
@@ -846,13 +846,14 @@
   function renderCostMode() {
     if (!el.costMode || !state.cost) return;
     var catalog = CORE.materialCatalog(orderedTactics());
+    var tacticControls = '<section class="tactics-cost-tactics"><h2>六兵法起点与终点</h2><div class="tactics-cost-tactic-grid">' + orderedTactics().map(costTacticCardHtml).join('') + '</div></section>';
+    var materialControls = '<section class="panel tactics-cost-materials"><div class="panel-title">库存与购买包价格</div><div class="tactics-cost-material-head"><span>材料</span><span>库存</span><span>每包数量</span><span>每包元宝</span></div>' +
+      catalog.map(costMaterialRowHtml).join('') + '</section>';
     el.costMode.innerHTML = '<section class="panel tactics-cost-toolbar"><div><div class="panel-title">综合材料与元宝计算</div><p class="muted-tip">功勋、号角、统真言碎片、极真言碎片为共享库存；其他材料分别计算。</p></div>' +
       '<div class="tactics-cost-actions"><button type="button" class="seg" data-cost-action="select-all">全选</button><button type="button" class="seg" data-cost-action="clear-all">清空</button>' +
       '<button type="button" class="seg" data-cost-action="restore-progress">从个人进度重新读取</button><button type="button" class="seg active" data-cost-action="calculate">计算元宝</button></div>' +
       (state.costError ? '<div class="error" role="alert">' + escapeHtml(state.costError) + '</div>' : '') + '</section>' +
-      '<section class="tactics-cost-tactics"><h2>六兵法起点与终点</h2><div class="tactics-cost-tactic-grid">' + orderedTactics().map(costTacticCardHtml).join('') + '</div></section>' +
-      '<section class="panel tactics-cost-materials"><div class="panel-title">库存与购买包价格</div><div class="tactics-cost-material-head"><span>材料</span><span>库存</span><span>每包数量</span><span>每包元宝</span></div>' +
-      catalog.map(costMaterialRowHtml).join('') + '</section>' + costResultsHtml();
+      (state.costOutcome ? costResultsHtml() + tacticControls + materialControls : tacticControls + materialControls + costResultsHtml());
   }
 
   function setTacticsMode(mode) {

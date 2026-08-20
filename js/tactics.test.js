@@ -349,6 +349,36 @@ test("aggregateCostPlans：单项各用完整共享库存，合计只扣一次",
   assert.strictEqual(result.combined.purchase.rows.find(row => row.key === "shared:merit").shortage, 1400);
 });
 
+test("resetCostStartsFromProgress：重新读取后默认终点为起点下一阶", () => {
+  const progress = {
+    wind: {
+      rank: 8,
+      rehearsalSpent: 180,
+      mantras: { ling: 8, chan: 8, tong: 8, extreme: -1 }
+    }
+  };
+  const result = T.resetCostStartsFromProgress([wind], {}, progress).configs.wind;
+  assert.strictEqual(result.start.rank, 8);
+  assert.strictEqual(result.target.rank, 9);
+  assert.strictEqual(result.target.mantras.ling, 9);
+  assert.strictEqual(result.target.mantras.chan, 9);
+  assert.strictEqual(result.target.mantras.tong, 9);
+  assert.strictEqual(result.target.mantras.extreme, -1);
+});
+
+test("resetCostStartsFromProgress：下一阶解锁极真言时默认激活至0阶", () => {
+  const progress = {
+    wind: {
+      rank: 9,
+      rehearsalSpent: 0,
+      mantras: { ling: 9, chan: 9, tong: 9, extreme: -1 }
+    }
+  };
+  const result = T.resetCostStartsFromProgress([wind], {}, progress).configs.wind;
+  assert.strictEqual(result.target.rank, 10);
+  assert.strictEqual(result.target.mantras.extreme, 0);
+});
+
 test("阴雷：5→8阶累计进阶号角与各阶真言碎片", () => {
   [yin, thunder].forEach(tactic => {
     const mantraId = tactic.mantras[0].id;

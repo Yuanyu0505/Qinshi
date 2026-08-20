@@ -1277,6 +1277,7 @@ figcaption { color: var(--muted); font-size: 13px; margin-top: 8px; }
 #partition-tactics .tactics-cost-purchase-list { display: grid; gap: 6px; }
 #partition-tactics .tactics-cost-purchase-list > div { display: grid; grid-template-columns: minmax(110px, .45fr) minmax(0, 1fr); gap: 8px; padding: 7px 8px; background: var(--bg2); border-radius: 6px; }
 #partition-tactics .tactics-cost-purchase-list span { overflow-wrap: anywhere; }
+#partition-tactics .tactics-cost-buying { color: #ff4b4b; font-weight: 800; }
 #partition-tactics .tactics-cost-unpriced { color: #ff6d63; font-weight: 700; }
 #partition-tactics .tactics-cost-price { display: flex; flex-wrap: wrap; gap: 8px 14px; margin-top: 10px; padding: 10px; border-radius: 7px; }
 #partition-tactics .tactics-cost-price.is-complete { color: #35d06f; background: rgba(53, 208, 111, .1); border: 1px solid rgba(53, 208, 111, .45); }

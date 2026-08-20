@@ -420,20 +420,27 @@
     return { selected: selected, configs: configs, materials: materials };
   }
 
+  function nextCostTargetFromStart(tactic, startInput) {
+    var start = normalizeProgress(tactic, startInput);
+    var targetRank = clamp(start.rank + 1, start.rank, 15);
+    var target = normalizeProgress(tactic, { rank: targetRank, rehearsalSpent: 0, mantras: start.mantras });
+    array(tactic.mantras).forEach(function (mantra) {
+      if (!mantra || !mantra.id) return;
+      var allowed = allowedMantraRank(tactic, mantra.id, targetRank);
+      var nextMantraRank = start.mantras[mantra.id] + 1;
+      target.mantras[mantra.id] = clamp(nextMantraRank, -1, allowed);
+    });
+    return target;
+  }
+
   function resetCostStartsFromProgress(tactics, costInput, progressInput) {
     var cost = normalizeCostState(tactics, costInput, progressInput);
     var progress = object(progressInput);
     array(tactics).forEach(function (tactic) {
       if (!tactic || !tactic.id) return;
       var start = normalizeProgress(tactic, progress[tactic.id]);
-      var target = cost.configs[tactic.id].target;
-      if (target.rank < start.rank) target.rank = start.rank;
-      array(tactic.mantras).forEach(function (mantra) {
-        var allowed = allowedMantraRank(tactic, mantra.id, target.rank);
-        target.mantras[mantra.id] = clamp(Math.max(target.mantras[mantra.id], start.mantras[mantra.id]), -1, allowed);
-      });
       cost.configs[tactic.id].start = start;
-      cost.configs[tactic.id].target = target;
+      cost.configs[tactic.id].target = nextCostTargetFromStart(tactic, start);
     });
     return cost;
   }

@@ -357,6 +357,9 @@ test("兵法包含详情与综合计算子分区，并保存计算配置", async
     assert.match(ui.body, /data-cost-action="clear-all"/);
     assert.match(ui.body, /从个人进度重新读取/);
     assert.match(ui.body, /总价未完整/);
+    assert.match(ui.body, /costResultsHtml\(\) \+ tacticControls/);
+    assert.match(ui.body, /tacticControls \+ materialControls \+ costResultsHtml\(\)/);
+    assert.match(ui.body, /class="tactics-cost-buying"/);
     assert.match(ui.body, /class="tactics-cost-range-row"/);
     assert.match(ui.body, /class="tactics-cost-range-name">兵法/);
     assert.match(ui.body, /<span>起点<\/span><select[\s\S]*?data-cost-side="start"/);
@@ -366,6 +369,7 @@ test("兵法包含详情与综合计算子分区，并保存计算配置", async
     assert.match(core.body, /mantra:shared:tong/);
     assert.match(core.body, /mantra:shared:extreme/);
     assert.match(css.body, /\.tactics-cost-tactic-grid/);
+    assert.match(css.body, /\.tactics-cost-buying[\s\S]*?color:\s*#ff4b4b[\s\S]*?font-weight:\s*800/);
     assert.match(css.body, /\.tactics-cost-range-row[\s\S]*?grid-template-columns:\s*minmax\(72px, \.36fr\) minmax\(0, 1fr\) minmax\(0, 1fr\)/);
   });
 });

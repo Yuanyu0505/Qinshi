@@ -2,6 +2,7 @@ const { test } = require("node:test");
 const assert = require("node:assert");
 
 const DATA = require("../data/machine-beasts.js");
+const CORE = require("./machine-beasts.js");
 
 test("machine beast data: detailed names, schools and stage effects stay complete", () => {
   assert.strictEqual(DATA.beasts.length, 27);
@@ -45,4 +46,121 @@ test("machine beast data: research tables preserve spreadsheet values", () => {
     organPieceDivisor: 100,
     yuanPerContribution: 0.5
   });
+});
+
+test("levelForResearch: cumulative research reaches exact thresholds without resetting", () => {
+  assert.strictEqual(CORE.levelForResearch(0, DATA.researchThresholds, 25), 0);
+  assert.strictEqual(CORE.levelForResearch(22799, DATA.researchThresholds, 25), 0);
+  assert.strictEqual(CORE.levelForResearch(22800, DATA.researchThresholds, 25), 1);
+  assert.strictEqual(CORE.levelForResearch(405100, DATA.researchThresholds, 25), 12);
+  assert.strictEqual(CORE.levelForResearch(9999999, DATA.researchThresholds, 15), 15);
+});
+
+test("progress: normalization, next milestone and highest active effect", () => {
+  const beast = DATA.beasts.find(item => item.name === "机关炎傀");
+  const normalized = CORE.normalizeBeastProgress(beast, {
+    research: 405100,
+    fragments: -3,
+    showHighRanks: 1,
+    showMods: true,
+    inventory: { none: { 0: 2.9, 7: 3, 99: 9 }, saint: { 7: 1 } }
+  }, DATA);
+  assert.strictEqual(normalized.research, 405100);
+  assert.strictEqual(normalized.fragments, 0);
+  assert.strictEqual(normalized.inventory.none["0"], 2);
+  assert.strictEqual(normalized.inventory.none["7"], 3);
+  assert.strictEqual(normalized.inventory.none["99"], undefined);
+  assert.strictEqual(normalized.inventory.saint["7"], 1);
+  assert.strictEqual(CORE.nextEffectLevel(beast, 12), 15);
+  assert.strictEqual(CORE.nextEffectLevel(beast, 25), 25);
+  assert.deepStrictEqual(CORE.activeBeastEffect(beast, 19), beast.effects[1]);
+});
+
+test("schoolSnapshot: missing beasts count as zero and next stage keeps known effects", () => {
+  const school = DATA.schools[0];
+  const first = DATA.beasts.find(item => item.id === school.beastIds[0]);
+  const second = DATA.beasts.find(item => item.id === school.beastIds[1]);
+  const progress = {};
+  progress[first.id] = { research: DATA.researchThresholds[10] };
+  progress[second.id] = { research: DATA.researchThresholds[15] };
+  let snapshot = CORE.schoolSnapshot(school, progress, DATA);
+  assert.strictEqual(snapshot.totalLevel, 25);
+  assert.strictEqual(snapshot.currentStage, 0);
+  assert.strictEqual(snapshot.stageOneRemaining, 20);
+  assert.strictEqual(snapshot.nextStage.stage, 1);
+  assert.ok(snapshot.nextStage.formationEffect);
+
+  school.beastIds.slice(2, 4).forEach(id => { progress[id] = { research: DATA.researchThresholds[10] }; });
+  snapshot = CORE.schoolSnapshot(school, progress, DATA);
+  assert.strictEqual(snapshot.totalLevel, 45);
+  assert.strictEqual(snapshot.currentStage, 1);
+  assert.strictEqual(snapshot.stageOneRemaining, 0);
+  assert.strictEqual(snapshot.nextStage.stage, 2);
+  assert.strictEqual(snapshot.nextStage.requiredTotalLevel, null);
+  assert.ok(snapshot.nextStage.beastEffect);
+});
+
+test("investment optimizer: minimizes invested count before using owned low ranks", () => {
+  const beast = DATA.beasts.find(item => item.name === "机关炎傀");
+  const progress = CORE.normalizeBeastProgress(beast, {
+    research: 0,
+    fragments: 0,
+    inventory: { none: { 0: 20 } }
+  }, DATA);
+  const result = CORE.calculateInvestmentPlan(DATA, beast, progress, { targetLevel: 10 });
+  assert.strictEqual(result.valid, true);
+  assert.strictEqual(result.totals.investedCount, 5);
+  assert.strictEqual(result.selected.newItems.reduce((total, item) => total + item.count, 0), 5);
+  assert.strictEqual(result.selected.ownedItems.length, 0);
+});
+
+test("investment optimizer: folds high ranks for display and uses actual final-item resources", () => {
+  const beast = DATA.beasts.find(item => item.name === "机关炎傀");
+  const progress = CORE.normalizeBeastProgress(beast, {
+    research: 0,
+    fragments: 0,
+    showHighRanks: true,
+    inventory: { none: { 10: 1 } }
+  }, DATA);
+  const result = CORE.calculateInvestmentPlan(DATA, beast, progress, { targetLevel: 15, includeHighRanks: true });
+  const high = result.selected.ownedItems.find(item => item.rank === 10);
+  assert.ok(high);
+  assert.strictEqual(high.sevenRankEquivalent, 8);
+  assert.strictEqual(result.totals.investedCount, 1);
+  assert.strictEqual(result.totals.awakeningBlueprints, Math.ceil(DATA.researchValues.orange["10"].none / 500));
+  assert.strictEqual(result.totals.organPieces, Math.ceil(DATA.researchValues.orange["10"].none / 100));
+});
+
+test("investment optimizer: uses modified inventory actual values but only adds zero-mod beasts", () => {
+  const beast = DATA.beasts.find(item => item.name === "机关炎傀");
+  const progress = CORE.normalizeBeastProgress(beast, {
+    research: 0,
+    fragments: 0,
+    showMods: true,
+    inventory: { fullDivine: { 7: 1 } }
+  }, DATA);
+  const result = CORE.calculateInvestmentPlan(DATA, beast, progress, { targetLevel: 15, includeMods: true });
+  assert.ok(result.selected.ownedItems.some(item => item.modificationId === "fullDivine"));
+  assert.ok(result.selected.newItems.every(item => item.modificationId === "none" && item.rank <= 7));
+});
+
+test("investment optimizer: contribution tiers and no-exchange tiers are explicit", () => {
+  const orangeThree = DATA.beasts.find(item => item.name === "零号白虎");
+  const orangeFive = DATA.beasts.find(item => item.name === "机关鲲鹏");
+  const orangeResult = CORE.calculateInvestmentPlan(DATA, orangeThree, CORE.normalizeBeastProgress(orangeThree, {}, DATA), { targetLevel: 1 });
+  assert.strictEqual(orangeResult.exchange.available, true);
+  assert.strictEqual(orangeResult.exchange.contribution, orangeResult.shortage.fragments * 800);
+  assert.strictEqual(orangeResult.exchange.yuan, Math.ceil(orangeResult.exchange.contribution * 0.5));
+  const orangeFiveResult = CORE.calculateInvestmentPlan(DATA, orangeFive, CORE.normalizeBeastProgress(orangeFive, {}, DATA), { targetLevel: 1 });
+  assert.strictEqual(orangeFiveResult.exchange.available, false);
+  assert.ok(orangeFiveResult.shortage.fragments > 0);
+});
+
+test("investment optimizer: completed targets produce a zero-cost plan", () => {
+  const beast = DATA.beasts.find(item => item.name === "零号白虎");
+  const progress = CORE.normalizeBeastProgress(beast, { research: DATA.researchThresholds[10] }, DATA);
+  const result = CORE.calculateInvestmentPlan(DATA, beast, progress, { targetLevel: 10 });
+  assert.strictEqual(result.totals.investedCount, 0);
+  assert.strictEqual(result.totals.research, 0);
+  assert.strictEqual(result.shortage.fragments, 0);
 });

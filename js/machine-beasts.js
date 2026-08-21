@@ -173,13 +173,93 @@
     return states;
   }
 
-  function buildUnlimitedStates(types, maximumCount, limit, data) {
-    var bounded = types.map(function (type) { return Object.assign({ available: maximumCount }, type); });
-    var states = buildBoundedStates(bounded, maximumCount, limit, data);
-    states.forEach(function (map) {
-      map.forEach(function (state) { state.newCount = state.items.reduce(function (total, item) { return total + item.count; }, 0); });
-    });
-    return states;
+  function buildExactUnlimitedStates(types, exactCount, minimumNeeded, limit, data) {
+    if (!exactCount) return [{ research: 0, newCount: 0, awakeningBlueprints: 0, organPieces: 0, items: [] }];
+    var result = new Map();
+    var quantities = Array(types.length).fill(0);
+    var resources = types.map(function (type) { return itemResources(type.researchEach, data); });
+    function recordCounts() {
+      var research = 0;
+      var awakeningBlueprints = 0;
+      var organPieces = 0;
+      var items = [];
+      quantities.forEach(function (count, index) {
+        research += types[index].researchEach * count;
+        awakeningBlueprints += resources[index].awakeningBlueprints * count;
+        organPieces += resources[index].organPieces * count;
+        if (count) items = appendItem(items, types[index], count);
+      });
+      if (research < minimumNeeded) return;
+      addState(result, {
+        research: research,
+        newCount: exactCount,
+        awakeningBlueprints: awakeningBlueprints,
+        organPieces: organPieces,
+        items: items
+      }, limit);
+    }
+    if (types.length <= 3) {
+      var lowestIndex = types.length - 1;
+      if (types.length === 1) {
+        quantities[0] = exactCount;
+        recordCounts();
+      } else if (types.length === 2) {
+        var twoBase = exactCount * types[1].researchEach;
+        var twoDifference = types[0].researchEach - types[1].researchEach;
+        var firstMinimum = twoDifference > 0 ? Math.max(0, Math.ceil((minimumNeeded - twoBase) / twoDifference)) : 0;
+        for (var first = Math.min(exactCount, firstMinimum); first <= exactCount; first += 1) {
+          quantities[0] = first;
+          quantities[1] = exactCount - first;
+          recordCounts();
+        }
+      } else {
+        for (var highest = 0; highest <= exactCount; highest += 1) {
+          quantities[0] = highest;
+          var remaining = exactCount - highest;
+          var base = highest * types[0].researchEach + remaining * types[lowestIndex].researchEach;
+          var difference = types[1].researchEach - types[lowestIndex].researchEach;
+          var neededMiddle = difference > 0 ? Math.max(0, Math.ceil((minimumNeeded - base) / difference)) : 0;
+          var startMiddle = Math.min(remaining, neededMiddle);
+          for (var middle = startMiddle; middle <= remaining; middle += 1) {
+            quantities[1] = middle;
+            quantities[2] = remaining - middle;
+            recordCounts();
+          }
+        }
+      }
+      return sortedStates(result);
+    }
+    function visit(typeIndex, remaining, research, awakeningBlueprints, organPieces) {
+      var type = types[typeIndex];
+      var last = typeIndex === types.length - 1;
+      for (var quantity = 0; quantity <= remaining; quantity += 1) {
+        if (last && quantity !== remaining) continue;
+        var nextResearch = research + type.researchEach * quantity;
+        if (nextResearch > limit) continue;
+        quantities[typeIndex] = quantity;
+        var nextBlueprints = awakeningBlueprints + resources[typeIndex].awakeningBlueprints * quantity;
+        var nextPieces = organPieces + resources[typeIndex].organPieces * quantity;
+        if (last) {
+          var items = [];
+          quantities.forEach(function (count, index) {
+            if (count) items = appendItem(items, types[index], count);
+          });
+          if (nextResearch < minimumNeeded) continue;
+          addState(result, {
+            research: nextResearch,
+            newCount: exactCount,
+            awakeningBlueprints: nextBlueprints,
+            organPieces: nextPieces,
+            items: items
+          }, limit);
+        } else {
+          visit(typeIndex + 1, remaining - quantity, nextResearch, nextBlueprints, nextPieces);
+        }
+      }
+      quantities[typeIndex] = 0;
+    }
+    visit(0, exactCount, 0, 0, 0);
+    return sortedStates(result);
   }
 
   function ownedTypes(data, beast, progress, options, maximumCount) {
@@ -192,12 +272,13 @@
       Object.keys(ranks).forEach(function (rankKey) {
         var rank = integer(rankKey);
         if (rank > 7 && !includeHigh) return;
-        var count = Math.min(integer(ranks[rankKey]), maximumCount);
+        var totalAvailable = integer(ranks[rankKey]);
+        var count = Math.min(totalAvailable, maximumCount);
         var research = researchFor(data, beast, rank, modification.id);
         if (!count || !research) return;
         types.push({
           source: "owned", modificationId: modification.id, modificationIndex: modIndex,
-          rank: rank, researchEach: research, available: count
+          rank: rank, researchEach: research, available: count, totalAvailable: totalAvailable
         });
       });
     });
@@ -213,6 +294,21 @@
       types.push({ source: "new", modificationId: "none", rank: rank, researchEach: researchFor(data, beast, rank, "none") });
     }
     return types.filter(function (item) { return item.researchEach > 0; });
+  }
+
+  function minimumInvestedCount(deficit, newMaximumResearch, owned) {
+    var premiums = [];
+    owned.forEach(function (type) {
+      if (type.researchEach <= newMaximumResearch) return;
+      for (var count = 0; count < type.available; count += 1) premiums.push(type.researchEach - newMaximumResearch);
+    });
+    premiums.sort(function (left, right) { return right - left; });
+    var premiumTotal = 0;
+    for (var count = 1; count <= Math.ceil(deficit / newMaximumResearch); count += 1) {
+      if (premiums[count - 1]) premiumTotal += premiums[count - 1];
+      if (count * newMaximumResearch + premiumTotal >= deficit) return count;
+    }
+    return Math.ceil(deficit / newMaximumResearch);
   }
 
   function sortedStates(map) {
@@ -301,24 +397,26 @@
     var owned = ownedTypes(data, beast, progress, config, provisionalMaximumCount);
     owned.forEach(function (item) { maximumResearch = Math.max(maximumResearch, item.researchEach); });
     var limit = deficit + maximumResearch;
-    var ownedStates = buildBoundedStates(owned, provisionalMaximumCount, limit, data);
-    var newStates = buildUnlimitedStates(purchasable, provisionalMaximumCount, limit, data);
-    var sortedNew = newStates.map(sortedStates);
+    var totalCount = minimumInvestedCount(deficit, Math.max.apply(null, purchasable.map(function (item) { return item.researchEach; })), owned);
+    var ownedStates = buildBoundedStates(owned, totalCount, limit, data);
+    var newStateCache = {};
     var best = null;
 
-    for (var totalCount = 1; totalCount <= provisionalMaximumCount && !best; totalCount += 1) {
-      for (var ownedCount = 0; ownedCount <= totalCount; ownedCount += 1) {
-        var newCount = totalCount - ownedCount;
-        if (!ownedStates[ownedCount] || !sortedNew[newCount] || !sortedNew[newCount].length) continue;
-        ownedStates[ownedCount].forEach(function (ownedState) {
-          var addedState = lowerBound(sortedNew[newCount], Math.max(0, deficit - ownedState.research));
-          if (!addedState) return;
-          var state = combineStates(ownedState, addedState);
-          if (state.research < deficit) return;
-          var candidate = { state: state, metrics: planMetrics(state, deficit, beast, progress, data) };
-          if (betterPlan(candidate, best)) best = candidate;
-        });
-      }
+    for (var ownedCount = 0; ownedCount <= totalCount; ownedCount += 1) {
+      var newCount = totalCount - ownedCount;
+      if (!ownedStates[ownedCount]) continue;
+      var maximumOwnedResearch = 0;
+      ownedStates[ownedCount].forEach(function (ownedState) { maximumOwnedResearch = Math.max(maximumOwnedResearch, ownedState.research); });
+      if (!newStateCache[newCount]) newStateCache[newCount] = buildExactUnlimitedStates(purchasable, newCount, Math.max(0, deficit - maximumOwnedResearch), limit, data);
+      if (!newStateCache[newCount].length) continue;
+      ownedStates[ownedCount].forEach(function (ownedState) {
+        var addedState = lowerBound(newStateCache[newCount], Math.max(0, deficit - ownedState.research));
+        if (!addedState) return;
+        var state = combineStates(ownedState, addedState);
+        if (state.research < deficit) return;
+        var candidate = { state: state, metrics: planMetrics(state, deficit, beast, progress, data) };
+        if (betterPlan(candidate, best)) best = candidate;
+      });
     }
 
     if (!best) return { valid: false, errors: ["未能生成有效机关兽投入方案"] };
@@ -326,7 +424,7 @@
     var selectedNew = best.state.items.filter(function (item) { return item.source === "new"; });
     var unused = owned.map(function (type) {
       var selected = selectedOwned.find(function (item) { return item.rank === type.rank && item.modificationId === type.modificationId; });
-      var count = type.available - (selected ? selected.count : 0);
+      var count = type.totalAvailable - (selected ? selected.count : 0);
       return count > 0 ? { rank: type.rank, modificationId: type.modificationId, count: count, researchEach: type.researchEach } : null;
     }).filter(Boolean);
     var missingFragments = best.metrics.missingFragments;

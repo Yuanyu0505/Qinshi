@@ -1609,7 +1609,7 @@ figcaption { color: var(--muted); font-size: 13px; margin-top: 8px; }
 #partition-machine-beasts .machine-no-exchange b { color: #ffb0a8; }
 #partition-machine-beasts .machine-unused { margin-top: 10px; }
 #partition-machine-beasts .machine-unused summary { color: var(--gold-dim); cursor: pointer; }
-#partition-machine-beasts #machine-beast-reference { display: grid; gap: 12px; }
+#partition-machine-beasts #machine-beast-reference:not([hidden]) { display: grid; gap: 12px; }
 #partition-machine-beasts #machine-beast-reference .panel { margin-bottom: 0; }
 #partition-machine-beasts #machine-beast-reference h2 { margin-bottom: 9px; color: var(--gold); font-size: 18px; }
 #partition-machine-beasts .machine-table-scroll { max-width: 100%; overflow: auto; border: 1px solid var(--line); border-radius: 8px; isolation: isolate; }

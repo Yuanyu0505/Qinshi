@@ -199,37 +199,30 @@ Give each reference scroller an opaque background and sticky first column on pho
 
 Commit responsive changes with message `style: adapt machine beasts for mobile`.
 
-### Task 7: Backup copy and PWA 1.0.11
+### Task 7: PWA 1.0.11 and publication files
 
 **Files:**
-- Modify: `backup/index.html`
-- Modify: `backup/css/style.css`
-- Create: `backup/data/machine-beasts.js`
-- Create: `backup/js/machine-beasts.js`
-- Create: `backup/js/machine-beasts-ui.js`
 - Modify: `service-worker.js`
 - Modify: `js/pwa.js`
 - Modify: `index.html`
+- Modify: `.github/workflows/pages.yml`
+- Modify: `manifest.webmanifest`
 
 **Interfaces:**
 - Consumes: completed production files.
-- Produces: identical backup copy, PWA version 1.0.11, and offline precache entries.
+- Produces: PWA version 1.0.11, offline precache entries, and a Pages artifact containing the new runtime files.
 
-- [ ] **Step 1: Copy the completed partition into backup**
+- [ ] **Step 1: Bump visible and runtime versions**
 
-Mirror the changed HTML, CSS, data, core, and UI files into `backup/` without changing storage keys or behavior.
+Change `index.html`, `js/pwa.js`, and `service-worker.js` from 1.0.10 to 1.0.11.
 
-- [ ] **Step 2: Bump visible and runtime versions**
+- [ ] **Step 2: Update precache and Pages lists**
 
-Change `index.html`, `backup/index.html`, `js/pwa.js`, `backup/js/pwa.js`, `service-worker.js`, and `backup/service-worker.js` from 1.0.10 to 1.0.11.
+Add `data/machine-beasts.js`, `js/machine-beasts.js`, and `js/machine-beasts-ui.js` to the service worker precache list and include both new JavaScript runtime files in `.github/workflows/pages.yml`.
 
-- [ ] **Step 3: Update precache lists**
+- [ ] **Step 3: Commit PWA release files**
 
-Add `data/machine-beasts.js`, `js/machine-beasts.js`, and `js/machine-beasts-ui.js` to both service worker precache lists.
-
-- [ ] **Step 4: Commit PWA release files**
-
-Commit backup and PWA files with message `chore: release pwa 1.0.11`.
+Commit PWA and publication files with message `chore: release pwa 1.0.11`.
 
 ### Task 8: Integrate and publish
 
@@ -255,4 +248,3 @@ Push the updated `master` to the configured GitHub remote so GitHub Pages can pu
 - [ ] **Step 4: Report manual verification points**
 
 Ask the user to manually verify personal-progress persistence, both school summaries, optimizer ordering, resource calculations, mobile/tablet rendering, offline update to 1.0.11, and GitHub Pages availability.
-

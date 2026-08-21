@@ -102,6 +102,40 @@ test("首页提供合阵工作台及其数据、核心和界面脚本", async ()
   });
 });
 
+test("首页提供机关兽个人进度、方案计算、资料图表及其三层脚本", async () => {
+  await withServer(async (port) => {
+    const page = await get(port, "/");
+    assert.strictEqual(page.status, 200);
+    assert.match(page.body, /id="partition-machine-beasts"/);
+    assert.match(page.body, /data-machine-beast-mode="progress">个人进度/);
+    assert.match(page.body, /data-machine-beast-mode="calculator">方案计算/);
+    assert.match(page.body, /data-machine-beast-mode="reference">资料图表/);
+    assert.match(page.body, /<script src="data\/machine-beasts\.js"><\/script>/);
+    assert.match(page.body, /<script src="js\/machine-beasts\.js"><\/script>/);
+    assert.match(page.body, /<script src="js\/machine-beasts-ui\.js"><\/script>/);
+    for (const resource of ["/data/machine-beasts.js", "/js/machine-beasts.js", "/js/machine-beasts-ui.js"]) {
+      const response = await get(port, resource);
+      assert.strictEqual(response.status, 200, resource);
+      assert.match(response.headers["content-type"], /javascript/, resource);
+    }
+  });
+});
+
+test("全端导航使用确认后的十个分区顺序", async () => {
+  await withServer(async (port) => {
+    const page = await get(port, "/");
+    const nav = page.body.match(/<nav class="tabs"[\s\S]*?<\/nav>/);
+    assert.ok(nav);
+    const order = ["atlas", "forging", "drops", "equipment", "inscription", "machine-beasts", "tactics", "formations", "loulan", "quiz"];
+    let cursor = -1;
+    order.forEach(partition => {
+      const next = nav[0].indexOf('data-partition="' + partition + '"');
+      assert.ok(next > cursor, partition);
+      cursor = next;
+    });
+  });
+});
+
 test("合阵在桌面导航和移动更多菜单中均位于兵法之后答题之前", async () => {
   await withServer(async (port) => {
     const page = await get(port, "/");
@@ -374,12 +408,14 @@ test("兵法包含详情与综合计算子分区，并保存计算配置", async
   });
 });
 
-test("PWA 1.0.10 覆盖手机 1.0.6 后的功能并同步缓存与页面版本", async () => {
+test("PWA 1.0.11 缓存并发布机关兽桌面与移动资源", async () => {
   const pagesWorkflow = fs.readFileSync(path.join(__dirname, ".github", "workflows", "pages.yml"), "utf8");
   assert.match(pagesWorkflow, /js\/tactics\.js/);
   assert.match(pagesWorkflow, /js\/tactics-ui\.js/);
   assert.match(pagesWorkflow, /js\/formations\.js/);
   assert.match(pagesWorkflow, /js\/formations-ui\.js/);
+  assert.match(pagesWorkflow, /js\/machine-beasts\.js/);
+  assert.match(pagesWorkflow, /js\/machine-beasts-ui\.js/);
   await withServer(async (port) => {
     const [index, worker, pwa, css] = await Promise.all([
       get(port, "/"),
@@ -391,15 +427,18 @@ test("PWA 1.0.10 覆盖手机 1.0.6 后的功能并同步缓存与页面版本",
     assert.strictEqual(worker.status, 200);
     assert.strictEqual(pwa.status, 200);
     assert.strictEqual(css.status, 200);
-    assert.match(index.body, /id="pwa-version">1\.0\.10<\/strong>/);
-    assert.match(worker.body, /CACHE_NAME\s*=\s*CACHE_PREFIX\s*\+\s*"1\.0\.10"/);
-    assert.match(pwa.body, /APP_VERSION\s*=\s*"1\.0\.10"/);
+    assert.match(index.body, /id="pwa-version">1\.0\.11<\/strong>/);
+    assert.match(worker.body, /CACHE_NAME\s*=\s*CACHE_PREFIX\s*\+\s*"1\.0\.11"/);
+    assert.match(pwa.body, /APP_VERSION\s*=\s*"1\.0\.11"/);
     assert.match(worker.body, /"\.\/data\/tactics\.js"/);
     assert.match(worker.body, /"\.\/js\/tactics\.js"/);
     assert.match(worker.body, /"\.\/js\/tactics-ui\.js"/);
     assert.match(worker.body, /"\.\/data\/formations\.js"/);
     assert.match(worker.body, /"\.\/js\/formations\.js"/);
     assert.match(worker.body, /"\.\/js\/formations-ui\.js"/);
+    assert.match(worker.body, /"\.\/data\/machine-beasts\.js"/);
+    assert.match(worker.body, /"\.\/js\/machine-beasts\.js"/);
+    assert.match(worker.body, /"\.\/js\/machine-beasts-ui\.js"/);
     assert.match(css.body, /@media \(max-width: 1024px\)[\s\S]*?\.atlas-favorite-toggle\s*\{[\s\S]*?width:\s*44px;[\s\S]*?height:\s*44px;/);
     assert.match(css.body, /#partition-tactics \.tactics-selector \.seg,[\s\S]*?#partition-equipment \.book-detail-toggle\s*\{[\s\S]*?min-height:\s*44px;/);
     assert.match(css.body, /#partition-tactics \.tactics-form-grid select,[\s\S]*?#partition-tactics \.tactics-form-grid input\s*\{[\s\S]*?font-size:\s*16px;/);
@@ -407,5 +446,6 @@ test("PWA 1.0.10 覆盖手机 1.0.6 后的功能并同步缓存与页面版本",
     assert.match(css.body, /\.book-detail-popover\s*\{[\s\S]*?max-height:\s*calc\(100dvh - 24px\)/);
     assert.match(css.body, /\.book-detail-popover-body\s*\{[\s\S]*?max-height:\s*calc\(100dvh - 104px\)[\s\S]*?overscroll-behavior:\s*contain/);
     assert.match(css.body, /#partition-drops \.drop-default-orange-table\s*\{[\s\S]*?min-width:\s*0/);
+    assert.match(css.body, /#partition-machine-beasts \.machine-reference-table tr > :first-child\s*\{[\s\S]*?position:\s*sticky/);
   });
 });

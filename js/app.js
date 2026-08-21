@@ -28,6 +28,7 @@
     equipment: "装备属性",
     forging: "橙装锻造",
     inscription: "铭文",
+    "machine-beasts": "机关兽",
     tactics: "兵法",
     formations: "合阵",
     quiz: "答题",
@@ -139,7 +140,7 @@
     const mobileMoreToggle = document.getElementById("mobile-more-toggle");
     const mobileMoreLayer = document.getElementById("mobile-more-layer");
     const mobileMoreClose = document.getElementById("mobile-more-close");
-    const secondaryPartitions = ["inscription", "tactics", "formations", "quiz", "loulan", "settings"];
+    const secondaryPartitions = ["inscription", "machine-beasts", "tactics", "formations", "loulan", "quiz", "settings"];
     const parts = {
       equipment: document.getElementById("partition-equipment"),
       loulan: document.getElementById("partition-loulan"),
@@ -148,6 +149,7 @@
       atlas: document.getElementById("partition-atlas"),
       quiz: document.getElementById("partition-quiz"),
       inscription: document.getElementById("partition-inscription"),
+      "machine-beasts": document.getElementById("partition-machine-beasts"),
       tactics: document.getElementById("partition-tactics"),
       formations: document.getElementById("partition-formations"),
       settings: document.getElementById("partition-settings")

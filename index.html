@@ -26,14 +26,15 @@
   <div class="app-shell">
     <nav class="tabs" aria-label="工具分区">
       <button type="button" class="tab mobile-primary active" data-partition="atlas">图鉴</button>
+      <button type="button" class="tab mobile-primary" data-partition="forging">橙装锻造</button>
       <button type="button" class="tab mobile-primary" data-partition="drops">关卡掉落</button>
       <button type="button" class="tab mobile-primary" data-partition="equipment">装备属性</button>
-      <button type="button" class="tab mobile-primary" data-partition="forging">橙装锻造</button>
       <button type="button" class="tab mobile-secondary" data-partition="inscription">铭文</button>
+      <button type="button" class="tab mobile-secondary" data-partition="machine-beasts">机关兽</button>
       <button type="button" class="tab mobile-secondary" data-partition="tactics">兵法</button>
       <button type="button" class="tab mobile-secondary" data-partition="formations">合阵</button>
-      <button type="button" class="tab mobile-secondary" data-partition="quiz">答题</button>
       <button type="button" class="tab mobile-secondary" data-partition="loulan">楼兰棋阵</button>
+      <button type="button" class="tab mobile-secondary" data-partition="quiz">答题</button>
       <button type="button" class="tab mobile-secondary" data-partition="settings">设置</button>
       <button id="mobile-more-toggle" type="button" class="tab mobile-more-toggle" aria-expanded="false" aria-controls="mobile-more-layer">更多</button>
     </nav>
@@ -177,6 +178,21 @@
       </section>
 
       <section id="inscription-reference" hidden></section>
+    </section>
+
+    <section id="partition-machine-beasts" hidden>
+      <div id="machine-beast-modes" class="segs machine-beast-modes">
+        <button type="button" class="seg active" data-machine-beast-mode="progress">个人进度</button>
+        <button type="button" class="seg" data-machine-beast-mode="calculator">方案计算</button>
+        <button type="button" class="seg" data-machine-beast-mode="reference">资料图表</button>
+      </div>
+      <div id="machine-beast-error" class="error" role="alert" hidden></div>
+      <section id="machine-beast-progress"></section>
+      <section id="machine-beast-calculator" hidden>
+        <div id="machine-beast-calculator-result" hidden></div>
+        <div id="machine-beast-calculator-controls"></div>
+      </section>
+      <section id="machine-beast-reference" hidden></section>
     </section>
 
     <section id="partition-tactics" hidden>
@@ -365,7 +381,7 @@
 
       <section class="panel settings-panel">
         <div class="panel-title">本机进度备份</div>
-        <p class="settings-copy">备份包含本机保存的图鉴等级与收藏库存、橙装锻造进度、铭文进度、兵法进度与计算设置、合阵个人进度及历史答题修订数据，不包含工具自带题库和查询数据。</p>
+        <p class="settings-copy">备份包含本机保存的图鉴等级与收藏库存、橙装锻造进度、铭文进度、机关兽进度、兵法进度与计算设置、合阵个人进度及历史答题修订数据，不包含工具自带题库和查询数据。</p>
         <div class="settings-actions">
           <button id="settings-export" type="button" class="seg active">导出备份</button>
           <button id="settings-import-trigger" type="button" class="seg">导入备份</button>
@@ -389,10 +405,11 @@
     </div>
     <div class="mobile-more-grid">
       <button type="button" data-partition="inscription">铭文</button>
+      <button type="button" data-partition="machine-beasts">机关兽</button>
       <button type="button" data-partition="tactics">兵法</button>
       <button type="button" data-partition="formations">合阵</button>
-      <button type="button" data-partition="quiz">答题</button>
       <button type="button" data-partition="loulan">楼兰棋阵</button>
+      <button type="button" data-partition="quiz">答题</button>
       <button type="button" data-partition="settings">设置</button>
     </div>
   </div>
@@ -400,6 +417,7 @@
 
 <script src="data/tactics.js"></script>
 <script src="data/formations.js"></script>
+<script src="data/machine-beasts.js"></script>
 <script src="data/special-equipment.js"></script>
 <script src="data/forging.js"></script>
 <script src="data/drops.js"></script>
@@ -408,6 +426,7 @@
 <script src="data/inscription.js"></script>
 <script src="js/tactics.js"></script>
 <script src="js/formations.js"></script>
+<script src="js/machine-beasts.js"></script>
 <script src="js/query.js"></script>
 <script src="js/forging.js"></script>
 <script src="js/drops.js"></script>
@@ -419,6 +438,7 @@
 <script src="js/pwa.js"></script>
 <script src="js/tactics-ui.js"></script>
 <script src="js/formations-ui.js"></script>
+<script src="js/machine-beasts-ui.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>

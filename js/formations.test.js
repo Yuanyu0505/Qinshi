@@ -82,7 +82,7 @@ test("buildMatrix：排除主将并列出数据不完整的弟子", () => {
   progress.members.b.health = null;
   const matrix = F.buildMatrix(formation, progress);
   assert.deepStrictEqual(matrix.rows.map(row => row.candidateId), ["c", "d"]);
-  assert.deepStrictEqual(matrix.excluded, [{ candidateId: "b", name: "乙", missing: ["血"] }]);
+  assert.deepStrictEqual(matrix.excluded, [{ candidateId: "b", name: "乙", missing: ["血"], errors: [] }]);
 });
 
 test("rankColumn：最高不同数值档标红、第二档标黄且并列保留", () => {

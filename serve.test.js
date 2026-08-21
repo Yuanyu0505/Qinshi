@@ -37,7 +37,7 @@ test("GET / 返回 index.html", async () => {
     const r = await get(port, "/");
     assert.strictEqual(r.status, 200);
     assert.match(r.headers["content-type"], /text\/html/);
-    assert.match(r.body, /特殊属性装备/);
+    assert.match(r.body, /<h1 id="page-title">图鉴<\/h1>/);
   });
 });
 

@@ -264,3 +264,154 @@ test("normalizeInventoryRecord：只保留合法魂魄和装备记录", () => {
     equipment: {}
   });
 });
+
+test("soulInventoryStatus：所需魂魄为零时无需录入也视为达标", () => {
+  assert.deepStrictEqual(A.soulInventoryStatus(0, null), { state: "enough", owned: null, missing: 0 });
+});
+
+test("detectNoteSources：组合来源不受书写顺序影响并保留独立关键词", () => {
+  assert.deepStrictEqual(
+    A.detectNoteSources(["碎片/禁地", "禁地 / 碎片，楼兰", "主线聚宝盆"]),
+    ["禁地", "碎片", "碎片/禁地", "主线", "聚宝盆", "楼兰"]
+  );
+});
+
+test("deriveAtlasState：严格区分装备齐全、未齐全和未录入", () => {
+  const common = {
+    levels: { "t-0003": 5 },
+    targetLevel: 8,
+    upgradeStages,
+    favorites: ["t-0003"]
+  };
+  const owned = A.deriveAtlasState(fixture[2], {
+    ...common,
+    inventory: {
+      "t-0003": {
+        equipment: {
+          "5→6|0": { name: "冰魄戒", owned: true, note: "" },
+          "7→8|0": { name: "墨眉", owned: true, note: "" }
+        }
+      }
+    }
+  });
+  const missing = A.deriveAtlasState(fixture[2], {
+    ...common,
+    inventory: {
+      "t-0003": {
+        equipment: {
+          "5→6|0": { name: "冰魄戒", owned: false, note: "禁地/碎片" },
+          "7→8|0": { name: "墨眉", owned: true, note: "" }
+        }
+      }
+    }
+  });
+  const unset = A.deriveAtlasState(fixture[2], {
+    ...common,
+    inventory: {
+      "t-0003": {
+        equipment: {
+          "5→6|0": { name: "冰魄戒", owned: false, note: "禁地" }
+        }
+      }
+    }
+  });
+  assert.strictEqual(owned.equipmentState, "owned");
+  assert.strictEqual(missing.equipmentState, "missing");
+  assert.deepStrictEqual(missing.noteSources, ["禁地", "碎片", "碎片/禁地"]);
+  assert.strictEqual(unset.equipmentState, "unset");
+});
+
+test("deriveAtlasState：当前目标区间无需装备时自动视为全部拥有", () => {
+  const state = A.deriveAtlasState(fixture[2], {
+    levels: { "t-0003": 8 },
+    targetLevel: 9,
+    upgradeStages,
+    inventory: {}
+  });
+  assert.strictEqual(state.equipmentState, "owned");
+});
+
+test("filterAtlas：库存筛选、来源 OR 和已收藏图鉴类型共同生效", () => {
+  const inventory = {
+    "t-0001": {
+      soulsOwned: 0,
+      equipment: {
+        "5→6|0": { name: "号钟琴", owned: false, note: "禁地兑换" },
+        "7→8|0": { name: "水寒", owned: true, note: "" },
+        "9→10|0": { name: "残虹", owned: true, note: "" }
+      }
+    },
+    "t-0003": {
+      soulsOwned: 160,
+      equipment: {
+        "5→6|0": { name: "冰魄戒", owned: false, note: "楼兰碎片" },
+        "7→8|0": { name: "墨眉", owned: true, note: "" },
+        "9→10|0": { name: "黄帝内经", owned: true, note: "" }
+      }
+    }
+  };
+  const result = A.filterAtlas(fixture, {
+    category: "已收藏",
+    favoriteType: "防",
+    favorites: ["t-0001", "t-0003"],
+    levels: { "t-0001": 5, "t-0003": 5 },
+    targetLevel: 10,
+    upgradeStages,
+    inventory,
+    equipmentFilter: "missing",
+    noteSources: ["禁地", "楼兰"]
+  });
+  assert.deepStrictEqual(result.map(item => item.id), ["t-0003"]);
+});
+
+test("filterAtlas：置顶、收藏、普通图鉴分组且置顶使用固定排序", () => {
+  const result = A.filterAtlas(fixture, {
+    category: "全部",
+    favorites: ["t-0001", "t-0002", "t-0003"],
+    pins: ["t-0001", "t-0003"],
+    levels: { "t-0001": 5, "t-0002": 5, "t-0003": 5 },
+    targetLevel: 10,
+    upgradeStages,
+    inventory: {},
+    sortField: "disciple"
+  });
+  assert.deepStrictEqual(result.map(item => item.id), ["t-0001", "t-0003", "t-0002"]);
+});
+
+test("filterAtlas：魂魄排序已达标始终优先且未录入始终最后", () => {
+  const inventory = {
+    "t-0001": { soulsOwned: 1000, equipment: {} },
+    "t-0002": { soulsOwned: 0, equipment: {} }
+  };
+  ["asc", "desc"].forEach(direction => {
+    const result = A.filterAtlas(fixture, {
+      category: "全部",
+      levels: { "t-0001": 5, "t-0002": 5, "t-0003": 5 },
+      targetLevel: 10,
+      upgradeStages,
+      inventory,
+      favorites: ["t-0001", "t-0002", "t-0003"],
+      sortField: "souls",
+      sortDirection: direction
+    });
+    assert.strictEqual(result[0].id, "t-0001");
+    assert.strictEqual(result[result.length - 1].id, "t-0003");
+  });
+});
+
+test("filterAtlas：明鬼绳结和名称字段支持确认后的排序规则", () => {
+  const common = {
+    category: "全部",
+    levels: { "t-0001": 5, "t-0002": 10, "t-0003": 5 },
+    targetLevel: 10,
+    upgradeStages
+  };
+  assert.deepStrictEqual(
+    A.filterAtlas(fixture, { ...common, sortField: "knots", sortDirection: "asc" }).map(item => item.id),
+    ["t-0002", "t-0001", "t-0003"]
+  );
+  assert.deepStrictEqual(
+    A.filterAtlas(fixture, { ...common, sortField: "group" }).map(item => item.id),
+    ["t-0001", "t-0003", "t-0002"]
+  );
+});

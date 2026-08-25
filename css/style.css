@@ -116,6 +116,74 @@ header.top {
 .atlas-level-range { display: inline-flex; align-items: center; gap: 8px; color: var(--muted); }
 #atlas-level-min,
 #atlas-level-max { width: 86px; }
+.atlas-advanced-filters {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--line);
+}
+.atlas-filter-control {
+  position: relative;
+  display: grid;
+  min-width: 0;
+  gap: 5px;
+  color: var(--muted);
+  font-size: 12px;
+}
+.atlas-filter-control[hidden] { display: none; }
+.atlas-filter-control > select,
+.atlas-select-button {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  min-height: 38px;
+  padding: 8px 10px;
+  color: var(--text);
+  background: var(--bg2);
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  font: inherit;
+  font-size: 14px;
+  text-align: left;
+}
+.atlas-select-button {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.atlas-select-button:disabled { color: var(--muted); cursor: not-allowed; opacity: .72; }
+.atlas-filter-control > select:focus,
+.atlas-select-button:focus-visible { border-color: var(--gold-dim); outline: 2px solid rgba(212, 175, 55, .15); }
+.atlas-note-menu {
+  position: absolute;
+  top: calc(100% + 5px);
+  left: 0;
+  z-index: 35;
+  display: grid;
+  width: max-content;
+  min-width: 100%;
+  max-width: min(320px, 80vw);
+  padding: 7px;
+  background: var(--bg2);
+  border: 1px solid var(--gold-dim);
+  border-radius: 8px;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, .42);
+}
+.atlas-note-filter .atlas-note-menu { right: 0; left: auto; }
+.atlas-note-menu[hidden] { display: none; }
+.atlas-note-menu label { display: flex; align-items: center; gap: 7px; padding: 7px 8px; color: var(--text); cursor: pointer; }
+.atlas-note-menu input { accent-color: var(--red); }
+.atlas-sort-controls {
+  display: grid;
+  grid-template-columns: minmax(160px, 220px) minmax(140px, 180px) max-content;
+  align-items: end;
+  gap: 10px;
+  margin-top: 10px;
+}
+.atlas-filter-clear { min-height: 38px; }
 .muted-tip { color: var(--muted); font-size: 12px; margin-top: 8px; }
 .quiz-results { display: grid; gap: 10px; }
 .quiz-item { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; }
@@ -601,6 +669,29 @@ tr.hit-row td { background: rgba(212, 175, 55, .06); }
   border-color: rgba(53, 208, 111, .6);
 }
 .atlas-item-favorite .atlas-head .forge-name { color: #35d06f; }
+.atlas-item-pinned {
+  border-color: #ff4b4b;
+  box-shadow: inset 4px 0 0 #ff4b4b;
+}
+.atlas-item-pinned .atlas-head .q-badge {
+  color: #ff4b4b;
+  background: rgba(255, 75, 75, .12);
+  border-color: #ff4b4b;
+}
+.atlas-item-pinned .atlas-head .forge-name { color: #ff4b4b; }
+.atlas-pin-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 2px 8px;
+  color: #fff;
+  background: #e53935;
+  border: 2px solid #ff4b4b;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 800;
+}
+.atlas-pin-toggle.is-pinned { color: #ff6d63; border-color: #ff4b4b; }
 .atlas-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; }
 .atlas-favorite-toggle {
   display: inline-flex;
@@ -1721,11 +1812,17 @@ figcaption { color: var(--muted); font-size: 13px; margin-top: 8px; }
   .prog-material-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (max-width: 1024px) {
+  .atlas-advanced-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .atlas-sort-controls { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .atlas-filter-clear { grid-column: 1 / -1; }
+  .atlas-filter-control > select,
+  .atlas-select-button { min-height: 44px; font-size: 16px; }
   .atlas-favorite-toggle {
     width: 44px;
     height: 44px;
     touch-action: manipulation;
   }
+  .atlas-pin-toggle,
   .atlas-inventory-edit,
   .atlas-inventory-actions .seg { min-height: 44px; touch-action: manipulation; }
   .atlas-inventory-souls { align-items: stretch; flex-direction: column; }

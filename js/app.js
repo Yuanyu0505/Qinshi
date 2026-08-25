@@ -21,6 +21,7 @@
   const ATLAS_TARGET_LEVEL_KEY = "qinshi_atlas_target_level_v1";
   const ATLAS_FAVORITES_KEY = "qinshi_atlas_favorites_v1";
   const ATLAS_INVENTORY_KEY = "qinshi_atlas_inventory_v1";
+  const ATLAS_PINS_KEY = "qinshi_atlas_pins_v1";
   const QUIZ_STORE_KEY = "qinshi_quiz_items_v1";
   const PARTITION_TITLES = {
     atlas: "图鉴",
@@ -87,6 +88,17 @@
     atlasLevelMin: document.getElementById("atlas-level-min"),
     atlasLevelMax: document.getElementById("atlas-level-max"),
     atlasTargetLevel: document.getElementById("atlas-target-level"),
+    atlasFavoriteTypeWrap: document.getElementById("atlas-favorite-type-wrap"),
+    atlasFavoriteType: document.getElementById("atlas-favorite-type"),
+    atlasSoulFilter: document.getElementById("atlas-soul-filter"),
+    atlasEquipmentFilter: document.getElementById("atlas-equipment-filter"),
+    atlasNoteFilter: document.getElementById("atlas-note-filter"),
+    atlasNoteToggle: document.getElementById("atlas-note-toggle"),
+    atlasNoteMenu: document.getElementById("atlas-note-menu"),
+    atlasSortField: document.getElementById("atlas-sort-field"),
+    atlasSortDirectionWrap: document.getElementById("atlas-sort-direction-wrap"),
+    atlasSortDirection: document.getElementById("atlas-sort-direction"),
+    atlasFilterClear: document.getElementById("atlas-filter-clear"),
     atlasUpgradeSummary: document.getElementById("atlas-upgrade-summary"),
     atlasResults: document.getElementById("atlas-results"),
     quizSearch: document.getElementById("quiz-search"),
@@ -109,8 +121,15 @@
     levelMax: 20,
     targetLevel: loadAtlasTargetLevel(),
     favorites: loadAtlasFavorites(),
+    pins: loadAtlasPins(),
     levels: loadAtlasLevels(),
     inventory: loadAtlasInventory(),
+    favoriteType: "all",
+    soulFilter: "all",
+    equipmentFilter: "all",
+    noteSources: [],
+    sortField: "default",
+    sortDirection: "asc",
     inventoryEditingId: "",
     inventoryDraft: null,
     inventoryError: ""
@@ -292,6 +311,24 @@
     }
   }
 
+  function loadAtlasPins() {
+    try {
+      const parsed = JSON.parse(localStorage.getItem(ATLAS_PINS_KEY) || "[]");
+      if (!Array.isArray(parsed)) return [];
+      return Array.from(new Set(parsed.map((id) => String(id || "").trim()).filter(Boolean)));
+    } catch (e) {
+      return [];
+    }
+  }
+
+  function saveAtlasPins() {
+    try {
+      localStorage.setItem(ATLAS_PINS_KEY, JSON.stringify(atlasState.pins));
+    } catch (e) {
+      // 忽略存储失败
+    }
+  }
+
   function loadAtlasInventory() {
     try {
       const parsed = JSON.parse(localStorage.getItem(ATLAS_INVENTORY_KEY) || "{}");
@@ -318,6 +355,45 @@
     atlasState.inventoryEditingId = "";
     atlasState.inventoryDraft = null;
     atlasState.inventoryError = "";
+  }
+
+  function atlasNoteSourceInputs() {
+    return Array.prototype.slice.call(el.atlasNoteMenu.querySelectorAll("[data-atlas-note-source]"));
+  }
+
+  function closeAtlasNoteFilter() {
+    el.atlasNoteMenu.hidden = true;
+    el.atlasNoteToggle.setAttribute("aria-expanded", "false");
+  }
+
+  function syncAtlasFilterControls() {
+    el.atlasFavoriteTypeWrap.hidden = atlasState.tab !== "已收藏";
+    el.atlasFavoriteType.value = atlasState.favoriteType;
+    el.atlasSoulFilter.value = atlasState.soulFilter;
+    el.atlasEquipmentFilter.value = atlasState.equipmentFilter;
+    el.atlasSortField.value = atlasState.sortField;
+    el.atlasSortDirection.value = atlasState.sortDirection;
+    const noteEnabled = atlasState.equipmentFilter === "missing";
+    el.atlasNoteToggle.disabled = !noteEnabled;
+    el.atlasNoteFilter.classList.toggle("is-disabled", !noteEnabled);
+    el.atlasNoteToggle.textContent = noteEnabled
+      ? (atlasState.noteSources.length ? atlasState.noteSources.join("、") : "全部来源")
+      : "需先选择装备未齐全";
+    atlasNoteSourceInputs().forEach((input) => {
+      input.checked = atlasState.noteSources.includes(input.dataset.atlasNoteSource);
+    });
+    if (!noteEnabled) closeAtlasNoteFilter();
+    el.atlasSortDirectionWrap.hidden = !["knots", "souls"].includes(atlasState.sortField);
+  }
+
+  function clearAtlasAdvancedFilters() {
+    atlasState.favoriteType = "all";
+    atlasState.soulFilter = "all";
+    atlasState.equipmentFilter = "all";
+    atlasState.noteSources = [];
+    atlasState.sortField = "default";
+    atlasState.sortDirection = "asc";
+    closeAtlasNoteFilter();
   }
 
   function initAtlas() {
@@ -367,6 +443,57 @@
       saveAtlasTargetLevel();
       applyAtlas();
     });
+    el.atlasFavoriteType.addEventListener("change", () => {
+      atlasState.activated = true;
+      atlasState.favoriteType = el.atlasFavoriteType.value;
+      applyAtlas();
+    });
+    el.atlasSoulFilter.addEventListener("change", () => {
+      atlasState.activated = true;
+      atlasState.soulFilter = el.atlasSoulFilter.value;
+      applyAtlas();
+    });
+    el.atlasEquipmentFilter.addEventListener("change", () => {
+      atlasState.activated = true;
+      atlasState.equipmentFilter = el.atlasEquipmentFilter.value;
+      applyAtlas();
+    });
+    el.atlasSortField.addEventListener("change", () => {
+      atlasState.activated = true;
+      atlasState.sortField = el.atlasSortField.value;
+      applyAtlas();
+    });
+    el.atlasSortDirection.addEventListener("change", () => {
+      atlasState.activated = true;
+      atlasState.sortDirection = el.atlasSortDirection.value;
+      applyAtlas();
+    });
+    el.atlasNoteToggle.addEventListener("click", () => {
+      if (el.atlasNoteToggle.disabled) return;
+      const open = el.atlasNoteToggle.getAttribute("aria-expanded") === "true";
+      el.atlasNoteMenu.hidden = open;
+      el.atlasNoteToggle.setAttribute("aria-expanded", String(!open));
+    });
+    el.atlasNoteMenu.addEventListener("change", (event) => {
+      const input = event.target.closest("[data-atlas-note-source]");
+      if (!input) return;
+      atlasState.activated = true;
+      atlasState.noteSources = atlasNoteSourceInputs()
+        .filter((checkbox) => checkbox.checked)
+        .map((checkbox) => checkbox.dataset.atlasNoteSource);
+      applyAtlas();
+    });
+    el.atlasFilterClear.addEventListener("click", () => {
+      atlasState.activated = true;
+      clearAtlasAdvancedFilters();
+      applyAtlas();
+    });
+    document.addEventListener("click", (event) => {
+      if (!el.atlasNoteFilter.contains(event.target)) closeAtlasNoteFilter();
+    });
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") closeAtlasNoteFilter();
+    });
     el.atlasResults.addEventListener("change", (e) => {
       if (e.target.classList.contains("atlas-level")) {
         closeAtlasInventoryEditor();
@@ -400,11 +527,24 @@
         const index = atlasState.favorites.indexOf(id);
         if (index >= 0) {
           atlasState.favorites.splice(index, 1);
+          atlasState.pins = atlasState.pins.filter((pinId) => pinId !== id);
+          saveAtlasPins();
           if (atlasState.inventoryEditingId === id) closeAtlasInventoryEditor();
         } else {
           atlasState.favorites.push(id);
         }
         saveAtlasFavorites();
+        applyAtlas();
+        return;
+      }
+      const pinButton = e.target.closest("button[data-atlas-pin]");
+      if (pinButton) {
+        const id = pinButton.dataset.atlasPin;
+        if (!atlasState.favorites.includes(id)) return;
+        const index = atlasState.pins.indexOf(id);
+        if (index >= 0) atlasState.pins.splice(index, 1);
+        else atlasState.pins.push(id);
+        saveAtlasPins();
         applyAtlas();
         return;
       }
@@ -540,6 +680,7 @@
     const L = ATLAS.levelOf(item, atlasState.levels);
     const itemId = String(item.id);
     const favorite = atlasState.favorites.includes(itemId);
+    const pinned = favorite && atlasState.pins.includes(itemId);
     const plan = ATLAS.upgradePlan(item, L, atlasState.targetLevel, ATLAS_DATA.meta.upgradeStages);
     const equipmentHtml = atlasEquipmentHtml(itemId, plan, favorite);
     const upgradeHtml = plan.reached
@@ -554,11 +695,13 @@
           <div class="muted-tip">14级后不再获得成长值</div>
           <div class="atlas-upgrade-equipment"><div class="atlas-equipment-title">所需装备</div>${equipmentHtml}</div>
         </div>`;
-    return `<div class="atlas-item${favorite ? " atlas-item-favorite" : ""}" data-atlas-item="${escapeHtml(itemId)}">
+    return `<div class="atlas-item${favorite ? " atlas-item-favorite" : ""}${pinned ? " atlas-item-pinned" : ""}" data-atlas-item="${escapeHtml(itemId)}">
       <div class="atlas-head">
+        ${pinned ? '<span class="atlas-pin-badge">置顶</span>' : ""}
         <span class="q-badge q-orange">${item.atlas}图鉴</span>
         <span class="forge-name">${escapeHtml(item.name)}</span>
         <button type="button" class="atlas-favorite-toggle${favorite ? " is-favorite" : ""}" data-atlas-favorite="${escapeHtml(itemId)}" aria-pressed="${favorite}" title="${favorite ? "取消收藏" : "收藏图鉴"}" aria-label="${favorite ? "取消收藏" : "收藏图鉴"}">${favorite ? "★" : "☆"}</button>
+        ${favorite ? `<button type="button" class="seg atlas-pin-toggle${pinned ? " is-pinned" : ""}" data-atlas-pin="${escapeHtml(itemId)}" aria-pressed="${pinned}">${pinned ? "取消置顶" : "置顶"}</button>` : ""}
         ${favorite ? `<button type="button" class="seg atlas-inventory-edit" data-atlas-inventory-edit="${escapeHtml(itemId)}">编辑库存</button>` : ""}
         <label class="atlas-level-label">图鉴等级
           <input type="number" class="atlas-level" data-id="${item.id}" value="${L}" min="0" max="${atlasMaxLevel()}">
@@ -635,6 +778,7 @@
     el.atlasTabs.querySelectorAll("button").forEach((b) => {
       b.classList.toggle("active", b.dataset.atlas === atlasState.tab);
     });
+    syncAtlasFilterControls();
     if (!atlasState.activated) {
       el.atlasUpgradeSummary.innerHTML = "";
       el.atlasResults.innerHTML = "";
@@ -652,7 +796,16 @@
       field: atlasState.searchField,
       targetLevel: atlasState.targetLevel,
       favorites: atlasState.favorites,
-      levels: atlasState.levels
+      pins: atlasState.pins,
+      levels: atlasState.levels,
+      inventory: atlasState.inventory,
+      upgradeStages: ATLAS_DATA.meta.upgradeStages,
+      favoriteType: atlasState.favoriteType,
+      soulFilter: atlasState.soulFilter,
+      equipmentFilter: atlasState.equipmentFilter,
+      noteSources: atlasState.noteSources,
+      sortField: atlasState.sortField,
+      sortDirection: atlasState.sortDirection
     });
     el.atlasUpgradeSummary.innerHTML = atlasUpgradeSummaryHtml(
       ATLAS.summarizeUpgrade(items, atlasState.levels, atlasState.targetLevel, ATLAS_DATA.meta.upgradeStages)

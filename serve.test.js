@@ -347,6 +347,46 @@ test("已收藏图鉴可保存魂魄和逐件装备库存，未收藏不展示�
   });
 });
 
+test("图鉴提供紧凑库存筛选、排序和手机平板两行布局", async () => {
+  await withServer(async (port) => {
+    const [index, app, css] = await Promise.all([
+      get(port, "/"),
+      get(port, "/js/app.js"),
+      get(port, "/css/style.css")
+    ]);
+    assert.match(index.body, /id="atlas-favorite-type"/);
+    assert.match(index.body, /id="atlas-soul-filter"/);
+    assert.match(index.body, /id="atlas-equipment-filter"/);
+    assert.match(index.body, /id="atlas-note-filter"/);
+    assert.match(index.body, /data-atlas-note-source="碎片\/禁地"/);
+    assert.match(index.body, /id="atlas-sort-field"/);
+    assert.match(index.body, /id="atlas-sort-direction"/);
+    assert.match(index.body, /id="atlas-filter-clear"/);
+    assert.match(app.body, /noteSources:\s*\[\]/);
+    assert.match(app.body, /sortField:\s*"default"/);
+    assert.match(app.body, /equipmentFilter:\s*"all"/);
+    assert.match(css.body, /\.atlas-advanced-filters\s*\{[\s\S]*?grid-template-columns:\s*repeat\(4,/);
+    assert.match(css.body, /@media \(max-width: 1024px\)[\s\S]*?\.atlas-advanced-filters\s*\{[\s\S]*?grid-template-columns:\s*repeat\(2,/);
+  });
+});
+
+test("图鉴置顶使用独立存储、取消收藏联动取消置顶并显示红色卡片", async () => {
+  await withServer(async (port) => {
+    const [app, css] = await Promise.all([
+      get(port, "/js/app.js"),
+      get(port, "/css/style.css")
+    ]);
+    assert.match(app.body, /ATLAS_PINS_KEY\s*=\s*"qinshi_atlas_pins_v1"/);
+    assert.match(app.body, /function loadAtlasPins/);
+    assert.match(app.body, /function saveAtlasPins/);
+    assert.match(app.body, /data-atlas-pin/);
+    assert.match(app.body, /atlas-pin-badge/);
+    assert.match(app.body, /atlasState\.pins\s*=\s*atlasState\.pins\.filter/);
+    assert.match(css.body, /\.atlas-item-pinned\s*\{/);
+    assert.match(css.body, /\.atlas-pin-badge\s*\{/);
+  });
+});
+
 test("关卡掉落首页包含固定橙装普通关卡表", async () => {
   await withServer(async (port) => {
     const r = await get(port, "/");

@@ -358,6 +358,68 @@
           <input id="atlas-target-level" type="number" min="1" step="1">
         </div>
         <div class="muted-tip">图鉴等级为个人进度（可直接修改）；达到目标等级即视为完成，14级后不再获得成长值。</div>
+        <div class="atlas-advanced-filters" aria-label="图鉴库存筛选">
+          <label id="atlas-favorite-type-wrap" class="atlas-filter-control" hidden>
+            <span>图鉴类型</span>
+            <select id="atlas-favorite-type">
+              <option value="all">全部类型</option>
+              <option value="攻">攻图鉴</option>
+              <option value="血">血图鉴</option>
+              <option value="内力">内力图鉴</option>
+              <option value="防">防图鉴</option>
+            </select>
+          </label>
+          <label class="atlas-filter-control">
+            <span>魂魄</span>
+            <select id="atlas-soul-filter">
+              <option value="all">不限</option>
+              <option value="enough">已达标</option>
+              <option value="short">未达标</option>
+              <option value="unset">未录入</option>
+            </select>
+          </label>
+          <label class="atlas-filter-control">
+            <span>装备</span>
+            <select id="atlas-equipment-filter">
+              <option value="all">不限</option>
+              <option value="owned">全部拥有</option>
+              <option value="missing">未齐全</option>
+              <option value="unset">未录入</option>
+            </select>
+          </label>
+          <div id="atlas-note-filter" class="atlas-filter-control atlas-note-filter">
+            <span>备注来源</span>
+            <button id="atlas-note-toggle" type="button" class="atlas-select-button" aria-expanded="false" aria-haspopup="true" disabled>需先选择装备未齐全</button>
+            <div id="atlas-note-menu" class="atlas-note-menu" hidden>
+              <label><input type="checkbox" data-atlas-note-source="禁地">禁地</label>
+              <label><input type="checkbox" data-atlas-note-source="碎片">碎片</label>
+              <label><input type="checkbox" data-atlas-note-source="碎片/禁地">碎片/禁地</label>
+              <label><input type="checkbox" data-atlas-note-source="主线">主线</label>
+              <label><input type="checkbox" data-atlas-note-source="聚宝盆">聚宝盆</label>
+              <label><input type="checkbox" data-atlas-note-source="楼兰">楼兰</label>
+            </div>
+          </div>
+        </div>
+        <div class="atlas-sort-controls">
+          <label class="atlas-filter-control">
+            <span>排序字段</span>
+            <select id="atlas-sort-field">
+              <option value="default">默认顺序</option>
+              <option value="knots">明鬼绳结</option>
+              <option value="souls">魂魄缺口</option>
+              <option value="disciple">弟子名称</option>
+              <option value="group">所属图鉴名称</option>
+            </select>
+          </label>
+          <label id="atlas-sort-direction-wrap" class="atlas-filter-control">
+            <span>排序方向</span>
+            <select id="atlas-sort-direction">
+              <option value="asc">少到多</option>
+              <option value="desc">多到少</option>
+            </select>
+          </label>
+          <button id="atlas-filter-clear" type="button" class="seg atlas-filter-clear">清除新增条件</button>
+        </div>
       </section>
       <div id="atlas-upgrade-summary" hidden></div>
       <div id="atlas-results" hidden></div>
@@ -381,7 +443,7 @@
 
       <section class="panel settings-panel">
         <div class="panel-title">本机进度备份</div>
-        <p class="settings-copy">备份包含本机保存的图鉴等级与收藏库存、橙装锻造进度、铭文进度、机关兽进度、兵法进度与计算设置、合阵个人进度及历史答题修订数据，不包含工具自带题库和查询数据。</p>
+        <p class="settings-copy">备份包含本机保存的图鉴等级、收藏、置顶与库存、橙装锻造进度、铭文进度、机关兽进度、兵法进度与计算设置、合阵个人进度及历史答题修订数据，不包含工具自带题库和查询数据。</p>
         <div class="settings-actions">
           <button id="settings-export" type="button" class="seg active">导出备份</button>
           <button id="settings-import-trigger" type="button" class="seg">导入备份</button>

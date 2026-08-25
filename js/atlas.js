@@ -76,6 +76,7 @@
   function soulInventoryStatus(requiredInput, ownedInput) {
     var required = Math.max(0, inventoryInteger(requiredInput) || 0);
     var owned = inventoryInteger(ownedInput);
+    if (required === 0) return { state: "enough", owned: owned, missing: 0 };
     if (owned == null) return { state: "unset", owned: null, missing: required };
     var missing = Math.max(0, required - owned);
     return {
@@ -105,6 +106,50 @@
     return {
       soulsOwned: inventoryInteger(source.soulsOwned),
       equipment: equipment
+    };
+  }
+
+  var NOTE_SOURCE_ORDER = ["禁地", "碎片", "碎片/禁地", "主线", "聚宝盆", "楼兰"];
+
+  function detectNoteSources(notes) {
+    var found = {};
+    (Array.isArray(notes) ? notes : []).forEach(function (note) {
+      var text = normalize(note).replace(/\s+/g, "");
+      if (!text) return;
+      var hasForbidden = text.indexOf("禁地") !== -1;
+      var hasFragment = text.indexOf("碎片") !== -1;
+      if (hasForbidden) found["禁地"] = true;
+      if (hasFragment) found["碎片"] = true;
+      if (hasForbidden && hasFragment) found["碎片/禁地"] = true;
+      if (text.indexOf("主线") !== -1) found["主线"] = true;
+      if (text.indexOf("聚宝盆") !== -1) found["聚宝盆"] = true;
+      if (text.indexOf("楼兰") !== -1) found["楼兰"] = true;
+    });
+    return NOTE_SOURCE_ORDER.filter(function (source) { return found[source]; });
+  }
+
+  function equipmentInventoryStatus(plan, recordInput) {
+    var stages = plan && Array.isArray(plan.equipmentStages) ? plan.equipmentStages : [];
+    if (!stages.length) return { state: "owned", missingNotes: [], noteSources: [] };
+    var record = normalizeInventoryRecord(recordInput);
+    var missingNotes = [];
+    var unset = false;
+    stages.forEach(function (stage) {
+      (stage.items || []).forEach(function (token, index) {
+        var key = equipmentRecordKey(stage.key, index);
+        var saved = record.equipment[key];
+        if (!saved || saved.name !== token.n) {
+          unset = true;
+          return;
+        }
+        if (!saved.owned) missingNotes.push(saved.note || "");
+      });
+    });
+    if (unset) return { state: "unset", missingNotes: [], noteSources: [] };
+    return {
+      state: missingNotes.length ? "missing" : "owned",
+      missingNotes: missingNotes,
+      noteSources: detectNoteSources(missingNotes)
     };
   }
 
@@ -215,6 +260,92 @@
     });
   }
 
+  function deriveAtlasState(item, options) {
+    var opts = options || {};
+    var id = String(!item || item.id == null ? "" : item.id);
+    var plan = upgradePlan(
+      item,
+      levelOf(item, opts.levels),
+      opts.targetLevel,
+      opts.upgradeStages
+    );
+    var inventory = opts.inventory && typeof opts.inventory === "object" ? opts.inventory : {};
+    var favorite = isFavorite(item, opts.favorites);
+    var record = normalizeInventoryRecord(favorite ? inventory[id] : null);
+    var equipment = equipmentInventoryStatus(plan, record);
+    return {
+      item: item,
+      plan: plan,
+      soulState: soulInventoryStatus(plan.souls, record.soulsOwned),
+      equipmentState: equipment.state,
+      noteSources: equipment.noteSources,
+      favorite: favorite,
+      pinned: favorite && isFavorite(item, opts.pins)
+    };
+  }
+
+  function compareText(a, b) {
+    return normalize(a).localeCompare(normalize(b), "zh-Hans-CN");
+  }
+
+  function compareDisciple(a, b) {
+    return compareText(a.item && a.item.name, b.item && b.item.name);
+  }
+
+  function stableSort(states, comparator) {
+    return states.map(function (state, index) { return { state: state, index: index }; })
+      .sort(function (a, b) { return comparator(a.state, b.state) || a.index - b.index; })
+      .map(function (entry) { return entry.state; });
+  }
+
+  function ordinaryComparator(options) {
+    var opts = options || {};
+    var field = normalize(opts.sortField) || "default";
+    var direction = normalize(opts.sortDirection) === "desc" ? -1 : 1;
+    if (field === "knots") {
+      return function (a, b) {
+        return direction * (a.plan.knots - b.plan.knots) || compareDisciple(a, b);
+      };
+    }
+    if (field === "souls") {
+      var soulRank = { enough: 0, short: 1, unset: 2 };
+      return function (a, b) {
+        var rankDifference = soulRank[a.soulState.state] - soulRank[b.soulState.state];
+        if (rankDifference) return rankDifference;
+        if (a.soulState.state === "short") {
+          var gapDifference = direction * (a.soulState.missing - b.soulState.missing);
+          if (gapDifference) return gapDifference;
+        }
+        return compareDisciple(a, b);
+      };
+    }
+    if (field === "disciple") return compareDisciple;
+    if (field === "group") {
+      return function (a, b) {
+        return compareText(a.item && a.item.group, b.item && b.item.group) || compareDisciple(a, b);
+      };
+    }
+    return function () { return 0; };
+  }
+
+  function pinnedComparator(a, b) {
+    var atlasRank = { "攻": 0, "血": 1, "内力": 2, "防": 3 };
+    var equipmentRank = { owned: 0, missing: 1, unset: 2 };
+    var typeDifference = (atlasRank[a.item.atlas] == null ? 99 : atlasRank[a.item.atlas]) -
+      (atlasRank[b.item.atlas] == null ? 99 : atlasRank[b.item.atlas]);
+    if (typeDifference) return typeDifference;
+    var equipmentDifference = equipmentRank[a.equipmentState] - equipmentRank[b.equipmentState];
+    if (equipmentDifference) return equipmentDifference;
+    return a.plan.knots - b.plan.knots || compareDisciple(a, b);
+  }
+
+  function matchesSelectedSources(state, selectedSources) {
+    if (!selectedSources.length) return true;
+    return selectedSources.some(function (source) {
+      return state.noteSources.indexOf(source) !== -1;
+    });
+  }
+
   function filterAtlas(items, options) {
     var opts = options || {};
     var category = opts.category || "全部";
@@ -228,10 +359,35 @@
       return categoryMatch && level >= minLevel && level <= maxLevel;
     });
     if (minLevel > maxLevel) return [];
-    return favoriteFirst(
-      searchAtlas(result, opts.query, opts.levels, opts.field, opts.targetLevel),
-      opts.favorites
-    );
+    var states = searchAtlas(result, opts.query, opts.levels, opts.field, opts.targetLevel)
+      .map(function (item) { return deriveAtlasState(item, opts); });
+    if (category === "已收藏" && opts.favoriteType && opts.favoriteType !== "all") {
+      states = states.filter(function (state) { return state.item.atlas === opts.favoriteType; });
+    }
+    if (opts.soulFilter && opts.soulFilter !== "all") {
+      states = states.filter(function (state) { return state.soulState.state === opts.soulFilter; });
+    }
+    if (opts.equipmentFilter && opts.equipmentFilter !== "all") {
+      states = states.filter(function (state) { return state.equipmentState === opts.equipmentFilter; });
+    }
+    var selectedSources = Array.isArray(opts.noteSources) ? opts.noteSources.filter(function (source) {
+      return NOTE_SOURCE_ORDER.indexOf(source) !== -1;
+    }) : [];
+    if (opts.equipmentFilter === "missing" && selectedSources.length) {
+      states = states.filter(function (state) { return matchesSelectedSources(state, selectedSources); });
+    }
+    var pinned = [];
+    var favorites = [];
+    var regular = [];
+    states.forEach(function (state) {
+      if (state.pinned) pinned.push(state);
+      else if (state.favorite) favorites.push(state);
+      else regular.push(state);
+    });
+    var comparator = ordinaryComparator(opts);
+    return stableSort(pinned, pinnedComparator)
+      .concat(stableSort(favorites, comparator), stableSort(regular, comparator))
+      .map(function (state) { return state.item; });
   }
 
   return {
@@ -243,6 +399,9 @@
     equipmentRecordKey: equipmentRecordKey,
     soulInventoryStatus: soulInventoryStatus,
     normalizeInventoryRecord: normalizeInventoryRecord,
+    detectNoteSources: detectNoteSources,
+    equipmentInventoryStatus: equipmentInventoryStatus,
+    deriveAtlasState: deriveAtlasState,
     sortEquipment: sortEquipment,
     neededStages: neededStages,
     upgradePlan: upgradePlan,

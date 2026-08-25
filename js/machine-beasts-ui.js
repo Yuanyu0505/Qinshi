@@ -3,16 +3,21 @@
 
   var DATA = window.MACHINE_BEAST_DATA;
   var CORE = window.MACHINE_BEAST_CORE;
+  var PLANNER = window.MACHINE_BEAST_SCHOOL_PLANNER;
   var STORE_KEY = "qinshi_machine_beasts_progress_v1";
   var state = {
     mode: "progress",
     beasts: {},
     editingId: null,
     editDraft: null,
+    calculatorMode: "single",
     calcBeastId: null,
     calcDraft: null,
     calcTargetLevel: null,
-    calcResult: null
+    calcResult: null,
+    singleInventoryPolicy: null,
+    schoolDraft: null,
+    schoolResult: null
   };
   var el = {};
 
@@ -124,20 +129,21 @@
   function inventoryEditor(beast, draft, scope) {
     var ranks = visibleRanks(beast, draft);
     var modifications = beast.quality === "orange" && draft.showMods ? DATA.modifications : [DATA.modifications[0]];
-    var flagPrefix = scope === "progress" ? "edit" : "calc";
+    var flagPrefix = scope === "progress" ? "edit" : scope === "school" ? "school" : "calc";
+    var beastData = scope === "school" ? ' data-beast-id="' + beast.id + '"' : '';
     var html = '<div class="machine-inventory-options">';
     if (beast.maxRank >= 8) {
-      html += '<label><input type="checkbox" data-' + flagPrefix + '-flag="showHighRanks"' + (draft.showHighRanks ? " checked" : "") + '>显示8–10阶库存</label>';
+      html += '<label><input type="checkbox" data-' + flagPrefix + '-flag="showHighRanks"' + beastData + (draft.showHighRanks ? " checked" : "") + '>显示8–10阶库存</label>';
     }
     if (beast.quality === "orange") {
-      html += '<label><input type="checkbox" data-' + flagPrefix + '-flag="showMods"' + (draft.showMods ? " checked" : "") + '>显示改造库存</label>';
+      html += '<label><input type="checkbox" data-' + flagPrefix + '-flag="showMods"' + beastData + (draft.showMods ? " checked" : "") + '>显示改造库存</label>';
     }
     html += "</div><div class=\"machine-inventory-groups\">";
     modifications.forEach(function (modification) {
       html += '<fieldset class="machine-inventory-group"><legend>' + escapeHtml(modification.name) + '</legend><div class="machine-rank-inputs">';
       ranks.forEach(function (rank) {
         var value = (draft.inventory[modification.id] || {})[String(rank)] || 0;
-        html += '<label><span>' + rank + '阶</span><input type="number" min="0" step="1" inputmode="numeric" value="' + value + '" data-' + flagPrefix + '-inventory data-mod="' + modification.id + '" data-rank="' + rank + '"></label>';
+        html += '<label><span>' + rank + '阶</span><input type="number" min="0" step="1" inputmode="numeric" value="' + value + '" data-' + flagPrefix + '-inventory' + beastData + ' data-mod="' + modification.id + '" data-rank="' + rank + '"></label>';
       });
       html += "</div></fieldset>";
     });
@@ -190,13 +196,78 @@
     }).join("");
   }
 
+  function inventoryPolicy(progress) {
+    var limits = {};
+    DATA.modifications.forEach(function (modification) {
+      var ranks = progress.inventory[modification.id] || {};
+      Object.keys(ranks).forEach(function (rank) {
+        if (!limits[modification.id]) limits[modification.id] = {};
+        limits[modification.id][rank] = CORE.integer(ranks[rank]);
+      });
+    });
+    return { useOwnedInventory: true, limits: limits };
+  }
+
+  function inventoryEntries(beast, progress) {
+    var entries = [];
+    DATA.modifications.forEach(function (modification) {
+      var ranks = progress.inventory[modification.id] || {};
+      Object.keys(ranks).sort(function (left, right) { return Number(right) - Number(left); }).forEach(function (rank) {
+        var count = CORE.integer(ranks[rank]);
+        if (count) entries.push({ beastId: beast.id, modificationId: modification.id, modificationName: modification.name, rank: rank, count: count });
+      });
+    });
+    return entries;
+  }
+
+  function calculatorInventorySelector(beast, progress, policy, scope, showGlobal) {
+    var entries = inventoryEntries(beast, progress);
+    var global = showGlobal ? '<label class="machine-owned-global"><input type="checkbox" data-owned-global data-owned-scope="' + scope + '"' + (policy.useOwnedInventory ? ' checked' : '') + '>使用已有库存</label>' : '';
+    var rows = entries.map(function (entry) {
+      var modificationLimits = policy.limits[entry.modificationId] || {};
+      var enabled = CORE.integer(modificationLimits[entry.rank]) > 0;
+      var limit = enabled ? Math.min(entry.count, CORE.integer(modificationLimits[entry.rank])) : 0;
+      return '<div class="machine-owned-inventory-row" data-beast-id="' + entry.beastId + '" data-mod="' + entry.modificationId + '" data-rank="' + entry.rank + '">' +
+        '<input type="checkbox" data-machine-owned-enabled data-owned-scope="' + scope + '" data-beast-id="' + entry.beastId + '" data-mod="' + entry.modificationId + '" data-rank="' + entry.rank + '"' + (enabled ? ' checked' : '') + (policy.useOwnedInventory ? '' : ' disabled') + '>' +
+        '<span>' + escapeHtml(entry.modificationName) + ' ' + entry.rank + '阶</span><span>已有×' + entry.count + '</span>' +
+        '<label><span>最多使用</span><input type="number" min="0" max="' + entry.count + '" step="1" value="' + limit + '" data-machine-owned-limit data-owned-scope="' + scope + '" data-beast-id="' + entry.beastId + '" data-mod="' + entry.modificationId + '" data-rank="' + entry.rank + '"' + (enabled && policy.useOwnedInventory ? '' : ' disabled') + '></label></div>';
+    }).join("");
+    return '<section class="machine-owned-inventory"><div class="machine-owned-head"><strong>本次使用库存</strong>' + global + '</div>' +
+      (rows ? '<div class="machine-owned-inventory-grid">' + rows + '</div>' : '<p class="muted-tip">暂无可用库存</p>') + '</section>';
+  }
+
   function resetCalculator(beastId) {
     var beast = beastById(beastId || state.calcBeastId || DATA.beasts[0].id);
     state.calcBeastId = beast.id;
     state.calcDraft = clone(getProgress(beast));
+    state.singleInventoryPolicy = inventoryPolicy(state.calcDraft);
     var currentLevel = CORE.levelForResearch(state.calcDraft.research, DATA.researchThresholds, beast.maxLevel);
     state.calcTargetLevel = CORE.nextEffectLevel(beast, currentLevel);
     state.calcResult = null;
+  }
+
+  function resetSchoolCalculator(schoolId) {
+    var school = DATA.schools.find(function (item) { return item.id === (schoolId || (state.schoolDraft && state.schoolDraft.schoolId)); }) || DATA.schools[0];
+    var progressByBeast = {};
+    var participating = {};
+    var ownedPoliciesByBeast = {};
+    school.beastIds.forEach(function (beastId) {
+      var beast = beastById(beastId);
+      progressByBeast[beastId] = clone(getProgress(beast));
+      participating[beastId] = true;
+      ownedPoliciesByBeast[beastId] = inventoryPolicy(progressByBeast[beastId]);
+    });
+    state.schoolDraft = {
+      schoolId: school.id,
+      targetStage: PLANNER.defaultTargetStage(DATA, school, progressByBeast),
+      progressByBeast: progressByBeast,
+      participating: participating,
+      useOwnedInventory: true,
+      ownedPoliciesByBeast: ownedPoliciesByBeast,
+      allowNewHighRanks: false,
+      allowNewModifications: false
+    };
+    state.schoolResult = null;
   }
 
   function calcTargetOptions(beast, selected, currentLevel) {
@@ -207,7 +278,7 @@
     return html;
   }
 
-  function renderCalculatorControls() {
+  function renderSingleCalculatorControls() {
     if (!state.calcDraft) resetCalculator();
     var beast = beastById(state.calcBeastId);
     var currentLevel = CORE.levelForResearch(state.calcDraft.research, DATA.researchThresholds, beast.maxLevel);
@@ -223,9 +294,51 @@
       '<label><span>目标研发等级</span><select data-calc-target>' + calcTargetOptions(beast, state.calcTargetLevel, currentLevel) + '</select></label>' +
       '<label><span>当前机关兽碎片</span><input type="number" min="0" step="1" inputmode="numeric" value="' + state.calcDraft.fragments + '" data-calc-field="fragments"></label>' +
       '</div><div class="machine-calculator-actions"><button type="button" class="seg" data-machine-action="reload-calculator">从个人进度重新读取</button>' +
-      '<button type="button" class="seg" data-machine-action="save-calculator">保存回个人进度</button>' +
       '<button type="button" class="seg active" data-machine-action="calculate">计算最优方案</button></div>' +
-      inventoryEditor(beast, state.calcDraft, "calculator") + '</section>';
+      '<details class="machine-temporary-inventory"><summary>临时调整当前库存</summary>' + inventoryEditor(beast, state.calcDraft, "calculator") + '</details>' +
+      calculatorInventorySelector(beast, state.calcDraft, state.singleInventoryPolicy, "single", true) + '</section>';
+  }
+
+  function schoolStageOptions(school, selected) {
+    return school.stages.map(function (stage) {
+      return '<option value="' + stage.stage + '"' + (stage.stage === selected ? ' selected' : '') + '>' + stage.stage + '阶（累计' + stage.requiredTotalLevel + '级）</option>';
+    }).join("");
+  }
+
+  function renderSchoolBeastControl(beast, draft) {
+    var progress = draft.progressByBeast[beast.id];
+      var policy = Object.assign({}, draft.ownedPoliciesByBeast[beast.id], { useOwnedInventory: draft.useOwnedInventory });
+    var level = CORE.levelForResearch(progress.research, DATA.researchThresholds, beast.maxLevel);
+    var participating = draft.participating[beast.id];
+    return '<article class="machine-school-beast-control ' + (participating ? '' : 'is-excluded') + '">' +
+      '<header><div><span class="machine-quality-badge ' + qualityClass(beast) + '">' + escapeHtml(beast.tier) + '</span><strong>' + escapeHtml(beast.name) + '</strong></div>' +
+      '<label><input type="checkbox" data-school-participant data-beast-id="' + beast.id + '"' + (participating ? ' checked' : '') + '>参与后续培养</label></header>' +
+      '<div class="machine-school-beast-fields"><label><span>当前累计研发度</span><input type="number" min="0" step="1" value="' + progress.research + '" data-school-field="research" data-beast-id="' + beast.id + '"></label>' +
+      '<label><span>当前等级</span><b>' + level + '/' + beast.maxLevel + '级</b></label>' +
+      '<label><span>机关兽碎片</span><input type="number" min="0" step="1" value="' + progress.fragments + '" data-school-field="fragments" data-beast-id="' + beast.id + '"></label></div>' +
+      (participating ? '<details class="machine-temporary-inventory"><summary>临时库存与本次使用</summary>' + inventoryEditor(beast, progress, "school") + calculatorInventorySelector(beast, progress, policy, "school", false) + '</details>' : '<p class="muted-tip">现有等级仍计入流派累计等级，但不会继续投入。</p>') + '</article>';
+  }
+
+  function renderSchoolCalculatorControls() {
+    if (!state.schoolDraft) resetSchoolCalculator();
+    var draft = state.schoolDraft;
+    var school = DATA.schools.find(function (item) { return item.id === draft.schoolId; });
+    var snapshot = CORE.schoolSnapshot(school, draft.progressByBeast, DATA);
+    var targetTotal = school.stages[draft.targetStage - 1].requiredTotalLevel;
+    el.calculatorControls.innerHTML = '<section class="panel machine-school-calculator"><div class="machine-school-calculator-grid">' +
+      '<label><span>机关术流派</span><select data-school-calc-school>' + DATA.schools.map(function (item) { return '<option value="' + item.id + '"' + (item.id === school.id ? ' selected' : '') + '>' + escapeHtml(item.name) + '</option>'; }).join("") + '</select></label>' +
+      '<label><span>目标流派阶数</span><select data-school-target>' + schoolStageOptions(school, draft.targetStage) + '</select></label>' +
+      '<div><span>当前累计觉醒等级</span><b>' + snapshot.totalLevel + '</b></div><div><span>距离目标</span><b>' + Math.max(0, targetTotal - snapshot.totalLevel) + '级</b></div></div>' +
+      '<div class="machine-school-options"><label><input type="checkbox" data-school-option="useOwnedInventory"' + (draft.useOwnedInventory ? ' checked' : '') + '>使用已有库存</label>' +
+      '<label><input type="checkbox" data-school-option="allowNewHighRanks"' + (draft.allowNewHighRanks ? ' checked' : '') + '>允许新增8–10阶</label>' +
+      '<label><input type="checkbox" data-school-option="allowNewModifications"' + (draft.allowNewModifications ? ' checked' : '') + '>允许新增改造机关兽</label></div>' +
+      '<div class="machine-calculator-actions"><button type="button" class="seg" data-machine-action="reload-school-calculator">从个人进度重新读取</button><button type="button" class="seg active" data-machine-action="calculate-school">计算两套最优方案</button></div>' +
+      '<div class="machine-school-beast-controls">' + school.beastIds.map(function (beastId) { return renderSchoolBeastControl(beastById(beastId), draft); }).join("") + '</div></section>';
+  }
+
+  function renderCalculatorControls() {
+    if (state.calculatorMode === "school") renderSchoolCalculatorControls();
+    else renderSingleCalculatorControls();
   }
 
   function itemLabel(item) {
@@ -264,6 +377,45 @@
       '<div class="machine-result-metrics machine-resource-metrics"><div><span>觉醒神图</span><b>' + formatNumber(result.totals.awakeningBlueprints) + '</b></div><div><span>机关破片</span><b>' + formatNumber(result.totals.organPieces) + '</b></div>' +
       '<div><span>本体缺口</span><b>' + result.shortage.bodyEquivalent + '本体</b></div><div><span>机关兽碎片缺口</span><b>' + formatNumber(result.shortage.fragments) + '</b></div>' + exchange + '</div>' +
       '<details class="machine-unused"><summary>查看未使用库存（' + result.unused.reduce(function (total, item) { return total + item.count; }, 0) + '只）</summary>' + itemList(result.unused.map(function (item) { return Object.assign({ source: "owned", sevenRankEquivalent: item.rank > 7 ? Math.pow(2, item.rank - 7) : 1 }, item); }), "无未使用库存") + '</details></section>';
+    el.calculatorResult.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  function schoolPlanTitle(kind) {
+    if (kind === "free") return "自由等级方案";
+    if (kind === "milestone") return "效果档位方案";
+    return "同时满足自由等级与效果档位优化";
+  }
+
+  function schoolResourceValue(value) {
+    return value === null ? "存在不可贡献兑换的碎片缺口" : formatNumber(value);
+  }
+
+  function renderSchoolBeastPlan(detail) {
+    var ownedItems = detail.items.filter(function (item) { return item.source === "owned"; });
+    var newItems = detail.items.filter(function (item) { return item.source === "new"; });
+    return '<article class="machine-school-plan-beast"><header><strong>' + escapeHtml(detail.beastName) + '</strong><b>' + detail.startLevel + '级 → ' + detail.endLevel + '级</b></header>' +
+      '<div class="machine-school-plan-beast-metrics"><span>研发度 ' + formatNumber(detail.startResearch) + ' → ' + formatNumber(detail.endResearch) + '</span><span>增加 ' + formatNumber(detail.addedResearch) + '</span><span>溢出 ' + formatNumber(detail.overflowResearch) + '</span></div>' +
+      '<div class="machine-result-columns"><article><h3>使用已有库存</h3>' + itemList(ownedItems, "不使用已有完整机关兽") + '</article><article><h3>新增投入</h3>' + itemList(newItems, "无需新增机关兽", true) + '</article></div>' +
+      '<div class="machine-school-plan-resources"><span>折算投入 <b>' + detail.investedCount + '只</b></span><span>机关兽碎片缺口 <b>' + formatNumber(detail.resources.fragments) + '</b></span><span>贡献 <b>' + schoolResourceValue(detail.resources.contribution) + '</b></span><span>元宝 <b>' + schoolResourceValue(detail.resources.yuan) + '</b></span></div></article>';
+  }
+
+  function renderSchoolPlan(plan, result) {
+    var totals = plan.totals;
+    return '<section class="panel machine-result machine-school-plan"><div class="machine-result-head"><div><span>目标流派阶数计算</span><h2>' + escapeHtml(schoolPlanTitle(plan.kind)) + '</h2></div><b>' + result.target.stage + '阶 · 累计' + result.target.totalLevel + '级</b></div>' +
+      '<div class="machine-school-plan-summary"><div><span>当前累计等级</span><b>' + result.current.totalLevel + '</b></div><div><span>推荐后累计等级</span><b>' + totals.projectedTotalLevel + '</b></div>' +
+      '<div><span>折算投入总只数</span><b>' + totals.investedCount + '</b></div><div><span>使用已有库存</span><b>' + totals.ownedInvestedCount + '</b></div><div><span>新增机关兽</span><b>' + totals.newInvestedCount + '</b></div>' +
+      '<div><span>效果档位数量</span><b>' + totals.milestoneCount + '</b></div><div><span>研发度溢出</span><b>' + formatNumber(totals.overflowResearch) + '</b></div><div><span>觉醒神图</span><b>' + formatNumber(totals.awakeningBlueprints) + '</b></div>' +
+      '<div><span>机关破片</span><b>' + formatNumber(totals.organPieces) + '</b></div><div><span>机关兽碎片缺口</span><b>' + formatNumber(totals.fragments) + '</b></div><div><span>贡献合计</span><b>' + schoolResourceValue(totals.contribution) + '</b></div><div><span>元宝合计</span><b>' + schoolResourceValue(totals.yuan) + '</b></div></div>' +
+      (plan.beasts.length ? '<div class="machine-school-plan-beasts">' + plan.beasts.map(renderSchoolBeastPlan).join("") + '</div>' : '<p class="machine-school-complete">目标已达成，无需新增投入。</p>') + '</section>';
+  }
+
+  function renderSchoolCalculatorResult(result) {
+    el.calculatorResult.hidden = false;
+    if (!result.valid) {
+      el.calculatorResult.innerHTML = '<section class="panel machine-result is-error"><h2>无法计算</h2><ul>' + result.errors.map(function (error) { return '<li>' + escapeHtml(error) + '</li>'; }).join("") + '</ul></section>';
+      return;
+    }
+    el.calculatorResult.innerHTML = result.plans.map(function (plan) { return renderSchoolPlan(plan, result); }).join("");
     el.calculatorResult.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
@@ -378,6 +530,16 @@
   }
 
   function handleCalculatorClick(event) {
+    var modeButton = event.target.closest("[data-machine-calculator-mode]");
+    if (modeButton) {
+      state.calculatorMode = modeButton.dataset.machineCalculatorMode;
+      el.calculatorModes.querySelectorAll("[data-machine-calculator-mode]").forEach(function (button) {
+        button.classList.toggle("active", button === modeButton);
+      });
+      el.calculatorResult.hidden = true;
+      renderCalculatorControls();
+      return;
+    }
     var button = event.target.closest("[data-machine-action]");
     if (!button) return;
     var action = button.dataset.machineAction;
@@ -386,43 +548,109 @@
       resetCalculator(beast.id);
       el.calculatorResult.hidden = true;
       renderCalculatorControls();
-    } else if (action === "save-calculator") {
-      state.beasts[beast.id] = CORE.normalizeBeastProgress(beast, state.calcDraft, DATA);
-      if (saveProgress()) {
-        clearError();
-        renderProgress();
-      }
     } else if (action === "calculate") {
       state.calcResult = CORE.calculateInvestmentPlan(DATA, beast, state.calcDraft, {
         targetLevel: state.calcTargetLevel,
         includeHighRanks: state.calcDraft.showHighRanks,
-        includeMods: state.calcDraft.showMods
+        includeMods: state.calcDraft.showMods,
+        useOwnedInventory: state.singleInventoryPolicy.useOwnedInventory,
+        ownedLimits: state.singleInventoryPolicy.limits
       });
       renderCalculatorResult(state.calcResult);
+    } else if (action === "reload-school-calculator") {
+      resetSchoolCalculator(state.schoolDraft.schoolId);
+      el.calculatorResult.hidden = true;
+      renderCalculatorControls();
+    } else if (action === "calculate-school") {
+      var draft = state.schoolDraft;
+      var school = DATA.schools.find(function (item) { return item.id === draft.schoolId; });
+      var participatingIds = school.beastIds.filter(function (beastId) { return draft.participating[beastId]; });
+      var limits = {};
+      school.beastIds.forEach(function (beastId) { limits[beastId] = draft.ownedPoliciesByBeast[beastId].limits; });
+      state.schoolResult = PLANNER.calculateSchoolPlans(DATA, school, draft.progressByBeast, {
+        targetStage: draft.targetStage,
+        participatingBeastIds: participatingIds,
+        useOwnedInventory: draft.useOwnedInventory,
+        ownedLimitsByBeast: limits,
+        allowNewHighRanks: draft.allowNewHighRanks,
+        allowNewModifications: draft.allowNewModifications
+      });
+      renderSchoolCalculatorResult(state.schoolResult);
     }
   }
 
   function handleCalculatorInput(event) {
-    if (!state.calcDraft) return;
-    if (event.target.matches("[data-calc-field]")) state.calcDraft[event.target.dataset.calcField] = CORE.integer(event.target.value);
-    if (event.target.matches("[data-calc-inventory]")) updateInventory(state.calcDraft, event.target);
+    var target = event.target;
+    if (target.matches("[data-calc-field]")) state.calcDraft[target.dataset.calcField] = CORE.integer(target.value);
+    if (target.matches("[data-calc-inventory]")) {
+      var oldSingle = CORE.integer((state.calcDraft.inventory[target.dataset.mod] || {})[target.dataset.rank]);
+      updateInventory(state.calcDraft, target);
+      var singleLimits = state.singleInventoryPolicy.limits[target.dataset.mod] || (state.singleInventoryPolicy.limits[target.dataset.mod] = {});
+      if (CORE.integer(singleLimits[target.dataset.rank]) >= oldSingle) singleLimits[target.dataset.rank] = CORE.integer(target.value);
+    }
+    if (target.matches("[data-school-field]")) {
+      state.schoolDraft.progressByBeast[target.dataset.beastId][target.dataset.schoolField] = CORE.integer(target.value);
+    }
+    if (target.matches("[data-school-inventory]")) {
+      var schoolProgress = state.schoolDraft.progressByBeast[target.dataset.beastId];
+      var oldSchool = CORE.integer((schoolProgress.inventory[target.dataset.mod] || {})[target.dataset.rank]);
+      updateInventory(schoolProgress, target);
+      var schoolPolicy = state.schoolDraft.ownedPoliciesByBeast[target.dataset.beastId];
+      var schoolLimits = schoolPolicy.limits[target.dataset.mod] || (schoolPolicy.limits[target.dataset.mod] = {});
+      if (CORE.integer(schoolLimits[target.dataset.rank]) >= oldSchool) schoolLimits[target.dataset.rank] = CORE.integer(target.value);
+    }
+    if (target.matches("[data-machine-owned-limit]")) {
+      var policy = target.dataset.ownedScope === "single" ? state.singleInventoryPolicy : state.schoolDraft.ownedPoliciesByBeast[target.dataset.beastId];
+      var policyLimits = policy.limits[target.dataset.mod] || (policy.limits[target.dataset.mod] = {});
+      policyLimits[target.dataset.rank] = CORE.integer(target.value);
+    }
   }
 
   function handleCalculatorChange(event) {
-    if (event.target.matches("[data-calc-beast]")) {
-      resetCalculator(event.target.value);
+    var target = event.target;
+    if (target.matches("[data-calc-beast]")) {
+      resetCalculator(target.value);
       el.calculatorResult.hidden = true;
       renderCalculatorControls();
-    } else if (event.target.matches("[data-calc-target]")) {
-      state.calcTargetLevel = CORE.integer(event.target.value);
-    } else if (event.target.matches("[data-calc-flag]")) {
-      state.calcDraft[event.target.dataset.calcFlag] = event.target.checked;
+    } else if (target.matches("[data-calc-target]")) {
+      state.calcTargetLevel = CORE.integer(target.value);
+    } else if (target.matches("[data-calc-flag]")) {
+      state.calcDraft[target.dataset.calcFlag] = target.checked;
+      renderCalculatorControls();
+    } else if (target.matches("[data-owned-global]")) {
+      if (target.dataset.ownedScope === "single") state.singleInventoryPolicy.useOwnedInventory = target.checked;
+      else state.schoolDraft.useOwnedInventory = target.checked;
+      renderCalculatorControls();
+    } else if (target.matches("[data-machine-owned-enabled]")) {
+      var policy = target.dataset.ownedScope === "single" ? state.singleInventoryPolicy : state.schoolDraft.ownedPoliciesByBeast[target.dataset.beastId];
+      var progress = target.dataset.ownedScope === "single" ? state.calcDraft : state.schoolDraft.progressByBeast[target.dataset.beastId];
+      var limits = policy.limits[target.dataset.mod] || (policy.limits[target.dataset.mod] = {});
+      limits[target.dataset.rank] = target.checked ? CORE.integer((progress.inventory[target.dataset.mod] || {})[target.dataset.rank]) : 0;
+      renderCalculatorControls();
+    } else if (target.matches("[data-school-calc-school]")) {
+      resetSchoolCalculator(target.value);
+      el.calculatorResult.hidden = true;
+      renderCalculatorControls();
+    } else if (target.matches("[data-school-target]")) {
+      state.schoolDraft.targetStage = CORE.integer(target.value);
+      renderCalculatorControls();
+    } else if (target.matches("[data-school-option]")) {
+      state.schoolDraft[target.dataset.schoolOption] = target.checked;
+      renderCalculatorControls();
+    } else if (target.matches("[data-school-participant]")) {
+      state.schoolDraft.participating[target.dataset.beastId] = target.checked;
+      renderCalculatorControls();
+    } else if (target.matches("[data-school-flag]")) {
+      state.schoolDraft.progressByBeast[target.dataset.beastId][target.dataset.schoolFlag] = target.checked;
+      renderCalculatorControls();
+    } else if (target.matches("[data-school-field], [data-school-inventory], [data-calc-inventory]")) {
       renderCalculatorControls();
     }
   }
 
   function validDependencies() {
-    return DATA && CORE && Array.isArray(DATA.beasts) && typeof CORE.calculateInvestmentPlan === "function";
+    return DATA && CORE && PLANNER && Array.isArray(DATA.beasts) && typeof CORE.calculateInvestmentPlan === "function" &&
+      typeof PLANNER.calculateSchoolPlans === "function" && typeof PLANNER.defaultTargetStage === "function";
   }
 
   function init() {
@@ -432,15 +660,17 @@
     el.error = document.getElementById("machine-beast-error");
     el.progress = document.getElementById("machine-beast-progress");
     el.calculator = document.getElementById("machine-beast-calculator");
+    el.calculatorModes = document.getElementById("machine-calculator-modes");
     el.calculatorResult = document.getElementById("machine-beast-calculator-result");
     el.calculatorControls = document.getElementById("machine-beast-calculator-controls");
     el.reference = document.getElementById("machine-beast-reference");
     if (!validDependencies()) {
-      showError("机关兽数据加载失败，请确认 data/machine-beasts.js 与 js/machine-beasts.js 存在。");
+      showError("机关兽数据加载失败，请确认 data/machine-beasts.js、js/machine-beasts.js 与 js/machine-beast-school-planner.js 存在。");
       return;
     }
     loadProgress();
     resetCalculator(DATA.beasts[0].id);
+    resetSchoolCalculator(DATA.schools[0].id);
     renderProgress();
     renderCalculatorControls();
     el.modes.addEventListener("click", function (event) {

@@ -113,12 +113,32 @@ test("首页提供机关兽个人进度、方案计算、资料图表及其三�
     assert.match(page.body, /<script src="data\/machine-beasts\.js"><\/script>/);
     assert.match(page.body, /<script src="js\/machine-beasts\.js"><\/script>/);
     assert.match(page.body, /<script src="js\/machine-beasts-ui\.js"><\/script>/);
-    for (const resource of ["/data/machine-beasts.js", "/js/machine-beasts.js", "/js/machine-beasts-ui.js"]) {
+    for (const resource of ["/data/machine-beasts.js", "/js/machine-beasts.js", "/js/machine-beast-school-planner.js", "/js/machine-beasts-ui.js"]) {
       const response = await get(port, resource);
       assert.strictEqual(response.status, 200, resource);
       assert.match(response.headers["content-type"], /javascript/, resource);
-    }
-  });
+  }
+});
+
+test("机关兽方案计算提供单只与目标流派阶数子页面", () => {
+  const html = fs.readFileSync(path.join(__dirname, "index.html"), "utf8");
+  const ui = fs.readFileSync(path.join(__dirname, "js", "machine-beasts-ui.js"), "utf8");
+  const css = fs.readFileSync(path.join(__dirname, "css", "style.css"), "utf8");
+  assert.match(html, /data-machine-calculator-mode="single"[^>]*>单只机关兽/);
+  assert.match(html, /data-machine-calculator-mode="school"[^>]*>目标流派阶数/);
+  assert.match(html, /<script src="js\/machine-beast-school-planner\.js"><\/script>/);
+  assert.ok(html.indexOf("js/machine-beasts.js") < html.indexOf("js/machine-beast-school-planner.js"));
+  assert.ok(html.indexOf("js/machine-beast-school-planner.js") < html.indexOf("js/machine-beasts-ui.js"));
+  assert.match(ui, /使用已有库存/);
+  assert.match(ui, /data-machine-owned-enabled/);
+  assert.match(ui, /data-machine-owned-limit/);
+  assert.match(ui, /自由等级方案/);
+  assert.match(ui, /效果档位方案/);
+  assert.match(ui, /同时满足自由等级与效果档位优化/);
+  assert.match(css, /\.machine-owned-inventory-grid/);
+  assert.match(css, /\.machine-school-calculator-grid/);
+  assert.match(css, /\.machine-school-plan-summary/);
+});
 });
 
 test("机关兽新增投入突出需求，资料图表使用纵向自适应卡片", () => {

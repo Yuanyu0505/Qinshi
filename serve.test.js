@@ -131,8 +131,10 @@ test("机关兽新增投入突出需求，资料图表使用纵向自适应卡�
   assert.match(ui, /machine-research-card-grid/);
   assert.match(ui, /machine-beast-reference-grid/);
   assert.match(ui, /machine-school-stage-grid/);
+  assert.match(ui, /DATA\.schools\.map[\s\S]*?beast\.schoolId === school\.id/);
   assert.match(css, /#partition-machine-beasts \.machine-reference-grid\s*\{[\s\S]*?grid-template-columns:\s*repeat\(auto-fit,/);
   assert.match(css, /#partition-machine-beasts \.machine-investment-demand\s*\{[\s\S]*?color:\s*#ff4b4b;[\s\S]*?font-weight:\s*800;/);
+  assert.match(css, /#partition-machine-beasts \.machine-reference-pair b\s*\{[\s\S]*?white-space:\s*nowrap;/);
 });
 
 test("全端导航使用确认后的十个分区顺序", async () => {

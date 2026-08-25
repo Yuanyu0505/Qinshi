@@ -287,15 +287,17 @@
   }
 
   function beastReference() {
-    return '<section class="panel"><h2>机关兽归属与研发效果</h2><div class="machine-reference-grid machine-beast-reference-grid">' +
-      DATA.beasts.map(function (beast) {
-        var school = DATA.schools.find(function (item) { return item.id === beast.schoolId; });
+    var groups = DATA.schools.map(function (school) {
+      var cards = DATA.beasts.filter(function (beast) { return beast.schoolId === school.id; }).map(function (beast) {
         var effects = DATA.effectLevels.map(function (level) {
           var effect = beast.effects.find(function (item) { return item.level === level; });
           return '<div><dt>' + level + '级效果</dt><dd>' + (effect ? escapeHtml(effect.text) : '—') + '</dd></div>';
         }).join("");
         return '<article class="machine-reference-card machine-beast-reference-card"><header><span class="machine-name-token ' + qualityClass(beast) + '">' + escapeHtml(beast.name) + '</span><span>' + escapeHtml(school.name) + ' · ' + beast.tier + ' · 上限' + beast.maxLevel + '级</span></header><dl class="machine-effect-reference-list">' + effects + '</dl></article>';
-      }).join("") + '</div></section>';
+      }).join("");
+      return '<section class="machine-reference-group machine-beast-school-group"><h3>' + escapeHtml(school.name) + '</h3><div class="machine-reference-grid machine-beast-reference-grid">' + cards + '</div></section>';
+    }).join("");
+    return '<section class="panel"><h2>机关兽归属与研发效果</h2>' + groups + '</section>';
   }
 
   function schoolReference() {

@@ -1621,7 +1621,7 @@ figcaption { color: var(--muted); font-size: 13px; margin-top: 8px; }
   gap: 8px;
   min-width: 0;
 }
-#partition-machine-beasts .machine-threshold-grid { grid-template-columns: repeat(auto-fit, minmax(min(100%, 128px), 1fr)); }
+#partition-machine-beasts .machine-threshold-grid { grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr)); }
 #partition-machine-beasts .machine-reference-pair,
 #partition-machine-beasts .machine-reference-card {
   min-width: 0;
@@ -1631,7 +1631,7 @@ figcaption { color: var(--muted); font-size: 13px; margin-top: 8px; }
 }
 #partition-machine-beasts .machine-reference-pair { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: baseline; gap: 8px; padding: 8px 10px; }
 #partition-machine-beasts .machine-reference-pair span { color: var(--gold-dim); white-space: nowrap; }
-#partition-machine-beasts .machine-reference-pair b { min-width: 0; text-align: right; overflow-wrap: anywhere; }
+#partition-machine-beasts .machine-reference-pair b { min-width: 0; text-align: right; white-space: nowrap; }
 #partition-machine-beasts .machine-reference-pair.is-milestone { color: #ff5750; background: rgba(176, 58, 46, .14); border-color: #a83e37; font-weight: 800; }
 #partition-machine-beasts .machine-reference-card { padding: 9px 10px; }
 #partition-machine-beasts .machine-reference-card h4 { margin: 0 0 7px; color: var(--gold); font-size: 15px; }

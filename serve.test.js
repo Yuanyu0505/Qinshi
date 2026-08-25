@@ -543,28 +543,34 @@ test("兵法包含详情与综合计算子分区，并保存计算配置", async
   });
 });
 
-test("PWA 1.0.11 缓存并发布机关兽桌面与移动资源", async () => {
+test("PWA 1.0.12 缓存并发布今日新增的桌面与移动资源", async () => {
   const pagesWorkflow = fs.readFileSync(path.join(__dirname, ".github", "workflows", "pages.yml"), "utf8");
   assert.match(pagesWorkflow, /js\/tactics\.js/);
   assert.match(pagesWorkflow, /js\/tactics-ui\.js/);
   assert.match(pagesWorkflow, /js\/formations\.js/);
   assert.match(pagesWorkflow, /js\/formations-ui\.js/);
   assert.match(pagesWorkflow, /js\/machine-beasts\.js/);
+  assert.match(pagesWorkflow, /js\/machine-beast-school-planner\.js/);
   assert.match(pagesWorkflow, /js\/machine-beasts-ui\.js/);
+  assert.match(pagesWorkflow, /js\/equipment-compare\.js/);
   await withServer(async (port) => {
-    const [index, worker, pwa, css] = await Promise.all([
+    const [index, worker, pwa, css, schoolPlanner, equipmentCompare] = await Promise.all([
       get(port, "/"),
       get(port, "/service-worker.js"),
       get(port, "/js/pwa.js"),
-      get(port, "/css/style.css")
+      get(port, "/css/style.css"),
+      get(port, "/js/machine-beast-school-planner.js"),
+      get(port, "/js/equipment-compare.js")
     ]);
     assert.strictEqual(index.status, 200);
     assert.strictEqual(worker.status, 200);
     assert.strictEqual(pwa.status, 200);
     assert.strictEqual(css.status, 200);
-    assert.match(index.body, /id="pwa-version">1\.0\.11<\/strong>/);
-    assert.match(worker.body, /CACHE_NAME\s*=\s*CACHE_PREFIX\s*\+\s*"1\.0\.11"/);
-    assert.match(pwa.body, /APP_VERSION\s*=\s*"1\.0\.11"/);
+    assert.strictEqual(schoolPlanner.status, 200);
+    assert.strictEqual(equipmentCompare.status, 200);
+    assert.match(index.body, /id="pwa-version">1\.0\.12<\/strong>/);
+    assert.match(worker.body, /CACHE_NAME\s*=\s*CACHE_PREFIX\s*\+\s*"1\.0\.12"/);
+    assert.match(pwa.body, /APP_VERSION\s*=\s*"1\.0\.12"/);
     assert.match(worker.body, /"\.\/data\/tactics\.js"/);
     assert.match(worker.body, /"\.\/js\/tactics\.js"/);
     assert.match(worker.body, /"\.\/js\/tactics-ui\.js"/);
@@ -573,7 +579,9 @@ test("PWA 1.0.11 缓存并发布机关兽桌面与移动资源", async () => {
     assert.match(worker.body, /"\.\/js\/formations-ui\.js"/);
     assert.match(worker.body, /"\.\/data\/machine-beasts\.js"/);
     assert.match(worker.body, /"\.\/js\/machine-beasts\.js"/);
+    assert.match(worker.body, /"\.\/js\/machine-beast-school-planner\.js"/);
     assert.match(worker.body, /"\.\/js\/machine-beasts-ui\.js"/);
+    assert.match(worker.body, /"\.\/js\/equipment-compare\.js"/);
     assert.match(css.body, /@media \(max-width: 1024px\)[\s\S]*?\.atlas-favorite-toggle\s*\{[\s\S]*?width:\s*44px;[\s\S]*?height:\s*44px;/);
     assert.match(css.body, /#partition-tactics \.tactics-selector \.seg,[\s\S]*?#partition-equipment \.book-detail-toggle\s*\{[\s\S]*?min-height:\s*44px;/);
     assert.match(css.body, /#partition-tactics \.tactics-form-grid select,[\s\S]*?#partition-tactics \.tactics-form-grid input\s*\{[\s\S]*?font-size:\s*16px;/);

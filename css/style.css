@@ -1865,6 +1865,7 @@ figcaption { color: var(--muted); font-size: 13px; margin-top: 8px; }
 }
 #partition-machine-beasts .machine-new-rank-mode > span { flex: 0 0 auto; color: var(--muted); white-space: nowrap; }
 #partition-machine-beasts .machine-new-rank-mode label { display: inline-flex; flex: 0 0 auto; align-items: center; gap: 6px; color: var(--text); white-space: nowrap; }
+#partition-machine-beasts .machine-new-rank-mode input { width: auto; min-height: 0; margin: 0; accent-color: var(--red); }
 #partition-machine-beasts .machine-school-beast-controls { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; margin-top: 12px; }
 #partition-machine-beasts .machine-school-beast-control { min-width: 0; padding: 10px; background: rgba(25, 22, 17, .72); border: 1px solid var(--line); border-left: 3px solid var(--gold-dim); border-radius: 8px; }
 #partition-machine-beasts .machine-school-beast-control.is-excluded { opacity: .62; }
@@ -1937,10 +1938,11 @@ figcaption { color: var(--muted); font-size: 13px; margin-top: 8px; }
 
 @media (max-width: 1099px) {
   #partition-equipment .equipment-compare-table-wrap { display: none; }
-  #partition-equipment .equipment-compare-cards { display: grid; gap: 10px; margin-top: 13px; }
+  #partition-equipment .equipment-compare-cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 13px; }
   #partition-equipment .equipment-compare-control-row { align-items: stretch; }
   #partition-equipment .equipment-compare-control-row label { width: 100%; justify-content: space-between; }
   #partition-equipment .equipment-compare-control-row select { min-height: 44px; font-size: 16px; }
+  #partition-equipment .equipment-compare-dimension-actions { flex-wrap: wrap; }
   #partition-formations .formation-desktop-matrix { display: none; }
   #partition-formations .formation-mobile-ranking { display: block; margin-top: 12px; }
   #partition-formations .formation-position-tabs { display: flex; flex-wrap: wrap; }
@@ -2021,6 +2023,7 @@ figcaption { color: var(--muted); font-size: 13px; margin-top: 8px; }
   .atlas-filter-clear { grid-column: 1 / -1; }
   .atlas-filter-control > select,
   .atlas-select-button { min-height: 44px; font-size: 16px; }
+  .atlas-note-menu { max-width: min(100%, 360px); }
   .atlas-favorite-toggle {
     width: 44px;
     height: 44px;
@@ -2054,6 +2057,21 @@ figcaption { color: var(--muted); font-size: 13px; margin-top: 8px; }
   #partition-machine-beasts button,
   #partition-machine-beasts select,
   #partition-machine-beasts input { min-height: 44px; touch-action: manipulation; }
+  #partition-equipment .equipment-main-visibility,
+  #partition-equipment .equipment-compare-toggle,
+  #partition-equipment .equipment-compare-start,
+  #partition-equipment .equipment-compare-add,
+  #partition-equipment .equipment-compare-dimensions .chip { min-height: 44px; touch-action: manipulation; }
+  #partition-equipment .equipment-main-visibility { padding: 7px 11px; }
+  #partition-equipment .equipment-compare-card,
+  #partition-machine-beasts .machine-school-plan-beast,
+  #partition-machine-beasts .machine-school-plan-summary > div { overflow: hidden; }
+  #partition-machine-beasts .machine-school-calculator-grid b,
+  #partition-machine-beasts .machine-school-plan-summary b,
+  #partition-machine-beasts .machine-school-plan-resources b {
+    font-variant-numeric: tabular-nums;
+    overflow-wrap: anywhere;
+  }
   #partition-machine-beasts .machine-school-head,
   #partition-machine-beasts .machine-effect-grid,
   #partition-machine-beasts .machine-result-columns { grid-template-columns: 1fr; }
@@ -2252,6 +2270,22 @@ figcaption { color: var(--muted); font-size: 13px; margin-top: 8px; }
   .segs { max-width: 100%; flex-wrap: wrap; }
   .summary-card { padding: 10px; }
   #partition-equipment #table-wrap { display: none; }
+  #partition-equipment .equipment-compare-body { padding: 0 10px 10px; }
+  #partition-equipment .equipment-compare-cards { grid-template-columns: 1fr; }
+  #partition-equipment .equipment-compare-selected-item { max-width: 100%; }
+  #partition-equipment .equipment-compare-selected-item .equipment-name-badge {
+    min-width: 0;
+    overflow-wrap: anywhere;
+    white-space: normal;
+  }
+  #partition-equipment .equipment-compare-dimension-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+  #partition-equipment .equipment-compare-card dl > div {
+    grid-template-columns: minmax(72px, .55fr) minmax(0, 1fr);
+  }
+  #partition-equipment .equipment-compare-card dd { overflow-wrap: anywhere; }
   #partition-equipment .book-card .book-tier-block {
     grid-template-columns: 64px minmax(0, 1fr);
   }
@@ -2287,6 +2321,12 @@ figcaption { color: var(--muted); font-size: 13px; margin-top: 8px; }
   .atlas-summary-equipment-list > *,
   .atlas-equipment-stage-list > *,
   .equipment-name-badge { max-width: 100%; white-space: normal; overflow-wrap: anywhere; }
+  .atlas-note-menu {
+    right: auto;
+    left: 0;
+    width: 100%;
+    max-width: 100%;
+  }
   .atlas-equipment-entry { flex-wrap: wrap; }
   .atlas-inventory-equipment-row {
     grid-template-columns: minmax(56px, auto) minmax(0, 1fr);
@@ -2361,8 +2401,21 @@ figcaption { color: var(--muted); font-size: 13px; margin-top: 8px; }
   #partition-machine-beasts .machine-calculator-modes .seg { flex: 1; }
   #partition-machine-beasts .machine-school-calculator-grid,
   #partition-machine-beasts .machine-school-beast-controls,
-  #partition-machine-beasts .machine-school-beast-fields,
-  #partition-machine-beasts .machine-school-plan-summary { grid-template-columns: 1fr; }
+  #partition-machine-beasts .machine-school-beast-fields { grid-template-columns: 1fr; }
+  #partition-machine-beasts .machine-school-plan-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  #partition-machine-beasts .machine-school-options { display: grid; grid-template-columns: 1fr; gap: 8px; }
+  #partition-machine-beasts .machine-new-rank-mode {
+    gap: 6px 10px;
+    padding: 8px 9px;
+    font-size: 12px;
+  }
+  #partition-machine-beasts .machine-new-rank-mode label { gap: 4px; font-size: 13px; }
+  #partition-machine-beasts .machine-school-plan-beast-metrics,
+  #partition-machine-beasts .machine-school-plan-resources {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px 10px;
+  }
   #partition-machine-beasts .machine-school-beast-control header,
   #partition-machine-beasts .machine-owned-head,
   #partition-machine-beasts .machine-school-plan-beast > header { align-items: flex-start; flex-direction: column; }

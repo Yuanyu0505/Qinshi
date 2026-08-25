@@ -144,6 +144,7 @@ $python = 'C:\Users\pghyl\.cache\codex-runtimes\codex-primary-runtime\dependenci
 
 - `service-worker.js` 的缓存名格式为 `qinshi-site-<版本号>`；每次发布静态资源变更时必须同步提升该版本号。
 - `js/pwa.js` 中的 `APP_VERSION` 必须与 Service Worker 缓存版本一致。
+- `1.0.12` 汇总发布 2026-08-25 的图鉴库存筛选与置顶、机关兽流派计算、装备多维对比、锻造选择器及装备属性展示更新；补齐手机/平板响应式布局，并将 `js/machine-beast-school-planner.js`、`js/equipment-compare.js` 纳入离线预缓存和 GitHub Pages 构建清单。
 - `1.0.11` 新增机关兽分区，将个人进度、最优方案计算、资料图表和手机/平板响应式界面纳入离线预缓存与 GitHub Pages 发布清单。
 - `1.0.10` 新增合阵分区，并将合阵资料、计算核心和手机/平板响应式界面纳入离线预缓存与 GitHub Pages 发布清单。
 - `1.0.9` 面向仍停留在 `1.0.6` 的手机和平板：包含图鉴收藏与延迟展示、答题搜索后展示、兵法分区、关卡掉落默认橙装表，以及神兵/典籍数据修正、累计属性、混合搜索和进阶详情气泡；同时补强收藏、兵法表单与按钮、典籍卡片和气泡的窄屏触控与布局。

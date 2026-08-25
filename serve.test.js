@@ -223,6 +223,37 @@ test("装备未选择分类时分别展示普通装备与各类典籍结果", as
   });
 });
 
+test("装备属性提供同大类多装备对比工作台与响应式结果", () => {
+  const html = fs.readFileSync(path.join(__dirname, "index.html"), "utf8");
+  const app = fs.readFileSync(path.join(__dirname, "js", "app.js"), "utf8");
+  const css = fs.readFileSync(path.join(__dirname, "css", "style.css"), "utf8");
+  assert.match(html, /id="equipment-compare-panel"/);
+  assert.match(html, /id="equipment-compare-toggle"/);
+  assert.match(html, /id="equipment-compare-body"/);
+  assert.match(html, /id="equipment-compare-result"/);
+  assert.match(html, /<script src="js\/equipment-compare\.js"><\/script>/);
+  assert.ok(html.indexOf("js/query.js") < html.indexOf("js/equipment-compare.js"));
+  assert.ok(html.indexOf("js/equipment-compare.js") < html.indexOf("js/app.js"));
+  assert.match(app, /data-compare-add/);
+  assert.match(app, /data-compare-remove/);
+  assert.match(app, /data-compare-dimension/);
+  assert.match(app, /equipment-compare-table/);
+  assert.match(app, /equipment-compare-cards/);
+  assert.match(css, /\.equipment-compare-highest/);
+  assert.match(css, /\.equipment-compare-difference/);
+  assert.match(css, /@media \(max-width: 1099px\)[\s\S]*?\.equipment-compare-table-wrap\s*\{\s*display:\s*none/);
+  assert.match(css, /@media \(max-width: 1099px\)[\s\S]*?\.equipment-compare-cards\s*\{\s*display:\s*grid/);
+});
+
+test("机关兽计算结果不展示冗余结果类型标题", () => {
+  const ui = fs.readFileSync(path.join(__dirname, "js", "machine-beasts-ui.js"), "utf8");
+  assert.doesNotMatch(ui, /<span>最优方案<\/span>/);
+  assert.doesNotMatch(ui, /<span>目标流派阶数计算<\/span>/);
+  assert.match(ui, />计算结果<\/b>/);
+  assert.match(ui, /自由等级方案/);
+  assert.match(ui, /效果档位方案/);
+});
+
 test("典籍默认展示最高阶累计，并通过页面级气泡查看逐阶成长", async () => {
   await withServer(async (port) => {
     const [index, app, css] = await Promise.all([

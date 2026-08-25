@@ -1,12 +1,13 @@
 /**
  * 特殊属性装备 · 页面渲染与交互
- * 依赖：window.SPECIAL_EQUIPMENT_DATA（数据）、window.QSQuery（查询核心）
+ * 依赖：window.SPECIAL_EQUIPMENT_DATA（数据）、window.QSQuery（查询核心）、window.QSEquipmentCompare（装备对比）
  */
 (function () {
   "use strict";
 
   const DATA = window.SPECIAL_EQUIPMENT_DATA;
   const Q = window.QSQuery;
+  const EQUIP_COMPARE = window.QSEquipmentCompare;
   const FDATA = window.FORGING_DATA;
   const FORG = window.FORGING;
   const DROP_DATA = window.DROP_DATA;
@@ -37,7 +38,10 @@
     settings: "设置"
   };
 
-  const state = { search: "", category: null, main: null, filters: [], sortAttr: null, valueSource: "max", activated: false };
+  const state = {
+    search: "", category: null, main: null, filters: [], sortAttr: null, valueSource: "max", activated: false,
+    comparison: { itemIds: [], group: null, tier: "红金", dimensions: [], expanded: false, started: false }
+  };
   const forgeState = { mode: "main", query: "" };
   let activeBookDetail = null;
 
@@ -56,6 +60,13 @@
     empty: document.getElementById("empty"),
     clearAll: document.getElementById("clear-all"),
     emptyClear: document.getElementById("empty-clear"),
+    comparePanel: document.getElementById("equipment-compare-panel"),
+    compareToggle: document.getElementById("equipment-compare-toggle"),
+    compareBody: document.getElementById("equipment-compare-body"),
+    compareSelected: document.getElementById("equipment-compare-selected"),
+    compareControls: document.getElementById("equipment-compare-controls"),
+    compareMessage: document.getElementById("equipment-compare-message"),
+    compareResult: document.getElementById("equipment-compare-result"),
     bookDetailPopover: document.getElementById("book-detail-popover"),
     bookDetailTitle: document.getElementById("book-detail-popover-title"),
     bookDetailBody: document.getElementById("book-detail-popover-body"),
@@ -144,7 +155,7 @@
     initAtlas();
     initQuiz();
     if (window.FORMATIONS_UI) window.FORMATIONS_UI.init();
-    if (!DATA || !Q) {
+    if (!DATA || !Q || !EQUIP_COMPARE) {
       el.error.hidden = false;
       return;
     }
@@ -1342,11 +1353,22 @@
     el.clearAll.addEventListener("click", resetEquipmentView);
     el.emptyClear.addEventListener("click", resetEquipmentView);
     el.results.addEventListener("click", (event) => {
+      const compareButton = event.target.closest("[data-compare-add]");
+      if (compareButton) {
+        addEquipmentToComparison(compareButton.dataset.compareAdd);
+        return;
+      }
       const button = event.target.closest(".book-detail-toggle");
       if (!button) return;
       event.stopPropagation();
       toggleBookDetailPopover(button);
     });
+    el.compareToggle.addEventListener("click", () => {
+      state.comparison.expanded = !state.comparison.expanded;
+      renderEquipmentComparison();
+    });
+    el.comparePanel.addEventListener("click", handleEquipmentCompareClick);
+    el.comparePanel.addEventListener("change", handleEquipmentCompareChange);
     el.bookDetailClose.addEventListener("click", closeBookDetailPopover);
     el.bookDetailPopover.addEventListener("click", (event) => event.stopPropagation());
     document.addEventListener("click", (event) => {
@@ -1357,6 +1379,147 @@
     });
     window.addEventListener("resize", closeBookDetailPopover);
     window.addEventListener("scroll", closeBookDetailPopover, true);
+  }
+
+  function selectedComparisonItems() {
+    return state.comparison.itemIds.map((id) => DATA.items.find((item) => item.id === id)).filter(Boolean);
+  }
+
+  function reconcileComparisonDimensions() {
+    const available = EQUIP_COMPARE.availableDimensions(selectedComparisonItems(), state.comparison.tier);
+    state.comparison.dimensions = state.comparison.dimensions.filter((dimension) => available.indexOf(dimension) >= 0);
+    return available;
+  }
+
+  function addEquipmentToComparison(itemId) {
+    const item = DATA.items.find((entry) => entry.id === itemId);
+    if (!item || state.comparison.itemIds.indexOf(item.id) >= 0) return;
+    const group = EQUIP_COMPARE.groupForCategory(item.cat);
+    if (!group || (state.comparison.group && state.comparison.group !== group)) return;
+    if (!state.comparison.group) state.comparison.group = group;
+    state.comparison.itemIds.push(item.id);
+    state.comparison.expanded = true;
+    reconcileComparisonDimensions();
+    apply();
+  }
+
+  function removeEquipmentFromComparison(itemId) {
+    state.comparison.itemIds = state.comparison.itemIds.filter((id) => id !== itemId);
+    if (!state.comparison.itemIds.length) {
+      state.comparison.group = null;
+      state.comparison.dimensions = [];
+      state.comparison.started = false;
+    }
+    reconcileComparisonDimensions();
+    apply();
+  }
+
+  function clearEquipmentComparison() {
+    state.comparison.itemIds = [];
+    state.comparison.group = null;
+    state.comparison.dimensions = [];
+    state.comparison.started = false;
+    state.comparison.expanded = false;
+    apply();
+  }
+
+  function equipmentCompareActionHtml(item) {
+    const selected = state.comparison.itemIds.indexOf(item.id) >= 0;
+    const itemGroup = EQUIP_COMPARE.groupForCategory(item.cat);
+    const incompatible = Boolean(state.comparison.group && state.comparison.group !== itemGroup);
+    const label = selected ? "已加入" : incompatible ? "类别不一致" : "加入对比";
+    return `<button type="button" class="seg equipment-compare-add${selected ? " is-added" : ""}" data-compare-add="${escapeHtml(item.id)}"${selected || incompatible ? " disabled" : ""}>${label}</button>`;
+  }
+
+  function compareCellValueHtml(row, dimension) {
+    if (!row.available) return '<span class="equipment-compare-unavailable">该档位无数据</span>';
+    const entry = row.values[dimension];
+    if (!entry) return '<span class="equipment-compare-unavailable">—</span>';
+    const value = `<span class="${entry.isMax ? "equipment-compare-highest" : "equipment-compare-value"}">${escapeHtml(entry.display)}</span>`;
+    const difference = entry.differenceDisplay
+      ? `（<span class="equipment-compare-difference">${escapeHtml(entry.differenceDisplay)}</span>）`
+      : "";
+    return value + difference;
+  }
+
+  function renderEquipmentComparisonResult(items) {
+    if (!state.comparison.started) return "";
+    if (items.length < 2) return '<div class="equipment-compare-empty">至少选择2件同类装备</div>';
+    if (!state.comparison.dimensions.length) return '<div class="equipment-compare-empty">请选择一个或多个对比维度</div>';
+    const model = EQUIP_COMPARE.compareItems(items, state.comparison.tier, state.comparison.dimensions);
+    if (!model.rows.some((row) => row.available)) {
+      return '<div class="equipment-compare-empty">所选装备在该档位均无属性数据</div>';
+    }
+    const desktop = `<div class="equipment-compare-table-wrap"><table class="equipment-compare-table"><thead><tr><th>对比维度</th>${model.rows.map((row) =>
+      `<th>${equipmentNameHtml(row.item)}<small>${escapeHtml(row.item.cat)} · 主属性：${escapeHtml(row.item.main)}</small></th>`
+    ).join("")}</tr></thead><tbody>${model.dimensions.map((dimension) => `<tr><th>${escapeHtml(dimension)}</th>${model.rows.map((row) =>
+      `<td>${compareCellValueHtml(row, dimension)}</td>`
+    ).join("")}</tr>`).join("")}</tbody></table></div>`;
+    const mobile = `<div class="equipment-compare-cards">${model.rows.map((row) => `<article class="equipment-compare-card"><header>${equipmentNameHtml(row.item)}<span>${escapeHtml(row.item.cat)} · 主属性：${escapeHtml(row.item.main)}</span></header>${row.available
+      ? `<dl>${model.dimensions.map((dimension) => `<div><dt>${escapeHtml(dimension)}</dt><dd>${compareCellValueHtml(row, dimension)}</dd></div>`).join("")}</dl>`
+      : '<div class="equipment-compare-unavailable">该档位无数据</div>'}</article>`).join("")}</div>`;
+    return desktop + mobile;
+  }
+
+  function renderEquipmentComparison() {
+    const items = selectedComparisonItems();
+    const availableDimensions = reconcileComparisonDimensions();
+    el.comparePanel.classList.toggle("is-empty", items.length === 0);
+    el.compareToggle.setAttribute("aria-expanded", String(state.comparison.expanded));
+    el.compareToggle.innerHTML = `<span>装备对比（${items.length}）</span><span aria-hidden="true">${state.comparison.expanded ? "▾" : "▸"}</span>`;
+    el.compareBody.hidden = !state.comparison.expanded;
+    if (!state.comparison.expanded) return;
+    el.compareSelected.innerHTML = items.length
+      ? `<div class="equipment-compare-selected-head"><strong>${escapeHtml(state.comparison.group)}大类</strong><button type="button" class="link-btn" data-compare-action="clear-items">清空全部</button></div><div class="equipment-compare-selected-list">${items.map((item) =>
+        `<span class="equipment-compare-selected-item">${equipmentNameHtml(item)}<button type="button" data-compare-remove="${escapeHtml(item.id)}" aria-label="移除${escapeHtml(item.name)}">×</button></span>`
+      ).join("")}</div>`
+      : '<p class="muted-tip">从下方搜索或筛选结果中加入同一大类装备。</p>';
+    const tiers = ["紫色", "橙色", "橙金", "红色", "红金"];
+    el.compareControls.innerHTML = items.length ? `<div class="equipment-compare-control-row"><label><span>对比档位</span><select data-compare-tier>${tiers.map((tier) =>
+      `<option value="${tier}"${tier === state.comparison.tier ? " selected" : ""}>${tier}</option>`
+    ).join("")}</select></label><div class="equipment-compare-dimension-actions"><button type="button" class="link-btn" data-compare-action="select-all">全选维度</button><button type="button" class="link-btn" data-compare-action="clear-dimensions">清空维度</button></div></div><div class="equipment-compare-dimensions">${availableDimensions.map((dimension) =>
+      `<button type="button" class="chip${state.comparison.dimensions.indexOf(dimension) >= 0 ? " active" : ""}" data-compare-dimension="${escapeHtml(dimension)}">${escapeHtml(dimension)}</button>`
+    ).join("") || '<span class="muted-tip">当前档位没有可比较的副属性</span>'}</div><button type="button" class="seg active equipment-compare-start" data-compare-action="start">开始对比</button>` : "";
+    el.compareMessage.textContent = items.length < 2 ? "至少选择2件同类装备" : state.comparison.dimensions.length ? "" : "请选择一个或多个对比维度";
+    el.compareResult.innerHTML = renderEquipmentComparisonResult(items);
+  }
+
+  function handleEquipmentCompareClick(event) {
+    const removeButton = event.target.closest("[data-compare-remove]");
+    if (removeButton) {
+      removeEquipmentFromComparison(removeButton.dataset.compareRemove);
+      return;
+    }
+    const dimensionButton = event.target.closest("[data-compare-dimension]");
+    if (dimensionButton) {
+      const dimension = dimensionButton.dataset.compareDimension;
+      const index = state.comparison.dimensions.indexOf(dimension);
+      if (index >= 0) state.comparison.dimensions.splice(index, 1);
+      else state.comparison.dimensions.push(dimension);
+      renderEquipmentComparison();
+      return;
+    }
+    const actionButton = event.target.closest("[data-compare-action]");
+    if (!actionButton) return;
+    const action = actionButton.dataset.compareAction;
+    if (action === "clear-items") clearEquipmentComparison();
+    else if (action === "select-all") {
+      state.comparison.dimensions = EQUIP_COMPARE.availableDimensions(selectedComparisonItems(), state.comparison.tier);
+      renderEquipmentComparison();
+    } else if (action === "clear-dimensions") {
+      state.comparison.dimensions = [];
+      renderEquipmentComparison();
+    } else if (action === "start") {
+      state.comparison.started = true;
+      renderEquipmentComparison();
+    }
+  }
+
+  function handleEquipmentCompareChange(event) {
+    if (!event.target.matches("[data-compare-tier]")) return;
+    state.comparison.tier = event.target.value;
+    reconcileComparisonDimensions();
+    renderEquipmentComparison();
   }
 
   function hasEquipmentConditions() {
@@ -1379,6 +1542,7 @@
   function apply() {
     closeBookDetailPopover();
     renderControls();
+    renderEquipmentComparison();
     if (!state.activated) {
       el.results.hidden = true;
       el.empty.hidden = true;
@@ -1440,7 +1604,7 @@
   }
 
   function tableHeaderHtml(tiers, hasFilter) {
-    return `<tr><th>分类</th><th>装备名</th><th>主属性</th>${tiers.map((tier) => `<th>${tier}</th>`).join("")}${hasFilter ? '<th class="badge">排序值</th>' : ""}</tr>`;
+    return `<tr><th>分类</th><th>装备名</th><th>主属性</th>${tiers.map((tier) => `<th>${tier}</th>`).join("")}${hasFilter ? '<th class="badge">排序值</th>' : ""}<th class="equipment-compare-action-head">对比</th></tr>`;
   }
 
   function bookPopoverStageRowsHtml(stages) {
@@ -1556,6 +1720,7 @@
       <td class="main">${item.main}</td>
       ${tiers.map((tier) => `<td class="${item.bookGroup ? "book-tier-cell" : ""}">${item.bookGroup ? bookTierHtml(item, tier) : tokenHtml(item.tiers[tier])}</td>`).join("")}
       ${hasFilter ? `<td class="badge">${sortBadge(item)}</td>` : ""}
+      <td class="equipment-compare-action">${equipmentCompareActionHtml(item)}</td>
     </tr>`;
     }).join("");
     return `<section class="equipment-result-group${title ? " book-result-group" : ""}">${title ? `<h3 class="equipment-group-title">${title}<span>${items.length} 件</span></h3>` : ""}<div class="table-wrap"><table class="${title ? "book-equipment-table" : ""}"><thead>${tableHeaderHtml(tiers, hasFilter)}</thead><tbody>${body}</tbody></table></div></section>`;
@@ -1602,6 +1767,7 @@
         </div>
         <div class="card-main">主属性：<b>${item.main}</b></div>
         ${tierHtml}
+        <div class="equipment-compare-card-action">${equipmentCompareActionHtml(item)}</div>
       </div>`;
     }).join("");
   }

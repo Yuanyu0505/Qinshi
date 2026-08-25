@@ -1110,6 +1110,83 @@ td.badge, th.badge { text-align: center; white-space: nowrap; color: var(--gold)
 #partition-equipment .card .badge { color: #ff4b4b; }
 .card-main { margin: 6px 0; color: var(--muted); font-size: 13px; text-align: center; }
 #partition-equipment .card-main b { color: #fff; }
+.equipment-compare-panel { margin-top: 14px; padding: 0; overflow: hidden; }
+.equipment-compare-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 13px 15px;
+  border: 0;
+  background: transparent;
+  color: var(--gold);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 700;
+  text-align: left;
+}
+.equipment-compare-panel.is-empty .equipment-compare-toggle { color: var(--muted); }
+.equipment-compare-body { padding: 0 14px 14px; border-top: 1px solid var(--line); }
+.equipment-compare-selected-head,
+.equipment-compare-control-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  margin-top: 12px;
+}
+.equipment-compare-selected-head strong { color: var(--gold); }
+.equipment-compare-selected-head .link-btn,
+.equipment-compare-dimension-actions .link-btn { margin: 0; }
+.equipment-compare-selected-list { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 9px; }
+.equipment-compare-selected-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 6px 4px 4px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--bg2);
+}
+.equipment-compare-selected-item button {
+  border: 0;
+  background: transparent;
+  color: #ff746c;
+  cursor: pointer;
+  font-size: 18px;
+  line-height: 1;
+}
+.equipment-compare-control-row label { display: inline-flex; align-items: center; gap: 8px; color: var(--muted); }
+.equipment-compare-control-row select { min-width: 112px; }
+.equipment-compare-dimension-actions { display: inline-flex; gap: 14px; }
+.equipment-compare-dimensions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.equipment-compare-start { margin-top: 11px; }
+.equipment-compare-empty { margin-top: 12px; padding: 14px; border: 1px dashed var(--line); border-radius: 8px; color: var(--muted); text-align: center; }
+.equipment-compare-table-wrap { margin-top: 14px; overflow-x: auto; border: 1px solid var(--line); border-radius: 9px; }
+.equipment-compare-table { min-width: max(720px, 100%); table-layout: auto; }
+.equipment-compare-table thead th:first-child,
+.equipment-compare-table tbody th { min-width: 92px; }
+.equipment-compare-table thead th:not(:first-child) { min-width: 172px; }
+.equipment-compare-table thead th small { display: block; margin-top: 5px; color: var(--muted); font-weight: 400; }
+.equipment-compare-table tbody th { padding: 9px 12px; border-bottom: 1px solid rgba(58, 49, 37, .55); color: var(--gold-dim); white-space: nowrap; }
+.equipment-compare-highest { color: #ff4b4b; font-weight: 800; }
+.equipment-compare-value { color: #fff; font-weight: 400; }
+.equipment-compare-difference { color: #4fd67b; font-weight: 400; }
+.equipment-compare-unavailable { color: var(--status); font-size: 13px; }
+.equipment-compare-cards { display: none; }
+.equipment-compare-card { padding: 12px; border: 1px solid var(--line); border-radius: 9px; background: var(--bg2); }
+.equipment-compare-card header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 7px; }
+.equipment-compare-card header > span:last-child { color: var(--muted); font-size: 13px; }
+.equipment-compare-card dl { display: grid; gap: 0; margin: 10px 0 0; }
+.equipment-compare-card dl > div { display: grid; grid-template-columns: minmax(72px, .45fr) minmax(0, 1fr); gap: 10px; padding: 8px 0; border-top: 1px dashed rgba(58, 49, 37, .65); }
+.equipment-compare-card dt { color: var(--gold-dim); }
+.equipment-compare-card dd { margin: 0; text-align: right; }
+.equipment-compare-action-head,
+.equipment-compare-action { min-width: 112px; }
+.equipment-compare-add.is-added { color: #4fd67b; border-color: #2f8f50; }
+.equipment-compare-add:disabled { cursor: default; opacity: .72; }
+.equipment-compare-card-action { display: flex; justify-content: center; margin-top: 10px; }
 .card-tier {
   display: flex;
   justify-content: center;
@@ -1808,6 +1885,11 @@ figcaption { color: var(--muted); font-size: 13px; margin-top: 8px; }
 #partition-machine-beasts summary:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
 
 @media (max-width: 1099px) {
+  #partition-equipment .equipment-compare-table-wrap { display: none; }
+  #partition-equipment .equipment-compare-cards { display: grid; gap: 10px; margin-top: 13px; }
+  #partition-equipment .equipment-compare-control-row { align-items: stretch; }
+  #partition-equipment .equipment-compare-control-row label { width: 100%; justify-content: space-between; }
+  #partition-equipment .equipment-compare-control-row select { min-height: 44px; font-size: 16px; }
   #partition-formations .formation-desktop-matrix { display: none; }
   #partition-formations .formation-mobile-ranking { display: block; margin-top: 12px; }
   #partition-formations .formation-position-tabs { display: flex; flex-wrap: wrap; }

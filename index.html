@@ -83,6 +83,18 @@
         <button id="clear-all" type="button" class="link-btn">清除全部条件</button>
       </section>
 
+      <section id="equipment-compare-panel" class="panel equipment-compare-panel is-empty">
+        <button id="equipment-compare-toggle" type="button" class="equipment-compare-toggle" aria-expanded="false">
+          <span>装备对比（0）</span><span aria-hidden="true">▸</span>
+        </button>
+        <div id="equipment-compare-body" class="equipment-compare-body" hidden>
+          <div id="equipment-compare-selected"></div>
+          <div id="equipment-compare-controls"></div>
+          <div id="equipment-compare-message" class="muted-tip"></div>
+          <div id="equipment-compare-result"></div>
+        </div>
+      </section>
+
       <section id="results">
         <div id="table-wrap" class="equipment-table-groups"></div>
         <div id="cards" class="cards"></div>
@@ -495,6 +507,7 @@
 <script src="js/machine-beasts.js"></script>
 <script src="js/machine-beast-school-planner.js"></script>
 <script src="js/query.js"></script>
+<script src="js/equipment-compare.js"></script>
 <script src="js/forging.js"></script>
 <script src="js/drops.js"></script>
 <script src="js/progress.js"></script>

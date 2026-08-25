@@ -379,7 +379,7 @@
     var exchange = result.exchange.available
       ? '<div><span>仍需贡献</span><b>' + formatNumber(result.exchange.contribution) + '</b></div><div><span>约需元宝</span><b>' + formatNumber(result.exchange.yuan) + '</b></div>'
       : '<div class="machine-no-exchange"><span>贡献兑换</span><b>该档次不可通过贡献兑换碎片</b></div>';
-    el.calculatorResult.innerHTML = '<section class="panel machine-result"><div class="machine-result-head"><div><span>最优方案</span><h2>' + escapeHtml(beastById(state.calcBeastId).name) + '升至' + result.target.level + '级</h2></div><b>计算结果</b></div>' +
+    el.calculatorResult.innerHTML = '<section class="panel machine-result"><div class="machine-result-head"><div><h2>' + escapeHtml(beastById(state.calcBeastId).name) + '升至' + result.target.level + '级</h2></div><b>计算结果</b></div>' +
       '<div class="machine-result-metrics"><div><span>当前等级</span><b>' + result.current.level + '级</b></div><div><span>当前研发度</span><b>' + formatNumber(result.current.research) + '</b></div>' +
       '<div><span>目标研发度</span><b>' + formatNumber(result.target.research) + '</b></div><div><span>仍缺研发度</span><b>' + formatNumber(result.target.deficit) + '</b></div>' +
       '<div><span>投入总只数</span><b>' + result.totals.investedCount + '</b></div><div><span>投入研发度</span><b>' + formatNumber(result.totals.research) + '</b></div>' +
@@ -413,7 +413,7 @@
 
   function renderSchoolPlan(plan, result) {
     var totals = plan.totals;
-    return '<section class="panel machine-result machine-school-plan"><div class="machine-result-head"><div><span>目标流派阶数计算</span><h2>' + escapeHtml(schoolPlanTitle(plan.kind)) + '</h2></div><b>' + result.target.stage + '阶 · 累计' + result.target.totalLevel + '级</b></div>' +
+    return '<section class="panel machine-result machine-school-plan"><div class="machine-result-head"><div><h2>' + escapeHtml(schoolPlanTitle(plan.kind)) + '</h2></div><b>' + result.target.stage + '阶 · 累计' + result.target.totalLevel + '级</b></div>' +
       '<div class="machine-school-plan-summary"><div><span>当前累计等级</span><b>' + result.current.totalLevel + '</b></div><div><span>推荐后累计等级</span><b>' + totals.projectedTotalLevel + '</b></div>' +
       '<div><span>折算投入总只数</span><b>' + totals.investedCount + '</b></div><div><span>使用已有库存</span><b>' + totals.ownedInvestedCount + '</b></div><div><span>新增机关兽</span><b>' + totals.newInvestedCount + '</b></div>' +
       '<div><span>效果档位数量</span><b>' + totals.milestoneCount + '</b></div><div><span>研发度溢出</span><b>' + formatNumber(totals.overflowResearch) + '</b></div><div><span>觉醒神图</span><b>' + formatNumber(totals.awakeningBlueprints) + '</b></div>' +

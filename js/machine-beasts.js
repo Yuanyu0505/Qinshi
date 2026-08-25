@@ -77,13 +77,26 @@
       var normalized = normalizeBeastProgress(beast, progress[beastId], data);
       return total + levelForResearch(normalized.research, data.researchThresholds, beast.maxLevel);
     }, 0);
-    var currentStage = totalLevel >= 45 ? 1 : 0;
-    var currentEffects = currentStage ? school.stages[currentStage - 1] : null;
-    var nextStage = currentStage < school.stages.length ? school.stages[currentStage] : null;
+    var reachedStages = school.stages.filter(function (stage) {
+      return stage.requiredTotalLevel !== null && totalLevel >= stage.requiredTotalLevel;
+    });
+    var currentStage = reachedStages.length ? reachedStages[reachedStages.length - 1].stage : 0;
+    var currentEffects = currentStage ? reachedStages[reachedStages.length - 1] : null;
+    var nextStage = school.stages.find(function (stage) {
+      return stage.requiredTotalLevel !== null && totalLevel < stage.requiredTotalLevel;
+    }) || null;
+    var finalStage = school.stages[school.stages.length - 1];
+    var progressStage = nextStage ? nextStage.stage : finalStage.stage;
+    var progressTarget = nextStage ? nextStage.requiredTotalLevel : finalStage.requiredTotalLevel;
+    var progressCurrent = Math.min(totalLevel, progressTarget);
     return {
       schoolId: school.id,
       totalLevel: totalLevel,
       currentStage: currentStage,
+      progressStage: progressStage,
+      progressCurrent: progressCurrent,
+      progressTarget: progressTarget,
+      progressRemaining: Math.max(0, progressTarget - totalLevel),
       stageOneCurrent: Math.min(totalLevel, 45),
       stageOneRemaining: Math.max(0, 45 - totalLevel),
       currentEffects: currentEffects,

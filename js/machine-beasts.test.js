@@ -11,8 +11,7 @@ test("machine beast data: detailed names, schools and stage effects stay complet
   assert.deepStrictEqual(DATA.schools.map(item => item.id), ["hegemonic", "nonAttack"]);
   DATA.schools.forEach(school => {
     assert.strictEqual(school.stages.length, 5);
-    assert.strictEqual(school.stages[0].requiredTotalLevel, 45);
-    assert.deepStrictEqual(school.stages.slice(1).map(stage => stage.requiredTotalLevel), [null, null, null, null]);
+    assert.deepStrictEqual(school.stages.map(stage => stage.requiredTotalLevel), [45, 90, 135, 180, 225]);
     school.stages.forEach(stage => {
       assert.ok(stage.factionBonus);
       assert.ok(stage.formationEffect);
@@ -76,7 +75,7 @@ test("progress: normalization, next milestone and highest active effect", () => 
   assert.deepStrictEqual(CORE.activeBeastEffect(beast, 19), beast.effects[1]);
 });
 
-test("schoolSnapshot: missing beasts count as zero and next stage keeps known effects", () => {
+test("schoolSnapshot: calculates all five school stages from cumulative level", () => {
   const school = DATA.schools[0];
   const first = DATA.beasts.find(item => item.id === school.beastIds[0]);
   const second = DATA.beasts.find(item => item.id === school.beastIds[1]);
@@ -86,7 +85,10 @@ test("schoolSnapshot: missing beasts count as zero and next stage keeps known ef
   let snapshot = CORE.schoolSnapshot(school, progress, DATA);
   assert.strictEqual(snapshot.totalLevel, 25);
   assert.strictEqual(snapshot.currentStage, 0);
-  assert.strictEqual(snapshot.stageOneRemaining, 20);
+  assert.strictEqual(snapshot.progressStage, 1);
+  assert.strictEqual(snapshot.progressCurrent, 25);
+  assert.strictEqual(snapshot.progressTarget, 45);
+  assert.strictEqual(snapshot.progressRemaining, 20);
   assert.strictEqual(snapshot.nextStage.stage, 1);
   assert.ok(snapshot.nextStage.formationEffect);
 
@@ -94,10 +96,24 @@ test("schoolSnapshot: missing beasts count as zero and next stage keeps known ef
   snapshot = CORE.schoolSnapshot(school, progress, DATA);
   assert.strictEqual(snapshot.totalLevel, 45);
   assert.strictEqual(snapshot.currentStage, 1);
-  assert.strictEqual(snapshot.stageOneRemaining, 0);
+  assert.strictEqual(snapshot.progressStage, 2);
+  assert.strictEqual(snapshot.progressCurrent, 45);
+  assert.strictEqual(snapshot.progressTarget, 90);
+  assert.strictEqual(snapshot.progressRemaining, 45);
   assert.strictEqual(snapshot.nextStage.stage, 2);
-  assert.strictEqual(snapshot.nextStage.requiredTotalLevel, null);
+  assert.strictEqual(snapshot.nextStage.requiredTotalLevel, 90);
   assert.ok(snapshot.nextStage.beastEffect);
+
+  school.beastIds.slice(0, 9).forEach(id => { progress[id] = { research: DATA.researchThresholds[25] }; });
+  snapshot = CORE.schoolSnapshot(school, progress, DATA);
+  assert.strictEqual(snapshot.totalLevel, 225);
+  assert.strictEqual(snapshot.currentStage, 5);
+  assert.strictEqual(snapshot.progressStage, 5);
+  assert.strictEqual(snapshot.progressCurrent, 225);
+  assert.strictEqual(snapshot.progressTarget, 225);
+  assert.strictEqual(snapshot.progressRemaining, 0);
+  assert.strictEqual(snapshot.currentEffects.stage, 5);
+  assert.strictEqual(snapshot.nextStage, null);
 });
 
 test("investment optimizer: minimizes invested count before using owned low ranks", () => {

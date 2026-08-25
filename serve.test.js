@@ -132,6 +132,9 @@ test("机关兽新增投入突出需求，资料图表使用纵向自适应卡�
   assert.match(ui, /machine-beast-reference-grid/);
   assert.match(ui, /machine-school-stage-grid/);
   assert.match(ui, /DATA\.schools\.map[\s\S]*?beast\.schoolId === school\.id/);
+  assert.match(ui, /snapshot\.progressStage \+ "阶进度："/);
+  assert.match(ui, /各阶累计觉醒等级要求：45／90／135／180／225/);
+  assert.doesNotMatch(ui, /2–5阶升阶等级要求：数据待补充/);
   assert.match(css, /#partition-machine-beasts \.machine-reference-grid\s*\{[\s\S]*?grid-template-columns:\s*repeat\(auto-fit,/);
   assert.match(css, /#partition-machine-beasts \.machine-investment-demand\s*\{[\s\S]*?color:\s*#ff4b4b;[\s\S]*?font-weight:\s*800;/);
   assert.match(css, /#partition-machine-beasts \.machine-reference-pair b\s*\{[\s\S]*?white-space:\s*nowrap;/);

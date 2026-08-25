@@ -180,9 +180,11 @@
     el.progress.innerHTML = DATA.schools.map(function (school) {
       var snapshot = CORE.schoolSnapshot(school, progressMap, DATA);
       var stageCopy = snapshot.currentStage ? snapshot.currentStage + "阶已达成" : "尚未达成1阶";
+      var progressCopy = snapshot.progressStage + "阶进度：" + snapshot.progressCurrent + "/" + snapshot.progressTarget +
+        (snapshot.progressRemaining ? "，还差" + snapshot.progressRemaining : "");
       return '<section class="machine-school panel">' +
         '<div class="machine-school-head"><div><h2>' + escapeHtml(school.name) + '</h2><span>当前流派累计觉醒等级</span><strong>' + snapshot.totalLevel + '</strong></div>' +
-        '<div class="machine-stage-one"><b>' + stageCopy + '</b><span>1阶进度：' + snapshot.stageOneCurrent + '/45' + (snapshot.stageOneRemaining ? "，还差" + snapshot.stageOneRemaining : "") + '</span><small>2–5阶升阶等级要求：数据待补充</small></div></div>' +
+        '<div class="machine-stage-one"><b>' + stageCopy + '</b><span>' + progressCopy + '</span><small>各阶累计觉醒等级要求：45／90／135／180／225</small></div></div>' +
         '<div class="machine-effect-grid">' + effectBlock("当前生效", snapshot.currentEffects, "尚未达成1阶") + effectBlock("下一阶预览", snapshot.nextStage, "已达到当前最高阶") + '</div>' +
         '<div class="machine-beast-list">' + school.beastIds.map(function (id) { return beastCard(beastById(id)); }).join("") + '</div></section>';
     }).join("");

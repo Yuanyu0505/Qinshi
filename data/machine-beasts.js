@@ -123,10 +123,10 @@
       beastIds: beasts.filter(function (item) { return item.schoolId === "hegemonic"; }).map(function (item) { return item.id; }),
       stages: [
         { stage: 1, requiredTotalLevel: 45, factionBonus: "总攻+2%", formationEffect: "以敌方初始攻击最低的后排单位为基准，使其他后排单位的初始攻击下降两者差值的12%", beastEffect: "我方弟子中的最高初始攻击和暴击，此两项属性高于上阵机关兽时，机关兽获得两者差值的14%" },
-        { stage: 2, requiredTotalLevel: null, factionBonus: "总攻+4%", formationEffect: "以敌方初始攻击最低的后排单位为基准，使其他后排单位的初始攻击下降两者差值的24%", beastEffect: "我方弟子中的最高初始攻击和暴击，此两项属性高于上阵机关兽时，机关兽获得两者差值的28%" },
-        { stage: 3, requiredTotalLevel: null, factionBonus: "总攻+6%", formationEffect: "以敌方初始攻击最低的后排单位为基准，使其他后排单位的初始攻击下降两者差值的36%", beastEffect: "我方弟子中的最高初始攻击和暴击，此两项属性高于上阵机关兽时，机关兽获得两者差值的42%" },
-        { stage: 4, requiredTotalLevel: null, factionBonus: "总攻+8%", formationEffect: "以敌方初始攻击最低的后排单位为基准，使其他后排单位的初始攻击下降两者差值的48%", beastEffect: "我方弟子中的最高初始攻击和暴击，此两项属性高于上阵机关兽时，机关兽获得两者差值的56%" },
-        { stage: 5, requiredTotalLevel: null, factionBonus: "总攻+10%", formationEffect: "以敌方初始攻击最低的后排单位为基准，使其他后排单位的初始攻击下降两者差值的60%", beastEffect: "我方弟子中的最高初始攻击和暴击，此两项属性高于上阵机关兽时，机关兽获得两者差值的70%" }
+        { stage: 2, requiredTotalLevel: 90, factionBonus: "总攻+4%", formationEffect: "以敌方初始攻击最低的后排单位为基准，使其他后排单位的初始攻击下降两者差值的24%", beastEffect: "我方弟子中的最高初始攻击和暴击，此两项属性高于上阵机关兽时，机关兽获得两者差值的28%" },
+        { stage: 3, requiredTotalLevel: 135, factionBonus: "总攻+6%", formationEffect: "以敌方初始攻击最低的后排单位为基准，使其他后排单位的初始攻击下降两者差值的36%", beastEffect: "我方弟子中的最高初始攻击和暴击，此两项属性高于上阵机关兽时，机关兽获得两者差值的42%" },
+        { stage: 4, requiredTotalLevel: 180, factionBonus: "总攻+8%", formationEffect: "以敌方初始攻击最低的后排单位为基准，使其他后排单位的初始攻击下降两者差值的48%", beastEffect: "我方弟子中的最高初始攻击和暴击，此两项属性高于上阵机关兽时，机关兽获得两者差值的56%" },
+        { stage: 5, requiredTotalLevel: 225, factionBonus: "总攻+10%", formationEffect: "以敌方初始攻击最低的后排单位为基准，使其他后排单位的初始攻击下降两者差值的60%", beastEffect: "我方弟子中的最高初始攻击和暴击，此两项属性高于上阵机关兽时，机关兽获得两者差值的70%" }
       ]
     },
     {
@@ -135,10 +135,10 @@
       beastIds: beasts.filter(function (item) { return item.schoolId === "nonAttack"; }).map(function (item) { return item.id; }),
       stages: [
         { stage: 1, requiredTotalLevel: 45, factionBonus: "总血+3%", formationEffect: "以敌方初始技能减免最低的单位为基准，使其他单位的初始技能减免下降两者差值的8%", beastEffect: "我方弟子中的最高初始穿透和暴伤，此两项属性高于上阵机关兽时，机关兽获得两者差值的14%" },
-        { stage: 2, requiredTotalLevel: null, factionBonus: "总血+6%", formationEffect: "以敌方初始技能减免最低的单位为基准，使其他单位的初始技能减免下降两者差值的16%", beastEffect: "我方弟子中的最高初始穿透和暴伤，此两项属性高于上阵机关兽时，机关兽获得两者差值的28%" },
-        { stage: 3, requiredTotalLevel: null, factionBonus: "总血+9%", formationEffect: "以敌方初始技能减免最低的单位为基准，使其他单位的初始技能减免下降两者差值的24%", beastEffect: "我方弟子中的最高初始穿透和暴伤，此两项属性高于上阵机关兽时，机关兽获得两者差值的42%" },
-        { stage: 4, requiredTotalLevel: null, factionBonus: "总血+12%", formationEffect: "以敌方初始技能减免最低的单位为基准，使其他单位的初始技能减免下降两者差值的32%", beastEffect: "我方弟子中的最高初始穿透和暴伤，此两项属性高于上阵机关兽时，机关兽获得两者差值的56%" },
-        { stage: 5, requiredTotalLevel: null, factionBonus: "总血+15%", formationEffect: "以敌方初始技能减免最低的单位为基准，使其他单位的初始技能减免下降两者差值的40%", beastEffect: "我方弟子中的最高初始穿透和暴伤，此两项属性高于上阵机关兽时，机关兽获得两者差值的70%" }
+        { stage: 2, requiredTotalLevel: 90, factionBonus: "总血+6%", formationEffect: "以敌方初始技能减免最低的单位为基准，使其他单位的初始技能减免下降两者差值的16%", beastEffect: "我方弟子中的最高初始穿透和暴伤，此两项属性高于上阵机关兽时，机关兽获得两者差值的28%" },
+        { stage: 3, requiredTotalLevel: 135, factionBonus: "总血+9%", formationEffect: "以敌方初始技能减免最低的单位为基准，使其他单位的初始技能减免下降两者差值的24%", beastEffect: "我方弟子中的最高初始穿透和暴伤，此两项属性高于上阵机关兽时，机关兽获得两者差值的42%" },
+        { stage: 4, requiredTotalLevel: 180, factionBonus: "总血+12%", formationEffect: "以敌方初始技能减免最低的单位为基准，使其他单位的初始技能减免下降两者差值的32%", beastEffect: "我方弟子中的最高初始穿透和暴伤，此两项属性高于上阵机关兽时，机关兽获得两者差值的56%" },
+        { stage: 5, requiredTotalLevel: 225, factionBonus: "总血+15%", formationEffect: "以敌方初始技能减免最低的单位为基准，使其他单位的初始技能减免下降两者差值的40%", beastEffect: "我方弟子中的最高初始穿透和暴伤，此两项属性高于上阵机关兽时，机关兽获得两者差值的70%" }
       ]
     }
   ];

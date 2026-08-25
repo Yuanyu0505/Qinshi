@@ -604,7 +604,7 @@ tr.hit-row td { background: rgba(212, 175, 55, .06); }
   font-size: 18px;
   font-weight: 700;
 }
-.prog-add-form { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+.prog-add-form { display: flex; align-items: flex-start; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
 .prog-add-form[hidden] { display: none; }
 .prog-add-form select {
   background: var(--bg2);
@@ -614,7 +614,12 @@ tr.hit-row td { background: rgba(212, 175, 55, .06); }
   padding: 9px 12px;
   font-size: 15px;
 }
-.prog-pick { position: relative; flex: 1; min-width: 260px; }
+.prog-pick {
+  position: relative;
+  flex: 0 1 560px;
+  width: min(560px, 100%);
+  min-width: 260px;
+}
 .prog-item-search {
   width: 100%;
   padding: 10px 14px;
@@ -635,7 +640,7 @@ tr.hit-row td { background: rgba(212, 175, 55, .06); }
   background: var(--bg2);
   border: 1px solid var(--line);
   border-radius: 6px;
-  max-height: 260px;
+  max-height: 180px;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
@@ -2269,6 +2274,12 @@ figcaption { color: var(--muted); font-size: 13px; margin-top: 8px; }
   .prog-search-relation,
   .prog-disciple,
   .prog-equip { min-width: 0; max-width: 100%; }
+  .prog-pick {
+    flex: 1 1 100%;
+    width: 100%;
+    min-width: 0;
+    max-width: none;
+  }
   .prog-search-hits,
   .prog-stage-materials { max-width: 100%; overflow-wrap: anywhere; }
   #partition-drops .drop-default-orange { padding: 10px; }

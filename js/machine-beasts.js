@@ -276,8 +276,10 @@
   }
 
   function ownedTypes(data, beast, progress, options, maximumCount) {
+    if (options.useOwnedInventory === false) return [];
     var includeHigh = Boolean(options.includeHighRanks || progress.showHighRanks);
     var includeMods = Boolean(options.includeMods || progress.showMods);
+    var ownedLimits = options.ownedLimits && typeof options.ownedLimits === "object" ? options.ownedLimits : {};
     var types = [];
     data.modifications.forEach(function (modification, modIndex) {
       if (modification.id !== "none" && (!includeMods || beast.quality !== "orange")) return;
@@ -286,6 +288,10 @@
         var rank = integer(rankKey);
         if (rank > 7 && !includeHigh) return;
         var totalAvailable = integer(ranks[rankKey]);
+        var modificationLimits = ownedLimits[modification.id];
+        if (modificationLimits && Object.prototype.hasOwnProperty.call(modificationLimits, rankKey)) {
+          totalAvailable = Math.min(totalAvailable, integer(modificationLimits[rankKey]));
+        }
         var count = Math.min(totalAvailable, maximumCount);
         var research = researchFor(data, beast, rank, modification.id);
         if (!count || !research) return;

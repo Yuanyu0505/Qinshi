@@ -130,6 +130,34 @@ test("investment optimizer: minimizes invested count before using owned low rank
   assert.strictEqual(result.selected.ownedItems.length, 0);
 });
 
+test("investment optimizer: can ignore all owned inventory for a temporary calculation", () => {
+  const beast = DATA.beasts.find(item => item.name === "机关炎傀");
+  const progress = CORE.normalizeBeastProgress(beast, {
+    inventory: { none: { 7: 5 } }
+  }, DATA);
+  const result = CORE.calculateInvestmentPlan(DATA, beast, progress, {
+    targetLevel: 10,
+    useOwnedInventory: false
+  });
+  assert.strictEqual(result.valid, true);
+  assert.deepStrictEqual(result.selected.ownedItems, []);
+  assert.ok(result.selected.newItems.length > 0);
+});
+
+test("investment optimizer: respects per-rank owned inventory limits", () => {
+  const beast = DATA.beasts.find(item => item.name === "机关炎傀");
+  const progress = CORE.normalizeBeastProgress(beast, {
+    inventory: { none: { 7: 5 } }
+  }, DATA);
+  const result = CORE.calculateInvestmentPlan(DATA, beast, progress, {
+    targetLevel: 15,
+    useOwnedInventory: true,
+    ownedLimits: { none: { "7": 1 } }
+  });
+  const used = result.selected.ownedItems.reduce((total, item) => total + item.count, 0);
+  assert.ok(used <= 1);
+});
+
 test("investment optimizer: folds high ranks for display and uses actual final-item resources", () => {
   const beast = DATA.beasts.find(item => item.name === "机关炎傀");
   const progress = CORE.normalizeBeastProgress(beast, {

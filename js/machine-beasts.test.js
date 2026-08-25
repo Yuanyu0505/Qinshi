@@ -3,6 +3,7 @@ const assert = require("node:assert");
 
 const DATA = require("../data/machine-beasts.js");
 const CORE = require("./machine-beasts.js");
+const PLANNER = require("./machine-beast-school-planner.js");
 
 test("machine beast data: detailed names, schools and stage effects stay complete", () => {
   assert.strictEqual(DATA.beasts.length, 27);
@@ -207,4 +208,67 @@ test("investment optimizer: completed targets produce a zero-cost plan", () => {
   assert.strictEqual(result.totals.investedCount, 0);
   assert.strictEqual(result.totals.research, 0);
   assert.strictEqual(result.shortage.fragments, 0);
+});
+
+test("school planner: defaults to the next school stage", () => {
+  const school = DATA.schools.find(item => item.id === "hegemonic");
+  const progress = {};
+  assert.strictEqual(PLANNER.defaultTargetStage(DATA, school, progress), 1);
+  progress[school.beastIds[0]] = { research: DATA.researchThresholds[25] };
+  progress[school.beastIds[1]] = { research: DATA.researchThresholds[20] };
+  assert.strictEqual(PLANNER.defaultTargetStage(DATA, school, progress), 2);
+});
+
+test("school planner: maps target stages and keeps excluded beasts in the baseline", () => {
+  const school = DATA.schools.find(item => item.id === "hegemonic");
+  const progress = {};
+  progress[school.beastIds[0]] = { research: DATA.researchThresholds[10] };
+  const participating = school.beastIds.slice(1, 4);
+  const result = PLANNER.calculateSchoolPlans(DATA, school, progress, {
+    targetStage: 1,
+    participatingBeastIds: participating,
+    useOwnedInventory: false
+  });
+  assert.strictEqual(result.valid, true);
+  assert.strictEqual(result.current.totalLevel, 10);
+  assert.strictEqual(result.target.totalLevel, 45);
+  result.plans.forEach(plan => {
+    assert.ok(plan.totals.projectedTotalLevel >= 45);
+    assert.ok(!plan.beasts.some(item => item.beastId === school.beastIds[0]));
+  });
+});
+
+test("school planner: an achieved target returns one merged zero-cost plan", () => {
+  const school = DATA.schools.find(item => item.id === "nonAttack");
+  const progress = {};
+  progress[school.beastIds[0]] = { research: DATA.researchThresholds[25] };
+  progress[school.beastIds[1]] = { research: DATA.researchThresholds[20] };
+  const result = PLANNER.calculateSchoolPlans(DATA, school, progress, { targetStage: 1 });
+  assert.strictEqual(result.valid, true);
+  assert.strictEqual(result.plans.length, 1);
+  assert.strictEqual(result.plans[0].kind, "merged");
+  assert.strictEqual(result.plans[0].totals.investedCount, 0);
+});
+
+test("school planner: high-rank inventory uses seven-rank body equivalents", () => {
+  const school = DATA.schools.find(item => item.id === "hegemonic");
+  const beastId = school.beastIds.find(id => DATA.beasts.find(item => item.id === id).maxRank >= 10);
+  const progress = {};
+  progress[beastId] = { inventory: { none: { 10: 1 } }, showHighRanks: true };
+  const result = PLANNER.calculateSchoolPlans(DATA, school, progress, {
+    targetStage: 1,
+    participatingBeastIds: [beastId],
+    ownedLimitsByBeast: { [beastId]: { none: { "10": 1 } } },
+    allowNewHighRanks: false
+  });
+  assert.strictEqual(result.valid, false);
+  assert.match(result.errors.join(""), /无法达到/);
+
+  const direct = PLANNER.machineBeastCandidates(DATA, DATA.beasts.find(item => item.id === beastId), progress[beastId], {
+    useOwnedInventory: true,
+    ownedLimits: { none: { "10": 1 } }
+  });
+  const highRankPlan = direct.find(item => item.items.some(entry => entry.source === "owned" && entry.rank === 10));
+  assert.ok(highRankPlan);
+  assert.strictEqual(highRankPlan.investedCount, 8);
 });

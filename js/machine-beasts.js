@@ -139,6 +139,10 @@
     return next;
   }
 
+  function investedWeight(rank, options) {
+    return options && options.investedCountMode === "equivalent" && rank > 7 ? Math.pow(2, rank - 7) : 1;
+  }
+
   function stateKey(state) {
     return state.items.map(function (item) {
       return [item.source, item.modificationId, item.rank, item.count].join(":");
@@ -147,7 +151,7 @@
 
   function preferSameResearch(left, right) {
     if (!right) return true;
-    var fields = ["newCount", "awakeningBlueprints", "organPieces"];
+    var fields = ["newInvestedCount", "newCount", "awakeningBlueprints", "organPieces"];
     for (var index = 0; index < fields.length; index += 1) {
       if (left[fields[index]] !== right[fields[index]]) return left[fields[index]] < right[fields[index]];
     }
@@ -162,18 +166,19 @@
 
   function buildBoundedStates(types, maximumCount, limit, data) {
     var states = Array.from({ length: maximumCount + 1 }, function () { return new Map(); });
-    states[0].set(0, { research: 0, newCount: 0, awakeningBlueprints: 0, organPieces: 0, items: [] });
+    states[0].set(0, { research: 0, newCount: 0, newInvestedCount: 0, awakeningBlueprints: 0, organPieces: 0, items: [] });
     types.forEach(function (type) {
       var previous = states;
       var next = previous.map(function (map) { return new Map(map); });
       for (var count = 0; count <= maximumCount; count += 1) {
         previous[count].forEach(function (state) {
-          var available = Math.min(type.available, maximumCount - count);
+          var available = Math.min(type.available, Math.floor((maximumCount - count) / type.investedWeight));
           for (var quantity = 1; quantity <= available; quantity += 1) {
             var resources = itemResources(type.researchEach, data);
-            addState(next[count + quantity], {
+            addState(next[count + quantity * type.investedWeight], {
               research: state.research + type.researchEach * quantity,
               newCount: state.newCount,
+              newInvestedCount: state.newInvestedCount,
               awakeningBlueprints: state.awakeningBlueprints + resources.awakeningBlueprints * quantity,
               organPieces: state.organPieces + resources.organPieces * quantity,
               items: appendItem(state.items, type, quantity)
@@ -187,92 +192,76 @@
   }
 
   function buildExactUnlimitedStates(types, exactCount, minimumNeeded, limit, data) {
-    if (!exactCount) return [{ research: 0, newCount: 0, awakeningBlueprints: 0, organPieces: 0, items: [] }];
-    var result = new Map();
-    var quantities = Array(types.length).fill(0);
-    var resources = types.map(function (type) { return itemResources(type.researchEach, data); });
-    function recordCounts() {
-      var research = 0;
-      var awakeningBlueprints = 0;
-      var organPieces = 0;
-      var items = [];
-      quantities.forEach(function (count, index) {
-        research += types[index].researchEach * count;
-        awakeningBlueprints += resources[index].awakeningBlueprints * count;
-        organPieces += resources[index].organPieces * count;
-        if (count) items = appendItem(items, types[index], count);
-      });
-      if (research < minimumNeeded) return;
-      addState(result, {
-        research: research,
-        newCount: exactCount,
-        awakeningBlueprints: awakeningBlueprints,
-        organPieces: organPieces,
-        items: items
-      }, limit);
-    }
-    if (types.length <= 3) {
-      var lowestIndex = types.length - 1;
+    if (!exactCount) return [{ research: 0, newCount: 0, newInvestedCount: 0, awakeningBlueprints: 0, organPieces: 0, items: [] }];
+    if (types.length <= 3 && types.every(function (type) { return type.investedWeight === 1; })) {
+      var compact = new Map();
+      var quantities = Array(types.length).fill(0);
+      var resourcesByType = types.map(function (type) { return itemResources(type.researchEach, data); });
+      function recordCompact() {
+        var research = 0;
+        var awakeningBlueprints = 0;
+        var organPieces = 0;
+        var items = [];
+        quantities.forEach(function (quantity, index) {
+          research += types[index].researchEach * quantity;
+          awakeningBlueprints += resourcesByType[index].awakeningBlueprints * quantity;
+          organPieces += resourcesByType[index].organPieces * quantity;
+          if (quantity) items = appendItem(items, types[index], quantity);
+        });
+        if (research < minimumNeeded) return;
+        addState(compact, {
+          research: research,
+          newCount: exactCount,
+          newInvestedCount: exactCount,
+          awakeningBlueprints: awakeningBlueprints,
+          organPieces: organPieces,
+          items: items
+        }, limit);
+      }
       if (types.length === 1) {
         quantities[0] = exactCount;
-        recordCounts();
+        recordCompact();
       } else if (types.length === 2) {
-        var twoBase = exactCount * types[1].researchEach;
-        var twoDifference = types[0].researchEach - types[1].researchEach;
-        var firstMinimum = twoDifference > 0 ? Math.max(0, Math.ceil((minimumNeeded - twoBase) / twoDifference)) : 0;
-        for (var first = Math.min(exactCount, firstMinimum); first <= exactCount; first += 1) {
+        for (var first = 0; first <= exactCount; first += 1) {
           quantities[0] = first;
           quantities[1] = exactCount - first;
-          recordCounts();
+          recordCompact();
         }
       } else {
         for (var highest = 0; highest <= exactCount; highest += 1) {
-          quantities[0] = highest;
-          var remaining = exactCount - highest;
-          var base = highest * types[0].researchEach + remaining * types[lowestIndex].researchEach;
-          var difference = types[1].researchEach - types[lowestIndex].researchEach;
-          var neededMiddle = difference > 0 ? Math.max(0, Math.ceil((minimumNeeded - base) / difference)) : 0;
-          var startMiddle = Math.min(remaining, neededMiddle);
-          for (var middle = startMiddle; middle <= remaining; middle += 1) {
+          for (var middle = 0; middle <= exactCount - highest; middle += 1) {
+            quantities[0] = highest;
             quantities[1] = middle;
-            quantities[2] = remaining - middle;
-            recordCounts();
+            quantities[2] = exactCount - highest - middle;
+            recordCompact();
           }
         }
       }
-      return sortedStates(result);
+      return sortedStates(compact);
     }
-    function visit(typeIndex, remaining, research, awakeningBlueprints, organPieces) {
-      var type = types[typeIndex];
-      var last = typeIndex === types.length - 1;
-      for (var quantity = 0; quantity <= remaining; quantity += 1) {
-        if (last && quantity !== remaining) continue;
-        var nextResearch = research + type.researchEach * quantity;
-        if (nextResearch > limit) continue;
-        quantities[typeIndex] = quantity;
-        var nextBlueprints = awakeningBlueprints + resources[typeIndex].awakeningBlueprints * quantity;
-        var nextPieces = organPieces + resources[typeIndex].organPieces * quantity;
-        if (last) {
-          var items = [];
-          quantities.forEach(function (count, index) {
-            if (count) items = appendItem(items, types[index], count);
-          });
-          if (nextResearch < minimumNeeded) continue;
-          addState(result, {
+    var states = Array.from({ length: exactCount + 1 }, function () { return new Map(); });
+    states[0].set(0, { research: 0, newCount: 0, newInvestedCount: 0, awakeningBlueprints: 0, organPieces: 0, items: [] });
+    for (var weight = 0; weight <= exactCount; weight += 1) {
+      if (!states[weight].size) continue;
+      states[weight].forEach(function (state) {
+        types.forEach(function (type) {
+          var nextWeight = weight + type.investedWeight;
+          if (nextWeight > exactCount) return;
+          var nextResearch = state.research + type.researchEach;
+          if (nextResearch > limit) return;
+          var resources = itemResources(type.researchEach, data);
+          addState(states[nextWeight], {
             research: nextResearch,
-            newCount: exactCount,
-            awakeningBlueprints: nextBlueprints,
-            organPieces: nextPieces,
-            items: items
+            newCount: state.newCount + 1,
+            newInvestedCount: state.newInvestedCount + type.investedWeight,
+            awakeningBlueprints: state.awakeningBlueprints + resources.awakeningBlueprints,
+            organPieces: state.organPieces + resources.organPieces,
+            items: appendItem(state.items, type, 1)
           }, limit);
-        } else {
-          visit(typeIndex + 1, remaining - quantity, nextResearch, nextBlueprints, nextPieces);
-        }
-      }
-      quantities[typeIndex] = 0;
+        });
+      });
     }
-    visit(0, exactCount, 0, 0, 0);
-    return sortedStates(result);
+    return sortedStates(new Map(Array.from(states[exactCount]).filter(function (entry) { return entry[0] >= minimumNeeded; })));
   }
 
   function ownedTypes(data, beast, progress, options, maximumCount) {
@@ -287,17 +276,19 @@
       Object.keys(ranks).forEach(function (rankKey) {
         var rank = integer(rankKey);
         if (rank > 7 && !includeHigh) return;
-        var totalAvailable = integer(ranks[rankKey]);
+        var recordedAvailable = integer(ranks[rankKey]);
+        var totalAvailable = recordedAvailable;
         var modificationLimits = ownedLimits[modification.id];
         if (modificationLimits && Object.prototype.hasOwnProperty.call(modificationLimits, rankKey)) {
           totalAvailable = Math.min(totalAvailable, integer(modificationLimits[rankKey]));
         }
-        var count = Math.min(totalAvailable, maximumCount);
+        var weight = investedWeight(rank, options);
+        var count = Math.min(totalAvailable, Math.floor(maximumCount / weight));
         var research = researchFor(data, beast, rank, modification.id);
         if (!count || !research) return;
         types.push({
           source: "owned", modificationId: modification.id, modificationIndex: modIndex,
-          rank: rank, researchEach: research, available: count, totalAvailable: totalAvailable
+          rank: rank, researchEach: research, investedWeight: weight, available: count, totalAvailable: recordedAvailable
         });
       });
     });
@@ -306,11 +297,18 @@
     });
   }
 
-  function newTypes(data, beast) {
-    var maximumRank = Math.min(7, beast.maxRank);
+  function newTypes(data, beast, options) {
+    var maximumRank = options.allowNewHighRanks ? beast.maxRank : Math.min(7, beast.maxRank);
+    var modifications = beast.quality === "orange" && options.allowNewModifications ? data.modifications : [data.modifications[0]];
     var types = [];
     for (var rank = maximumRank; rank >= 0; rank -= 1) {
-      types.push({ source: "new", modificationId: "none", rank: rank, researchEach: researchFor(data, beast, rank, "none") });
+      modifications.forEach(function (modification) {
+        types.push({
+          source: "new", modificationId: modification.id, rank: rank,
+          researchEach: researchFor(data, beast, rank, modification.id),
+          investedWeight: investedWeight(rank, options)
+        });
+      });
     }
     return types.filter(function (item) { return item.researchEach > 0; });
   }
@@ -349,17 +347,22 @@
     return {
       research: owned.research + added.research,
       newCount: added.newCount,
+      newInvestedCount: added.newInvestedCount,
       awakeningBlueprints: owned.awakeningBlueprints + added.awakeningBlueprints,
       organPieces: owned.organPieces + added.organPieces,
       items: owned.items.concat(added.items)
     };
   }
 
-  function planMetrics(state, deficit, beast, progress, data) {
-    var missingFragments = Math.max(0, state.newCount * beast.fragmentsPerBody - progress.fragments);
+  function planMetrics(state, deficit, beast, progress, data, options) {
+    var countEquivalent = state.items.reduce(function (total, item) {
+      return total + item.count * investedWeight(item.rank, options);
+    }, 0);
+    var missingFragments = Math.max(0, state.newInvestedCount * beast.fragmentsPerBody - progress.fragments);
     var contribution = beast.contributionPerFragment === null ? null : missingFragments * beast.contributionPerFragment;
     return {
-      investedCount: state.items.reduce(function (total, item) { return total + item.count; }, 0),
+      investedCount: countEquivalent,
+      newInvestedCount: state.newInvestedCount,
       overflow: Math.max(0, state.research - deficit),
       missingFragments: missingFragments,
       contribution: contribution === null ? Number.MAX_SAFE_INTEGER : contribution,
@@ -370,9 +373,10 @@
     };
   }
 
-  function betterPlan(candidate, best) {
+  function betterPlan(candidate, best, preferOwned) {
     if (!best) return true;
-    var keys = ["investedCount", "overflow", "missingFragments", "contribution", "yuan", "awakeningBlueprints", "organPieces"];
+    var keys = preferOwned ? ["investedCount", "newInvestedCount", "overflow", "missingFragments", "contribution", "yuan", "awakeningBlueprints", "organPieces"] :
+      ["investedCount", "overflow", "missingFragments", "contribution", "yuan", "awakeningBlueprints", "organPieces"];
     for (var index = 0; index < keys.length; index += 1) {
       if (candidate.metrics[keys[index]] !== best.metrics[keys[index]]) {
         return candidate.metrics[keys[index]] < best.metrics[keys[index]];
@@ -389,7 +393,7 @@
       target: { level: targetLevel, research: targetResearch, deficit: 0 },
       selected: { ownedItems: [], newItems: [] },
       unused: [],
-      totals: { investedCount: 0, research: 0, overflow: 0, awakeningBlueprints: 0, organPieces: 0, projectedLevel: currentLevel },
+      totals: { investedCount: 0, newInvestedCount: 0, research: 0, overflow: 0, awakeningBlueprints: 0, organPieces: 0, projectedLevel: currentLevel },
       shortage: { bodies: 0, bodyEquivalent: 0, fragments: 0 },
       exchange: { available: beast.contributionPerFragment !== null, contribution: 0, yuan: 0 }
     };
@@ -409,33 +413,38 @@
     var deficit = Math.max(0, targetResearch - progress.research);
     if (!deficit) return emptyPlan(data, beast, progress, currentLevel, targetLevel, targetResearch);
 
-    var purchasable = newTypes(data, beast);
+    var purchasable = newTypes(data, beast, config);
     var minimumResearch = Math.min.apply(null, purchasable.map(function (item) { return item.researchEach; }));
     var maximumResearch = Math.max.apply(null, purchasable.map(function (item) { return item.researchEach; }));
-    var provisionalMaximumCount = Math.ceil(deficit / minimumResearch) + 1;
+    var bestNewType = purchasable.reduce(function (best, type) {
+      return !best || type.researchEach / type.investedWeight > best.researchEach / best.investedWeight ? type : best;
+    }, null);
+    var provisionalMaximumCount = Math.ceil(deficit / minimumResearch) + 8;
     var owned = ownedTypes(data, beast, progress, config, provisionalMaximumCount);
     owned.forEach(function (item) { maximumResearch = Math.max(maximumResearch, item.researchEach); });
     var limit = deficit + maximumResearch;
-    var totalCount = minimumInvestedCount(deficit, Math.max.apply(null, purchasable.map(function (item) { return item.researchEach; })), owned);
-    var ownedStates = buildBoundedStates(owned, totalCount, limit, data);
+    var maximumInvestedCount = Math.ceil(deficit / bestNewType.researchEach) * bestNewType.investedWeight + bestNewType.investedWeight;
+    var ownedStates = buildBoundedStates(owned, maximumInvestedCount, limit, data);
     var newStateCache = {};
     var best = null;
 
-    for (var ownedCount = 0; ownedCount <= totalCount; ownedCount += 1) {
-      var newCount = totalCount - ownedCount;
-      if (!ownedStates[ownedCount]) continue;
-      var maximumOwnedResearch = 0;
-      ownedStates[ownedCount].forEach(function (ownedState) { maximumOwnedResearch = Math.max(maximumOwnedResearch, ownedState.research); });
-      if (!newStateCache[newCount]) newStateCache[newCount] = buildExactUnlimitedStates(purchasable, newCount, Math.max(0, deficit - maximumOwnedResearch), limit, data);
-      if (!newStateCache[newCount].length) continue;
-      ownedStates[ownedCount].forEach(function (ownedState) {
-        var addedState = lowerBound(newStateCache[newCount], Math.max(0, deficit - ownedState.research));
-        if (!addedState) return;
-        var state = combineStates(ownedState, addedState);
-        if (state.research < deficit) return;
-        var candidate = { state: state, metrics: planMetrics(state, deficit, beast, progress, data) };
-        if (betterPlan(candidate, best)) best = candidate;
-      });
+    for (var totalCount = 0; totalCount <= maximumInvestedCount && !best; totalCount += 1) {
+      for (var ownedCount = 0; ownedCount <= totalCount; ownedCount += 1) {
+        var newCount = totalCount - ownedCount;
+        if (!ownedStates[ownedCount]) continue;
+        var maximumOwnedResearch = 0;
+        ownedStates[ownedCount].forEach(function (ownedState) { maximumOwnedResearch = Math.max(maximumOwnedResearch, ownedState.research); });
+        if (!newStateCache[newCount]) newStateCache[newCount] = buildExactUnlimitedStates(purchasable, newCount, Math.max(0, deficit - maximumOwnedResearch), limit, data);
+        if (!newStateCache[newCount].length) continue;
+        ownedStates[ownedCount].forEach(function (ownedState) {
+          var addedState = lowerBound(newStateCache[newCount], Math.max(0, deficit - ownedState.research));
+          if (!addedState) return;
+          var state = combineStates(ownedState, addedState);
+          if (state.research < deficit) return;
+          var candidate = { state: state, metrics: planMetrics(state, deficit, beast, progress, data, config) };
+          if (betterPlan(candidate, best, config.preferOwnedOnTie)) best = candidate;
+        });
+      }
     }
 
     if (!best) return { valid: false, errors: ["未能生成有效机关兽投入方案"] };
@@ -458,6 +467,7 @@
       unused: unused,
       totals: {
         investedCount: best.metrics.investedCount,
+        newInvestedCount: best.metrics.newInvestedCount,
         research: best.state.research,
         overflow: best.metrics.overflow,
         awakeningBlueprints: best.state.awakeningBlueprints,
@@ -466,7 +476,7 @@
       },
       shortage: {
         bodies: best.state.newCount,
-        bodyEquivalent: missingFragments / beast.fragmentsPerBody,
+        bodyEquivalent: best.metrics.newInvestedCount,
         fragments: missingFragments
       },
       exchange: {

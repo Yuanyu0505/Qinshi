@@ -1221,6 +1221,14 @@ td.badge, th.badge { text-align: center; white-space: nowrap; color: var(--gold)
   padding-right: 4px;
   text-align: center;
 }
+.equipment-result-table.hide-main .equipment-compare-action-head,
+.equipment-result-table.hide-main .equipment-compare-action {
+  width: 84px;
+  min-width: 84px;
+  max-width: 84px;
+  padding-left: 10px;
+  padding-right: 10px;
+}
 .equipment-compare-add {
   min-width: 48px;
   padding-left: 7px;

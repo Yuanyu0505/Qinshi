@@ -874,6 +874,22 @@ tr.hit-row td { background: rgba(212, 175, 55, .06); }
 .panel-title { color: var(--muted); font-size: 13px; margin-bottom: 10px; }
 .filter-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
 .filter-label { color: var(--muted); font-size: 13px; min-width: 3.2em; }
+.equipment-main-visibility {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 30px;
+  padding: 4px 10px;
+  color: var(--text);
+  background: var(--bg2);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  font-size: 13px;
+  cursor: pointer;
+}
+.equipment-main-visibility:hover { border-color: var(--gold-dim); }
+.equipment-main-visibility input { width: 15px; height: 15px; margin: 0; accent-color: var(--red); }
+.equipment-main-visibility:has(input:checked) { color: #fff; border-color: var(--red); background: rgba(184, 59, 52, .22); }
 .chips { display: flex; flex-wrap: wrap; gap: 8px; }
 .chip {
   background: var(--bg2);
@@ -956,15 +972,26 @@ td.name { font-weight: 600; white-space: nowrap; }
 .equipment-name-orange { background: #f79646; border-color: #f79646; }
 .cat { color: var(--gold-dim); font-size: 13px; white-space: nowrap; }
 #partition-equipment .main { color: #fff; font-weight: 600; }
+#partition-equipment .equipment-result-table {
+  min-width: 900px;
+  table-layout: fixed;
+}
+#partition-equipment .equipment-result-table.show-main { min-width: 1000px; }
+#partition-equipment .equipment-result-table .equipment-category-cell { width: 78px; }
+#partition-equipment .equipment-result-table .equipment-name-cell { width: 132px; }
+#partition-equipment .equipment-result-table .equipment-main-cell { width: 112px; }
+#partition-equipment .equipment-result-table .equipment-sort-cell { width: 108px; }
+#partition-equipment .equipment-result-table th,
+#partition-equipment .equipment-result-table td { padding: 11px 10px; line-height: 1.55; }
+#partition-equipment .equipment-result-table tbody tr:nth-child(even) { background: rgba(255, 255, 255, .018); }
+#partition-equipment .equipment-result-table tbody tr:hover { background: rgba(212, 175, 55, .075); }
 .tier-attr { white-space: nowrap; }
 #partition-equipment .tier-attr.hit { color: #ff4b4b; font-weight: 700; }
 .tier-status { color: var(--status); font-style: italic; }
 .tier-none { color: var(--status); }
 .plus { color: var(--status); margin: 0 2px; }
-.book-equipment-table { min-width: 1080px; table-layout: fixed; }
-.book-equipment-table th:nth-child(1) { width: 74px; }
-.book-equipment-table th:nth-child(2) { width: 116px; }
-.book-equipment-table th:nth-child(3) { width: 118px; }
+.book-equipment-table { min-width: 1080px; }
+.book-equipment-table.show-main { min-width: 1180px; }
 .book-tier-cell { padding: 9px 8px; vertical-align: middle; }
 #partition-equipment .book-tier-block {
   display: grid;
@@ -1936,23 +1963,28 @@ figcaption { color: var(--muted); font-size: 13px; margin-top: 8px; }
     border-collapse: separate;
     border-spacing: 0;
   }
-  #partition-equipment .book-equipment-table tr > :nth-child(1) {
+  #partition-equipment .book-equipment-table tr > .equipment-category-cell {
     position: sticky;
     left: 0;
     z-index: 2;
   }
-  #partition-equipment .book-equipment-table tr > :nth-child(2) {
+  #partition-equipment .book-equipment-table tr > .equipment-name-cell {
     position: sticky;
-    left: 74px;
+    left: 78px;
     z-index: 2;
   }
-  #partition-equipment .book-equipment-table tr > :nth-child(3) {
+  #partition-equipment .book-equipment-table.show-main tr > .equipment-main-cell {
     position: sticky;
-    left: 190px;
+    left: 210px;
     z-index: 2;
     box-shadow: 9px 0 12px -11px #000, 1px 0 0 var(--line);
   }
-  #partition-equipment .book-equipment-table tbody tr > :nth-child(-n+3) {
+  #partition-equipment .book-equipment-table.hide-main tr > .equipment-name-cell {
+    box-shadow: 9px 0 12px -11px #000, 1px 0 0 var(--line);
+  }
+  #partition-equipment .book-equipment-table tbody .equipment-category-cell,
+  #partition-equipment .book-equipment-table tbody .equipment-name-cell,
+  #partition-equipment .book-equipment-table tbody .equipment-main-cell {
     background-color: #191611;
     background-clip: padding-box;
   }
@@ -1961,7 +1993,9 @@ figcaption { color: var(--muted); font-size: 13px; margin-top: 8px; }
     top: 0;
     z-index: 3;
   }
-  #partition-equipment .book-equipment-table thead tr > :nth-child(-n+3) {
+  #partition-equipment .book-equipment-table thead .equipment-category-cell,
+  #partition-equipment .book-equipment-table thead .equipment-name-cell,
+  #partition-equipment .book-equipment-table thead .equipment-main-cell {
     z-index: 5;
     background-color: #221d16;
   }

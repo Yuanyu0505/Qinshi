@@ -39,7 +39,7 @@
   };
 
   const state = {
-    search: "", category: null, main: null, filters: [], sortAttr: null, valueSource: "max", activated: false,
+    search: "", category: null, main: null, showMain: false, filters: [], sortAttr: null, valueSource: "max", activated: false,
     comparison: { itemIds: [], group: null, tier: "红金", dimensions: [], expanded: false, started: false }
   };
   const forgeState = { mode: "main", query: "" };
@@ -49,6 +49,7 @@
     search: document.getElementById("search"),
     categoryBtns: document.getElementById("category-filter"),
     mainBtns: document.getElementById("main-filter"),
+    showMain: document.getElementById("show-main-attribute"),
     chips: document.getElementById("chips"),
     sortPanel: document.getElementById("sort-panel"),
     sortAttrBtns: document.getElementById("sort-attr"),
@@ -1322,6 +1323,10 @@
       state.activated = true;
       apply();
     });
+    el.showMain.addEventListener("change", () => {
+      state.showMain = el.showMain.checked;
+      apply();
+    });
     el.chips.addEventListener("click", (e) => {
       const btn = e.target.closest(".chip");
       if (!btn) return;
@@ -1533,6 +1538,7 @@
     state.search = "";
     state.category = null;
     state.main = null;
+    state.showMain = false;
     state.filters = [];
     state.sortAttr = null;
     state.valueSource = "max";
@@ -1572,6 +1578,7 @@
     el.mainBtns.querySelectorAll("button").forEach((btn) => {
       btn.classList.toggle("active", state.main !== null && btn.dataset.main === state.main);
     });
+    el.showMain.checked = state.showMain;
     document.querySelectorAll(".chip").forEach((btn) => {
       const attr = btn.dataset.attr;
       const active = state.filters.indexOf(attr) >= 0;
@@ -1606,7 +1613,8 @@
   }
 
   function tableHeaderHtml(tiers, hasFilter) {
-    return `<tr><th>分类</th><th>装备名</th><th>主属性</th>${tiers.map((tier) => `<th>${tier}</th>`).join("")}${hasFilter ? '<th class="badge">排序值</th>' : ""}<th class="equipment-compare-action-head">对比</th></tr>`;
+    const mainHeader = state.showMain ? '<th class="equipment-main-cell">主属性</th>' : "";
+    return `<tr><th class="equipment-category-cell">分类</th><th class="equipment-name-cell">装备名</th>${mainHeader}${tiers.map((tier) => `<th class="equipment-tier-cell">${tier}</th>`).join("")}${hasFilter ? '<th class="badge equipment-sort-cell">排序值</th>' : ""}<th class="equipment-compare-action-head">对比</th></tr>`;
   }
 
   function bookPopoverStageRowsHtml(stages) {
@@ -1717,15 +1725,16 @@
     if (!items.length) return "";
     const body = items.map((item) => {
       return `<tr>
-      <td><span class="cat">${item.cat}</span></td>
-      <td class="name">${equipmentNameHtml(item)}</td>
-      <td class="main">${item.main}</td>
-      ${tiers.map((tier) => `<td class="${item.bookGroup ? "book-tier-cell" : ""}">${item.bookGroup ? bookTierHtml(item, tier) : tokenHtml(item.tiers[tier])}</td>`).join("")}
-      ${hasFilter ? `<td class="badge">${sortBadge(item)}</td>` : ""}
+      <td class="equipment-category-cell"><span class="cat">${item.cat}</span></td>
+      <td class="name equipment-name-cell">${equipmentNameHtml(item)}</td>
+      ${state.showMain ? `<td class="main equipment-main-cell">${escapeHtml(item.main)}</td>` : ""}
+      ${tiers.map((tier) => `<td class="equipment-tier-cell${item.bookGroup ? " book-tier-cell" : ""}">${item.bookGroup ? bookTierHtml(item, tier) : tokenHtml(item.tiers[tier])}</td>`).join("")}
+      ${hasFilter ? `<td class="badge equipment-sort-cell">${sortBadge(item)}</td>` : ""}
       <td class="equipment-compare-action">${equipmentCompareActionHtml(item)}</td>
     </tr>`;
     }).join("");
-    return `<section class="equipment-result-group${title ? " book-result-group" : ""}">${title ? `<h3 class="equipment-group-title">${title}<span>${items.length} 件</span></h3>` : ""}<div class="table-wrap"><table class="${title ? "book-equipment-table" : ""}"><thead>${tableHeaderHtml(tiers, hasFilter)}</thead><tbody>${body}</tbody></table></div></section>`;
+    const tableClasses = `equipment-result-table ${state.showMain ? "show-main" : "hide-main"}${title ? " book-equipment-table" : ""}`;
+    return `<section class="equipment-result-group${title ? " book-result-group" : ""}">${title ? `<h3 class="equipment-group-title">${title}<span>${items.length} 件</span></h3>` : ""}<div class="table-wrap"><table class="${tableClasses}"><thead>${tableHeaderHtml(tiers, hasFilter)}</thead><tbody>${body}</tbody></table></div></section>`;
   }
 
   function renderTable(items) {
@@ -1767,7 +1776,7 @@
           ${equipmentNameHtml(item)}
           ${badge ? `<span class="badge">${badge}</span>` : ""}
         </div>
-        <div class="card-main">主属性：<b>${item.main}</b></div>
+        ${state.showMain ? `<div class="card-main">主属性：<b>${escapeHtml(item.main)}</b></div>` : ""}
         ${tierHtml}
         <div class="equipment-compare-card-action">${equipmentCompareActionHtml(item)}</div>
       </div>`;

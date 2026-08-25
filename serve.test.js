@@ -247,6 +247,20 @@ test("装备属性提供同大类多装备对比工作台与响应式结果", ()
   assert.match(css, /@media \(max-width: 1099px\)[\s\S]*?\.equipment-compare-cards\s*\{\s*display:\s*grid/);
 });
 
+test("装备主属性默认隐藏并可按需展示", () => {
+  const html = fs.readFileSync(path.join(__dirname, "index.html"), "utf8");
+  const app = fs.readFileSync(path.join(__dirname, "js", "app.js"), "utf8");
+  const css = fs.readFileSync(path.join(__dirname, "css", "style.css"), "utf8");
+  assert.match(html, /id="show-main-attribute"[^>]*type="checkbox"/);
+  assert.doesNotMatch(html, /id="show-main-attribute"[^>]*checked/);
+  assert.match(app, /showMain:\s*false/);
+  assert.match(app, /state\.showMain\s*\?\s*'<th class="equipment-main-cell">主属性<\/th>'\s*:\s*""/);
+  assert.match(app, /state\.showMain\s*\?\s*`<td class="main equipment-main-cell">/);
+  assert.match(app, /state\.showMain\s*\?\s*`<div class="card-main">主属性：/);
+  assert.match(css, /\.equipment-result-table \.equipment-category-cell/);
+  assert.match(css, /\.book-equipment-table\.hide-main tr > \.equipment-name-cell/);
+});
+
 test("机关兽计算结果不展示冗余结果类型标题", () => {
   const ui = fs.readFileSync(path.join(__dirname, "js", "machine-beasts-ui.js"), "utf8");
   assert.doesNotMatch(ui, /<span>最优方案<\/span>/);

@@ -121,6 +121,20 @@ test("首页提供机关兽个人进度、方案计算、资料图表及其三�
   });
 });
 
+test("机关兽新增投入突出需求，资料图表使用纵向自适应卡片", () => {
+  const ui = fs.readFileSync(path.join(__dirname, "js", "machine-beasts-ui.js"), "utf8");
+  const css = fs.readFileSync(path.join(__dirname, "css", "style.css"), "utf8");
+
+  assert.match(ui, /class="machine-investment-demand"/);
+  assert.match(ui, /itemList\(result\.selected\.newItems,[\s\S]*?true\)/);
+  assert.match(ui, /machine-threshold-grid/);
+  assert.match(ui, /machine-research-card-grid/);
+  assert.match(ui, /machine-beast-reference-grid/);
+  assert.match(ui, /machine-school-stage-grid/);
+  assert.match(css, /#partition-machine-beasts \.machine-reference-grid\s*\{[\s\S]*?grid-template-columns:\s*repeat\(auto-fit,/);
+  assert.match(css, /#partition-machine-beasts \.machine-investment-demand\s*\{[\s\S]*?color:\s*#ff4b4b;[\s\S]*?font-weight:\s*800;/);
+});
+
 test("全端导航使用确认后的十个分区顺序", async () => {
   await withServer(async (port) => {
     const page = await get(port, "/");
@@ -446,6 +460,6 @@ test("PWA 1.0.11 缓存并发布机关兽桌面与移动资源", async () => {
     assert.match(css.body, /\.book-detail-popover\s*\{[\s\S]*?max-height:\s*calc\(100dvh - 24px\)/);
     assert.match(css.body, /\.book-detail-popover-body\s*\{[\s\S]*?max-height:\s*calc\(100dvh - 104px\)[\s\S]*?overscroll-behavior:\s*contain/);
     assert.match(css.body, /#partition-drops \.drop-default-orange-table\s*\{[\s\S]*?min-width:\s*0/);
-    assert.match(css.body, /#partition-machine-beasts \.machine-reference-table tr > :first-child\s*\{[\s\S]*?position:\s*sticky/);
+    assert.match(css.body, /#partition-machine-beasts \.machine-reference-grid\s*\{[\s\S]*?grid-template-columns:\s*repeat\(auto-fit,/);
   });
 });

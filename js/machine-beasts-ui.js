@@ -231,8 +231,16 @@
     return modificationName(item.modificationId) + ' ' + item.rank + '阶×' + item.count + equivalent + '，单只' + formatNumber(item.researchEach) + '研发度';
   }
 
-  function itemList(items, empty) {
-    return items.length ? '<ul>' + items.map(function (item) { return '<li>' + escapeHtml(itemLabel(item)) + '</li>'; }).join("") + '</ul>' : '<p class="muted-tip">' + escapeHtml(empty) + '</p>';
+  function itemRequirementLabel(item) {
+    var equivalent = item.rank > 7 ? '（折合7阶×' + item.sevenRankEquivalent * item.count + '）' : '';
+    return modificationName(item.modificationId) + ' ' + item.rank + '阶×' + item.count + equivalent;
+  }
+
+  function itemList(items, empty, emphasizeRequirement) {
+    return items.length ? '<ul>' + items.map(function (item) {
+      if (!emphasizeRequirement) return '<li>' + escapeHtml(itemLabel(item)) + '</li>';
+      return '<li><strong class="machine-investment-demand">' + escapeHtml(itemRequirementLabel(item)) + '</strong><span>，单只' + formatNumber(item.researchEach) + '研发度</span></li>';
+    }).join("") + '</ul>' : '<p class="muted-tip">' + escapeHtml(empty) + '</p>';
   }
 
   function renderCalculatorResult(result) {
@@ -250,7 +258,7 @@
       '<div><span>投入总只数</span><b>' + result.totals.investedCount + '</b></div><div><span>投入研发度</span><b>' + formatNumber(result.totals.research) + '</b></div>' +
       '<div><span>溢出研发度</span><b>' + formatNumber(result.totals.overflow) + '</b></div><div><span>预计达到</span><b>' + result.totals.projectedLevel + '级</b></div></div>' +
       '<div class="machine-result-columns"><article><h3>使用已有库存</h3>' + itemList(result.selected.ownedItems, "不使用已有完整机关兽") + '</article>' +
-      '<article><h3>新增投入</h3>' + itemList(result.selected.newItems, "无需新增机关兽") + '</article></div>' +
+      '<article><h3>新增投入</h3>' + itemList(result.selected.newItems, "无需新增机关兽", true) + '</article></div>' +
       '<div class="machine-result-metrics machine-resource-metrics"><div><span>觉醒神图</span><b>' + formatNumber(result.totals.awakeningBlueprints) + '</b></div><div><span>机关破片</span><b>' + formatNumber(result.totals.organPieces) + '</b></div>' +
       '<div><span>本体缺口</span><b>' + result.shortage.bodyEquivalent + '本体</b></div><div><span>机关兽碎片缺口</span><b>' + formatNumber(result.shortage.fragments) + '</b></div>' + exchange + '</div>' +
       '<details class="machine-unused"><summary>查看未使用库存（' + result.unused.reduce(function (total, item) { return total + item.count; }, 0) + '只）</summary>' + itemList(result.unused.map(function (item) { return Object.assign({ source: "owned", sevenRankEquivalent: item.rank > 7 ? Math.pow(2, item.rank - 7) : 1 }, item); }), "无未使用库存") + '</details></section>';
@@ -258,39 +266,43 @@
   }
 
   function thresholdReference() {
-    return '<section class="panel"><h2>研发等级累计研发度</h2><div class="machine-table-scroll"><table class="machine-reference-table"><thead><tr><th>研发等级</th>' +
-      Array.from({ length: 25 }, function (_, index) { return '<th class="' + (DATA.effectLevels.includes(index + 1) ? "is-milestone" : "") + '">' + (index + 1) + '级</th>'; }).join("") +
-      '</tr></thead><tbody><tr><th>累计研发度</th>' + Array.from({ length: 25 }, function (_, index) { return '<td class="' + (DATA.effectLevels.includes(index + 1) ? "is-milestone" : "") + '">' + formatNumber(DATA.researchThresholds[index + 1]) + '</td>'; }).join("") + '</tr></tbody></table></div></section>';
+    return '<section class="panel"><h2>研发等级累计研发度</h2><div class="machine-reference-grid machine-threshold-grid">' +
+      Array.from({ length: 25 }, function (_, index) {
+        var level = index + 1;
+        return '<article class="machine-reference-pair ' + (DATA.effectLevels.includes(level) ? "is-milestone" : "") + '"><span>' + level + '级</span><b>' + formatNumber(DATA.researchThresholds[level]) + '</b></article>';
+      }).join("") + '</div></section>';
   }
 
   function researchReference() {
-    var orangeRows = Object.keys(DATA.researchValues.orange).sort(function (a, b) { return Number(a) - Number(b); }).map(function (rank) {
-      return '<tr><th>' + rank + '阶</th>' + DATA.modifications.map(function (mod) { return '<td>' + formatNumber(DATA.researchValues.orange[rank][mod.id]) + '</td>'; }).join("") + '</tr>';
-    }).join("");
-    function simpleRows(quality) {
-      return Object.keys(DATA.researchValues[quality]).sort(function (a, b) { return Number(a) - Number(b); }).map(function (rank) { return '<tr><th>' + rank + '阶</th><td>' + formatNumber(DATA.researchValues[quality][rank].none) + '</td></tr>'; }).join("");
+    function qualityCards(quality, title, includeModifications) {
+      var cards = Object.keys(DATA.researchValues[quality]).sort(function (a, b) { return Number(a) - Number(b); }).map(function (rank) {
+        var values = includeModifications ? DATA.modifications.map(function (mod) {
+          return '<div><dt>' + escapeHtml(mod.name) + '</dt><dd>' + formatNumber(DATA.researchValues[quality][rank][mod.id]) + '</dd></div>';
+        }).join("") : '<div><dt>研发度</dt><dd>' + formatNumber(DATA.researchValues[quality][rank].none) + '</dd></div>';
+        return '<article class="machine-reference-card machine-research-card"><h4>' + rank + '阶</h4><dl>' + values + '</dl></article>';
+      }).join("");
+      return '<section class="machine-reference-group"><h3>' + title + '</h3><div class="machine-reference-grid machine-research-card-grid">' + cards + '</div></section>';
     }
-    return '<section class="panel"><h2>不同阶数与改造研发度</h2><div class="machine-reference-split"><div class="machine-table-scroll"><table class="machine-reference-table"><caption>橙色机关兽</caption><thead><tr><th>阶数</th>' + DATA.modifications.map(function (mod) { return '<th>' + mod.name + '</th>'; }).join("") + '</tr></thead><tbody>' + orangeRows + '</tbody></table></div>' +
-      '<div><div class="machine-table-scroll"><table class="machine-reference-table"><caption>紫色机关兽</caption><thead><tr><th>阶数</th><th>研发度</th></tr></thead><tbody>' + simpleRows("purple") + '</tbody></table></div>' +
-      '<div class="machine-table-scroll"><table class="machine-reference-table"><caption>蓝色机关兽</caption><thead><tr><th>阶数</th><th>研发度</th></tr></thead><tbody>' + simpleRows("blue") + '</tbody></table></div></div></div></section>';
+    return '<section class="panel"><h2>不同阶数与改造研发度</h2>' + qualityCards("orange", "橙色机关兽", true) + qualityCards("purple", "紫色机关兽", false) + qualityCards("blue", "蓝色机关兽", false) + '</section>';
   }
 
   function beastReference() {
-    return '<section class="panel"><h2>机关兽归属与研发效果</h2><div class="machine-table-scroll"><table class="machine-reference-table machine-beast-reference-table"><thead><tr><th>机关兽</th><th>流派</th><th>档次</th><th>上限</th>' + DATA.effectLevels.map(function (level) { return '<th>' + level + '级效果</th>'; }).join("") + '</tr></thead><tbody>' +
+    return '<section class="panel"><h2>机关兽归属与研发效果</h2><div class="machine-reference-grid machine-beast-reference-grid">' +
       DATA.beasts.map(function (beast) {
         var school = DATA.schools.find(function (item) { return item.id === beast.schoolId; });
-        return '<tr><th><span class="machine-name-token ' + qualityClass(beast) + '">' + escapeHtml(beast.name) + '</span></th><td>' + escapeHtml(school.name) + '</td><td>' + beast.tier + '</td><td>' + beast.maxLevel + '级</td>' + DATA.effectLevels.map(function (level) {
+        var effects = DATA.effectLevels.map(function (level) {
           var effect = beast.effects.find(function (item) { return item.level === level; });
-          return '<td>' + (effect ? escapeHtml(effect.text) : '—') + '</td>';
-        }).join("") + '</tr>';
-      }).join("") + '</tbody></table></div></section>';
+          return '<div><dt>' + level + '级效果</dt><dd>' + (effect ? escapeHtml(effect.text) : '—') + '</dd></div>';
+        }).join("");
+        return '<article class="machine-reference-card machine-beast-reference-card"><header><span class="machine-name-token ' + qualityClass(beast) + '">' + escapeHtml(beast.name) + '</span><span>' + escapeHtml(school.name) + ' · ' + beast.tier + ' · 上限' + beast.maxLevel + '级</span></header><dl class="machine-effect-reference-list">' + effects + '</dl></article>';
+      }).join("") + '</div></section>';
   }
 
   function schoolReference() {
     return DATA.schools.map(function (school) {
-      return '<section class="panel"><h2>' + escapeHtml(school.name) + '阶数效果</h2><div class="machine-table-scroll"><table class="machine-reference-table"><thead><tr><th>阶数</th><th>升阶等级要求</th><th>流派加成</th><th>阵容特效</th><th>机关兽特效</th></tr></thead><tbody>' + school.stages.map(function (stage) {
-        return '<tr><th>' + stage.stage + '阶</th><td>' + (stage.requiredTotalLevel === null ? '数据待补充' : '累计觉醒等级' + stage.requiredTotalLevel) + '</td><td>' + escapeHtml(stage.factionBonus) + '</td><td>' + escapeHtml(stage.formationEffect) + '</td><td>' + escapeHtml(stage.beastEffect) + '</td></tr>';
-      }).join("") + '</tbody></table></div></section>';
+      return '<section class="panel"><h2>' + escapeHtml(school.name) + '阶数效果</h2><div class="machine-reference-grid machine-school-stage-grid">' + school.stages.map(function (stage) {
+        return '<article class="machine-reference-card machine-school-stage-card"><header><h3>' + stage.stage + '阶</h3><span>' + (stage.requiredTotalLevel === null ? '升阶要求：数据待补充' : '累计觉醒等级' + stage.requiredTotalLevel) + '</span></header><dl><div><dt>流派加成</dt><dd>' + escapeHtml(stage.factionBonus) + '</dd></div><div><dt>阵容特效</dt><dd>' + escapeHtml(stage.formationEffect) + '</dd></div><div><dt>机关兽特效</dt><dd>' + escapeHtml(stage.beastEffect) + '</dd></div></dl></article>';
+      }).join("") + '</div></section>';
     }).join("");
   }
 

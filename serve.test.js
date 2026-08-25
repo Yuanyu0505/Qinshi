@@ -142,6 +142,8 @@ test("机关兽方案计算提供单只与目标流派阶数子页面", () => {
   assert.match(css, /\.machine-owned-inventory-grid/);
   assert.match(css, /\.machine-school-calculator-grid/);
   assert.match(css, /\.machine-school-plan-summary/);
+  assert.match(css, /\.machine-new-rank-mode\s*\{[\s\S]*?flex-wrap:\s*nowrap/);
+  assert.match(css, /\.machine-new-rank-mode label\s*\{[^}]*white-space:\s*nowrap/);
 });
 });
 

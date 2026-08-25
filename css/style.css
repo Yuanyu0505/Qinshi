@@ -1696,6 +1696,7 @@ figcaption { color: var(--muted); font-size: 13px; margin-top: 8px; }
 #partition-machine-beasts .machine-result-columns ul,
 #partition-machine-beasts .machine-unused ul { margin: 7px 0 0; padding-left: 20px; }
 #partition-machine-beasts .machine-investment-demand { color: #ff4b4b; font-weight: 800; }
+#partition-machine-beasts .machine-owned-investment { color: #4fd67b; font-weight: 800; }
 #partition-machine-beasts .machine-resource-metrics { margin-top: 9px; }
 #partition-machine-beasts .machine-no-exchange { grid-column: span 2; }
 #partition-machine-beasts .machine-no-exchange b { color: #ffb0a8; }

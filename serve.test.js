@@ -152,6 +152,8 @@ test("机关兽新增投入突出需求，资料图表使用纵向自适应卡�
   const css = fs.readFileSync(path.join(__dirname, "css", "style.css"), "utf8");
 
   assert.match(ui, /class="machine-investment-demand"/);
+  assert.match(ui, /machine-owned-investment/);
+  assert.match(ui, /itemList\(result\.selected\.ownedItems,[\s\S]*?"owned"\)/);
   assert.match(ui, /itemList\(result\.selected\.newItems,[\s\S]*?true\)/);
   assert.match(ui, /machine-threshold-grid/);
   assert.match(ui, /machine-research-card-grid/);
@@ -163,6 +165,7 @@ test("机关兽新增投入突出需求，资料图表使用纵向自适应卡�
   assert.doesNotMatch(ui, /2–5阶升阶等级要求：数据待补充/);
   assert.match(css, /#partition-machine-beasts \.machine-reference-grid\s*\{[\s\S]*?grid-template-columns:\s*repeat\(auto-fit,/);
   assert.match(css, /#partition-machine-beasts \.machine-investment-demand\s*\{[\s\S]*?color:\s*#ff4b4b;[\s\S]*?font-weight:\s*800;/);
+  assert.match(css, /#partition-machine-beasts \.machine-owned-investment\s*\{[\s\S]*?color:\s*#4fd67b;[\s\S]*?font-weight:\s*800;/);
   assert.match(css, /#partition-machine-beasts \.machine-reference-pair b\s*\{[\s\S]*?white-space:\s*nowrap;/);
 });
 

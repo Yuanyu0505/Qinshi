@@ -16,6 +16,7 @@
     calcTargetLevel: null,
     calcResult: null,
     singleInventoryPolicy: null,
+    singleNewRankMode: "zeroToSeven",
     schoolDraft: null,
     schoolResult: null
   };
@@ -236,6 +237,13 @@
       (rows ? '<div class="machine-owned-inventory-grid">' + rows + '</div>' : '<p class="muted-tip">暂无可用库存</p>') + '</section>';
   }
 
+  function newRankModeSelector(scope, selected) {
+    var name = "machine-" + scope + "-new-rank-mode";
+    return '<div class="machine-new-rank-mode"><span>新增机关兽阶数范围</span>' +
+      '<label><input type="radio" name="' + name + '" value="zero" data-new-rank-mode-scope="' + scope + '"' + (selected === "zero" ? " checked" : "") + '>仅0阶</label>' +
+      '<label><input type="radio" name="' + name + '" value="zeroToSeven" data-new-rank-mode-scope="' + scope + '"' + (selected !== "zero" ? " checked" : "") + '>0–7阶</label></div>';
+  }
+
   function resetCalculator(beastId) {
     var beast = beastById(beastId || state.calcBeastId || DATA.beasts[0].id);
     state.calcBeastId = beast.id;
@@ -264,6 +272,7 @@
       participating: participating,
       useOwnedInventory: true,
       ownedPoliciesByBeast: ownedPoliciesByBeast,
+      newRankMode: "zeroToSeven",
       allowNewHighRanks: false,
       allowNewModifications: false
     };
@@ -295,6 +304,7 @@
       '<label><span>当前机关兽碎片</span><input type="number" min="0" step="1" inputmode="numeric" value="' + state.calcDraft.fragments + '" data-calc-field="fragments"></label>' +
       '</div><div class="machine-calculator-actions"><button type="button" class="seg" data-machine-action="reload-calculator">从个人进度重新读取</button>' +
       '<button type="button" class="seg active" data-machine-action="calculate">计算最优方案</button></div>' +
+      newRankModeSelector("single", state.singleNewRankMode) +
       '<details class="machine-temporary-inventory"><summary>临时调整当前库存</summary>' + inventoryEditor(beast, state.calcDraft, "calculator") + '</details>' +
       calculatorInventorySelector(beast, state.calcDraft, state.singleInventoryPolicy, "single", true) + '</section>';
   }
@@ -330,8 +340,9 @@
       '<label><span>目标流派阶数</span><select data-school-target>' + schoolStageOptions(school, draft.targetStage) + '</select></label>' +
       '<div><span>当前累计觉醒等级</span><b>' + snapshot.totalLevel + '</b></div><div><span>距离目标</span><b>' + Math.max(0, targetTotal - snapshot.totalLevel) + '级</b></div></div>' +
       '<div class="machine-school-options"><label><input type="checkbox" data-school-option="useOwnedInventory"' + (draft.useOwnedInventory ? ' checked' : '') + '>使用已有库存</label>' +
-      '<label><input type="checkbox" data-school-option="allowNewHighRanks"' + (draft.allowNewHighRanks ? ' checked' : '') + '>允许新增8–10阶</label>' +
+      '<label><input type="checkbox" data-school-option="allowNewHighRanks"' + (draft.allowNewHighRanks ? ' checked' : '') + (draft.newRankMode === "zero" ? ' disabled' : '') + '>允许新增8–10阶</label>' +
       '<label><input type="checkbox" data-school-option="allowNewModifications"' + (draft.allowNewModifications ? ' checked' : '') + '>允许新增改造机关兽</label></div>' +
+      newRankModeSelector("school", draft.newRankMode) +
       '<div class="machine-calculator-actions"><button type="button" class="seg" data-machine-action="reload-school-calculator">从个人进度重新读取</button><button type="button" class="seg active" data-machine-action="calculate-school">计算两套最优方案</button></div>' +
       '<div class="machine-school-beast-controls">' + school.beastIds.map(function (beastId) { return renderSchoolBeastControl(beastById(beastId), draft); }).join("") + '</div></section>';
   }
@@ -554,7 +565,9 @@
         includeHighRanks: state.calcDraft.showHighRanks,
         includeMods: state.calcDraft.showMods,
         useOwnedInventory: state.singleInventoryPolicy.useOwnedInventory,
-        ownedLimits: state.singleInventoryPolicy.limits
+        ownedLimits: state.singleInventoryPolicy.limits,
+        newRankMode: state.singleNewRankMode,
+        preferOwnedOnTie: true
       });
       renderCalculatorResult(state.calcResult);
     } else if (action === "reload-school-calculator") {
@@ -573,7 +586,8 @@
         useOwnedInventory: draft.useOwnedInventory,
         ownedLimitsByBeast: limits,
         allowNewHighRanks: draft.allowNewHighRanks,
-        allowNewModifications: draft.allowNewModifications
+        allowNewModifications: draft.allowNewModifications,
+        newRankMode: draft.newRankMode
       });
       renderSchoolCalculatorResult(state.schoolResult);
     }
@@ -636,6 +650,14 @@
       renderCalculatorControls();
     } else if (target.matches("[data-school-option]")) {
       state.schoolDraft[target.dataset.schoolOption] = target.checked;
+      renderCalculatorControls();
+    } else if (target.matches("[data-new-rank-mode-scope]")) {
+      if (target.dataset.newRankModeScope === "single") {
+        state.singleNewRankMode = target.value;
+      } else {
+        state.schoolDraft.newRankMode = target.value;
+        if (target.value === "zero") state.schoolDraft.allowNewHighRanks = false;
+      }
       renderCalculatorControls();
     } else if (target.matches("[data-school-participant]")) {
       state.schoolDraft.participating[target.dataset.beastId] = target.checked;

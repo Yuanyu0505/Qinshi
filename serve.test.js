@@ -135,6 +135,10 @@ test("机关兽方案计算提供单只与目标流派阶数子页面", () => {
   assert.match(ui, /自由等级方案/);
   assert.match(ui, /效果档位方案/);
   assert.match(ui, /同时满足自由等级与效果档位优化/);
+  assert.match(ui, /仅0阶/);
+  assert.match(ui, /0–7阶/);
+  assert.match(ui, /data-new-rank-mode-scope="single"/);
+  assert.match(ui, /data-new-rank-mode-scope="school"/);
   assert.match(css, /\.machine-owned-inventory-grid/);
   assert.match(css, /\.machine-school-calculator-grid/);
   assert.match(css, /\.machine-school-plan-summary/);

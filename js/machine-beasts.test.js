@@ -159,6 +159,58 @@ test("investment optimizer: respects per-rank owned inventory limits", () => {
   assert.ok(used <= 1);
 });
 
+test("investment optimizer: prefers checked inventory before overflow when total bodies tie", () => {
+  const beast = DATA.beasts.find(item => item.name === "零号白虎");
+  const progress = CORE.normalizeBeastProgress(beast, {
+    research: 225756,
+    fragments: 0,
+    inventory: { none: { 6: 1 } }
+  }, DATA);
+  const result = CORE.calculateInvestmentPlan(DATA, beast, progress, {
+    targetLevel: 10,
+    useOwnedInventory: true,
+    ownedLimits: { none: { "6": 1 } },
+    newRankMode: "zeroToSeven",
+    preferOwnedOnTie: true
+  });
+  assert.strictEqual(result.valid, true);
+  assert.ok(result.selected.ownedItems.some(item => item.rank === 6 && item.count === 1));
+  assert.strictEqual(result.totals.investedCount, 2);
+  assert.strictEqual(result.totals.newInvestedCount, 1);
+});
+
+test("investment optimizer: new rank mode limits new beasts to zero or zero through seven", () => {
+  const beast = DATA.beasts.find(item => item.name === "零号白虎");
+  const progress = CORE.normalizeBeastProgress(beast, {}, DATA);
+  const zeroOnly = CORE.calculateInvestmentPlan(DATA, beast, progress, {
+    targetLevel: 10,
+    useOwnedInventory: false,
+    newRankMode: "zero"
+  });
+  const zeroToSeven = CORE.calculateInvestmentPlan(DATA, beast, progress, {
+    targetLevel: 10,
+    useOwnedInventory: false,
+    newRankMode: "zeroToSeven"
+  });
+  assert.ok(zeroOnly.selected.newItems.length > 0);
+  assert.ok(zeroOnly.selected.newItems.every(item => item.rank === 0));
+  assert.ok(zeroToSeven.selected.newItems.every(item => item.rank >= 0 && item.rank <= 7));
+  assert.ok(zeroToSeven.selected.newItems.some(item => item.rank > 0));
+});
+
+test("investment optimizer: builds one reusable frontier for all target levels", () => {
+  const beast = DATA.beasts.find(item => item.name === "零号白虎");
+  const progress = CORE.normalizeBeastProgress(beast, {}, DATA);
+  const results = CORE.calculateInvestmentCandidates(DATA, beast, progress, {
+    useOwnedInventory: false,
+    newRankMode: "zeroToSeven"
+  });
+  assert.ok(results.length > 1);
+  assert.deepStrictEqual(results.map(result => result.target.level),
+    Array.from({ length: beast.maxLevel }, (_, index) => index + 1));
+  assert.ok(results.every(result => result.valid));
+});
+
 test("investment optimizer: folds high ranks for display and uses actual final-item resources", () => {
   const beast = DATA.beasts.find(item => item.name === "机关炎傀");
   const progress = CORE.normalizeBeastProgress(beast, {
@@ -271,4 +323,17 @@ test("school planner: high-rank inventory uses seven-rank body equivalents", () 
   const highRankPlan = direct.find(item => item.items.some(entry => entry.source === "owned" && entry.rank === 10));
   assert.ok(highRankPlan);
   assert.strictEqual(highRankPlan.investedCount, 8);
+});
+
+test("school planner: forwards the chosen new-beast rank range", () => {
+  const school = DATA.schools.find(item => item.id === "hegemonic");
+  const beastId = school.beastIds[0];
+  const beast = DATA.beasts.find(item => item.id === beastId);
+  const candidates = PLANNER.machineBeastCandidates(DATA, beast, {}, {
+    useOwnedInventory: false,
+    newRankMode: "zero"
+  });
+  candidates.forEach(candidate => {
+    assert.ok(candidate.items.filter(item => item.source === "new").every(item => item.rank === 0));
+  });
 });

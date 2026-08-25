@@ -103,19 +103,20 @@
     var byEndLevel = {};
     byEndLevel[String(currentLevel)] = unchangedCandidate(beast, progress, currentLevel);
 
-    for (var targetLevel = currentLevel + 1; targetLevel <= beast.maxLevel; targetLevel += 1) {
-      var result = CORE.calculateInvestmentPlan(data, beast, progress, {
-        targetLevel: targetLevel,
+    var results = CORE.calculateInvestmentCandidates(data, beast, progress, {
         useOwnedInventory: config.useOwnedInventory !== false,
         ownedLimits: limits,
         includeHighRanks: hasSelectedHighRank(limits),
         includeMods: hasSelectedModification(limits),
         allowNewHighRanks: Boolean(config.allowNewHighRanks),
         allowNewModifications: Boolean(config.allowNewModifications),
+        newRankMode: config.newRankMode || "zeroToSeven",
+        maximumTargetLevel: Math.min(beast.maxLevel, currentLevel + CORE.integer(config.maximumAddedLevel, beast.maxLevel)),
         investedCountMode: "equivalent",
         preferOwnedOnTie: true
       });
-      if (!result.valid) continue;
+    results.forEach(function (result) {
+      if (!result.valid) return;
       var endLevel = result.totals.projectedLevel;
       var endResearch = progress.research + result.totals.research;
       var newInvestedCount = CORE.integer(result.totals.newInvestedCount, result.shortage.bodyEquivalent);
@@ -145,7 +146,7 @@
       };
       var key = String(endLevel);
       if (betterBeastCandidate(candidate, byEndLevel[key])) byEndLevel[key] = candidate;
-    }
+    });
 
     return Object.keys(byEndLevel).map(function (level) { return byEndLevel[level]; }).sort(function (left, right) {
       return left.endLevel - right.endLevel || left.investedCount - right.investedCount;
@@ -286,7 +287,9 @@
         useOwnedInventory: config.useOwnedInventory !== false,
         ownedLimits: config.ownedLimitsByBeast && config.ownedLimitsByBeast[beastId],
         allowNewHighRanks: config.allowNewHighRanks,
-        allowNewModifications: config.allowNewModifications
+        allowNewModifications: config.allowNewModifications,
+        newRankMode: config.newRankMode || "zeroToSeven",
+        maximumAddedLevel: target.remaining
       }));
     });
 

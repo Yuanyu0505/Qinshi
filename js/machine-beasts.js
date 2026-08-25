@@ -298,7 +298,8 @@
   }
 
   function newTypes(data, beast, options) {
-    var maximumRank = options.allowNewHighRanks ? beast.maxRank : Math.min(7, beast.maxRank);
+    var maximumRank = options.newRankMode === "zero" ? 0 :
+      (options.allowNewHighRanks ? beast.maxRank : Math.min(7, beast.maxRank));
     var modifications = beast.quality === "orange" && options.allowNewModifications ? data.modifications : [data.modifications[0]];
     var types = [];
     for (var rank = maximumRank; rank >= 0; rank -= 1) {
@@ -399,6 +400,34 @@
     };
   }
 
+  function buildInvestmentWorkspace(data, beast, progress, config, maximumTargetLevel) {
+    var maximumTargetResearch = thresholdForLevel(maximumTargetLevel, data.researchThresholds);
+    var maximumDeficit = Math.max(0, maximumTargetResearch - progress.research);
+    var purchasable = newTypes(data, beast, config);
+    if (!purchasable.length) return null;
+    var minimumResearch = Math.min.apply(null, purchasable.map(function (item) { return item.researchEach; }));
+    var maximumResearch = Math.max.apply(null, purchasable.map(function (item) { return item.researchEach; }));
+    var bestNewType = purchasable.reduce(function (best, type) {
+      return !best || type.researchEach / type.investedWeight > best.researchEach / best.investedWeight ? type : best;
+    }, null);
+    var provisionalMaximumCount = Math.ceil(maximumDeficit / minimumResearch) + 8;
+    var owned = ownedTypes(data, beast, progress, config, provisionalMaximumCount);
+    owned.forEach(function (item) { maximumResearch = Math.max(maximumResearch, item.researchEach); });
+    var limit = maximumDeficit + maximumResearch;
+    var maximumInvestedCount = Math.ceil(maximumDeficit / bestNewType.researchEach) * bestNewType.investedWeight + bestNewType.investedWeight;
+    return {
+      beastId: beast.id,
+      progressResearch: progress.research,
+      purchasable: purchasable,
+      bestNewType: bestNewType,
+      owned: owned,
+      limit: limit,
+      maximumInvestedCount: maximumInvestedCount,
+      ownedStates: buildBoundedStates(owned, maximumInvestedCount, limit, data),
+      newStateCache: {}
+    };
+  }
+
   function calculateInvestmentPlan(data, beast, rawProgress, options) {
     var config = options || {};
     var progress = normalizeBeastProgress(beast, rawProgress, data);
@@ -413,28 +442,26 @@
     var deficit = Math.max(0, targetResearch - progress.research);
     if (!deficit) return emptyPlan(data, beast, progress, currentLevel, targetLevel, targetResearch);
 
-    var purchasable = newTypes(data, beast, config);
-    var minimumResearch = Math.min.apply(null, purchasable.map(function (item) { return item.researchEach; }));
-    var maximumResearch = Math.max.apply(null, purchasable.map(function (item) { return item.researchEach; }));
-    var bestNewType = purchasable.reduce(function (best, type) {
-      return !best || type.researchEach / type.investedWeight > best.researchEach / best.investedWeight ? type : best;
-    }, null);
-    var provisionalMaximumCount = Math.ceil(deficit / minimumResearch) + 8;
-    var owned = ownedTypes(data, beast, progress, config, provisionalMaximumCount);
-    owned.forEach(function (item) { maximumResearch = Math.max(maximumResearch, item.researchEach); });
-    var limit = deficit + maximumResearch;
-    var maximumInvestedCount = Math.ceil(deficit / bestNewType.researchEach) * bestNewType.investedWeight + bestNewType.investedWeight;
-    var ownedStates = buildBoundedStates(owned, maximumInvestedCount, limit, data);
-    var newStateCache = {};
+    var workspace = config.investmentWorkspace;
+    if (!workspace || workspace.beastId !== beast.id || workspace.progressResearch !== progress.research) {
+      workspace = buildInvestmentWorkspace(data, beast, progress, config, targetLevel);
+    }
+    if (!workspace) return { valid: false, errors: ["未能生成可用的新增机关兽候选"] };
+    var purchasable = workspace.purchasable;
+    var bestNewType = workspace.bestNewType;
+    var owned = workspace.owned;
+    var limit = workspace.limit;
+    var maximumInvestedCount = Math.min(workspace.maximumInvestedCount,
+      Math.ceil(deficit / bestNewType.researchEach) * bestNewType.investedWeight + bestNewType.investedWeight);
+    var ownedStates = workspace.ownedStates;
+    var newStateCache = workspace.newStateCache;
     var best = null;
 
     for (var totalCount = 0; totalCount <= maximumInvestedCount && !best; totalCount += 1) {
       for (var ownedCount = 0; ownedCount <= totalCount; ownedCount += 1) {
         var newCount = totalCount - ownedCount;
         if (!ownedStates[ownedCount]) continue;
-        var maximumOwnedResearch = 0;
-        ownedStates[ownedCount].forEach(function (ownedState) { maximumOwnedResearch = Math.max(maximumOwnedResearch, ownedState.research); });
-        if (!newStateCache[newCount]) newStateCache[newCount] = buildExactUnlimitedStates(purchasable, newCount, Math.max(0, deficit - maximumOwnedResearch), limit, data);
+        if (!newStateCache[newCount]) newStateCache[newCount] = buildExactUnlimitedStates(purchasable, newCount, 0, limit, data);
         if (!newStateCache[newCount].length) continue;
         ownedStates[ownedCount].forEach(function (ownedState) {
           var addedState = lowerBound(newStateCache[newCount], Math.max(0, deficit - ownedState.research));
@@ -487,6 +514,24 @@
     };
   }
 
+  function calculateInvestmentCandidates(data, beast, rawProgress, options) {
+    var config = options || {};
+    var progress = normalizeBeastProgress(beast, rawProgress, data);
+    var currentLevel = levelForResearch(progress.research, data.researchThresholds, beast.maxLevel);
+    var maximumTargetLevel = Math.min(beast.maxLevel, Math.max(currentLevel,
+      integer(config.maximumTargetLevel, beast.maxLevel)));
+    var workspace = buildInvestmentWorkspace(data, beast, progress, config, maximumTargetLevel);
+    if (!workspace) return [];
+    var results = [];
+    for (var targetLevel = currentLevel + 1; targetLevel <= maximumTargetLevel; targetLevel += 1) {
+      results.push(calculateInvestmentPlan(data, beast, progress, Object.assign({}, config, {
+        targetLevel: targetLevel,
+        investmentWorkspace: workspace
+      })));
+    }
+    return results;
+  }
+
   return {
     integer: integer,
     thresholdForLevel: thresholdForLevel,
@@ -496,6 +541,7 @@
     normalizeBeastProgress: normalizeBeastProgress,
     schoolSnapshot: schoolSnapshot,
     researchFor: researchFor,
-    calculateInvestmentPlan: calculateInvestmentPlan
+    calculateInvestmentPlan: calculateInvestmentPlan,
+    calculateInvestmentCandidates: calculateInvestmentCandidates
   };
 });

@@ -239,8 +239,10 @@ test("装备属性提供同大类多装备对比工作台与响应式结果", ()
   assert.match(app, /data-compare-dimension/);
   assert.match(app, /equipment-compare-table/);
   assert.match(app, /equipment-compare-cards/);
+  assert.doesNotMatch(app, /equipment-compare-table[\s\S]*?<small>\$\{escapeHtml\(row\.item\.cat\)\} · 主属性/);
   assert.match(css, /\.equipment-compare-highest/);
   assert.match(css, /\.equipment-compare-difference/);
+  assert.match(css, /\.equipment-compare-action-head,[\s\S]*?\.equipment-compare-action\s*\{[^}]*width:\s*64px/);
   assert.match(css, /@media \(max-width: 1099px\)[\s\S]*?\.equipment-compare-table-wrap\s*\{\s*display:\s*none/);
   assert.match(css, /@media \(max-width: 1099px\)[\s\S]*?\.equipment-compare-cards\s*\{\s*display:\s*grid/);
 });

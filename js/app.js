@@ -1355,7 +1355,7 @@
     el.results.addEventListener("click", (event) => {
       const compareButton = event.target.closest("[data-compare-add]");
       if (compareButton) {
-        addEquipmentToComparison(compareButton.dataset.compareAdd);
+        toggleEquipmentComparison(compareButton.dataset.compareAdd);
         return;
       }
       const button = event.target.closest(".book-detail-toggle");
@@ -1391,14 +1391,18 @@
     return available;
   }
 
-  function addEquipmentToComparison(itemId) {
+  function toggleEquipmentComparison(itemId) {
     const item = DATA.items.find((entry) => entry.id === itemId);
-    if (!item || state.comparison.itemIds.indexOf(item.id) >= 0) return;
-    const group = EQUIP_COMPARE.groupForCategory(item.cat);
-    if (!group || (state.comparison.group && state.comparison.group !== group)) return;
-    if (!state.comparison.group) state.comparison.group = group;
-    state.comparison.itemIds.push(item.id);
-    state.comparison.expanded = true;
+    if (!item) return;
+    const next = EQUIP_COMPARE.toggleSelection(state.comparison.itemIds, state.comparison.group, item);
+    if (!next.changed) return;
+    state.comparison.itemIds = next.itemIds;
+    state.comparison.group = next.group;
+    if (next.selected) state.comparison.expanded = true;
+    if (!next.itemIds.length) {
+      state.comparison.dimensions = [];
+      state.comparison.started = false;
+    }
     reconcileComparisonDimensions();
     apply();
   }
@@ -1424,11 +1428,9 @@
   }
 
   function equipmentCompareActionHtml(item) {
-    const selected = state.comparison.itemIds.indexOf(item.id) >= 0;
-    const itemGroup = EQUIP_COMPARE.groupForCategory(item.cat);
-    const incompatible = Boolean(state.comparison.group && state.comparison.group !== itemGroup);
-    const label = selected ? "已加入" : incompatible ? "类别不一致" : "加入对比";
-    return `<button type="button" class="seg equipment-compare-add${selected ? " is-added" : ""}" data-compare-add="${escapeHtml(item.id)}"${selected || incompatible ? " disabled" : ""}>${label}</button>`;
+    const action = EQUIP_COMPARE.selectionAction(state.comparison.itemIds, state.comparison.group, item);
+    const title = action.incompatible ? ' title="仅可加入同一大类装备"' : action.selected ? ' title="再次点击取消加入"' : "";
+    return `<button type="button" class="seg equipment-compare-add${action.selected ? " is-added" : ""}" data-compare-add="${escapeHtml(item.id)}"${action.disabled ? " disabled" : ""}${title}>${action.label}</button>`;
   }
 
   function compareCellValueHtml(row, dimension) {
@@ -1451,11 +1453,11 @@
       return '<div class="equipment-compare-empty">所选装备在该档位均无属性数据</div>';
     }
     const desktop = `<div class="equipment-compare-table-wrap"><table class="equipment-compare-table"><thead><tr><th>对比维度</th>${model.rows.map((row) =>
-      `<th>${equipmentNameHtml(row.item)}<small>${escapeHtml(row.item.cat)} · 主属性：${escapeHtml(row.item.main)}</small></th>`
+      `<th>${equipmentNameHtml(row.item)}</th>`
     ).join("")}</tr></thead><tbody>${model.dimensions.map((dimension) => `<tr><th>${escapeHtml(dimension)}</th>${model.rows.map((row) =>
       `<td>${compareCellValueHtml(row, dimension)}</td>`
     ).join("")}</tr>`).join("")}</tbody></table></div>`;
-    const mobile = `<div class="equipment-compare-cards">${model.rows.map((row) => `<article class="equipment-compare-card"><header>${equipmentNameHtml(row.item)}<span>${escapeHtml(row.item.cat)} · 主属性：${escapeHtml(row.item.main)}</span></header>${row.available
+    const mobile = `<div class="equipment-compare-cards">${model.rows.map((row) => `<article class="equipment-compare-card"><header>${equipmentNameHtml(row.item)}</header>${row.available
       ? `<dl>${model.dimensions.map((dimension) => `<div><dt>${escapeHtml(dimension)}</dt><dd>${compareCellValueHtml(row, dimension)}</dd></div>`).join("")}</dl>`
       : '<div class="equipment-compare-unavailable">该档位无数据</div>'}</article>`).join("")}</div>`;
     return desktop + mobile;

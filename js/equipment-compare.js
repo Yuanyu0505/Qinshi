@@ -27,6 +27,32 @@
     return CATEGORY_GROUPS[category] || null;
   }
 
+  function selectionAction(itemIds, group, item) {
+    var selected = (itemIds || []).indexOf(item.id) >= 0;
+    var itemGroup = groupForCategory(item.cat);
+    var incompatible = !selected && Boolean(group && group !== itemGroup);
+    return {
+      selected: selected,
+      incompatible: incompatible,
+      label: selected ? "已加入" : incompatible ? "不可加" : "加入",
+      disabled: incompatible
+    };
+  }
+
+  function toggleSelection(itemIds, group, item) {
+    var ids = (itemIds || []).slice();
+    var action = selectionAction(ids, group, item);
+    if (action.incompatible) {
+      return { itemIds: ids, group: group || null, changed: false, selected: false };
+    }
+    if (action.selected) {
+      ids = ids.filter(function (id) { return id !== item.id; });
+      return { itemIds: ids, group: ids.length ? group : null, changed: true, selected: false };
+    }
+    ids.push(item.id);
+    return { itemIds: ids, group: group || groupForCategory(item.cat), changed: true, selected: true };
+  }
+
   function tokensForTier(item, tier) {
     if (!item || !tier) return null;
     if (item.bookGroup) {
@@ -122,6 +148,8 @@
   return {
     ATTRIBUTE_ORDER: ATTRIBUTE_ORDER,
     groupForCategory: groupForCategory,
+    selectionAction: selectionAction,
+    toggleSelection: toggleSelection,
     tokensForTier: tokensForTier,
     availableDimensions: availableDimensions,
     dimensionValue: dimensionValue,

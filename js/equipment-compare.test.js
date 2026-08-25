@@ -41,6 +41,38 @@ test("equipment comparison: maps normal and divine categories into four large gr
   assert.strictEqual(C.groupForCategory("神兵典籍"), "典籍");
 });
 
+test("equipment comparison: selected result remains clickable and toggles out of comparison", () => {
+  const action = C.selectionAction([weapon.id], "武器", weapon);
+  assert.deepStrictEqual(action, {
+    selected: true,
+    incompatible: false,
+    label: "已加入",
+    disabled: false
+  });
+  assert.deepStrictEqual(C.toggleSelection([weapon.id], "武器", weapon), {
+    itemIds: [],
+    group: null,
+    changed: true,
+    selected: false
+  });
+});
+
+test("equipment comparison: incompatible equipment stays disabled while compatible equipment can be added", () => {
+  const armor = { id: "a-1", cat: "防具", name: "普通防具", main: "防", tiers: {} };
+  assert.deepStrictEqual(C.selectionAction([weapon.id], "武器", armor), {
+    selected: false,
+    incompatible: true,
+    label: "不可加",
+    disabled: true
+  });
+  assert.deepStrictEqual(C.toggleSelection([weapon.id], "武器", divineWeapon), {
+    itemIds: [weapon.id, divineWeapon.id],
+    group: "武器",
+    changed: true,
+    selected: true
+  });
+});
+
 test("equipment comparison: uses the final cumulative book stage and distinguishes a missing tier", () => {
   const tokens = C.tokensForTier(book, "红金");
   assert.deepStrictEqual(tokens.map(token => [token.t, token.v]), [

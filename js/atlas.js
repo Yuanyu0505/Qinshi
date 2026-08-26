@@ -15,6 +15,29 @@
     return String(s == null ? "" : s).trim().toLowerCase();
   }
 
+  var ELEMENT_DISCIPLES = {
+    "金": ["神王道少羽", "神霸道田虎", "神赤霄刘季", "神极诣星魂", "神寒蝉吴旷", "神真刚", "神嬴政", "神紫女", "神云中君", "神伏念", "神胡姬", "神虞姬", "神白凤", "神典庆", "神季布", "神司徒万里", "神韩信", "神月神"],
+    "木": ["神兰轩紫女", "神荼蘼田蜜", "神潜蛟韩信", "神素华少司命", "神镜仙端木蓉", "神逍遥子", "神扶苏", "神韩非", "神颜路", "神燕丹", "神项羽", "神高月", "神墨鸦", "神吴旷", "神田蜜", "神英布", "神田言", "神端木蓉", "神少司命"],
+    "水": ["瑶瑶", "神鬼谷盖聂", "神凤吟弄玉", "神秋水晓梦", "神天泽", "神墨家雪女", "神水寒高渐离", "神渊虹盖聂", "神天宗晓梦", "神小黎", "神丽姬", "神湘夫人", "神张良", "神赵高", "神诺敏", "神白亦非", "神荆天明", "神田仲", "神钟离昧", "神田虎", "神刘邦", "神盖聂", "神雪女", "神高渐离"],
+    "火": ["神将威龙且", "神侠道天明", "神龙骧章邯", "神黑龙天", "神惊鲵田言", "神森罗大司命", "神红莲赤练", "神大铁锤", "神黑白玄翦", "神王翦", "神田光", "神焰灵姬", "神蒙恬", "神掩日", "神东皇太一", "神焱妃", "神龙且", "神胜七", "神朱家", "神晓梦", "神卫庄", "神大司命"],
+    "土": ["神鲨齿卫庄", "神逆天而行", "神梅三娘", "神太虚月神", "神巨阙陈胜", "神蚩魔卫庄", "神李斯", "神荆轲", "神湘君", "神李牧", "神胡亥", "神王离", "神惊鲵", "神田赐", "神章邯", "神赤练", "神星魂"]
+  };
+  var ELEMENT_BY_DISCIPLE = {};
+
+  function normalizeDiscipleName(name) {
+    return normalize(name).replace(/[\s·•・]/g, "");
+  }
+
+  Object.keys(ELEMENT_DISCIPLES).forEach(function (element) {
+    ELEMENT_DISCIPLES[element].forEach(function (name) {
+      ELEMENT_BY_DISCIPLE[normalizeDiscipleName(name)] = element;
+    });
+  });
+
+  function elementOfDisciple(name) {
+    return ELEMENT_BY_DISCIPLE[normalizeDiscipleName(name)] || "";
+  }
+
   /** 解析等级查询："N级以下" lt、"N级以上" ge、"N级" eq；否则 null */
   function parseLevelQuery(q) {
     var text = normalize(q);
@@ -392,6 +415,7 @@
 
   return {
     normalize: normalize,
+    elementOfDisciple: elementOfDisciple,
     parseLevelQuery: parseLevelQuery,
     levelOf: levelOf,
     isFavorite: isFavorite,

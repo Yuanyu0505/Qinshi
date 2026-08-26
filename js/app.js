@@ -691,6 +691,7 @@
   function atlasItemHtml(item) {
     const L = ATLAS.levelOf(item, atlasState.levels);
     const itemId = String(item.id);
+    const element = ATLAS.elementOfDisciple(item.name);
     const favorite = atlasState.favorites.includes(itemId);
     const pinned = favorite && atlasState.pins.includes(itemId);
     const plan = ATLAS.upgradePlan(item, L, atlasState.targetLevel, ATLAS_DATA.meta.upgradeStages);
@@ -722,6 +723,7 @@
       <div class="atlas-meta">
         <span>获取途径：${escapeHtml(item.acquire) || "—"}</span>
         <span>所属图鉴：${item.group ? `<span class="atlas-group">${escapeHtml(item.group)}</span>` : "—"}</span>
+        ${element ? `<span>五行属性：<span class="atlas-element" data-element="${escapeHtml(element)}">${escapeHtml(element)}</span></span>` : ""}
       </div>
       ${upgradeHtml}
       ${atlasInventoryEditorHtml(itemId, plan)}

@@ -723,7 +723,7 @@
       <div class="atlas-meta">
         <span>获取途径：${escapeHtml(item.acquire) || "—"}</span>
         <span>所属图鉴：${item.group ? `<span class="atlas-group">${escapeHtml(item.group)}</span>` : "—"}</span>
-        ${element ? `<span>五行属性：<span class="atlas-element" data-element="${escapeHtml(element)}">${escapeHtml(element)}</span></span>` : ""}
+        ${element ? `<span>五行属性：${escapeHtml(element)}</span>` : ""}
       </div>
       ${upgradeHtml}
       ${atlasInventoryEditorHtml(itemId, plan)}

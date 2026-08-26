@@ -730,21 +730,6 @@ tr.hit-row td { background: rgba(212, 175, 55, .06); }
 }
 .atlas-meta { display: flex; gap: 18px; flex-wrap: wrap; color: var(--muted); font-size: 13px; margin-bottom: 8px; }
 .atlas-group { color: var(--gold); background: rgba(212, 175, 55, .16); border: 1px solid rgba(212, 175, 55, .45); border-radius: 5px; padding: 1px 6px; font-weight: 700; }
-.atlas-element {
-  display: inline-block;
-  min-width: 1.7em;
-  padding: 1px 6px;
-  border: 1px solid currentColor;
-  border-radius: 5px;
-  font-weight: 800;
-  line-height: 1.35;
-  text-align: center;
-}
-.atlas-element[data-element="金"] { color: #ffd45c; background: rgba(255, 212, 92, .1); }
-.atlas-element[data-element="木"] { color: #55d67b; background: rgba(85, 214, 123, .1); }
-.atlas-element[data-element="水"] { color: #58baff; background: rgba(88, 186, 255, .1); }
-.atlas-element[data-element="火"] { color: #ff625a; background: rgba(255, 98, 90, .1); }
-.atlas-element[data-element="土"] { color: #d8a65e; background: rgba(216, 166, 94, .1); }
 .atlas-stage-key { color: var(--gold-dim); min-width: 52px; white-space: nowrap; }
 .atlas-upgrade-summary, .atlas-upgrade { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 10px; margin-bottom: 10px; }
 .atlas-upgrade-summary { margin-bottom: 14px; }

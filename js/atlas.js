@@ -137,16 +137,17 @@
   function detectNoteSources(notes) {
     var found = {};
     (Array.isArray(notes) ? notes : []).forEach(function (note) {
-      var text = normalize(note).replace(/\s+/g, "");
+      var text = normalize(note).replace(/\s+/g, "").replace(/／/g, "/");
       if (!text) return;
-      var hasForbidden = text.indexOf("禁地") !== -1;
-      var hasFragment = text.indexOf("碎片") !== -1;
-      if (hasForbidden) found["禁地"] = true;
-      if (hasFragment) found["碎片"] = true;
-      if (hasForbidden && hasFragment) found["碎片/禁地"] = true;
-      if (text.indexOf("主线") !== -1) found["主线"] = true;
-      if (text.indexOf("聚宝盆") !== -1) found["聚宝盆"] = true;
-      if (text.indexOf("楼兰") !== -1) found["楼兰"] = true;
+      var standaloneText = text.replace(/禁地\/碎片|碎片\/禁地/g, function () {
+        found["碎片/禁地"] = true;
+        return "";
+      });
+      if (standaloneText.indexOf("禁地") !== -1) found["禁地"] = true;
+      if (standaloneText.indexOf("碎片") !== -1) found["碎片"] = true;
+      if (standaloneText.indexOf("主线") !== -1) found["主线"] = true;
+      if (standaloneText.indexOf("聚宝盆") !== -1) found["聚宝盆"] = true;
+      if (standaloneText.indexOf("楼兰") !== -1) found["楼兰"] = true;
     });
     return NOTE_SOURCE_ORDER.filter(function (source) { return found[source]; });
   }

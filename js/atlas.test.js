@@ -285,10 +285,14 @@ test("soulInventoryStatus：所需魂魄为零时无需录入也视为达标", (
   assert.deepStrictEqual(A.soulInventoryStatus(0, null), { state: "enough", owned: null, missing: 0 });
 });
 
-test("detectNoteSources：组合来源不受书写顺序影响并保留独立关键词", () => {
+test("detectNoteSources：禁地、碎片和组合来源严格互斥并保留其他独立关键词", () => {
   assert.deepStrictEqual(
     A.detectNoteSources(["碎片/禁地", "禁地 / 碎片，楼兰", "主线聚宝盆"]),
-    ["禁地", "碎片", "碎片/禁地", "主线", "聚宝盆", "楼兰"]
+    ["碎片/禁地", "主线", "聚宝盆", "楼兰"]
+  );
+  assert.deepStrictEqual(
+    A.detectNoteSources(["禁地", "碎片", "碎片／禁地", "禁地／碎片"]),
+    ["禁地", "碎片", "碎片/禁地"]
   );
 });
 
@@ -333,7 +337,7 @@ test("deriveAtlasState：严格区分装备齐全、未齐全和未录入", () =
   });
   assert.strictEqual(owned.equipmentState, "owned");
   assert.strictEqual(missing.equipmentState, "missing");
-  assert.deepStrictEqual(missing.noteSources, ["禁地", "碎片", "碎片/禁地"]);
+  assert.deepStrictEqual(missing.noteSources, ["碎片/禁地"]);
   assert.strictEqual(unset.equipmentState, "unset");
 });
 

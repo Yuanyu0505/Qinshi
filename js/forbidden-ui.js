@@ -165,7 +165,7 @@
         var label = config.rowLabels && config.rowLabels[index]
           ? '<span class="forbidden-reward-row-label">' + escapeHtml(config.rowLabels[index]) + "</span>"
           : "";
-        return '<div class="forbidden-reward-row">' + label + '<div class="forbidden-token-list">' + (renderTokens(row) || '<span class="muted-tip">—</span>') + "</div></div>";
+        return '<div class="forbidden-reward-row' + (label ? " has-label" : "") + '">' + label + '<div class="forbidden-token-list">' + (renderTokens(row) || '<span class="muted-tip">—</span>') + "</div></div>";
       }).join("") + "</div>";
     }
     return '<section class="forbidden-reward-section' + (isMatch ? " is-match" : "") + '">' +

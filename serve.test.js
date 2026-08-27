@@ -543,7 +543,7 @@ test("兵法包含详情与综合计算子分区，并保存计算配置", async
   });
 });
 
-test("PWA 1.0.12 缓存并发布今日新增的桌面与移动资源", async () => {
+test("PWA 1.0.13 缓存并发布图鉴五行与禁地的桌面、手机和平板资源", async () => {
   const pagesWorkflow = fs.readFileSync(path.join(__dirname, ".github", "workflows", "pages.yml"), "utf8");
   assert.match(pagesWorkflow, /js\/tactics\.js/);
   assert.match(pagesWorkflow, /js\/tactics-ui\.js/);
@@ -553,14 +553,19 @@ test("PWA 1.0.12 缓存并发布今日新增的桌面与移动资源", async () 
   assert.match(pagesWorkflow, /js\/machine-beast-school-planner\.js/);
   assert.match(pagesWorkflow, /js\/machine-beasts-ui\.js/);
   assert.match(pagesWorkflow, /js\/equipment-compare\.js/);
+  assert.match(pagesWorkflow, /js\/forbidden\.js/);
+  assert.match(pagesWorkflow, /js\/forbidden-ui\.js/);
   await withServer(async (port) => {
-    const [index, worker, pwa, css, schoolPlanner, equipmentCompare] = await Promise.all([
+    const [index, worker, pwa, css, schoolPlanner, equipmentCompare, forbiddenData, forbiddenCore, forbiddenUi] = await Promise.all([
       get(port, "/"),
       get(port, "/service-worker.js"),
       get(port, "/js/pwa.js"),
       get(port, "/css/style.css"),
       get(port, "/js/machine-beast-school-planner.js"),
-      get(port, "/js/equipment-compare.js")
+      get(port, "/js/equipment-compare.js"),
+      get(port, "/data/forbidden.js"),
+      get(port, "/js/forbidden.js"),
+      get(port, "/js/forbidden-ui.js")
     ]);
     assert.strictEqual(index.status, 200);
     assert.strictEqual(worker.status, 200);
@@ -568,9 +573,12 @@ test("PWA 1.0.12 缓存并发布今日新增的桌面与移动资源", async () 
     assert.strictEqual(css.status, 200);
     assert.strictEqual(schoolPlanner.status, 200);
     assert.strictEqual(equipmentCompare.status, 200);
-    assert.match(index.body, /id="pwa-version">1\.0\.12<\/strong>/);
-    assert.match(worker.body, /CACHE_NAME\s*=\s*CACHE_PREFIX\s*\+\s*"1\.0\.12"/);
-    assert.match(pwa.body, /APP_VERSION\s*=\s*"1\.0\.12"/);
+    assert.strictEqual(forbiddenData.status, 200);
+    assert.strictEqual(forbiddenCore.status, 200);
+    assert.strictEqual(forbiddenUi.status, 200);
+    assert.match(index.body, /id="pwa-version">1\.0\.13<\/strong>/);
+    assert.match(worker.body, /CACHE_NAME\s*=\s*CACHE_PREFIX\s*\+\s*"1\.0\.13"/);
+    assert.match(pwa.body, /APP_VERSION\s*=\s*"1\.0\.13"/);
     assert.match(worker.body, /"\.\/data\/tactics\.js"/);
     assert.match(worker.body, /"\.\/js\/tactics\.js"/);
     assert.match(worker.body, /"\.\/js\/tactics-ui\.js"/);
@@ -582,6 +590,9 @@ test("PWA 1.0.12 缓存并发布今日新增的桌面与移动资源", async () 
     assert.match(worker.body, /"\.\/js\/machine-beast-school-planner\.js"/);
     assert.match(worker.body, /"\.\/js\/machine-beasts-ui\.js"/);
     assert.match(worker.body, /"\.\/js\/equipment-compare\.js"/);
+    assert.match(worker.body, /"\.\/data\/forbidden\.js"/);
+    assert.match(worker.body, /"\.\/js\/forbidden\.js"/);
+    assert.match(worker.body, /"\.\/js\/forbidden-ui\.js"/);
     assert.match(css.body, /@media \(max-width: 1024px\)[\s\S]*?\.atlas-favorite-toggle\s*\{[\s\S]*?width:\s*44px;[\s\S]*?height:\s*44px;/);
     assert.match(css.body, /#partition-tactics \.tactics-selector \.seg,[\s\S]*?#partition-equipment \.book-detail-toggle\s*\{[\s\S]*?min-height:\s*44px;/);
     assert.match(css.body, /#partition-tactics \.tactics-form-grid select,[\s\S]*?#partition-tactics \.tactics-form-grid input\s*\{[\s\S]*?font-size:\s*16px;/);
@@ -590,5 +601,8 @@ test("PWA 1.0.12 缓存并发布今日新增的桌面与移动资源", async () 
     assert.match(css.body, /\.book-detail-popover-body\s*\{[\s\S]*?max-height:\s*calc\(100dvh - 104px\)[\s\S]*?overscroll-behavior:\s*contain/);
     assert.match(css.body, /#partition-drops \.drop-default-orange-table\s*\{[\s\S]*?min-width:\s*0/);
     assert.match(css.body, /#partition-machine-beasts \.machine-reference-grid\s*\{[\s\S]*?grid-template-columns:\s*repeat\(auto-fit,/);
+    assert.match(css.body, /@media \(max-width: 1024px\)[\s\S]*?\.atlas-meta\s*\{[\s\S]*?overflow-wrap:\s*anywhere/);
+    assert.match(css.body, /@media \(max-width: 1024px\)[\s\S]*?#partition-forbidden \.forbidden-token\s*\{[\s\S]*?min-height:\s*44px/);
+    assert.match(css.body, /@media \(max-width: 767px\),[\s\S]*?#partition-forbidden \.forbidden-reward-row\.has-label\s*\{[\s\S]*?grid-template-columns:\s*38px minmax\(0, 1fr\)/);
   });
 });

@@ -6,6 +6,7 @@
   var data = null;
   var core = null;
   var elements = {};
+  var tokenPointer = null;
   var state = {
     query: "",
     size: "",
@@ -18,10 +19,10 @@
   var SECTION_CONFIG = [
     { key: "contribution5", title: "贡献奖励 · 5W" },
     { key: "contribution10", title: "贡献奖励 · 10W" },
-    { key: "rank1", title: "排名奖励 · 第1名" },
-    { key: "rank2", title: "排名奖励 · 第2名" },
-    { key: "rank3to10", title: "排名奖励 · 第3—10名" },
-    { key: "equipmentFragments", title: "装备碎片" },
+    { key: "rank1", rowsKey: "rank1Rows", title: "排名奖励 · 第1名（每行任选一项）" },
+    { key: "rank2", rowsKey: "rank2Rows", title: "排名奖励 · 第2名（每行任选一项）" },
+    { key: "rank3to10", rowsKey: "rank3to10Rows", title: "排名奖励 · 第3—10名（每行任选一项）" },
+    { key: "equipmentFragments", rowsKey: "equipmentFragmentRows", rowLabels: ["武器", "防具", "首饰"], title: "装备碎片" },
     { key: "machineBeasts", title: "机关兽" },
     { key: "nuclei", title: "神核" },
     { key: "orangeDrops", title: "刷出橙装" }
@@ -112,15 +113,23 @@
     return list.indexOf(name) !== -1;
   }
 
+  function tokenMatches(name, displayName) {
+    var query = core.normalize(state.query);
+    if (!query) return false;
+    return core.normalize(name).indexOf(query) !== -1 || core.normalize(displayName).indexOf(query) !== -1;
+  }
+
   function tokenHtml(occurrence, type, name, displayName) {
     var isSelected = selected(occurrence, type, name);
-    return '<button type="button" class="forbidden-token' + (isSelected ? " is-selected" : "") + '"' +
+    var shownName = displayName == null ? name : displayName;
+    var isSearchHit = tokenMatches(name, shownName);
+    return '<span role="button" tabindex="0" class="forbidden-token' + (isSelected ? " is-selected" : "") + (isSearchHit ? " is-search-hit" : "") + '"' +
       ' data-forbidden-need-type="' + escapeHtml(type) + '"' +
       ' data-forbidden-need-name="' + escapeHtml(name) + '"' +
       ' data-forbidden-event="' + escapeHtml(occurrence.id) + '"' +
       ' aria-pressed="' + String(isSelected) + '">' +
       (isSelected ? '<span class="forbidden-checkmark" aria-hidden="true">✓</span>' : "") +
-      highlight(displayName == null ? name : displayName) + "</button>";
+      highlight(shownName) + "</span>";
   }
 
   function requirementSummaryHtml(occurrence) {
@@ -139,13 +148,29 @@
   function rewardSectionHtml(occurrence, resolved, config, matches) {
     var items = resolved[config.key] || [];
     var isMatch = matches.indexOf(config.key) !== -1;
+    function renderTokens(row) {
+      return (row || []).map(function (name) {
+        var displayName = itemDisplayName(config.key, name);
+        return tokenHtml(occurrence, "item", displayName, displayName);
+      }).join("");
+    }
     var tokens = items.map(function (name) {
       var displayName = itemDisplayName(config.key, name);
       return tokenHtml(occurrence, "item", displayName, displayName);
     }).join("");
+    var body = '<div class="forbidden-token-list">' + (tokens || '<span class="muted-tip">—</span>') + "</div>";
+    if (config.rowsKey) {
+      var rows = resolved[config.rowsKey] || [];
+      body = '<div class="forbidden-reward-rows">' + rows.map(function (row, index) {
+        var label = config.rowLabels && config.rowLabels[index]
+          ? '<span class="forbidden-reward-row-label">' + escapeHtml(config.rowLabels[index]) + "</span>"
+          : "";
+        return '<div class="forbidden-reward-row">' + label + '<div class="forbidden-token-list">' + (renderTokens(row) || '<span class="muted-tip">—</span>') + "</div></div>";
+      }).join("") + "</div>";
+    }
     return '<section class="forbidden-reward-section' + (isMatch ? " is-match" : "") + '">' +
       '<div class="forbidden-subtitle">' + escapeHtml(config.title) + "</div>" +
-      '<div class="forbidden-token-list">' + (tokens || '<span class="muted-tip">—</span>') + "</div></section>";
+      body + "</section>";
   }
 
   function rewardMatch(matches) {
@@ -283,10 +308,18 @@
       state.showSchedule = !state.showSchedule;
       render();
     });
+    elements.content.addEventListener("pointerdown", function (event) {
+      var token = event.target.closest("[data-forbidden-need-type]");
+      tokenPointer = token ? { token: token, x: event.clientX, y: event.clientY } : null;
+    });
     elements.content.addEventListener("click", function (event) {
-      var needButton = event.target.closest("[data-forbidden-need-type]");
-      if (needButton) {
-        toggleNeed(needButton.dataset.forbiddenEvent, needButton.dataset.forbiddenNeedType, needButton.dataset.forbiddenNeedName);
+      var needToken = event.target.closest("[data-forbidden-need-type]");
+      if (needToken) {
+        var selectionText = window.getSelection ? window.getSelection().toString() : "";
+        var start = tokenPointer && tokenPointer.token === needToken ? tokenPointer : null;
+        tokenPointer = null;
+        if (!core.shouldToggleToken(start, { x: event.clientX, y: event.clientY }, selectionText)) return;
+        toggleNeed(needToken.dataset.forbiddenEvent, needToken.dataset.forbiddenNeedType, needToken.dataset.forbiddenNeedName);
         return;
       }
       var expandButton = event.target.closest("[data-forbidden-expand]");
@@ -295,6 +328,13 @@
         state.expanded[id] = expandButton.getAttribute("aria-expanded") !== "true";
         render();
       }
+    });
+    elements.content.addEventListener("keydown", function (event) {
+      if (event.key !== "Enter" && event.key !== " ") return;
+      var token = event.target.closest("[data-forbidden-need-type]");
+      if (!token) return;
+      event.preventDefault();
+      toggleNeed(token.dataset.forbiddenEvent, token.dataset.forbiddenNeedType, token.dataset.forbiddenNeedName);
     });
   }
 

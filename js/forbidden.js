@@ -37,6 +37,14 @@
     });
   }
 
+  function uniqueRows(rows) {
+    return (rows || []).map(function (row) { return unique(row); });
+  }
+
+  function flattenRows(rows) {
+    return unique([].concat.apply([], rows || []));
+  }
+
   function canonicalBeasts(items) {
     return unique((items || []).map(function (item) { return BEAST_NAMES[item] || item; }));
   }
@@ -45,17 +53,34 @@
     var source = data && data.templates ? data.templates[occurrence.templateId] : null;
     if (!source) return null;
     var rows = source.rankingRows || [[], [], []];
+    var rank1Rows = uniqueRows([rows[0] || [], rows[1] || []]);
+    var rank2Rows = uniqueRows([rows[1] || [], rows[2] || []]);
+    var rank3to10Rows = uniqueRows([rows[2] || []]);
+    var equipmentFragmentRows = uniqueRows(source.equipmentFragmentRows || [source.equipmentFragments || []]);
     return {
       contribution5: unique(source.contribution && source.contribution["5W"]),
       contribution10: unique(source.contribution && source.contribution["10W"]),
-      rank1: unique((rows[0] || []).concat(rows[1] || [])),
-      rank2: unique((rows[1] || []).concat(rows[2] || [])),
-      rank3to10: unique(rows[2] || []),
-      equipmentFragments: unique(source.equipmentFragments),
+      rank1: flattenRows(rank1Rows),
+      rank2: flattenRows(rank2Rows),
+      rank3to10: flattenRows(rank3to10Rows),
+      rank1Rows: rank1Rows,
+      rank2Rows: rank2Rows,
+      rank3to10Rows: rank3to10Rows,
+      equipmentFragments: flattenRows(equipmentFragmentRows),
+      equipmentFragmentRows: equipmentFragmentRows,
       machineBeasts: canonicalBeasts(source.machineBeasts),
       nuclei: canonicalBeasts(source.nuclei),
       orangeDrops: unique(source.orangeDrops)
     };
+  }
+
+  function shouldToggleToken(start, end, selectionText) {
+    if (String(selectionText || "").trim()) return false;
+    if (!start || !end) return true;
+    var dx = Number(end.x) - Number(start.x);
+    var dy = Number(end.y) - Number(start.y);
+    if (!Number.isFinite(dx) || !Number.isFinite(dy)) return true;
+    return Math.sqrt(dx * dx + dy * dy) <= 6;
   }
 
   function parseLocalDate(value) {
@@ -203,6 +228,7 @@
     normalize: normalize,
     unique: unique,
     resolveTemplate: resolveTemplate,
+    shouldToggleToken: shouldToggleToken,
     statusFor: statusFor,
     compareByStatus: compareByStatus,
     getDefaultView: getDefaultView,

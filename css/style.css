@@ -1996,7 +1996,10 @@ figcaption { color: var(--muted); font-size: 13px; margin-top: 8px; }
   border-left: 3px solid var(--gold-dim);
   border-radius: 10px;
 }
-#partition-forbidden .forbidden-card.is-search-match { box-shadow: inset 0 0 0 1px rgba(212, 175, 55, .42); }
+#partition-forbidden .forbidden-card.is-search-match {
+  border-color: #ff4a43;
+  box-shadow: inset 0 0 0 1px rgba(255, 74, 67, .42), 0 0 16px rgba(217, 39, 34, .12);
+}
 #partition-forbidden .forbidden-match-reason {
   display: flex;
   align-items: baseline;
@@ -2046,7 +2049,11 @@ figcaption { color: var(--muted); font-size: 13px; margin-top: 8px; }
   border: 1px solid var(--line);
   border-radius: 8px;
 }
-#partition-forbidden .forbidden-disciples.is-match { border-color: var(--gold-dim); }
+#partition-forbidden .forbidden-disciples.is-match {
+  background: rgba(174, 23, 20, .18);
+  border-color: #ff4a43;
+  box-shadow: inset 0 0 0 1px rgba(255, 74, 67, .22);
+}
 #partition-forbidden .forbidden-needs { border-left: 3px solid #2d9b55; }
 #partition-forbidden .forbidden-subtitle { margin-bottom: 7px; color: var(--gold-dim); font-size: 13px; font-weight: 800; }
 #partition-forbidden .forbidden-token-list { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; min-width: 0; }
@@ -2066,7 +2073,10 @@ figcaption { color: var(--muted); font-size: 13px; margin-top: 8px; }
   line-height: 1.25;
   text-align: left;
   overflow-wrap: anywhere;
-  cursor: pointer;
+  cursor: text;
+  user-select: text;
+  -webkit-user-select: text;
+  touch-action: manipulation;
 }
 #partition-forbidden .forbidden-token:hover { filter: brightness(1.08); }
 #partition-forbidden .forbidden-token.is-selected {
@@ -2075,6 +2085,18 @@ figcaption { color: var(--muted); font-size: 13px; margin-top: 8px; }
   border-color: #42d77d;
   font-weight: 800;
   box-shadow: 0 0 0 1px rgba(66, 215, 125, .18);
+}
+#partition-forbidden .forbidden-token.is-search-hit {
+  color: #fff;
+  background: #d82424;
+  border-color: #ff5a50;
+  font-weight: 900;
+  box-shadow: 0 0 0 2px rgba(255, 77, 69, .2), 0 0 13px rgba(216, 36, 36, .42);
+}
+#partition-forbidden .forbidden-token.is-selected.is-search-hit {
+  background: #237f42;
+  border-color: #ff4a43;
+  box-shadow: 0 0 0 3px rgba(255, 74, 67, .7), 0 0 14px rgba(255, 74, 67, .35);
 }
 #partition-forbidden .forbidden-checkmark { color: #d8ffe4; font-weight: 900; }
 #partition-forbidden .forbidden-need-line { display: grid; grid-template-columns: 112px minmax(0, 1fr); align-items: start; gap: 8px; }
@@ -2094,9 +2116,29 @@ figcaption { color: var(--muted); font-size: 13px; margin-top: 8px; }
   border-radius: 8px;
 }
 #partition-forbidden .forbidden-reward-section.is-match {
-  border-color: var(--gold);
-  box-shadow: inset 0 0 0 1px rgba(212, 175, 55, .28);
+  background: rgba(174, 23, 20, .16);
+  border-color: #ff4a43;
+  box-shadow: inset 0 0 0 1px rgba(255, 74, 67, .28), 0 0 13px rgba(216, 36, 36, .14);
 }
+#partition-forbidden .forbidden-reward-rows { display: grid; gap: 0; }
+#partition-forbidden .forbidden-reward-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  min-width: 0;
+  padding: 6px 0;
+}
+#partition-forbidden .forbidden-reward-row:first-child { padding-top: 0; }
+#partition-forbidden .forbidden-reward-row:last-child { padding-bottom: 0; }
+#partition-forbidden .forbidden-reward-row + .forbidden-reward-row { border-top: 1px dashed rgba(212, 175, 55, .16); }
+#partition-forbidden .forbidden-reward-row-label {
+  flex: 0 0 32px;
+  padding-top: 7px;
+  color: var(--gold-dim);
+  font-size: 12px;
+  font-weight: 800;
+}
+#partition-forbidden .forbidden-reward-row .forbidden-token-list { flex: 1 1 auto; }
 #partition-forbidden mark.forbidden-match {
   color: #fff;
   background: #b93630;
@@ -2104,6 +2146,7 @@ figcaption { color: var(--muted); font-size: 13px; margin-top: 8px; }
   padding: 0 2px;
   font-weight: 800;
 }
+#partition-forbidden .forbidden-token:focus-visible,
 #partition-forbidden button:focus-visible,
 #partition-forbidden input:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
 

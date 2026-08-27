@@ -2233,6 +2233,13 @@ figcaption { color: var(--muted); font-size: 13px; margin-top: 8px; }
   .app-shell { grid-template-columns: 128px minmax(0, 1fr); gap: 16px; }
   .tabs { padding-right: 8px; }
   .tab { padding: 9px 10px; font-size: 14px; }
+  .tab.active {
+    width: calc(100% + 8px);
+    min-height: 60px;
+    padding: 15px 7% 15px 31%;
+    background-size: 100% 60px;
+    text-align: center;
+  }
   #partition-equipment .equipment-table-groups,
   #partition-equipment .equipment-result-group { min-width: 0; }
   #partition-equipment .equipment-result-group .table-wrap {
@@ -2513,6 +2520,18 @@ figcaption { color: var(--muted); font-size: 13px; margin-top: 8px; }
     text-align: center;
     font-size: 12px;
     line-height: 1.25;
+  }
+  .tab.active {
+    width: 100%;
+    min-height: 46px;
+    padding: 5px 2px;
+    border-color: var(--line);
+    border-radius: 7px;
+    background: var(--bg2);
+    color: var(--gold);
+    text-align: center;
+    text-shadow: none;
+    white-space: normal;
   }
   .tab.mobile-secondary { display: none; }
   .mobile-more-toggle { display: flex; }

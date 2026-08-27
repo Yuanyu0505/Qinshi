@@ -1,7 +1,7 @@
 "use strict";
 
 const CACHE_PREFIX = "qinshi-site-";
-const CACHE_NAME = CACHE_PREFIX + "1.0.14";
+const CACHE_NAME = CACHE_PREFIX + "1.0.15";
 const PRECACHE_URLS = [
   "./",
   "./index.html",
@@ -40,6 +40,7 @@ const PRECACHE_URLS = [
   "./icons/app-icon-192.png",
   "./icons/app-icon-512.png",
   "./icons/apple-touch-icon.png",
+  "./images/nav-sword.png",
   "./images/楼兰/楼兰 (1).png",
   "./images/楼兰/楼兰 (2).png",
   "./images/楼兰/楼兰 (3).png",

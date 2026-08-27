@@ -543,7 +543,7 @@ test("兵法包含详情与综合计算子分区，并保存计算配置", async
   });
 });
 
-test("PWA 1.0.13 缓存并发布图鉴五行与禁地的桌面、手机和平板资源", async () => {
+test("PWA 1.0.14 发布图鉴备注来源严格筛选及现有手机和平板资源", async () => {
   const pagesWorkflow = fs.readFileSync(path.join(__dirname, ".github", "workflows", "pages.yml"), "utf8");
   assert.match(pagesWorkflow, /js\/tactics\.js/);
   assert.match(pagesWorkflow, /js\/tactics-ui\.js/);
@@ -577,8 +577,8 @@ test("PWA 1.0.13 缓存并发布图鉴五行与禁地的桌面、手机和平板
     assert.strictEqual(forbiddenCore.status, 200);
     assert.strictEqual(forbiddenUi.status, 200);
     assert.match(index.body, /id="pwa-version">1\.0\.13<\/strong>/);
-    assert.match(worker.body, /CACHE_NAME\s*=\s*CACHE_PREFIX\s*\+\s*"1\.0\.13"/);
-    assert.match(pwa.body, /APP_VERSION\s*=\s*"1\.0\.13"/);
+    assert.match(worker.body, /CACHE_NAME\s*=\s*CACHE_PREFIX\s*\+\s*"1\.0\.14"/);
+    assert.match(pwa.body, /APP_VERSION\s*=\s*"1\.0\.14"/);
     assert.match(worker.body, /"\.\/data\/tactics\.js"/);
     assert.match(worker.body, /"\.\/js\/tactics\.js"/);
     assert.match(worker.body, /"\.\/js\/tactics-ui\.js"/);

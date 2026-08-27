@@ -146,6 +146,7 @@ $python = 'C:\Users\pghyl\.cache\codex-runtimes\codex-primary-runtime\dependenci
 
 - `service-worker.js` 的缓存名格式为 `qinshi-site-<版本号>`；每次发布静态资源变更时必须同步提升该版本号。
 - `js/pwa.js` 中的 `APP_VERSION` 必须与 Service Worker 缓存版本一致。
+- `1.0.14` 图鉴装备备注来源筛选改为严格互斥：单独“禁地”“碎片”不再包含组合来源，“碎片/禁地”仅匹配两种组合书写顺序。
 - `1.0.13` 新增图鉴弟子五行属性和禁地完整分区；禁地数据、核心与界面脚本纳入离线预缓存和 GitHub Pages 构建清单，并补齐手机/平板的单列奖励、触控、复制与搜索高亮布局。
 - `1.0.12` 汇总发布 2026-08-25 的图鉴库存筛选与置顶、机关兽流派计算、装备多维对比、锻造选择器及装备属性展示更新；补齐手机/平板响应式布局，并将 `js/machine-beast-school-planner.js`、`js/equipment-compare.js` 纳入离线预缓存和 GitHub Pages 构建清单。
 - `1.0.11` 新增机关兽分区，将个人进度、最优方案计算、资料图表和手机/平板响应式界面纳入离线预缓存与 GitHub Pages 发布清单。

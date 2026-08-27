@@ -176,7 +176,16 @@ test("机关兽三个页面提供搜索、流派切换、命中高亮和移动�
 
   assert.match(ui, /searchBar\("progress"/);
   assert.match(html, /id="machine-beast-calculator-search"/);
+  assert.match(html, /id="machine-beast-progress-search"/);
+  assert.match(html, /id="machine-beast-progress-content"/);
+  assert.match(html, /id="machine-beast-reference-search"/);
+  assert.match(html, /id="machine-beast-reference-content"/);
   assert.match(ui, /calculatorSearch\.innerHTML\s*=\s*searchBar\("calculator"/);
+  assert.match(ui, /progressSearch\.innerHTML\s*=\s*searchBar\("progress"/);
+  assert.match(ui, /referenceSearch\.innerHTML\s*=\s*searchBar\("reference"/);
+  assert.match(ui, /compositionstart/);
+  assert.match(ui, /compositionend/);
+  assert.match(ui, /event\.isComposing/);
   assert.match(ui, /searchBar\("reference"/);
   assert.match(ui, /schoolSwitcher\("progress"/);
   assert.match(ui, /schoolSwitcher\("reference-beasts"/);

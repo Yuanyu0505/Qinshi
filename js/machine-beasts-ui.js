@@ -22,7 +22,8 @@
     progressSchoolId: "hegemonic",
     referenceBeastSchoolId: "hegemonic",
     referenceStageSchoolId: "hegemonic",
-    searches: { progress: "", calculator: "", reference: "" }
+    searches: { progress: "", calculator: "", reference: "" },
+    composingSearch: { progress: false, calculator: false, reference: false }
   };
   var el = {};
 
@@ -76,14 +77,6 @@
       return '<button type="button" class="seg' + (school.id === selectedId ? ' active' : '') + '" data-machine-school-scope="' + scope +
         '" data-school-id="' + school.id + '">' + escapeHtml(school.name) + '</button>';
     }).join("") + '</div>';
-  }
-
-  function restoreSearchFocus(container, scope) {
-    var input = container && container.querySelector('[data-machine-search="' + scope + '"]');
-    if (!input) return;
-    input.focus();
-    var end = input.value.length;
-    if (input.setSelectionRange) input.setSelectionRange(end, end);
   }
 
   function getProgress(beast) {
@@ -231,8 +224,7 @@
     var cards = visibleIds.length
       ? visibleIds.map(function (id) { return beastCard(beastById(id), Boolean(query)); }).join("")
       : '<p class="machine-search-empty">当前流派没有符合条件的机关兽</p>';
-    el.progress.innerHTML = searchBar("progress", "搜索名称、品质、流派或研发效果") +
-      schoolSwitcher("progress", school.id) +
+    el.progressContent.innerHTML = schoolSwitcher("progress", school.id) +
       '<section class="machine-school panel">' +
       '<div class="machine-school-head"><div><h2>' + escapeHtml(school.name) + '</h2><span>当前流派累计觉醒等级</span><strong>' + snapshot.totalLevel + '</strong></div>' +
       '<div class="machine-stage-one"><b>' + stageCopy + '</b><span>' + progressCopy + '</span><small>各阶累计觉醒等级要求：45／90／135／180／225</small></div></div>' +
@@ -528,7 +520,7 @@
   }
 
   function renderReference() {
-    el.reference.innerHTML = searchBar("reference", "搜索名称、品质、流派或研发效果") + beastReference() + schoolReference() + thresholdReference() + researchReference();
+    el.referenceContent.innerHTML = beastReference() + schoolReference() + thresholdReference() + researchReference();
   }
 
   function setMode(mode) {
@@ -538,7 +530,7 @@
     el.calculator.hidden = mode !== "calculator";
     el.reference.hidden = mode !== "reference";
     if (mode === "calculator") renderCalculatorControls();
-    if (mode === "reference" && !el.reference.innerHTML) renderReference();
+    if (mode === "reference" && !el.referenceContent.innerHTML) renderReference();
   }
 
   function updateInventory(draft, target) {
@@ -571,6 +563,31 @@
         resetSchoolCalculator(matches[0].schoolId);
       }
     }
+  }
+
+  function renderSearchResults(scope) {
+    if (scope === "progress") renderProgress();
+    else if (scope === "calculator") renderCalculatorControls();
+    else if (scope === "reference") renderReference();
+  }
+
+  function applySearchInput(scope, value) {
+    if (!Object.prototype.hasOwnProperty.call(state.searches, scope) || state.searches[scope] === value) return;
+    state.searches[scope] = value;
+    applySearchContext(scope);
+    renderSearchResults(scope);
+  }
+
+  function handleSearchCompositionStart(event) {
+    var scope = event.target && event.target.dataset ? event.target.dataset.machineSearch : "";
+    if (scope && Object.prototype.hasOwnProperty.call(state.composingSearch, scope)) state.composingSearch[scope] = true;
+  }
+
+  function handleSearchCompositionEnd(event) {
+    var scope = event.target && event.target.dataset ? event.target.dataset.machineSearch : "";
+    if (!scope || !Object.prototype.hasOwnProperty.call(state.composingSearch, scope)) return;
+    state.composingSearch[scope] = false;
+    applySearchInput(scope, event.target.value);
   }
 
   function handleProgressClick(event) {
@@ -613,10 +630,8 @@
 
   function handleProgressInput(event) {
     if (event.target.matches('[data-machine-search="progress"]')) {
-      state.searches.progress = event.target.value;
-      applySearchContext("progress");
-      renderProgress();
-      restoreSearchFocus(el.progress, "progress");
+      if (event.isComposing || state.composingSearch.progress) return;
+      applySearchInput("progress", event.target.value);
       return;
     }
     if (!state.editDraft) return;
@@ -687,10 +702,8 @@
   function handleCalculatorInput(event) {
     var target = event.target;
     if (target.matches('[data-machine-search="calculator"]')) {
-      state.searches.calculator = target.value;
-      applySearchContext("calculator");
-      renderCalculatorControls();
-      restoreSearchFocus(el.calculatorSearch, "calculator");
+      if (event.isComposing || state.composingSearch.calculator) return;
+      applySearchInput("calculator", target.value);
       return;
     }
     if (target.matches("[data-calc-field]")) state.calcDraft[target.dataset.calcField] = CORE.integer(target.value);
@@ -778,10 +791,8 @@
 
   function handleReferenceInput(event) {
     if (!event.target.matches('[data-machine-search="reference"]')) return;
-    state.searches.reference = event.target.value;
-    applySearchContext("reference");
-    renderReference();
-    restoreSearchFocus(el.reference, "reference");
+    if (event.isComposing || state.composingSearch.reference) return;
+    applySearchInput("reference", event.target.value);
   }
 
   function validDependencies() {
@@ -795,12 +806,16 @@
     el.modes = document.getElementById("machine-beast-modes");
     el.error = document.getElementById("machine-beast-error");
     el.progress = document.getElementById("machine-beast-progress");
+    el.progressSearch = document.getElementById("machine-beast-progress-search");
+    el.progressContent = document.getElementById("machine-beast-progress-content");
     el.calculator = document.getElementById("machine-beast-calculator");
     el.calculatorModes = document.getElementById("machine-calculator-modes");
     el.calculatorSearch = document.getElementById("machine-beast-calculator-search");
     el.calculatorResult = document.getElementById("machine-beast-calculator-result");
     el.calculatorControls = document.getElementById("machine-beast-calculator-controls");
     el.reference = document.getElementById("machine-beast-reference");
+    el.referenceSearch = document.getElementById("machine-beast-reference-search");
+    el.referenceContent = document.getElementById("machine-beast-reference-content");
     if (!validDependencies()) {
       showError("机关兽数据加载失败，请确认 data/machine-beasts.js、js/machine-beasts.js 与 js/machine-beast-school-planner.js 存在。");
       return;
@@ -808,7 +823,9 @@
     loadProgress();
     resetCalculator(DATA.beasts[0].id);
     resetSchoolCalculator(DATA.schools[0].id);
+    el.progressSearch.innerHTML = searchBar("progress", "搜索名称、品质、流派或研发效果");
     el.calculatorSearch.innerHTML = searchBar("calculator", "搜索名称、品质、流派或研发效果");
+    el.referenceSearch.innerHTML = searchBar("reference", "搜索名称、品质、流派或研发效果");
     renderProgress();
     renderCalculatorControls();
     el.modes.addEventListener("click", function (event) {
@@ -823,6 +840,10 @@
     el.calculator.addEventListener("change", handleCalculatorChange);
     el.reference.addEventListener("click", handleReferenceClick);
     el.reference.addEventListener("input", handleReferenceInput);
+    [el.progress, el.calculator, el.reference].forEach(function (container) {
+      container.addEventListener("compositionstart", handleSearchCompositionStart);
+      container.addEventListener("compositionend", handleSearchCompositionEnd);
+    });
     setMode("progress");
   }
 

@@ -28,6 +28,7 @@
     atlas: "图鉴",
     drops: "关卡掉落",
     equipment: "装备属性",
+    forbidden: "禁地",
     forging: "橙装锻造",
     inscription: "铭文",
     "machine-beasts": "机关兽",
@@ -155,6 +156,7 @@
     initProgress();
     initAtlas();
     initQuiz();
+    if (window.FORBIDDEN_UI) window.FORBIDDEN_UI.init();
     if (window.FORMATIONS_UI) window.FORMATIONS_UI.init();
     if (!DATA || !Q || !EQUIP_COMPARE) {
       el.error.hidden = false;
@@ -171,13 +173,14 @@
     const mobileMoreToggle = document.getElementById("mobile-more-toggle");
     const mobileMoreLayer = document.getElementById("mobile-more-layer");
     const mobileMoreClose = document.getElementById("mobile-more-close");
-    const secondaryPartitions = ["inscription", "machine-beasts", "tactics", "formations", "loulan", "quiz", "settings"];
+    const secondaryPartitions = ["forbidden", "inscription", "machine-beasts", "tactics", "formations", "loulan", "quiz", "settings"];
     const parts = {
       equipment: document.getElementById("partition-equipment"),
       loulan: document.getElementById("partition-loulan"),
       forging: document.getElementById("partition-forging"),
       drops: document.getElementById("partition-drops"),
       atlas: document.getElementById("partition-atlas"),
+      forbidden: document.getElementById("partition-forbidden"),
       quiz: document.getElementById("partition-quiz"),
       inscription: document.getElementById("partition-inscription"),
       "machine-beasts": document.getElementById("partition-machine-beasts"),

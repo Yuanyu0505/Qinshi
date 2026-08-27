@@ -76,15 +76,15 @@ header.top {
   .tabs { overflow: visible; }
   .tab.active {
     width: calc(100% + 8px);
-    min-height: 54px;
-    padding: 12px 7% 12px 31%;
+    min-height: 60px;
+    padding: 15px 7% 15px 31%;
     border-color: transparent;
     border-radius: 0;
     background-color: transparent;
     background-image: url("../images/nav-sword.png");
     background-repeat: no-repeat;
     background-position: center;
-    background-size: 100% auto;
+    background-size: 100% 60px;
     color: #f0b92f;
     text-align: center;
     text-shadow: 0 1px 2px rgba(0, 0, 0, .95), 0 0 3px #000;
@@ -92,8 +92,8 @@ header.top {
   }
 }
 @media (min-width: 1025px) {
-  header.top { margin-left: 234px; }
-  .app-shell { grid-template-columns: 210px minmax(0, 1fr); }
+  header.top { margin-left: 254px; }
+  .app-shell { grid-template-columns: 230px minmax(0, 1fr); }
   .tabs { gap: 10px; }
   .tab {
     min-height: 50px;
@@ -103,8 +103,9 @@ header.top {
   }
   .tab.active {
     width: calc(100% + 12px);
-    min-height: 68px;
-    padding: 16px 8% 16px 32%;
+    min-height: 78px;
+    padding: 20px 8% 20px 32%;
+    background-size: 100% 78px;
   }
 }
 .summary-card {

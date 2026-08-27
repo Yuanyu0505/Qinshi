@@ -1700,6 +1700,28 @@ figcaption { color: var(--muted); font-size: 13px; margin-top: 8px; }
 
 /* 机关兽 */
 #partition-machine-beasts .machine-beast-modes { margin-bottom: 14px; }
+#partition-machine-beasts .machine-search-bar {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 9px;
+  margin: 0 0 10px;
+  padding: 10px 12px;
+  color: var(--gold-dim);
+  background: var(--bg1);
+  border: 1px solid var(--line);
+  border-radius: 9px;
+}
+#partition-machine-beasts .machine-search-bar input { width: 100%; min-width: 0; box-sizing: border-box; }
+#partition-machine-beasts .machine-school-switcher { display: inline-flex; margin: 0 0 10px; }
+#partition-machine-beasts .machine-search-match {
+  border-color: #ff4b4b !important;
+  box-shadow: inset 4px 0 0 #ff4b4b, 0 0 0 1px rgba(255, 75, 75, .42);
+}
+#partition-machine-beasts .machine-search-match .machine-beast-head strong,
+#partition-machine-beasts .machine-search-match .machine-name-token,
+#partition-machine-beasts .machine-search-match > header strong { color: #ff5750; }
+#partition-machine-beasts .machine-search-empty { grid-column: 1 / -1; margin: 0; padding: 18px; color: var(--muted); text-align: center; }
 #partition-machine-beasts h2,
 #partition-machine-beasts h3 { margin: 0; }
 #partition-machine-beasts .machine-school { padding: 14px; }
@@ -2275,6 +2297,9 @@ figcaption { color: var(--muted); font-size: 13px; margin-top: 8px; }
   #partition-machine-beasts button,
   #partition-machine-beasts select,
   #partition-machine-beasts input { min-height: 44px; touch-action: manipulation; }
+  #partition-machine-beasts .machine-search-bar { width: 100%; box-sizing: border-box; }
+  #partition-machine-beasts .machine-school-switcher { display: flex; width: 100%; }
+  #partition-machine-beasts .machine-school-switcher .seg { flex: 1; }
   #partition-forbidden .seg,
   #partition-forbidden button,
   #partition-forbidden input { min-height: 44px; touch-action: manipulation; }
@@ -2614,6 +2639,9 @@ figcaption { color: var(--muted); font-size: 13px; margin-top: 8px; }
   #partition-formations .formation-section-head { align-items: flex-start; }
   #partition-machine-beasts .machine-beast-modes { display: flex; width: 100%; }
   #partition-machine-beasts .machine-beast-modes .seg { flex: 1; padding-left: 7px; padding-right: 7px; }
+  #partition-machine-beasts .machine-search-bar { grid-template-columns: 1fr; gap: 5px; padding: 9px; }
+  #partition-machine-beasts .machine-school-switcher { gap: 5px; }
+  #partition-machine-beasts .machine-school-switcher .seg { min-width: 0; padding-left: 6px; padding-right: 6px; }
   #partition-machine-beasts .machine-school { padding: 10px; }
   #partition-machine-beasts .machine-school-head,
   #partition-machine-beasts .machine-effect-grid,

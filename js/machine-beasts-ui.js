@@ -18,7 +18,11 @@
     singleInventoryPolicy: null,
     singleNewRankMode: "zeroToSeven",
     schoolDraft: null,
-    schoolResult: null
+    schoolResult: null,
+    progressSchoolId: "hegemonic",
+    referenceBeastSchoolId: "hegemonic",
+    referenceStageSchoolId: "hegemonic",
+    searches: { progress: "", calculator: "", reference: "" }
   };
   var el = {};
 
@@ -47,6 +51,39 @@
 
   function qualityClass(beast) {
     return "machine-quality-" + beast.quality;
+  }
+
+  function schoolById(id) {
+    return DATA.schools.find(function (school) { return school.id === id; }) || DATA.schools[0];
+  }
+
+  function searchMatches(scope) {
+    return CORE.searchBeasts(DATA, state.searches[scope] || "");
+  }
+
+  function isSearchMatch(beast, scope) {
+    if (!state.searches[scope]) return false;
+    return searchMatches(scope).some(function (item) { return item.id === beast.id; });
+  }
+
+  function searchBar(scope, placeholder) {
+    return '<label class="machine-search-bar"><span>搜索机关兽</span><input type="search" autocomplete="off" data-machine-search="' + scope + '" value="' +
+      escapeHtml(state.searches[scope]) + '" placeholder="' + escapeHtml(placeholder) + '"></label>';
+  }
+
+  function schoolSwitcher(scope, selectedId) {
+    return '<div class="segs machine-school-switcher" aria-label="切换机关术流派">' + DATA.schools.map(function (school) {
+      return '<button type="button" class="seg' + (school.id === selectedId ? ' active' : '') + '" data-machine-school-scope="' + scope +
+        '" data-school-id="' + school.id + '">' + escapeHtml(school.name) + '</button>';
+    }).join("") + '</div>';
+  }
+
+  function restoreSearchFocus(container, scope) {
+    var input = container && container.querySelector('[data-machine-search="' + scope + '"]');
+    if (!input) return;
+    input.focus();
+    var end = input.value.length;
+    if (input.setSelectionRange) input.setSelectionRange(end, end);
   }
 
   function getProgress(beast) {
@@ -165,12 +202,12 @@
       '<button type="button" class="seg" data-machine-action="cancel-progress">取消</button></div></div>';
   }
 
-  function beastCard(beast) {
+  function beastCard(beast, matched) {
     var progress = getProgress(beast);
     var level = CORE.levelForResearch(progress.research, DATA.researchThresholds, beast.maxLevel);
     var active = CORE.activeBeastEffect(beast, level);
     var editing = state.editingId === beast.id;
-    return '<article class="machine-beast-card ' + qualityClass(beast) + '">' +
+    return '<article class="machine-beast-card ' + qualityClass(beast) + (matched ? ' machine-search-match' : '') + '">' +
       '<div class="machine-beast-head"><div><span class="machine-quality-badge">' + escapeHtml(beast.tier) + '</span><strong>' + escapeHtml(beast.name) + '</strong></div>' +
       (editing ? "" : '<button type="button" class="seg" data-machine-action="edit-progress" data-beast-id="' + beast.id + '">编辑</button>') + '</div>' +
       (editing ? beastEditor(beast, state.editDraft) :
@@ -184,17 +221,23 @@
   function renderProgress() {
     var progressMap = {};
     DATA.beasts.forEach(function (beast) { progressMap[beast.id] = getProgress(beast); });
-    el.progress.innerHTML = DATA.schools.map(function (school) {
-      var snapshot = CORE.schoolSnapshot(school, progressMap, DATA);
-      var stageCopy = snapshot.currentStage ? snapshot.currentStage + "阶已达成" : "尚未达成1阶";
-      var progressCopy = snapshot.progressStage + "阶进度：" + snapshot.progressCurrent + "/" + snapshot.progressTarget +
-        (snapshot.progressRemaining ? "，还差" + snapshot.progressRemaining : "");
-      return '<section class="machine-school panel">' +
-        '<div class="machine-school-head"><div><h2>' + escapeHtml(school.name) + '</h2><span>当前流派累计觉醒等级</span><strong>' + snapshot.totalLevel + '</strong></div>' +
-        '<div class="machine-stage-one"><b>' + stageCopy + '</b><span>' + progressCopy + '</span><small>各阶累计觉醒等级要求：45／90／135／180／225</small></div></div>' +
-        '<div class="machine-effect-grid">' + effectBlock("当前生效", snapshot.currentEffects, "尚未达成1阶") + effectBlock("下一阶预览", snapshot.nextStage, "已达到当前最高阶") + '</div>' +
-        '<div class="machine-beast-list">' + school.beastIds.map(function (id) { return beastCard(beastById(id)); }).join("") + '</div></section>';
-    }).join("");
+    var school = schoolById(state.progressSchoolId);
+    var snapshot = CORE.schoolSnapshot(school, progressMap, DATA);
+    var stageCopy = snapshot.currentStage ? snapshot.currentStage + "阶已达成" : "尚未达成1阶";
+    var progressCopy = snapshot.progressStage + "阶进度：" + snapshot.progressCurrent + "/" + snapshot.progressTarget +
+      (snapshot.progressRemaining ? "，还差" + snapshot.progressRemaining : "");
+    var query = state.searches.progress;
+    var visibleIds = query ? school.beastIds.filter(function (id) { return isSearchMatch(beastById(id), "progress"); }) : school.beastIds;
+    var cards = visibleIds.length
+      ? visibleIds.map(function (id) { return beastCard(beastById(id), Boolean(query)); }).join("")
+      : '<p class="machine-search-empty">当前流派没有符合条件的机关兽</p>';
+    el.progress.innerHTML = searchBar("progress", "搜索名称、品质、流派或研发效果") +
+      schoolSwitcher("progress", school.id) +
+      '<section class="machine-school panel">' +
+      '<div class="machine-school-head"><div><h2>' + escapeHtml(school.name) + '</h2><span>当前流派累计觉醒等级</span><strong>' + snapshot.totalLevel + '</strong></div>' +
+      '<div class="machine-stage-one"><b>' + stageCopy + '</b><span>' + progressCopy + '</span><small>各阶累计觉醒等级要求：45／90／135／180／225</small></div></div>' +
+      '<div class="machine-effect-grid">' + effectBlock("当前生效", snapshot.currentEffects, "尚未达成1阶") + effectBlock("下一阶预览", snapshot.nextStage, "已达到当前最高阶") + '</div>' +
+      '<div class="machine-beast-list">' + cards + '</div></section>';
   }
 
   function inventoryPolicy(progress) {
@@ -291,7 +334,7 @@
     if (!state.calcDraft) resetCalculator();
     var beast = beastById(state.calcBeastId);
     var currentLevel = CORE.levelForResearch(state.calcDraft.research, DATA.researchThresholds, beast.maxLevel);
-    el.calculatorControls.innerHTML = '<section class="panel machine-calculator-panel"><div class="machine-calculator-top">' +
+    el.calculatorControls.innerHTML = '<section class="panel machine-calculator-panel' + (isSearchMatch(beast, "calculator") ? ' machine-search-match' : '') + '"><div class="machine-calculator-top">' +
       '<label><span>选择机关兽</span><select data-calc-beast>' + DATA.schools.map(function (school) {
         return '<optgroup label="' + escapeHtml(school.name) + '">' + school.beastIds.map(function (id) {
           var item = beastById(id);
@@ -315,12 +358,12 @@
     }).join("");
   }
 
-  function renderSchoolBeastControl(beast, draft) {
+  function renderSchoolBeastControl(beast, draft, matched) {
     var progress = draft.progressByBeast[beast.id];
       var policy = Object.assign({}, draft.ownedPoliciesByBeast[beast.id], { useOwnedInventory: draft.useOwnedInventory });
     var level = CORE.levelForResearch(progress.research, DATA.researchThresholds, beast.maxLevel);
     var participating = draft.participating[beast.id];
-    return '<article class="machine-school-beast-control ' + (participating ? '' : 'is-excluded') + '">' +
+    return '<article class="machine-school-beast-control ' + (participating ? '' : 'is-excluded') + (matched ? ' machine-search-match' : '') + '">' +
       '<header><div><span class="machine-quality-badge ' + qualityClass(beast) + '">' + escapeHtml(beast.tier) + '</span><strong>' + escapeHtml(beast.name) + '</strong></div>' +
       '<label><input type="checkbox" data-school-participant data-beast-id="' + beast.id + '"' + (participating ? ' checked' : '') + '>参与后续培养</label></header>' +
       '<div class="machine-school-beast-fields"><label><span>当前累计研发度</span><input type="number" min="0" step="1" value="' + progress.research + '" data-school-field="research" data-beast-id="' + beast.id + '"></label>' +
@@ -335,6 +378,10 @@
     var school = DATA.schools.find(function (item) { return item.id === draft.schoolId; });
     var snapshot = CORE.schoolSnapshot(school, draft.progressByBeast, DATA);
     var targetTotal = school.stages[draft.targetStage - 1].requiredTotalLevel;
+    var calculatorQuery = state.searches.calculator;
+    var orderedBeastIds = school.beastIds.slice().sort(function (left, right) {
+      return Number(isSearchMatch(beastById(right), "calculator")) - Number(isSearchMatch(beastById(left), "calculator"));
+    });
     el.calculatorControls.innerHTML = '<section class="panel machine-school-calculator"><div class="machine-school-calculator-grid">' +
       '<label><span>机关术流派</span><select data-school-calc-school>' + DATA.schools.map(function (item) { return '<option value="' + item.id + '"' + (item.id === school.id ? ' selected' : '') + '>' + escapeHtml(item.name) + '</option>'; }).join("") + '</select></label>' +
       '<label><span>目标流派阶数</span><select data-school-target>' + schoolStageOptions(school, draft.targetStage) + '</select></label>' +
@@ -344,7 +391,10 @@
       '<label><input type="checkbox" data-school-option="allowNewModifications"' + (draft.allowNewModifications ? ' checked' : '') + '>允许新增改造机关兽</label></div>' +
       newRankModeSelector("school", draft.newRankMode) +
       '<div class="machine-calculator-actions"><button type="button" class="seg" data-machine-action="reload-school-calculator">从个人进度重新读取</button><button type="button" class="seg active" data-machine-action="calculate-school">计算两套最优方案</button></div>' +
-      '<div class="machine-school-beast-controls">' + school.beastIds.map(function (beastId) { return renderSchoolBeastControl(beastById(beastId), draft); }).join("") + '</div></section>';
+      '<div class="machine-school-beast-controls">' + orderedBeastIds.map(function (beastId) {
+        var beast = beastById(beastId);
+        return renderSchoolBeastControl(beast, draft, Boolean(calculatorQuery) && isSearchMatch(beast, "calculator"));
+      }).join("") + '</div></section>';
   }
 
   function renderCalculatorControls() {
@@ -453,29 +503,32 @@
   }
 
   function beastReference() {
-    var groups = DATA.schools.map(function (school) {
-      var cards = DATA.beasts.filter(function (beast) { return beast.schoolId === school.id; }).map(function (beast) {
+    var school = schoolById(state.referenceBeastSchoolId);
+    var query = state.searches.reference;
+    var beasts = DATA.beasts.filter(function (beast) {
+      return beast.schoolId === school.id && (!query || isSearchMatch(beast, "reference"));
+    });
+    var cards = beasts.map(function (beast) {
         var effects = DATA.effectLevels.map(function (level) {
           var effect = beast.effects.find(function (item) { return item.level === level; });
           return '<div><dt>' + level + '级效果</dt><dd>' + (effect ? escapeHtml(effect.text) : '—') + '</dd></div>';
         }).join("");
-        return '<article class="machine-reference-card machine-beast-reference-card"><header><span class="machine-name-token ' + qualityClass(beast) + '">' + escapeHtml(beast.name) + '</span><span>' + escapeHtml(school.name) + ' · ' + beast.tier + ' · 上限' + beast.maxLevel + '级</span></header><dl class="machine-effect-reference-list">' + effects + '</dl></article>';
+        return '<article class="machine-reference-card machine-beast-reference-card' + (query ? ' machine-search-match' : '') + '"><header><span class="machine-name-token ' + qualityClass(beast) + '">' + escapeHtml(beast.name) + '</span><span>' + escapeHtml(school.name) + ' · ' + beast.tier + ' · 上限' + beast.maxLevel + '级</span></header><dl class="machine-effect-reference-list">' + effects + '</dl></article>';
       }).join("");
-      return '<section class="machine-reference-group machine-beast-school-group"><h3>' + escapeHtml(school.name) + '</h3><div class="machine-reference-grid machine-beast-reference-grid">' + cards + '</div></section>';
-    }).join("");
-    return '<section class="panel"><h2>机关兽归属与研发效果</h2>' + groups + '</section>';
+    return '<section class="panel"><h2>机关兽归属与研发效果</h2>' + schoolSwitcher("reference-beasts", school.id) +
+      '<div class="machine-reference-grid machine-beast-reference-grid">' + (cards || '<p class="machine-search-empty">当前流派没有符合条件的机关兽</p>') + '</div></section>';
   }
 
   function schoolReference() {
-    return DATA.schools.map(function (school) {
-      return '<section class="panel"><h2>' + escapeHtml(school.name) + '阶数效果</h2><div class="machine-reference-grid machine-school-stage-grid">' + school.stages.map(function (stage) {
+    var school = schoolById(state.referenceStageSchoolId);
+    return '<section class="panel"><h2>霸道／非攻机关术阶数效果研发</h2>' + schoolSwitcher("reference-stages", school.id) +
+      '<div class="machine-reference-grid machine-school-stage-grid">' + school.stages.map(function (stage) {
         return '<article class="machine-reference-card machine-school-stage-card"><header><h3>' + stage.stage + '阶</h3><span>' + (stage.requiredTotalLevel === null ? '升阶要求：数据待补充' : '累计觉醒等级' + stage.requiredTotalLevel) + '</span></header><dl><div><dt>流派加成</dt><dd>' + escapeHtml(stage.factionBonus) + '</dd></div><div><dt>阵容特效</dt><dd>' + escapeHtml(stage.formationEffect) + '</dd></div><div><dt>机关兽特效</dt><dd>' + escapeHtml(stage.beastEffect) + '</dd></div></dl></article>';
       }).join("") + '</div></section>';
-    }).join("");
   }
 
   function renderReference() {
-    el.reference.innerHTML = thresholdReference() + researchReference() + beastReference() + schoolReference();
+    el.reference.innerHTML = searchBar("reference", "搜索名称、品质、流派或研发效果") + beastReference() + schoolReference() + thresholdReference() + researchReference();
   }
 
   function setMode(mode) {
@@ -497,7 +550,36 @@
     else delete draft.inventory[modificationId][rank];
   }
 
+  function schoolHasMatch(schoolId, matches) {
+    return matches.some(function (beast) { return beast.schoolId === schoolId; });
+  }
+
+  function applySearchContext(scope) {
+    var query = state.searches[scope];
+    if (!query) return;
+    var matches = searchMatches(scope);
+    if (!matches.length) return;
+    if (scope === "progress") {
+      if (!schoolHasMatch(state.progressSchoolId, matches)) state.progressSchoolId = matches[0].schoolId;
+    } else if (scope === "reference") {
+      if (!schoolHasMatch(state.referenceBeastSchoolId, matches)) state.referenceBeastSchoolId = matches[0].schoolId;
+      if (!schoolHasMatch(state.referenceStageSchoolId, matches)) state.referenceStageSchoolId = matches[0].schoolId;
+    } else if (scope === "calculator") {
+      if (state.calculatorMode === "single") {
+        if (!matches.some(function (beast) { return beast.id === state.calcBeastId; })) resetCalculator(matches[0].id);
+      } else if (!schoolHasMatch(state.schoolDraft.schoolId, matches)) {
+        resetSchoolCalculator(matches[0].schoolId);
+      }
+    }
+  }
+
   function handleProgressClick(event) {
+    var schoolButton = event.target.closest('[data-machine-school-scope="progress"]');
+    if (schoolButton) {
+      state.progressSchoolId = schoolButton.dataset.schoolId;
+      renderProgress();
+      return;
+    }
     var button = event.target.closest("[data-machine-action]");
     if (!button) return;
     var action = button.dataset.machineAction;
@@ -530,6 +612,13 @@
   }
 
   function handleProgressInput(event) {
+    if (event.target.matches('[data-machine-search="progress"]')) {
+      state.searches.progress = event.target.value;
+      applySearchContext("progress");
+      renderProgress();
+      restoreSearchFocus(el.progress, "progress");
+      return;
+    }
     if (!state.editDraft) return;
     if (event.target.matches("[data-edit-field]")) state.editDraft[event.target.dataset.editField] = CORE.integer(event.target.value);
     if (event.target.matches("[data-edit-inventory]")) updateInventory(state.editDraft, event.target);
@@ -549,6 +638,7 @@
         button.classList.toggle("active", button === modeButton);
       });
       el.calculatorResult.hidden = true;
+      applySearchContext("calculator");
       renderCalculatorControls();
       return;
     }
@@ -596,6 +686,13 @@
 
   function handleCalculatorInput(event) {
     var target = event.target;
+    if (target.matches('[data-machine-search="calculator"]')) {
+      state.searches.calculator = target.value;
+      applySearchContext("calculator");
+      renderCalculatorControls();
+      restoreSearchFocus(el.calculatorSearch, "calculator");
+      return;
+    }
     if (target.matches("[data-calc-field]")) state.calcDraft[target.dataset.calcField] = CORE.integer(target.value);
     if (target.matches("[data-calc-inventory]")) {
       var oldSingle = CORE.integer((state.calcDraft.inventory[target.dataset.mod] || {})[target.dataset.rank]);
@@ -671,8 +768,24 @@
     }
   }
 
+  function handleReferenceClick(event) {
+    var button = event.target.closest("[data-machine-school-scope]");
+    if (!button) return;
+    if (button.dataset.machineSchoolScope === "reference-beasts") state.referenceBeastSchoolId = button.dataset.schoolId;
+    if (button.dataset.machineSchoolScope === "reference-stages") state.referenceStageSchoolId = button.dataset.schoolId;
+    renderReference();
+  }
+
+  function handleReferenceInput(event) {
+    if (!event.target.matches('[data-machine-search="reference"]')) return;
+    state.searches.reference = event.target.value;
+    applySearchContext("reference");
+    renderReference();
+    restoreSearchFocus(el.reference, "reference");
+  }
+
   function validDependencies() {
-    return DATA && CORE && PLANNER && Array.isArray(DATA.beasts) && typeof CORE.calculateInvestmentPlan === "function" &&
+    return DATA && CORE && PLANNER && Array.isArray(DATA.beasts) && typeof CORE.searchBeasts === "function" && typeof CORE.calculateInvestmentPlan === "function" &&
       typeof PLANNER.calculateSchoolPlans === "function" && typeof PLANNER.defaultTargetStage === "function";
   }
 
@@ -684,6 +797,7 @@
     el.progress = document.getElementById("machine-beast-progress");
     el.calculator = document.getElementById("machine-beast-calculator");
     el.calculatorModes = document.getElementById("machine-calculator-modes");
+    el.calculatorSearch = document.getElementById("machine-beast-calculator-search");
     el.calculatorResult = document.getElementById("machine-beast-calculator-result");
     el.calculatorControls = document.getElementById("machine-beast-calculator-controls");
     el.reference = document.getElementById("machine-beast-reference");
@@ -694,6 +808,7 @@
     loadProgress();
     resetCalculator(DATA.beasts[0].id);
     resetSchoolCalculator(DATA.schools[0].id);
+    el.calculatorSearch.innerHTML = searchBar("calculator", "搜索名称、品质、流派或研发效果");
     renderProgress();
     renderCalculatorControls();
     el.modes.addEventListener("click", function (event) {
@@ -706,6 +821,8 @@
     el.calculator.addEventListener("click", handleCalculatorClick);
     el.calculator.addEventListener("input", handleCalculatorInput);
     el.calculator.addEventListener("change", handleCalculatorChange);
+    el.reference.addEventListener("click", handleReferenceClick);
+    el.reference.addEventListener("input", handleReferenceInput);
     setMode("progress");
   }
 

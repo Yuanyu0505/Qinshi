@@ -42,6 +42,23 @@
     return active;
   }
 
+  function normalizeSearch(value) {
+    return String(value == null ? "" : value).trim().toLowerCase().replace(/[\s·•・]/g, "");
+  }
+
+  function searchBeasts(data, query) {
+    var keyword = normalizeSearch(query);
+    if (!keyword) return data.beasts.slice();
+    var schools = {};
+    data.schools.forEach(function (school) { schools[school.id] = school.name; });
+    return data.beasts.filter(function (beast) {
+      var effectText = (beast.effects || []).map(function (effect) { return effect.text; }).join(" ");
+      var searchable = [beast.name, beast.tier, schools[beast.schoolId] || "", effectText]
+        .map(normalizeSearch).join(" ");
+      return searchable.indexOf(keyword) !== -1;
+    });
+  }
+
   function emptyInventory(data) {
     var inventory = {};
     data.modifications.forEach(function (modification) { inventory[modification.id] = {}; });
@@ -538,6 +555,7 @@
     levelForResearch: levelForResearch,
     nextEffectLevel: nextEffectLevel,
     activeBeastEffect: activeBeastEffect,
+    searchBeasts: searchBeasts,
     normalizeBeastProgress: normalizeBeastProgress,
     schoolSnapshot: schoolSnapshot,
     researchFor: researchFor,

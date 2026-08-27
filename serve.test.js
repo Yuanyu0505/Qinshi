@@ -169,6 +169,25 @@ test("机关兽新增投入突出需求，资料图表使用纵向自适应卡�
   assert.match(css, /#partition-machine-beasts \.machine-reference-pair b\s*\{[\s\S]*?white-space:\s*nowrap;/);
 });
 
+test("机关兽三个页面提供搜索、流派切换、命中高亮和移动端自适应布局", () => {
+  const html = fs.readFileSync(path.join(__dirname, "index.html"), "utf8");
+  const ui = fs.readFileSync(path.join(__dirname, "js", "machine-beasts-ui.js"), "utf8");
+  const css = fs.readFileSync(path.join(__dirname, "css", "style.css"), "utf8");
+
+  assert.match(ui, /searchBar\("progress"/);
+  assert.match(html, /id="machine-beast-calculator-search"/);
+  assert.match(ui, /calculatorSearch\.innerHTML\s*=\s*searchBar\("calculator"/);
+  assert.match(ui, /searchBar\("reference"/);
+  assert.match(ui, /schoolSwitcher\("progress"/);
+  assert.match(ui, /schoolSwitcher\("reference-beasts"/);
+  assert.match(ui, /schoolSwitcher\("reference-stages"/);
+  assert.match(ui, /machine-search-match/);
+  assert.match(ui, /renderReference\(\)[\s\S]*?beastReference\(\)\s*\+\s*schoolReference\(\)\s*\+\s*thresholdReference\(\)\s*\+\s*researchReference\(\)/);
+  assert.match(css, /#partition-machine-beasts \.machine-search-bar/);
+  assert.match(css, /#partition-machine-beasts \.machine-search-match/);
+  assert.match(css, /@media \(max-width: 1024px\)[\s\S]*?#partition-machine-beasts \.machine-search-bar/);
+});
+
 test("全端导航使用确认后的十个分区顺序", async () => {
   await withServer(async (port) => {
     const page = await get(port, "/");

@@ -21,6 +21,23 @@ test("machine beast data: detailed names, schools and stage effects stay complet
   });
 });
 
+test("searchBeasts: matches name, tier, school and research effects without changing source order", () => {
+  assert.deepStrictEqual(
+    CORE.searchBeasts(DATA, "白虎").map(item => item.id),
+    ["mechanical-white-tiger", "zero-white-tiger"]
+  );
+  assert.deepStrictEqual(
+    CORE.searchBeasts(DATA, "斩杀").map(item => item.id),
+    ["war-demon"]
+  );
+  assert.ok(CORE.searchBeasts(DATA, "橙五").every(item => item.tier === "橙五"));
+  assert.deepStrictEqual(
+    CORE.searchBeasts(DATA, "霸道机关术").map(item => item.id),
+    DATA.schools.find(item => item.id === "hegemonic").beastIds
+  );
+  assert.deepStrictEqual(CORE.searchBeasts(DATA, ""), DATA.beasts);
+});
+
 test("machine beast data: quality limits and corrected orange-five records", () => {
   const byName = Object.fromEntries(DATA.beasts.map(item => [item.name, item]));
   assert.deepStrictEqual(

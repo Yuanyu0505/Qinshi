@@ -403,11 +403,11 @@ header.top {
 }
 .ins-rank-stars.orange .ins-rank-star {
   color: #ff9f43;
-  -webkit-text-stroke: 2.2px #8b3f0c;
+  -webkit-text-stroke: 4px #8b3f0c;
 }
 .ins-rank-stars.purple .ins-rank-star {
   color: #b65de2;
-  -webkit-text-stroke: 2.2px #48135f;
+  -webkit-text-stroke: 4px #48135f;
 }
 .ins-main-preview b,
 .ins-main-line b { color: var(--gold); }

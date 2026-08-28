@@ -3743,76 +3743,40 @@ body {
   background-size: auto, auto, 10px 100%;
 }
 
-.panel::before,
-.panel::after {
-  content: "";
-  display: block;
-  position: absolute;
-  left: -1px;
-  z-index: 5;
-  width: calc(100% + 2px);
-  height: 30px;
-  pointer-events: none;
-  opacity: .95;
-}
-
 .panel::before {
-  top: -1px;
-  background:
-    linear-gradient(90deg, #a47b35 0 30px, transparent 30px) top left / 30px 1px no-repeat,
-    linear-gradient(#a47b35 0 30px, transparent 30px) top left / 1px 30px no-repeat,
-    linear-gradient(90deg, #8c652a 0 18px, transparent 18px) top 6px left 6px / 18px 1px no-repeat,
-    linear-gradient(#8c652a 0 18px, transparent 18px) top 6px left 6px / 1px 18px no-repeat,
-    linear-gradient(90deg, #6d4c20 0 8px, transparent 8px) top 12px left 12px / 8px 1px no-repeat,
-    linear-gradient(#6d4c20 0 8px, transparent 8px) top 12px left 12px / 1px 8px no-repeat,
-
-    linear-gradient(270deg, #a47b35 0 30px, transparent 30px) top right / 30px 1px no-repeat,
-    linear-gradient(#a47b35 0 30px, transparent 30px) top right / 1px 30px no-repeat,
-    linear-gradient(270deg, #8c652a 0 18px, transparent 18px) top 6px right 6px / 18px 1px no-repeat,
-    linear-gradient(#8c652a 0 18px, transparent 18px) top 6px right 6px / 1px 18px no-repeat,
-    linear-gradient(270deg, #6d4c20 0 8px, transparent 8px) top 12px right 12px / 8px 1px no-repeat,
-    linear-gradient(#6d4c20 0 8px, transparent 8px) top 12px right 12px / 1px 8px no-repeat;
+  content: "";
+  position: absolute;
+  inset: -1px;
+  z-index: 5;
+  display: block;
+  box-sizing: border-box;
+  border: 42px solid transparent;
+  border-image-source: url("../images/qin-ornate-panel-frame.webp");
+  border-image-slice: 300 300 300 300;
+  border-image-width: 42px;
+  border-image-outset: 0;
+  border-image-repeat: stretch;
+  pointer-events: none;
+  opacity: .86;
 }
 
 .panel::after {
-  bottom: -1px;
-  background:
-    linear-gradient(90deg, #876229 0 30px, transparent 30px) bottom left / 30px 1px no-repeat,
-    linear-gradient(0deg, #876229 0 30px, transparent 30px) bottom left / 1px 30px no-repeat,
-    linear-gradient(90deg, #745121 0 18px, transparent 18px) bottom 6px left 6px / 18px 1px no-repeat,
-    linear-gradient(0deg, #745121 0 18px, transparent 18px) bottom 6px left 6px / 1px 18px no-repeat,
-    linear-gradient(90deg, #5c3f1a 0 8px, transparent 8px) bottom 12px left 12px / 8px 1px no-repeat,
-    linear-gradient(0deg, #5c3f1a 0 8px, transparent 8px) bottom 12px left 12px / 1px 8px no-repeat,
+  display: none;
+}
 
-    linear-gradient(270deg, #876229 0 30px, transparent 30px) bottom right / 30px 1px no-repeat,
-    linear-gradient(0deg, #876229 0 30px, transparent 30px) bottom right / 1px 30px no-repeat,
-    linear-gradient(270deg, #745121 0 18px, transparent 18px) bottom 6px right 6px / 18px 1px no-repeat,
-    linear-gradient(0deg, #745121 0 18px, transparent 18px) bottom 6px right 6px / 1px 18px no-repeat,
-    linear-gradient(270deg, #5c3f1a 0 8px, transparent 8px) bottom 12px right 12px / 8px 1px no-repeat,
-    linear-gradient(0deg, #5c3f1a 0 8px, transparent 8px) bottom 12px right 12px / 1px 8px no-repeat;
+@media (min-width: 768px) and (max-width: 1024px) {
+  .panel::before {
+    border-width: 32px;
+    border-image-width: 32px;
+    opacity: .8;
+  }
 }
 
 @media (max-width: 767px),
        (max-width: 932px) and (max-height: 500px) and (orientation: landscape) {
-  .panel::before,
-  .panel::after {
-    height: 22px;
-    opacity: .7;
-  }
-
   .panel::before {
-    background:
-      linear-gradient(90deg, #926b2e 0 22px, transparent 22px) top left / 22px 1px no-repeat,
-      linear-gradient(#926b2e 0 22px, transparent 22px) top left / 1px 22px no-repeat,
-      linear-gradient(270deg, #926b2e 0 22px, transparent 22px) top right / 22px 1px no-repeat,
-      linear-gradient(#926b2e 0 22px, transparent 22px) top right / 1px 22px no-repeat;
-  }
-
-  .panel::after {
-    background:
-      linear-gradient(90deg, #6d4d21 0 22px, transparent 22px) bottom left / 22px 1px no-repeat,
-      linear-gradient(0deg, #6d4d21 0 22px, transparent 22px) bottom left / 1px 22px no-repeat,
-      linear-gradient(270deg, #6d4d21 0 22px, transparent 22px) bottom right / 22px 1px no-repeat,
-      linear-gradient(0deg, #6d4d21 0 22px, transparent 22px) bottom right / 1px 22px no-repeat;
+    border-width: 23px;
+    border-image-width: 23px;
+    opacity: .72;
   }
 }

@@ -778,8 +778,7 @@
       '<label><span>起点</span><select data-cost-tactic-id="' + escapeHtml(tactic.id) + '" data-cost-side="start" data-cost-field="rank">' + rankOptions(config.start.rank) + '</select></label>' +
       '<label><span>终点</span><select data-cost-tactic-id="' + escapeHtml(tactic.id) + '" data-cost-side="target" data-cost-field="rank">' + rankOptions(config.target.rank) + '</select></label></div>';
     if (isStandard(tactic) && rehearsal) {
-      html += '<div class="tactics-cost-range-row is-spent"><div class="tactics-cost-range-name"></div><label class="tactics-cost-spent"><span>起点阶已消耗号角</span><input type="number" min="0" step="' + escapeHtml(rehearsal.singleHorn || 1) + '" max="' +
-        escapeHtml(CORE.actualMaximum(rehearsal)) + '" value="' + escapeHtml(config.start.rehearsalSpent) + '" data-cost-tactic-id="' +
+      html += '<div class="tactics-cost-range-row is-spent"><div class="tactics-cost-range-name"></div><label class="tactics-cost-spent"><span>起点阶已消耗号角</span><input type="text" inputmode="numeric" pattern="[0-9]*" value="' + escapeHtml(config.start.rehearsalSpent) + '" data-cost-tactic-id="' +
         escapeHtml(tactic.id) + '" data-cost-side="start" data-cost-field="rehearsalSpent"></label></div>';
     }
     html += tactic.mantras.map(function (mantra) { return costMantraFieldsHtml(tactic, config, mantra); }).join('') + '</div></article>';
@@ -789,9 +788,9 @@
   function costMaterialRowHtml(material) {
     var value = state.cost.materials[material.key] || { stock: 0, packSize: null, packPrice: null };
     return '<div class="tactics-cost-material-row"><div class="tactics-cost-material-name"><b>' + escapeHtml(material.name) + '</b><span>' + escapeHtml(material.group) + '</span></div>' +
-      '<label><span>库存</span><input type="number" min="0" step="1" value="' + escapeHtml(value.stock) + '" data-cost-material="' + escapeHtml(material.key) + '" data-cost-material-field="stock"></label>' +
-      '<label><span>每包数量</span><input type="number" min="1" step="1" value="' + escapeHtml(value.packSize == null ? '' : value.packSize) + '" placeholder="未设置" data-cost-material="' + escapeHtml(material.key) + '" data-cost-material-field="packSize"></label>' +
-      '<label><span>每包元宝</span><input type="number" min="0" step="1" value="' + escapeHtml(value.packPrice == null ? '' : value.packPrice) + '" placeholder="未设置" data-cost-material="' + escapeHtml(material.key) + '" data-cost-material-field="packPrice"></label></div>';
+      '<label><span>库存</span><input type="text" inputmode="numeric" pattern="[0-9]*" value="' + escapeHtml(value.stock) + '" data-cost-material="' + escapeHtml(material.key) + '" data-cost-material-field="stock"></label>' +
+      '<label><span>每包数量</span><input type="text" inputmode="numeric" pattern="[0-9]*" value="' + escapeHtml(value.packSize == null ? '' : value.packSize) + '" placeholder="未设置" data-cost-material="' + escapeHtml(material.key) + '" data-cost-material-field="packSize"></label>' +
+      '<label><span>每包元宝</span><input type="text" inputmode="numeric" pattern="[0-9]*" value="' + escapeHtml(value.packPrice == null ? '' : value.packPrice) + '" placeholder="未设置" data-cost-material="' + escapeHtml(material.key) + '" data-cost-material-field="packPrice"></label></div>';
   }
 
   function costRequirementHtml(item) {

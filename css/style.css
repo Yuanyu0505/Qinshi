@@ -3587,3 +3587,40 @@ thead th {
       #17120c;
   }
 }
+
+/* 用户确认：移除页面、导航、标题与内容区外框；保留功能面板边框。 */
+.wrap::before,
+header.top::before,
+header.top::after,
+.app-content::before,
+.app-content::after,
+h1::after {
+  display: none;
+}
+
+header.top {
+  min-height: 0;
+  padding: 8px 0 12px;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.app-content {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+@media (min-width: 768px) {
+  .tabs::after {
+    display: none;
+  }
+
+  .tabs {
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+}

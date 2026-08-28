@@ -736,6 +736,8 @@ tr.hit-row td { background: rgba(212, 175, 55, .06); }
 }
 .atlas-pin-toggle.is-pinned { color: #ff6d63; border-color: #ff4b4b; }
 .atlas-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; }
+.atlas-head-primary,
+.atlas-head-secondary { display: contents; }
 .atlas-favorite-toggle {
   display: inline-flex;
   align-items: center;
@@ -2614,6 +2616,42 @@ figcaption { color: var(--muted); font-size: 13px; margin-top: 8px; }
   #partition-tactics .tactics-form-grid select,
   #partition-tactics .tactics-form-grid input,
   .atlas-level { min-height: 44px; font-size: 16px; }
+  .atlas-head { display: block; }
+  .atlas-head-primary {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 7px;
+    margin-bottom: 7px;
+  }
+  .atlas-head-secondary {
+    display: flex;
+    align-items: center;
+    flex-wrap: nowrap;
+    gap: 6px;
+    width: 100%;
+    min-width: 0;
+  }
+  .atlas-head-secondary .atlas-pin-toggle,
+  .atlas-head-secondary .atlas-inventory-edit {
+    flex: 0 0 auto;
+    min-height: 40px;
+    padding: 6px 8px;
+    font-size: 13px;
+    white-space: nowrap;
+  }
+  .atlas-head-secondary .atlas-level-label {
+    flex: 0 0 auto;
+    margin-left: auto;
+    gap: 4px;
+    white-space: nowrap;
+  }
+  .atlas-head-secondary .atlas-level {
+    box-sizing: border-box;
+    width: 52px;
+    min-height: 40px;
+    padding: 5px 6px;
+  }
   #partition-tactics .tactics-cost-material-row { grid-template-columns: 1fr; }
   #partition-tactics .tactics-cost-range-row { grid-template-columns: 1fr 1fr; }
   #partition-tactics .tactics-cost-range-name { grid-column: 1 / -1; }

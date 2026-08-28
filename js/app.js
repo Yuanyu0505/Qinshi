@@ -713,15 +713,19 @@
         </div>`;
     return `<div class="atlas-item${favorite ? " atlas-item-favorite" : ""}${pinned ? " atlas-item-pinned" : ""}" data-atlas-item="${escapeHtml(itemId)}">
       <div class="atlas-head">
-        ${pinned ? '<span class="atlas-pin-badge">置顶</span>' : ""}
-        <span class="q-badge q-orange">${item.atlas}图鉴</span>
-        <span class="forge-name">${escapeHtml(item.name)}</span>
-        <button type="button" class="atlas-favorite-toggle${favorite ? " is-favorite" : ""}" data-atlas-favorite="${escapeHtml(itemId)}" aria-pressed="${favorite}" title="${favorite ? "取消收藏" : "收藏图鉴"}" aria-label="${favorite ? "取消收藏" : "收藏图鉴"}">${favorite ? "★" : "☆"}</button>
-        ${favorite ? `<button type="button" class="seg atlas-pin-toggle${pinned ? " is-pinned" : ""}" data-atlas-pin="${escapeHtml(itemId)}" aria-pressed="${pinned}">${pinned ? "取消置顶" : "置顶"}</button>` : ""}
-        ${favorite ? `<button type="button" class="seg atlas-inventory-edit" data-atlas-inventory-edit="${escapeHtml(itemId)}">编辑库存</button>` : ""}
-        <label class="atlas-level-label">图鉴等级
-          <input type="number" class="atlas-level" data-id="${item.id}" value="${L}" min="0" max="${atlasMaxLevel()}">
-        </label>
+        <div class="atlas-head-primary">
+          ${pinned ? '<span class="atlas-pin-badge">置顶</span>' : ""}
+          <span class="q-badge q-orange">${item.atlas}图鉴</span>
+          <span class="forge-name">${escapeHtml(item.name)}</span>
+          <button type="button" class="atlas-favorite-toggle${favorite ? " is-favorite" : ""}" data-atlas-favorite="${escapeHtml(itemId)}" aria-pressed="${favorite}" title="${favorite ? "取消收藏" : "收藏图鉴"}" aria-label="${favorite ? "取消收藏" : "收藏图鉴"}">${favorite ? "★" : "☆"}</button>
+        </div>
+        <div class="atlas-head-secondary">
+          ${favorite ? `<button type="button" class="seg atlas-pin-toggle${pinned ? " is-pinned" : ""}" data-atlas-pin="${escapeHtml(itemId)}" aria-pressed="${pinned}">${pinned ? "取消置顶" : "置顶"}</button>` : ""}
+          ${favorite ? `<button type="button" class="seg atlas-inventory-edit" data-atlas-inventory-edit="${escapeHtml(itemId)}">编辑库存</button>` : ""}
+          <label class="atlas-level-label">图鉴等级
+            <input type="number" class="atlas-level" data-id="${item.id}" value="${L}" min="0" max="${atlasMaxLevel()}">
+          </label>
+        </div>
       </div>
       <div class="atlas-meta">
         <span>获取途径：${escapeHtml(item.acquire) || "—"}</span>

@@ -3734,34 +3734,21 @@ body {
 
 .panel {
   position: relative;
-  isolation: isolate;
   border-radius: 0;
   border-color: transparent;
   background-image:
+    url("../images/qin-ornate-panel-frame.webp"),
     repeating-radial-gradient(circle at 68% 32%, rgba(202, 168, 92, .015) 0 1px, transparent 1px 8px),
     linear-gradient(180deg, rgba(255, 244, 212, .016), rgba(0, 0, 0, .14)),
     linear-gradient(90deg, rgba(93, 66, 31, .018) 1px, transparent 1px);
-  background-size: auto, auto, 10px 100%;
+  background-position: center, center, center, center;
+  background-size: 100% 100%, auto, auto, 10px 100%;
+  background-repeat: no-repeat, repeat, repeat, repeat;
+  background-origin: border-box, padding-box, padding-box, padding-box;
+  background-clip: border-box, padding-box, padding-box, padding-box;
 }
 
-.panel::before {
-  content: "";
-  position: absolute;
-  inset: -1px;
-  z-index: -1;
-  display: block;
-  background: url("../images/qin-ornate-panel-frame.webp") center / 100% 100% no-repeat;
-  pointer-events: none;
-  opacity: .9;
-}
-
+.panel::before,
 .panel::after {
   display: none;
-}
-
-@media (max-width: 767px),
-       (max-width: 932px) and (max-height: 500px) and (orientation: landscape) {
-  .panel::before {
-    opacity: .78;
-  }
 }

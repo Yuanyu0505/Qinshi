@@ -3624,3 +3624,101 @@ header.top {
     box-shadow: none;
   }
 }
+
+/* 水墨远山、楼阁、竹影与流云：中心保持低干扰，装饰集中在画布边缘。 */
+body {
+  background-color: #080705;
+  background-image:
+    linear-gradient(180deg, rgba(5, 4, 3, .06), rgba(5, 4, 3, .24)),
+    url("../images/qin-ink-landscape.webp"),
+    repeating-linear-gradient(133deg, transparent 0 36px, rgba(230, 195, 112, .012) 37px, transparent 38px);
+  background-repeat: no-repeat, no-repeat, repeat;
+  background-position: center top, center top, center;
+  background-size: cover, cover, auto;
+  background-attachment: fixed, fixed, fixed;
+}
+
+/* 每个分区只保留四个独立回纹角，不恢复连续外围框线。 */
+#app > section[id^="partition-"] {
+  position: relative;
+  min-height: calc(100vh - 132px);
+  padding: 13px 12px 24px;
+}
+
+#app > section[id^="partition-"]::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  pointer-events: none;
+  opacity: .82;
+  background:
+    linear-gradient(90deg, #9c7431 0 42px, transparent 42px) top left / 52px 1px no-repeat,
+    linear-gradient(#9c7431 0 42px, transparent 42px) top left / 1px 52px no-repeat,
+    linear-gradient(90deg, #735124 0 23px, transparent 23px) top 7px left 7px / 32px 1px no-repeat,
+    linear-gradient(#735124 0 23px, transparent 23px) top 7px left 7px / 1px 32px no-repeat,
+
+    linear-gradient(270deg, #9c7431 0 42px, transparent 42px) top right / 52px 1px no-repeat,
+    linear-gradient(#9c7431 0 42px, transparent 42px) top right / 1px 52px no-repeat,
+    linear-gradient(270deg, #735124 0 23px, transparent 23px) top 7px right 7px / 32px 1px no-repeat,
+    linear-gradient(#735124 0 23px, transparent 23px) top 7px right 7px / 1px 32px no-repeat,
+
+    linear-gradient(90deg, #765525 0 42px, transparent 42px) bottom left / 52px 1px no-repeat,
+    linear-gradient(0deg, #765525 0 42px, transparent 42px) bottom left / 1px 52px no-repeat,
+    linear-gradient(90deg, #5e421d 0 23px, transparent 23px) bottom 7px left 7px / 32px 1px no-repeat,
+    linear-gradient(0deg, #5e421d 0 23px, transparent 23px) bottom 7px left 7px / 1px 32px no-repeat,
+
+    linear-gradient(270deg, #765525 0 42px, transparent 42px) bottom right / 52px 1px no-repeat,
+    linear-gradient(0deg, #765525 0 42px, transparent 42px) bottom right / 1px 52px no-repeat,
+    linear-gradient(270deg, #5e421d 0 23px, transparent 23px) bottom 7px right 7px / 32px 1px no-repeat,
+    linear-gradient(0deg, #5e421d 0 23px, transparent 23px) bottom 7px right 7px / 1px 32px no-repeat;
+}
+
+/* 角纹内侧留出少量呼吸空间，避免压住首行按钮和表格。 */
+#app > section[id^="partition-"] > :first-child { margin-top: 9px; }
+
+@media (min-width: 768px) and (max-width: 1024px) {
+  #app > section[id^="partition-"] {
+    min-height: calc(100vh - 114px);
+    padding: 11px 9px 20px;
+  }
+
+  #app > section[id^="partition-"]::before {
+    opacity: .68;
+    transform: scale(.995);
+  }
+}
+
+@media (max-width: 767px),
+       (max-width: 932px) and (max-height: 500px) and (orientation: landscape) {
+  body {
+    background-image:
+      linear-gradient(180deg, rgba(6, 5, 4, .2), rgba(6, 5, 4, .42)),
+      url("../images/qin-ink-landscape.webp");
+    background-repeat: no-repeat, no-repeat;
+    background-position: center, left top;
+    background-size: auto, auto 100vh;
+    background-attachment: fixed, fixed;
+  }
+
+  #app > section[id^="partition-"] {
+    min-height: calc(100vh - 126px);
+    padding: 7px 3px 12px;
+  }
+
+  #app > section[id^="partition-"]::before {
+    inset: 0 1px;
+    opacity: .42;
+    background:
+      linear-gradient(90deg, #8d682d 0 25px, transparent 25px) top left / 31px 1px no-repeat,
+      linear-gradient(#8d682d 0 25px, transparent 25px) top left / 1px 31px no-repeat,
+      linear-gradient(270deg, #8d682d 0 25px, transparent 25px) top right / 31px 1px no-repeat,
+      linear-gradient(#8d682d 0 25px, transparent 25px) top right / 1px 31px no-repeat,
+      linear-gradient(90deg, #654820 0 25px, transparent 25px) bottom left / 31px 1px no-repeat,
+      linear-gradient(0deg, #654820 0 25px, transparent 25px) bottom left / 1px 31px no-repeat,
+      linear-gradient(270deg, #654820 0 25px, transparent 25px) bottom right / 31px 1px no-repeat,
+      linear-gradient(0deg, #654820 0 25px, transparent 25px) bottom right / 1px 31px no-repeat;
+  }
+
+  #app > section[id^="partition-"] > :first-child { margin-top: 6px; }
+}

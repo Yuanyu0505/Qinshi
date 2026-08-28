@@ -3734,8 +3734,9 @@ body {
 
 .panel {
   position: relative;
+  isolation: isolate;
   border-radius: 0;
-  border-color: rgba(128, 95, 42, .8);
+  border-color: transparent;
   background-image:
     repeating-radial-gradient(circle at 68% 32%, rgba(202, 168, 92, .015) 0 1px, transparent 1px 8px),
     linear-gradient(180deg, rgba(255, 244, 212, .016), rgba(0, 0, 0, .14)),
@@ -3747,36 +3748,20 @@ body {
   content: "";
   position: absolute;
   inset: -1px;
-  z-index: 5;
+  z-index: -1;
   display: block;
-  box-sizing: border-box;
-  border: 42px solid transparent;
-  border-image-source: url("../images/qin-ornate-panel-frame.webp");
-  border-image-slice: 300 300 300 300;
-  border-image-width: 42px;
-  border-image-outset: 0;
-  border-image-repeat: stretch;
+  background: url("../images/qin-ornate-panel-frame.webp") center / 100% 100% no-repeat;
   pointer-events: none;
-  opacity: .86;
+  opacity: .9;
 }
 
 .panel::after {
   display: none;
 }
 
-@media (min-width: 768px) and (max-width: 1024px) {
-  .panel::before {
-    border-width: 32px;
-    border-image-width: 32px;
-    opacity: .8;
-  }
-}
-
 @media (max-width: 767px),
        (max-width: 932px) and (max-height: 500px) and (orientation: landscape) {
   .panel::before {
-    border-width: 23px;
-    border-image-width: 23px;
-    opacity: .72;
+    opacity: .78;
   }
 }

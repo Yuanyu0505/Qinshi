@@ -391,24 +391,23 @@ header.top {
 .ins-main-rank small { color: var(--muted); font-size: 12px; }
 .ins-rank-stars { gap: 3px; width: max-content; white-space: nowrap; }
 .ins-rank-star {
-  display: inline-grid;
-  place-items: center;
-  width: 25px;
-  height: 25px;
-  box-sizing: border-box;
-  border: 2px solid;
-  border-radius: 7px;
-  font-size: 15px;
+  display: inline-block;
+  border: 0;
+  background: none;
+  font-family: "Microsoft YaHei", "Segoe UI Symbol", sans-serif;
+  font-size: 25px;
+  font-weight: 900;
   line-height: 1;
-  box-shadow: inset 0 1px rgba(255, 255, 255, .18), 0 1px 4px rgba(0, 0, 0, .28);
+  paint-order: stroke fill;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, .42));
 }
 .ins-rank-stars.orange .ins-rank-star {
-  border-color: #ff9f43;
-  background: linear-gradient(180deg, #d87525, #a7430c);
+  color: #ff9f43;
+  -webkit-text-stroke: 1.4px #8b3f0c;
 }
 .ins-rank-stars.purple .ins-rank-star {
-  border-color: #b65de2;
-  background: linear-gradient(180deg, #7f36a5, #4e1769);
+  color: #b65de2;
+  -webkit-text-stroke: 1.4px #48135f;
 }
 .ins-main-preview b,
 .ins-main-line b { color: var(--gold); }

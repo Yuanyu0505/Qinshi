@@ -221,7 +221,7 @@
   function starBadgeHtml(quality, star) {
     var normalizedQuality = quality === "紫色" ? "紫色" : "橙色";
     var count = String(star) === "1" ? 1 : 2;
-    var stars = Array(count + 1).join('<span class="ins-rank-star" aria-hidden="true">⭐</span>');
+    var stars = Array(count + 1).join('<span class="ins-rank-star" aria-hidden="true">★</span>');
     return '<span class="ins-rank-stars ' + (normalizedQuality === "紫色" ? "purple" : "orange") + '" aria-label="' + normalizedQuality + count + '星" title="' + normalizedQuality + count + '星">' + stars + '</span>';
   }
   function mainStackHtml(main) { return '<span class="ins-main-stack">' + main.split("、").map(function (part) { return '<span>' + escapeHtml(part.trim()) + '</span>'; }).join("") + '</span>'; }

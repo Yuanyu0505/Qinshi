@@ -381,6 +381,35 @@ header.top {
 .ins-main-line { color: var(--muted); font-size: 13px; }
 .ins-main-preview { grid-column: 1 / -1; min-height: 20px; }
 .ins-main-line { display: grid; gap: 3px; }
+.ins-main-rank,
+.ins-rank-stars {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.ins-main-rank { flex-wrap: wrap; }
+.ins-main-rank small { color: var(--muted); font-size: 12px; }
+.ins-rank-stars { gap: 3px; width: max-content; white-space: nowrap; }
+.ins-rank-star {
+  display: inline-grid;
+  place-items: center;
+  width: 25px;
+  height: 25px;
+  box-sizing: border-box;
+  border: 2px solid;
+  border-radius: 7px;
+  font-size: 15px;
+  line-height: 1;
+  box-shadow: inset 0 1px rgba(255, 255, 255, .18), 0 1px 4px rgba(0, 0, 0, .28);
+}
+.ins-rank-stars.orange .ins-rank-star {
+  border-color: #ff9f43;
+  background: linear-gradient(180deg, #d87525, #a7430c);
+}
+.ins-rank-stars.purple .ins-rank-star {
+  border-color: #b65de2;
+  background: linear-gradient(180deg, #7f36a5, #4e1769);
+}
 .ins-main-preview b,
 .ins-main-line b { color: var(--gold); }
 .ins-editor-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 12px; }

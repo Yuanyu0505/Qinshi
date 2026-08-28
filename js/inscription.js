@@ -216,7 +216,13 @@
     var main = slot.quality === "紫色" ? "主属性暂不展示" : MAIN[slot.tian][slot.star];
     var subs = Array.isArray(slot.subs) ? slot.subs : ["", "", ""];
     var subValues = Array.isArray(slot.subValues) ? slot.subValues : ["", "", ""];
-    return '<div class="ins-saved-slot"><div class="ins-saved-core"><b>' + slot.tian + ' · ' + slot.shield + extremeNoteHtml(slot.shield) + '</b><span>' + slot.quality + ' ' + slot.star + '星</span>' + mainStackHtml(main) + '</div><div class="ins-saved-substats">' + subs.map(function (sub, index) { var display = subDisplayText(sub, subValues[index]); return '<span class="ins-saved-sub' + (isExtremeAttr(slot.shield, sub) ? " extreme" : "") + '"><small>副属性' + (index + 1) + '</small><strong>' + (display ? escapeHtml(display) : "未设置") + '</strong></span>'; }).join("") + '</div></div>';
+    return '<div class="ins-saved-slot"><div class="ins-saved-core"><b>' + slot.tian + ' · ' + slot.shield + extremeNoteHtml(slot.shield) + '</b>' + starBadgeHtml(slot.quality, slot.star) + mainStackHtml(main) + '</div><div class="ins-saved-substats">' + subs.map(function (sub, index) { var display = subDisplayText(sub, subValues[index]); return '<span class="ins-saved-sub' + (isExtremeAttr(slot.shield, sub) ? " extreme" : "") + '"><small>副属性' + (index + 1) + '</small><strong>' + (display ? escapeHtml(display) : "未设置") + '</strong></span>'; }).join("") + '</div></div>';
+  }
+  function starBadgeHtml(quality, star) {
+    var normalizedQuality = quality === "紫色" ? "紫色" : "橙色";
+    var count = String(star) === "1" ? 1 : 2;
+    var stars = Array(count + 1).join('<span class="ins-rank-star" aria-hidden="true">⭐</span>');
+    return '<span class="ins-rank-stars ' + (normalizedQuality === "紫色" ? "purple" : "orange") + '" aria-label="' + normalizedQuality + count + '星" title="' + normalizedQuality + count + '星">' + stars + '</span>';
   }
   function mainStackHtml(main) { return '<span class="ins-main-stack">' + main.split("、").map(function (part) { return '<span>' + escapeHtml(part.trim()) + '</span>'; }).join("") + '</span>'; }
   function handleProgressAction(event) {
@@ -264,8 +270,14 @@
     var visibleSlots = item.slots.filter(slotMatchesFilter);
     return '<article class="ins-query-card' + (saved ? " saved" : "") + '"><div class="ins-card-head"><div><span class="ins-quality ' + (item.quality === "红色神将" ? "red" : "orange") + '">' + item.quality + '</span><b class="' + (saved ? "ins-saved-name" : "") + '">' + escapeHtml(item.name) + '</b>' + (saved ? '<span class="ins-saved-mark">个人进度已保存</span>' : "") + '</div></div><div class="ins-query-slots">' + visibleSlots.map(function (slot) {
       var savedSlot = savedProgress && savedProgress.slots.find(function (entry) { return entry.tian === slot.tian && entry.shield === slot.shield; });
-      return '<div class="ins-query-slot"><div class="ins-slot-title">' + slot.tian + ' · ' + slot.shield + extremeNoteHtml(slot.shield) + '</div><div class="ins-main-line"><span>橙色二星主属性</span>' + MAIN[slot.tian]["2"] + '</div><div class="ins-query-substats"><div class="ins-sub-list"><span class="ins-sub-label">可洗练副属性</span>' + SUBS[slot.shield].map(subTagHtml).join("") + '</div>' + currentSubstatsHtml(savedSlot) + '</div></div>';
+      return '<div class="ins-query-slot"><div class="ins-slot-title">' + slot.tian + ' · ' + slot.shield + extremeNoteHtml(slot.shield) + '</div>' + queryMainHtml(slot, savedSlot) + '<div class="ins-query-substats"><div class="ins-sub-list"><span class="ins-sub-label">可洗练副属性</span>' + SUBS[slot.shield].map(subTagHtml).join("") + '</div>' + currentSubstatsHtml(savedSlot) + '</div></div>';
     }).join("") + '</div></article>';
+  }
+  function queryMainHtml(slot, savedSlot) {
+    var quality = savedSlot && savedSlot.quality === "紫色" ? "紫色" : "橙色";
+    var star = savedSlot && String(savedSlot.star) === "1" ? "1" : "2";
+    var main = quality === "紫色" ? "主属性暂不展示" : MAIN[slot.tian][star];
+    return '<div class="ins-main-line"><span class="ins-main-rank">' + starBadgeHtml(quality, star) + '<small>主属性</small></span>' + mainStackHtml(main) + '</div>';
   }
   function currentSubstatsHtml(savedSlot) {
     if (!savedSlot) return "";
@@ -283,7 +295,7 @@
   }
 
   function renderReference() {
-    el.reference.innerHTML = '<section class="ins-reference-block"><h3>天位主属性</h3><div class="table-wrap"><table class="ins-reference-table"><thead><tr><th>天位</th><th>橙色一星</th><th>橙色二星</th><th>紫色</th></tr></thead><tbody>' + TIANS.map(function (tian) { return '<tr><th>' + tian + '</th><td>' + MAIN[tian]["1"] + '</td><td>' + MAIN[tian]["2"] + '</td><td>暂不展示主属性</td></tr>'; }).join("") + '</tbody></table></div></section><section class="ins-reference-block"><h3>盾位副属性</h3><div class="table-wrap"><table class="ins-reference-table"><thead><tr><th>盾位</th><th>可洗练副属性</th><th>备注</th></tr></thead><tbody>' + SHIELDS.map(function (shield) { return '<tr><th>' + shield + extremeNoteHtml(shield) + '</th><td><div class="ins-sub-list">' + SUBS[shield].map(subTagHtml).join("") + '</div></td><td class="ins-shield-note">' + (SHIELD_NOTES[shield] || "—") + '</td></tr>'; }).join("") + '</tbody></table></div><div class="muted-tip">“极致”表示该基础属性可同时出现在副属性1、副属性2、副属性3中，不是名为“3攻”或“3技能穿透”的单条属性。</div></section>';
+    el.reference.innerHTML = '<section class="ins-reference-block"><h3>天位主属性</h3><div class="table-wrap"><table class="ins-reference-table"><thead><tr><th>天位</th><th>' + starBadgeHtml("橙色", "1") + '</th><th>' + starBadgeHtml("橙色", "2") + '</th><th>紫色</th></tr></thead><tbody>' + TIANS.map(function (tian) { return '<tr><th>' + tian + '</th><td>' + MAIN[tian]["1"] + '</td><td>' + MAIN[tian]["2"] + '</td><td>暂不展示主属性</td></tr>'; }).join("") + '</tbody></table></div></section><section class="ins-reference-block"><h3>盾位副属性</h3><div class="table-wrap"><table class="ins-reference-table"><thead><tr><th>盾位</th><th>可洗练副属性</th><th>备注</th></tr></thead><tbody>' + SHIELDS.map(function (shield) { return '<tr><th>' + shield + extremeNoteHtml(shield) + '</th><td><div class="ins-sub-list">' + SUBS[shield].map(subTagHtml).join("") + '</div></td><td class="ins-shield-note">' + (SHIELD_NOTES[shield] || "—") + '</td></tr>'; }).join("") + '</tbody></table></div><div class="muted-tip">“极致”表示该基础属性可同时出现在副属性1、副属性2、副属性3中，不是名为“3攻”或“3技能穿透”的单条属性。</div></section>';
   }
 
   document.addEventListener("DOMContentLoaded", init);

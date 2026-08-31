@@ -149,7 +149,22 @@
   };
   const quizState = { query: "", items: loadQuizItems() };
 
+  function initManualNumberInputs() {
+    document.addEventListener("keydown", (event) => {
+      const input = event.target;
+      if (!(input instanceof HTMLInputElement) || input.type !== "number") return;
+      if (event.key === "ArrowUp" || event.key === "ArrowDown") event.preventDefault();
+    });
+
+    document.addEventListener("wheel", (event) => {
+      const input = event.target;
+      if (!(input instanceof HTMLInputElement) || input.type !== "number") return;
+      if (document.activeElement === input) input.blur();
+    }, { capture: true, passive: true });
+  }
+
   function init() {
+    initManualNumberInputs();
     bindTabs();
     initForging();
     initDrops();

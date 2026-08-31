@@ -3134,6 +3134,18 @@ textarea,
   transition: border-color .16s ease, box-shadow .16s ease, background-color .16s ease;
 }
 
+/* 所有数值字段只接受手动输入，不显示或响应浏览器的步进控件。 */
+input[type="number"] {
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  margin: 0;
+  -webkit-appearance: none;
+}
+
 input::placeholder,
 textarea::placeholder { color: #746a5a; }
 

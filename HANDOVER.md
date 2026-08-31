@@ -121,6 +121,7 @@ $python = 'C:\Users\pghyl\.cache\codex-runtimes\codex-primary-runtime\dependenci
 | `qinshi_atlas_target_level_v1` | 图鉴目标等级 |
 | `qinshi_atlas_favorites_v1` | 已收藏图鉴 ID |
 | `qinshi_atlas_inventory_v1` | 已收藏图鉴个人库存：按图鉴 ID 保存已有魂魄及“阶段+位置”装备拥有状态/备注；取消收藏时保留但隐藏 |
+| `qinshi_equipment_favorites_v1` | 已收藏装备 ID；普通装备分类可与收藏条件组合筛选 |
 | `qinshi_inscription_progress_v2` | 铭文个人进度 |
 | `qinshi_quiz_items_v1` | 历史答题修订数据（兼容旧数据） |
 | `qinshi_tactics_progress_v1` | 兵法个人进度：按兵法 ID 保存 `{ rank, rehearsalSpent, mantras }` |
@@ -262,3 +263,11 @@ git -c safe.directory=C:/Users/pghyl/Desktop/deepseek tag -l
 - 手机和平板继续使用原有数值输入控件和数字键盘，不改变各分区响应式布局。
 - 缓存名及页面显示版本提升为 `1.0.19`，确保新版 `css/style.css` 与 `js/app.js` 覆盖旧离线缓存。
 - 功能验证由用户手动执行，重点检查图鉴等级、魂魄库存、机关兽库存与兵法进度等数字输入框，以及手机和平板离线重新打开。
+
+## 20. 2026-08-31 PWA 1.0.20
+
+- 装备属性新增本地收藏功能，搜索结果装备名后可通过星号收藏；收藏装备只在“收藏装备”条件下集中展示，不参与普通结果置顶。
+- “收藏装备”改为可叠加条件，可与任意一个普通装备分类同时筛选；普通分类之间仍保持单选。
+- 神兵礼经红色 15 阶修正为 `25%攻防血`、`22%技免`、`25%暴击`，并在装备数据生成器中保留该业务修正规则。
+- 缓存名及页面显示版本提升为 `1.0.20`，确保新版装备交互、查询核心和装备数据覆盖旧离线缓存。
+- 功能验证由用户手动执行，重点检查收藏装备单独筛选、与神兵武器等分类组合筛选、取消收藏即时移除，以及神兵礼经红色 15 阶进阶详情。

@@ -65,6 +65,9 @@ BOOK_TIERS = {
     "红色": [(0, 13), (5, 14), (10, 15), (15, 16)],
     "红金": [(0, 17), (5, 18), (10, 19), (15, 20)],
 }
+BOOK_STAGE_OVERRIDES = {
+    ("神兵礼经", "红色", 15): "25%攻防血\n22%减伤\n25%暴击",
+}
 SPEED_PAT = re.compile(r"^(\d+(?:\.\d+)?)\s*速$")
 ENEMY_PAT = re.compile(r"^敌方-\s*(\d+(?:\.\d+)?)%\s*(攻|防|血)$")
 
@@ -188,7 +191,10 @@ def parse_book_sheet(wb):
             stage_rows = []
             flat_tokens = []
             for stage, column in stage_columns:
-                tokens = parse_book_cell(ws.cell(row_number, column).value)
+                source_value = BOOK_STAGE_OVERRIDES.get(
+                    (name, tier, stage), ws.cell(row_number, column).value
+                )
+                tokens = parse_book_cell(source_value)
                 for token in tokens:
                     if "raw" in token and "t" not in token:
                         anomalies.append({

@@ -169,6 +169,14 @@ class TestParseSheet(unittest.TestCase):
         self.assertEqual(book["max"]["暴击"], 41.0)
         self.assertEqual(book["max"]["抗暴"], 35.0)
 
+    def test_divine_rites_red_stage_15_uses_corrected_attributes(self):
+        book = next(i for i in self.items if i["name"] == "神兵礼经")
+        stage = next(row for row in book["stages"]["红色"] if row["stage"] == 15)
+        self.assertEqual(
+            [token["raw"] for token in stage["tokens"]],
+            ["25%攻防血", "22%技免", "25%暴击"],
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

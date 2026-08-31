@@ -4,7 +4,7 @@ window.SPECIAL_EQUIPMENT_DATA = {
     "sourceFile": "秦时相关（更新贯侯钟离昧）20260618.xlsx",
     "sourceSheet": "特殊属性装备、典籍属性",
     "version": "20260618",
-    "generatedAt": "2026-08-14",
+    "generatedAt": "2026-08-31",
     "total": 175,
     "attrTypes": [
       "攻",
@@ -23849,9 +23849,9 @@ window.SPECIAL_EQUIPMENT_DATA = {
             ]
           },
           {
-            "t": "穿透",
-            "v": 10.0,
-            "raw": "10%穿透"
+            "t": "技免",
+            "v": 22.0,
+            "raw": "22%技免"
           },
           {
             "t": "暴击",
@@ -24153,9 +24153,9 @@ window.SPECIAL_EQUIPMENT_DATA = {
                 ]
               },
               {
-                "t": "穿透",
-                "v": 10.0,
-                "raw": "10%穿透"
+                "t": "技免",
+                "v": 22.0,
+                "raw": "22%技免"
               },
               {
                 "t": "暴击",
@@ -24263,7 +24263,7 @@ window.SPECIAL_EQUIPMENT_DATA = {
         "血": 48.0,
         "攻防血": 48.0,
         "技免": 62.0,
-        "穿透": 25.0,
+        "穿透": 15.0,
         "暴击": 25.0,
         "抗暴": 8.0
       }

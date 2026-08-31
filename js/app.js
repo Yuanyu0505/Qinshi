@@ -23,6 +23,8 @@
   const ATLAS_FAVORITES_KEY = "qinshi_atlas_favorites_v1";
   const ATLAS_INVENTORY_KEY = "qinshi_atlas_inventory_v1";
   const ATLAS_PINS_KEY = "qinshi_atlas_pins_v1";
+  const EQUIPMENT_FAVORITES_KEY = "qinshi_equipment_favorites_v1";
+  const EQUIPMENT_FAVORITES_CATEGORY = "收藏装备";
   const QUIZ_STORE_KEY = "qinshi_quiz_items_v1";
   const PARTITION_TITLES = {
     atlas: "图鉴",
@@ -41,6 +43,7 @@
 
   const state = {
     search: "", category: null, main: null, showMain: false, filters: [], sortAttr: null, valueSource: "max", activated: false,
+    favorites: loadEquipmentFavorites(),
     comparison: { itemIds: [], group: null, tier: "红金", dimensions: [], expanded: false, started: false }
   };
   const forgeState = { mode: "main", query: "" };
@@ -330,6 +333,24 @@
       return Array.from(new Set(parsed.map((id) => String(id || "").trim()).filter(Boolean)));
     } catch (e) {
       return [];
+    }
+  }
+
+  function loadEquipmentFavorites() {
+    try {
+      const parsed = JSON.parse(localStorage.getItem(EQUIPMENT_FAVORITES_KEY) || "[]");
+      if (!Array.isArray(parsed)) return [];
+      return Array.from(new Set(parsed.map((id) => String(id || "").trim()).filter(Boolean)));
+    } catch (e) {
+      return [];
+    }
+  }
+
+  function saveEquipmentFavorites() {
+    try {
+      localStorage.setItem(EQUIPMENT_FAVORITES_KEY, JSON.stringify(state.favorites));
+    } catch (e) {
+      // 忽略存储失败
     }
   }
 
@@ -1324,7 +1345,8 @@
   function renderCategoryButtons() {
     const categories = Array.isArray(DATA.meta.categories) ? DATA.meta.categories : [];
     el.categoryBtns.innerHTML = '<button type="button" class="seg" data-category="">除典籍外</button>' +
-      categories.map((category) => `<button type="button" class="seg" data-category="${escapeHtml(category)}">${escapeHtml(category)}</button>`).join("");
+      categories.map((category) => `<button type="button" class="seg" data-category="${escapeHtml(category)}">${escapeHtml(category)}</button>`).join("") +
+      `<button type="button" class="seg equipment-favorites-category" data-category="${EQUIPMENT_FAVORITES_CATEGORY}">${EQUIPMENT_FAVORITES_CATEGORY}</button>`;
   }
 
   function bindEvents() {
@@ -1382,6 +1404,11 @@
     el.clearAll.addEventListener("click", resetEquipmentView);
     el.emptyClear.addEventListener("click", resetEquipmentView);
     el.results.addEventListener("click", (event) => {
+      const favoriteButton = event.target.closest("[data-equipment-favorite]");
+      if (favoriteButton) {
+        toggleEquipmentFavorite(favoriteButton.dataset.equipmentFavorite);
+        return;
+      }
       const compareButton = event.target.closest("[data-compare-add]");
       if (compareButton) {
         toggleEquipmentComparison(compareButton.dataset.compareAdd);
@@ -1433,6 +1460,16 @@
       state.comparison.started = false;
     }
     reconcileComparisonDimensions();
+    apply();
+  }
+
+  function toggleEquipmentFavorite(itemId) {
+    const item = DATA.items.find((entry) => entry.id === itemId);
+    if (!item) return;
+    const index = state.favorites.indexOf(itemId);
+    if (index >= 0) state.favorites.splice(index, 1);
+    else state.favorites.push(itemId);
+    saveEquipmentFavorites();
     apply();
   }
 
@@ -1580,14 +1617,17 @@
       el.empty.hidden = true;
       return;
     }
-    const items = Q.queryItems(DATA.items, {
+    let items = Q.queryItems(DATA.items, {
       search: state.search,
-      category: state.category,
+      category: state.category === EQUIPMENT_FAVORITES_CATEGORY ? null : state.category,
       main: state.main == null ? "" : state.main,
       filters: state.filters,
       sortAttr: state.sortAttr,
       valueSource: state.valueSource
     });
+    if (state.category === EQUIPMENT_FAVORITES_CATEGORY) {
+      items = items.filter((item) => state.favorites.includes(item.id));
+    }
     renderTable(items);
     renderCards(items);
     const isEmpty = items.length === 0;
@@ -1744,13 +1784,18 @@
     return `<span class="equipment-name-badge ${purple ? "equipment-name-purple" : "equipment-name-orange"}">${escapeHtml(item.name)}</span>`;
   }
 
+  function equipmentResultNameHtml(item) {
+    const favorite = state.favorites.includes(item.id);
+    return `<span class="equipment-result-name">${equipmentNameHtml(item)}<button type="button" class="equipment-favorite-toggle${favorite ? " is-favorite" : ""}" data-equipment-favorite="${escapeHtml(item.id)}" aria-pressed="${favorite}" title="${favorite ? "取消收藏" : "收藏装备"}" aria-label="${favorite ? "取消收藏" : "收藏装备"}">${favorite ? "★" : "☆"}</button></span>`;
+  }
+
   function equipmentTableHtml(items, tiers, title) {
     const hasFilter = state.filters.length > 0;
     if (!items.length) return "";
     const body = items.map((item) => {
       return `<tr>
       <td class="equipment-category-cell"><span class="cat">${item.cat}</span></td>
-      <td class="name equipment-name-cell">${equipmentNameHtml(item)}</td>
+      <td class="name equipment-name-cell">${equipmentResultNameHtml(item)}</td>
       ${state.showMain ? `<td class="main equipment-main-cell">${escapeHtml(item.main)}</td>` : ""}
       ${tiers.map((tier) => `<td class="equipment-tier-cell${item.bookGroup ? " book-tier-cell" : ""}">${item.bookGroup ? bookTierHtml(item, tier) : tokenHtml(item.tiers[tier])}</td>`).join("")}
       ${hasFilter ? `<td class="badge equipment-sort-cell">${sortBadge(item)}</td>` : ""}
@@ -1762,7 +1807,7 @@
   }
 
   function renderTable(items) {
-    if (state.category === null) {
+    if (state.category === null || state.category === EQUIPMENT_FAVORITES_CATEGORY) {
       const nonBooks = items.filter((item) => !item.bookGroup);
       const orangeBooks = items.filter((item) => item.bookGroup === "初始橙色典籍");
       const purpleBooks = items.filter((item) => item.bookGroup === "初始紫色典籍");
@@ -1797,7 +1842,7 @@
       return `<div class="card${item.bookGroup ? " book-card" : ""}">
         <div class="card-head">
           <span class="cat">${item.cat}</span>
-          ${equipmentNameHtml(item)}
+          ${equipmentResultNameHtml(item)}
           ${badge ? `<span class="badge">${badge}</span>` : ""}
         </div>
         ${state.showMain ? `<div class="card-main">主属性：<b>${escapeHtml(item.main)}</b></div>` : ""}

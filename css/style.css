@@ -1038,6 +1038,38 @@ td.name { font-weight: 600; white-space: nowrap; }
 }
 .equipment-name-purple { background: #7030a0; border-color: #7030a0; }
 .equipment-name-orange { background: #f79646; border-color: #f79646; }
+.equipment-result-name {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  max-width: 100%;
+}
+.equipment-favorite-toggle {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  color: var(--gold);
+  background: transparent;
+  border: 2px solid transparent;
+  border-radius: 7px;
+  font-size: 21px;
+  line-height: 1;
+  cursor: pointer;
+}
+.equipment-favorite-toggle.is-favorite {
+  color: var(--gold);
+  background: var(--red);
+  border-color: var(--red);
+}
+.equipment-favorite-toggle:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
 .cat { color: var(--gold-dim); font-size: 13px; white-space: nowrap; }
 #partition-equipment .main { color: #fff; font-weight: 600; }
 #partition-equipment .equipment-result-table {
@@ -2380,11 +2412,13 @@ figcaption { color: var(--muted); font-size: 13px; margin-top: 8px; }
   #partition-forbidden .forbidden-subtitle { overflow-wrap: anywhere; }
   #partition-forbidden #forbidden-search { width: 100%; min-width: 0; box-sizing: border-box; }
   #partition-equipment .equipment-main-visibility,
+  #partition-equipment .equipment-favorite-toggle,
   #partition-equipment .equipment-compare-toggle,
   #partition-equipment .equipment-compare-start,
   #partition-equipment .equipment-compare-add,
   #partition-equipment .equipment-compare-dimensions .chip { min-height: 44px; touch-action: manipulation; }
   #partition-equipment .equipment-main-visibility { padding: 7px 11px; }
+  #partition-equipment .equipment-favorite-toggle { width: 44px; height: 44px; padding: 0; }
   #partition-equipment .equipment-compare-card,
   #partition-machine-beasts .machine-school-plan-beast,
   #partition-machine-beasts .machine-school-plan-summary > div { overflow: hidden; }
@@ -2692,6 +2726,7 @@ figcaption { color: var(--muted); font-size: 13px; margin-top: 8px; }
   .atlas-summary-equipment-list > *,
   .atlas-equipment-stage-list > *,
   .equipment-name-badge { max-width: 100%; white-space: normal; overflow-wrap: anywhere; }
+  #partition-equipment .equipment-result-name { justify-content: flex-start; }
   .atlas-note-menu {
     right: auto;
     left: 0;

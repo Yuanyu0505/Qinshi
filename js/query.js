@@ -39,6 +39,19 @@
     return item.cat === category;
   }
 
+  function nextEquipmentCategoryState(currentState, selectedCategory, favoritesCategory) {
+    currentState = currentState || {};
+    var category = currentState.category == null ? null : currentState.category;
+    var favoritesOnly = !!currentState.favoritesOnly;
+    if (selectedCategory === favoritesCategory) {
+      return { category: category, favoritesOnly: !favoritesOnly };
+    }
+    return {
+      category: category === selectedCategory ? null : selectedCategory,
+      favoritesOnly: favoritesOnly
+    };
+  }
+
   function tokenMatches(token, attr) {
     return token.t === attr || (Array.isArray(token.matches) && token.matches.indexOf(attr) !== -1);
   }
@@ -190,6 +203,7 @@
     normalizeInput: normalizeInput,
     matchSearch: matchSearch,
     matchCategory: matchCategory,
+    nextEquipmentCategoryState: nextEquipmentCategoryState,
     matchMain: matchMain,
     hasSubAttr: hasSubAttr,
     tokenMatches: tokenMatches,

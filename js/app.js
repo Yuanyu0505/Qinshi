@@ -44,6 +44,7 @@
   const state = {
     search: "", category: null, main: null, showMain: false, filters: [], sortAttr: null, valueSource: "max", activated: false,
     favorites: loadEquipmentFavorites(),
+    favoritesOnly: false,
     comparison: { itemIds: [], group: null, tier: "红金", dimensions: [], expanded: false, started: false }
   };
   const forgeState = { mode: "main", query: "" };
@@ -1358,8 +1359,10 @@
     el.categoryBtns.addEventListener("click", (e) => {
       const btn = e.target.closest("button[data-category]");
       if (!btn) return;
-      state.category = btn.dataset.category;
-      state.activated = true;
+      const nextSelection = Q.nextEquipmentCategoryState(state, btn.dataset.category, EQUIPMENT_FAVORITES_CATEGORY);
+      state.category = nextSelection.category;
+      state.favoritesOnly = nextSelection.favoritesOnly;
+      state.activated = hasEquipmentConditions();
       apply();
     });
     el.mainBtns.addEventListener("click", (e) => {
@@ -1592,12 +1595,13 @@
 
   function hasEquipmentConditions() {
     return state.search.trim() !== "" || state.category !== null ||
-      state.main !== null || state.filters.length > 0;
+      state.favoritesOnly || state.main !== null || state.filters.length > 0;
   }
 
   function resetEquipmentView() {
     state.search = "";
     state.category = null;
+    state.favoritesOnly = false;
     state.main = null;
     state.showMain = false;
     state.filters = [];
@@ -1619,13 +1623,13 @@
     }
     let items = Q.queryItems(DATA.items, {
       search: state.search,
-      category: state.category === EQUIPMENT_FAVORITES_CATEGORY ? null : state.category,
+      category: state.category,
       main: state.main == null ? "" : state.main,
       filters: state.filters,
       sortAttr: state.sortAttr,
       valueSource: state.valueSource
     });
-    if (state.category === EQUIPMENT_FAVORITES_CATEGORY) {
+    if (state.favoritesOnly) {
       items = items.filter((item) => state.favorites.includes(item.id));
     }
     renderTable(items);
@@ -1637,7 +1641,10 @@
 
   function renderControls() {
     el.categoryBtns.querySelectorAll("button").forEach((btn) => {
-      btn.classList.toggle("active", state.category !== null && btn.dataset.category === state.category);
+      const isFavoritesButton = btn.dataset.category === EQUIPMENT_FAVORITES_CATEGORY;
+      btn.classList.toggle("active", isFavoritesButton
+        ? state.favoritesOnly
+        : state.category !== null && btn.dataset.category === state.category);
     });
     el.mainBtns.querySelectorAll("button").forEach((btn) => {
       btn.classList.toggle("active", state.main !== null && btn.dataset.main === state.main);
@@ -1807,7 +1814,7 @@
   }
 
   function renderTable(items) {
-    if (state.category === null || state.category === EQUIPMENT_FAVORITES_CATEGORY) {
+    if (state.category === null) {
       const nonBooks = items.filter((item) => !item.bookGroup);
       const orangeBooks = items.filter((item) => item.bookGroup === "初始橙色典籍");
       const purpleBooks = items.filter((item) => item.bookGroup === "初始紫色典籍");

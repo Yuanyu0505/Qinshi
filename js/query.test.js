@@ -242,3 +242,28 @@ test("queryItems：双筛选 + 切换排序属性", () => {
   const byBlood = Q.queryItems(fixture, { filters: ["血", "暴击"], sortAttr: "血" });
   assert.deepStrictEqual(byBlood.map(i => i.name), ["月光耳坠", "神兵月光"]);
 });
+
+test("装备分类状态：收藏装备可与一个普通分类同时选中", () => {
+  const nextSelection = Q.nextEquipmentCategoryState;
+  let state = { category: null, favoritesOnly: false };
+
+  state = nextSelection(state, "神兵武器", "收藏装备");
+  assert.deepStrictEqual(state, { category: "神兵武器", favoritesOnly: false });
+
+  state = nextSelection(state, "收藏装备", "收藏装备");
+  assert.deepStrictEqual(state, { category: "神兵武器", favoritesOnly: true });
+});
+
+test("装备分类状态：普通分类保持单选且不清除收藏条件", () => {
+  const nextSelection = Q.nextEquipmentCategoryState;
+  let state = { category: "神兵武器", favoritesOnly: true };
+
+  state = nextSelection(state, "神兵防具", "收藏装备");
+  assert.deepStrictEqual(state, { category: "神兵防具", favoritesOnly: true });
+
+  state = nextSelection(state, "神兵防具", "收藏装备");
+  assert.deepStrictEqual(state, { category: null, favoritesOnly: true });
+
+  state = nextSelection(state, "收藏装备", "收藏装备");
+  assert.deepStrictEqual(state, { category: null, favoritesOnly: false });
+});

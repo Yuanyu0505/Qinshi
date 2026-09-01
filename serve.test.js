@@ -634,7 +634,7 @@ test("个人进度装备可进入装备属性并一次性返回原页", async ()
   });
 });
 
-test("PWA 1.0.22 发布装备锻造双向跳转与现有手机和平板资源", async () => {
+test("PWA 1.0.23 发布锻造个人进度装备模型与现有手机和平板资源", async () => {
   const pagesWorkflow = fs.readFileSync(path.join(__dirname, ".github", "workflows", "pages.yml"), "utf8");
   assert.match(pagesWorkflow, /js\/tactics\.js/);
   assert.match(pagesWorkflow, /js\/tactics-ui\.js/);
@@ -670,9 +670,9 @@ test("PWA 1.0.22 发布装备锻造双向跳转与现有手机和平板资源", 
     assert.strictEqual(forbiddenData.status, 200);
     assert.strictEqual(forbiddenCore.status, 200);
     assert.strictEqual(forbiddenUi.status, 200);
-    assert.match(index.body, /id="pwa-version">1\.0\.22<\/strong>/);
-    assert.match(worker.body, /CACHE_NAME\s*=\s*CACHE_PREFIX\s*\+\s*"1\.0\.22"/);
-    assert.match(pwa.body, /APP_VERSION\s*=\s*"1\.0\.22"/);
+    assert.match(index.body, /id="pwa-version">1\.0\.23<\/strong>/);
+    assert.match(worker.body, /CACHE_NAME\s*=\s*CACHE_PREFIX\s*\+\s*"1\.0\.23"/);
+    assert.match(pwa.body, /APP_VERSION\s*=\s*"1\.0\.23"/);
     assert.match(worker.body, /"\.\/data\/tactics\.js"/);
     assert.match(worker.body, /"\.\/js\/tactics\.js"/);
     assert.match(worker.body, /"\.\/js\/tactics-ui\.js"/);

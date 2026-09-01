@@ -623,6 +623,16 @@ test("锻造个人进度使用神兵名称底色、品质换算和锻数状态",
   });
 });
 
+test("橙金与红金装备名使用强金色双描边、高光和角饰", async () => {
+  await withServer(async (port) => {
+    const css = await get(port, "/css/style.css");
+    assert.match(css.body, /\.progress-equipment-orange-gold,\s*\.progress-equipment-red-gold\s*\{[\s\S]*?border:\s*3px solid #ffd75a;[\s\S]*?outline:\s*1px solid #6b4304;[\s\S]*?box-shadow:/);
+    assert.match(css.body, /\.progress-equipment-orange-gold::after,\s*\.progress-equipment-red-gold::after\s*\{[\s\S]*?transform:\s*rotate\(45deg\);/);
+    assert.match(css.body, /\.progress-equipment-orange-gold\s*\{[\s\S]*?linear-gradient\(110deg/);
+    assert.match(css.body, /\.progress-equipment-red-gold\s*\{[\s\S]*?linear-gradient\(110deg/);
+  });
+});
+
 test("个人进度装备可进入装备属性并一次性返回原页", async () => {
   await withServer(async (port) => {
     const app = await get(port, "/js/app.js");
@@ -635,7 +645,7 @@ test("个人进度装备可进入装备属性并一次性返回原页", async ()
   });
 });
 
-test("PWA 1.0.23 发布锻造个人进度装备模型与现有手机和平板资源", async () => {
+test("PWA 1.0.24 发布金色品质强化样式与现有手机和平板资源", async () => {
   const pagesWorkflow = fs.readFileSync(path.join(__dirname, ".github", "workflows", "pages.yml"), "utf8");
   assert.match(pagesWorkflow, /js\/tactics\.js/);
   assert.match(pagesWorkflow, /js\/tactics-ui\.js/);
@@ -671,9 +681,9 @@ test("PWA 1.0.23 发布锻造个人进度装备模型与现有手机和平板资
     assert.strictEqual(forbiddenData.status, 200);
     assert.strictEqual(forbiddenCore.status, 200);
     assert.strictEqual(forbiddenUi.status, 200);
-    assert.match(index.body, /id="pwa-version">1\.0\.23<\/strong>/);
-    assert.match(worker.body, /CACHE_NAME\s*=\s*CACHE_PREFIX\s*\+\s*"1\.0\.23"/);
-    assert.match(pwa.body, /APP_VERSION\s*=\s*"1\.0\.23"/);
+    assert.match(index.body, /id="pwa-version">1\.0\.24<\/strong>/);
+    assert.match(worker.body, /CACHE_NAME\s*=\s*CACHE_PREFIX\s*\+\s*"1\.0\.24"/);
+    assert.match(pwa.body, /APP_VERSION\s*=\s*"1\.0\.24"/);
     assert.match(worker.body, /"\.\/data\/tactics\.js"/);
     assert.match(worker.body, /"\.\/js\/tactics\.js"/);
     assert.match(worker.body, /"\.\/js\/tactics-ui\.js"/);

@@ -188,6 +188,21 @@
     return matches.find(function (entry) { return entry.preferred; }) || matches[0] || null;
   }
 
+  function createProgressReturnSession(progressView, equipmentName, recordId, scrollY) {
+    return {
+      progressView: JSON.parse(JSON.stringify(progressView || {})),
+      equipmentName: String(equipmentName == null ? "" : equipmentName).trim(),
+      recordId: String(recordId == null ? "" : recordId),
+      scrollY: Number.isFinite(Number(scrollY)) ? Math.max(0, Number(scrollY)) : 0,
+      valid: true
+    };
+  }
+
+  function matchesProgressReturnSession(session, equipmentName) {
+    return Boolean(session && session.valid === true && session.equipmentName &&
+      session.equipmentName === String(equipmentName == null ? "" : equipmentName).trim());
+  }
+
   return {
     FORGE_NAME_ALIASES: FORGE_NAME_ALIASES,
     resolveForgeTarget: resolveForgeTarget,
@@ -196,6 +211,8 @@
     buildProgressEquipmentCatalog: buildProgressEquipmentCatalog,
     searchProgressEquipmentCatalog: searchProgressEquipmentCatalog,
     preferredProgressEquipment: preferredProgressEquipment,
+    createProgressReturnSession: createProgressReturnSession,
+    matchesProgressReturnSession: matchesProgressReturnSession,
     createReturnSession: createReturnSession,
     matchesReturnSession: matchesReturnSession,
     buildReverseEquipmentView: buildReverseEquipmentView

@@ -622,6 +622,18 @@ test("锻造个人进度使用神兵名称底色、品质换算和锻数状态",
   });
 });
 
+test("个人进度装备可进入装备属性并一次性返回原页", async () => {
+  await withServer(async (port) => {
+    const app = await get(port, "/js/app.js");
+    assert.match(app.body, /let progressReturnSession = null/);
+    assert.match(app.body, /function captureProgressView/);
+    assert.match(app.body, /createProgressReturnSession/);
+    assert.match(app.body, /matchesProgressReturnSession/);
+    assert.match(app.body, /source:\s*"progress-return"/);
+    assert.match(app.body, /invalidateProgressReturnSession\("equipment-filter"\)/);
+  });
+});
+
 test("PWA 1.0.22 发布装备锻造双向跳转与现有手机和平板资源", async () => {
   const pagesWorkflow = fs.readFileSync(path.join(__dirname, ".github", "workflows", "pages.yml"), "utf8");
   assert.match(pagesWorkflow, /js\/tactics\.js/);

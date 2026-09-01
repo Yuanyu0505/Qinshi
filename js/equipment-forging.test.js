@@ -202,3 +202,14 @@ test("个人进度目录：四组稀缺装备保留普通和神兵两个选项",
     ["百家杂记", "神兵百家"]
   );
 });
+
+test("个人进度返回会话：深拷贝来源并只匹配有效同名装备", () => {
+  const view = { page: 2, query: "墨眉", view: "progress" };
+  const session = EquipmentForging.createProgressReturnSession(view, "神兵墨眉", "i1", 720);
+  view.page = 4;
+  assert.deepStrictEqual(session.progressView, { page: 2, query: "墨眉", view: "progress" });
+  assert.strictEqual(EquipmentForging.matchesProgressReturnSession(session, "神兵墨眉"), true);
+  assert.strictEqual(EquipmentForging.matchesProgressReturnSession(session, "墨眉"), false);
+  session.valid = false;
+  assert.strictEqual(EquipmentForging.matchesProgressReturnSession(session, "神兵墨眉"), false);
+});

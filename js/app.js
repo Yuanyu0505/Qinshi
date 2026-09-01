@@ -52,6 +52,7 @@
   const forgeState = { mode: "main", query: "" };
   let activeBookDetail = null;
   let forgeReturnSession = null;
+  let progressReturnSession = null;
   let switchPartition = function () {};
 
   const el = {
@@ -220,9 +221,31 @@
     el.search.value = state.search;
   }
 
+  function captureProgressView() {
+    return {
+      view: progState.view,
+      page: progState.page,
+      query: progState.query,
+      searchValue: el.progSearch.value
+    };
+  }
+
+  function restoreProgressView(view) {
+    const saved = view || {};
+    progState.view = saved.view || "progress";
+    progState.page = Number.isInteger(saved.page) ? saved.page : 0;
+    progState.query = saved.query || "";
+    el.progSearch.value = saved.searchValue === undefined ? progState.query : saved.searchValue;
+  }
+
   function invalidateForgeReturnSession(reason) {
     if (forgeReturnSession) forgeReturnSession.valid = false;
     forgeReturnSession = null;
+  }
+
+  function invalidateProgressReturnSession(reason) {
+    if (progressReturnSession) progressReturnSession.valid = false;
+    progressReturnSession = null;
   }
 
   function returnToEquipmentFromForge(session) {
@@ -230,6 +253,35 @@
     restoreEquipmentView(session.equipmentView);
     switchPartition("equipment", { source: "forge-return", preserveEquipment: true });
     apply();
+    requestAnimationFrame(function () {
+      window.scrollTo({ top: session.scrollY, behavior: "auto" });
+    });
+  }
+
+  function openEquipmentFromProgress(button) {
+    const equipmentName = button.dataset.progressEquipment;
+    if (!equipmentName) return;
+    progressReturnSession = EQUIP_FORGING.createProgressReturnSession(
+      captureProgressView(),
+      equipmentName,
+      button.dataset.progressRecord,
+      window.scrollY
+    );
+    invalidateForgeReturnSession("progress-equipment-link");
+    const nextView = EQUIP_FORGING.buildReverseEquipmentView(captureEquipmentView(), equipmentName);
+    restoreEquipmentView(nextView);
+    switchPartition("equipment", { source: "progress-link", preserveEquipment: true });
+    apply();
+    requestAnimationFrame(function () {
+      el.results.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  }
+
+  function returnToProgressFromEquipment(session) {
+    progressReturnSession = null;
+    restoreProgressView(session.progressView);
+    switchPartition("forging", { source: "progress-return" });
+    applyForgeView();
     requestAnimationFrame(function () {
       window.scrollTo({ top: session.scrollY, behavior: "auto" });
     });
@@ -272,8 +324,9 @@
     switchPartition = function (name, options) {
       const navigationOptions = options || {};
       if (!parts[name]) return;
-      if ((navigationOptions.source || "user") === "user" && name !== "forging") {
-        invalidateForgeReturnSession("partition");
+      if ((navigationOptions.source || "user") === "user") {
+        if (name !== "forging") invalidateForgeReturnSession("partition");
+        invalidateProgressReturnSession("partition");
       }
       closeBookDetailPopover();
       setPartitionTitle(name);
@@ -983,6 +1036,11 @@
       renderProgress();
     });
     el.progSearchResults.addEventListener("click", (e) => {
+      const equipmentLink = e.target.closest("button[data-progress-equipment]");
+      if (equipmentLink) {
+        openEquipmentFromProgress(equipmentLink);
+        return;
+      }
       const btn = e.target.closest("button[data-prog-disciple-index]");
       if (!btn) return;
       openProgressDisciple(Number(btn.dataset.progDiscipleIndex));
@@ -1000,6 +1058,11 @@
       }
     });
     el.progDisciples.addEventListener("click", (e) => {
+      const equipmentLink = e.target.closest("button[data-progress-equipment]");
+      if (equipmentLink) {
+        openEquipmentFromProgress(equipmentLink);
+        return;
+      }
       const btn = e.target.closest("button[data-act]");
       if (!btn) return;
       const act = btn.dataset.act;
@@ -1447,6 +1510,7 @@
 
   function bindEvents() {
     el.search.addEventListener("input", () => {
+      invalidateProgressReturnSession("equipment-filter");
       state.search = el.search.value;
       state.activated = hasEquipmentConditions();
       apply();
@@ -1454,6 +1518,7 @@
     el.categoryBtns.addEventListener("click", (e) => {
       const btn = e.target.closest("button[data-category]");
       if (!btn) return;
+      invalidateProgressReturnSession("equipment-filter");
       const nextSelection = Q.nextEquipmentCategoryState(state, btn.dataset.category, EQUIPMENT_FAVORITES_CATEGORY);
       state.category = nextSelection.category;
       state.favoritesOnly = nextSelection.favoritesOnly;
@@ -1463,6 +1528,7 @@
     el.mainBtns.addEventListener("click", (e) => {
       const btn = e.target.closest("button[data-main]");
       if (!btn) return;
+      invalidateProgressReturnSession("equipment-filter");
       state.main = btn.dataset.main;
       state.activated = true;
       apply();
@@ -1474,6 +1540,7 @@
     el.chips.addEventListener("click", (e) => {
       const btn = e.target.closest(".chip");
       if (!btn) return;
+      invalidateProgressReturnSession("equipment-filter");
       const attr = btn.dataset.attr;
       const idx = state.filters.indexOf(attr);
       if (idx >= 0) {
@@ -1490,17 +1557,25 @@
     el.sortAttrBtns.addEventListener("click", (e) => {
       const btn = e.target.closest("button[data-attr]");
       if (!btn) return;
+      invalidateProgressReturnSession("equipment-filter");
       state.sortAttr = btn.dataset.attr;
       apply();
     });
     el.sortTierBtns.addEventListener("click", (e) => {
       const btn = e.target.closest("button[data-tier]");
       if (!btn) return;
+      invalidateProgressReturnSession("equipment-filter");
       state.valueSource = btn.dataset.tier;
       apply();
     });
-    el.clearAll.addEventListener("click", resetEquipmentView);
-    el.emptyClear.addEventListener("click", resetEquipmentView);
+    el.clearAll.addEventListener("click", () => {
+      invalidateProgressReturnSession("equipment-filter");
+      resetEquipmentView();
+    });
+    el.emptyClear.addEventListener("click", () => {
+      invalidateProgressReturnSession("equipment-filter");
+      resetEquipmentView();
+    });
     el.results.addEventListener("click", (event) => {
       const favoriteButton = event.target.closest("[data-equipment-favorite]");
       if (favoriteButton) {
@@ -1510,6 +1585,12 @@
       const forgeButton = event.target.closest("[data-equipment-forge]");
       if (forgeButton) {
         const item = DATA.items.find((entry) => entry.id === forgeButton.dataset.equipmentForge);
+        if (item && EQUIP_FORGING.matchesProgressReturnSession(progressReturnSession, item.name)) {
+          const session = progressReturnSession;
+          returnToProgressFromEquipment(session);
+          return;
+        }
+        invalidateProgressReturnSession("different-equipment");
         const navigation = item ? EQUIP_FORGING.buildForgeNavigation(item.name, FDATA.items) : null;
         if (!navigation) return;
         forgeReturnSession = EQUIP_FORGING.createReturnSession(
@@ -1571,6 +1652,7 @@
     if (!item) return;
     const next = EQUIP_COMPARE.toggleSelection(state.comparison.itemIds, state.comparison.group, item);
     if (!next.changed) return;
+    invalidateProgressReturnSession("equipment-filter");
     state.comparison.itemIds = next.itemIds;
     state.comparison.group = next.group;
     if (next.selected) state.comparison.expanded = true;
@@ -1585,6 +1667,7 @@
   function toggleEquipmentFavorite(itemId) {
     const item = DATA.items.find((entry) => entry.id === itemId);
     if (!item) return;
+    invalidateProgressReturnSession("equipment-filter");
     const index = state.favorites.indexOf(itemId);
     if (index >= 0) state.favorites.splice(index, 1);
     else state.favorites.push(itemId);
@@ -1593,6 +1676,7 @@
   }
 
   function removeEquipmentFromComparison(itemId) {
+    invalidateProgressReturnSession("equipment-filter");
     state.comparison.itemIds = state.comparison.itemIds.filter((id) => id !== itemId);
     if (!state.comparison.itemIds.length) {
       state.comparison.group = null;
@@ -1604,6 +1688,7 @@
   }
 
   function clearEquipmentComparison() {
+    invalidateProgressReturnSession("equipment-filter");
     state.comparison.itemIds = [];
     state.comparison.group = null;
     state.comparison.dimensions = [];
@@ -1679,6 +1764,7 @@
     }
     const dimensionButton = event.target.closest("[data-compare-dimension]");
     if (dimensionButton) {
+      invalidateProgressReturnSession("equipment-filter");
       const dimension = dimensionButton.dataset.compareDimension;
       const index = state.comparison.dimensions.indexOf(dimension);
       if (index >= 0) state.comparison.dimensions.splice(index, 1);
@@ -1691,12 +1777,15 @@
     const action = actionButton.dataset.compareAction;
     if (action === "clear-items") clearEquipmentComparison();
     else if (action === "select-all") {
+      invalidateProgressReturnSession("equipment-filter");
       state.comparison.dimensions = EQUIP_COMPARE.availableDimensions(selectedComparisonItems(), state.comparison.tier);
       renderEquipmentComparison();
     } else if (action === "clear-dimensions") {
+      invalidateProgressReturnSession("equipment-filter");
       state.comparison.dimensions = [];
       renderEquipmentComparison();
     } else if (action === "start") {
+      invalidateProgressReturnSession("equipment-filter");
       state.comparison.started = true;
       renderEquipmentComparison();
     }
@@ -1704,6 +1793,7 @@
 
   function handleEquipmentCompareChange(event) {
     if (!event.target.matches("[data-compare-tier]")) return;
+    invalidateProgressReturnSession("equipment-filter");
     state.comparison.tier = event.target.value;
     reconcileComparisonDimensions();
     renderEquipmentComparison();

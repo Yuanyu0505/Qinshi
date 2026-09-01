@@ -1,6 +1,20 @@
 const { test } = require("node:test");
 const assert = require("node:assert");
+const fs = require("node:fs");
+const path = require("node:path");
+const vm = require("node:vm");
 const P = require("./progress.js");
+const EquipmentForging = require("./equipment-forging.js");
+
+function loadWindowData(file, key) {
+  const context = { window: {} };
+  vm.runInNewContext(fs.readFileSync(path.join(__dirname, "..", file), "utf8"), context);
+  return context.window[key];
+}
+
+const forgingData = loadWindowData("data/forging.js", "FORGING_DATA");
+const equipmentData = loadWindowData("data/special-equipment.js", "SPECIAL_EQUIPMENT_DATA");
+const progressCatalog = EquipmentForging.buildProgressEquipmentCatalog(forgingData.items, equipmentData.items);
 
 const item = {
   id: "f-0001", cat: "武器", name: "雷神锤", quality: "橙",
@@ -95,4 +109,52 @@ test("overallSummary：汇总所有弟子剩余材料", () => {
   const r = P.overallSummary(data, disciples);
   assert.strictEqual(r.find(m => m.n === "非攻").count, 2);
   assert.strictEqual(r.find(m => m.n === "赤霄").count, 2);
+});
+
+test("品质换算：红色高锻压缩为橙金且橙金升红继承为6锻", () => {
+  assert.deepStrictEqual(P.convertQuality({ id: "i1", forgeName: "墨眉", quality: "red", progress: 9 }, "orange"), {
+    id: "i1", forgeName: "墨眉", quality: "orange", progress: 6
+  });
+  assert.deepStrictEqual(P.convertQuality({ id: "i1", forgeName: "墨眉", quality: "orange", progress: 6 }, "red"), {
+    id: "i1", forgeName: "墨眉", quality: "red", progress: 6
+  });
+  assert.strictEqual(P.requiresQualityDowngradeConfirmation({ quality: "red", progress: 7 }, "orange"), true);
+  assert.strictEqual(P.requiresQualityDowngradeConfirmation({ quality: "red", progress: 6 }, "orange"), false);
+});
+
+test("品质状态：满锻使用橙金或红金且普通进度显示锻数", () => {
+  assert.deepStrictEqual(P.progressStatus({ quality: "orange", progress: 6 }), { label: "满锻", tier: "orange-gold" });
+  assert.deepStrictEqual(P.progressStatus({ quality: "red", progress: 11 }), { label: "满锻", tier: "red-gold" });
+  assert.deepStrictEqual(P.progressStatus({ quality: "red", progress: 5 }), { label: "5锻", tier: "red" });
+});
+
+test("旧进度迁移：默认红色、保留锻数并优先神兵", () => {
+  const migrated = P.normalizeProgressStore({ disciples: [{ id: "d1", name: "弟子", items: [
+    { id: "i1", name: "墨眉", cat: "武器", progress: 9 },
+    { id: "i2", name: "地煞魔铠", cat: "盔甲", progress: 2 },
+    { id: "i3", name: "鬼谷子", cat: "典籍", progress: 11 }
+  ] }] }, progressCatalog, forgingData.items);
+  assert.strictEqual(migrated.version, 2);
+  assert.deepStrictEqual(migrated.disciples[0].items.map((entry) => [entry.forgeName, entry.equipmentName, entry.quality, entry.progress]), [
+    ["墨眉", "神兵墨眉", "red", 9],
+    ["地煞魔铠", "神兵魔铠", "red", 2],
+    ["神兵鬼谷子", "神兵鬼谷子", "red", 11]
+  ]);
+});
+
+test("橙色只统计前6段且红色统计完整11段", () => {
+  assert.strictEqual(P.remainingStages(item, 0, "orange").length, 6);
+  assert.deepStrictEqual(P.remainingStages(item, 6, "orange"), []);
+  assert.strictEqual(P.remainingStages(item, 6, "red").length, 5);
+  const orangeSummary = P.discipleSummary(data, { items: [{ forgeName: "雷神锤", quality: "orange", progress: 0 }] });
+  assert.strictEqual(orangeSummary.materials.some((material) => material.n === "赤霄"), false);
+});
+
+test("个人进度搜索：普通名可命中已保存神兵", () => {
+  const disciples = P.normalizeProgressStore({ disciples: [{ id: "d1", name: "弟子", items: [
+    { id: "i1", name: "墨眉", cat: "武器", progress: 2 }
+  ] }] }, progressCatalog, forgingData.items).disciples;
+  const result = P.searchEquipment(forgingData, disciples, "墨眉", progressCatalog);
+  assert.strictEqual(result.owned.length, 1);
+  assert.strictEqual(result.owned[0].progressItem.equipmentName, "神兵墨眉");
 });

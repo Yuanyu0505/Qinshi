@@ -12,6 +12,8 @@
   "use strict";
 
   var CAT_ORDER = ["武器", "盔甲", "首饰", "典籍"];
+  var PROGRESS_STORE_VERSION = 2;
+  var QUALITY_LIMITS = { orange: 6, red: 11 };
 
   function normalizeSearch(s) {
     return String(s == null ? "" : s).trim().toLowerCase();
@@ -27,15 +29,87 @@
   }
 
   /** progress = 已完成阶段数（0..stages.length）；返回剩余阶段（含下一阶段） */
-  function remainingStages(item, progress) {
-    if (!item || !item.stages) return [];
-    var p = Math.max(0, Math.min(progress | 0, item.stages.length));
-    return item.stages.slice(p);
+  function qualityStageLimit(quality) {
+    return quality === "orange" ? QUALITY_LIMITS.orange : QUALITY_LIMITS.red;
   }
 
-  function nextStage(item, progress) {
-    var rem = remainingStages(item, progress);
+  function remainingStages(item, progress, quality) {
+    if (!item || !item.stages) return [];
+    var limit = Math.min(item.stages.length, qualityStageLimit(quality));
+    var p = Math.max(0, Math.min(progress | 0, limit));
+    return item.stages.slice(p, limit);
+  }
+
+  function nextStage(item, progress, quality) {
+    var rem = remainingStages(item, progress, quality);
     return rem.length ? rem[0] : null;
+  }
+
+  function convertQuality(progressItem, nextQuality) {
+    var quality = nextQuality === "orange" ? "orange" : "red";
+    return Object.assign({}, progressItem, {
+      quality: quality,
+      progress: Math.min(Math.max(0, progressItem.progress | 0), qualityStageLimit(quality))
+    });
+  }
+
+  function requiresQualityDowngradeConfirmation(progressItem, nextQuality) {
+    return Boolean(progressItem && progressItem.quality === "red" && nextQuality === "orange" &&
+      (progressItem.progress | 0) > QUALITY_LIMITS.orange);
+  }
+
+  function progressStatus(progressItem) {
+    var quality = progressItem && progressItem.quality === "orange" ? "orange" : "red";
+    var limit = qualityStageLimit(quality);
+    var progress = Math.max(0, Math.min(progressItem && progressItem.progress | 0, limit));
+    return {
+      label: progress >= limit ? "满锻" : progress + "锻",
+      tier: progress >= limit ? quality + "-gold" : quality
+    };
+  }
+
+  function catalogMatch(catalog, item, legacy) {
+    var entries = Array.isArray(catalog) ? catalog : [];
+    if (!legacy && item && item.equipmentName) {
+      var exact = entries.find(function (entry) {
+        return entry.equipmentName === item.equipmentName && (!item.forgeName || entry.forgeName === item.forgeName);
+      });
+      if (exact) return exact;
+    }
+    var name = String(item && (item.name || item.equipmentName || item.forgeName) || "");
+    var matches = entries.filter(function (entry) {
+      return entry.forgeName === name || entry.equipmentName === name || entry.aliases.indexOf(name) >= 0;
+    });
+    return matches.find(function (entry) { return entry.preferred; }) || matches[0] || null;
+  }
+
+  function normalizeProgressStore(raw, catalog, forgingItems) {
+    var source = raw && typeof raw === "object" ? raw : {};
+    var legacy = source.version !== PROGRESS_STORE_VERSION;
+    var forgeRows = Array.isArray(forgingItems) ? forgingItems : [];
+    var disciples = (Array.isArray(source.disciples) ? source.disciples : []).map(function (disciple) {
+      return {
+        id: String(disciple && disciple.id || ""),
+        name: String(disciple && disciple.name || "弟子"),
+        items: (Array.isArray(disciple && disciple.items) ? disciple.items : []).map(function (progressItem) {
+          var option = catalogMatch(catalog, progressItem, legacy);
+          var fallbackName = String(progressItem && (progressItem.forgeName || progressItem.name) || "");
+          var forgeName = option ? option.forgeName : fallbackName;
+          var forgeItem = forgeRows.find(function (entry) { return entry.name === forgeName; });
+          var quality = legacy ? "red" : (progressItem.quality === "orange" ? "orange" : "red");
+          return {
+            id: String(progressItem && progressItem.id || ""),
+            forgeName: forgeName,
+            equipmentName: option ? option.equipmentName : String(progressItem && (progressItem.equipmentName || progressItem.name) || forgeName),
+            equipmentId: option ? option.equipmentId : null,
+            cat: option ? option.cat : String(progressItem && progressItem.cat || forgeItem && forgeItem.cat || ""),
+            quality: quality,
+            progress: Math.max(0, Math.min(progressItem && progressItem.progress | 0, qualityStageLimit(quality)))
+          };
+        })
+      };
+    });
+    return { version: PROGRESS_STORE_VERSION, disciples: disciples };
   }
 
   function compareMaterialTokens(a, b) {
@@ -66,7 +140,7 @@
   function discipleSummary(data, disciple) {
     var stages = [];
     (disciple.items || []).forEach(function (it) {
-      stages = stages.concat(remainingStages(findItem(data, it.name), it.progress));
+      stages = stages.concat(remainingStages(findItem(data, it.forgeName || it.name), it.progress, it.quality));
     });
     return { id: disciple.id, name: disciple.name, materials: aggregateMaterials(stages) };
   }
@@ -103,7 +177,7 @@
    * 跨全部弟子搜索个人进度中的装备关系。
    * owned：弟子直接持有的装备；required：未完成阶段中的材料需求。
    */
-  function searchEquipment(data, disciples, keyword) {
+  function searchEquipment(data, disciples, keyword, catalog) {
     var q = normalizeSearch(keyword);
     var result = { owned: [], required: [] };
     if (!q) return result;
@@ -112,11 +186,13 @@
       if (!disciple || typeof disciple !== "object") return;
       orderedProgressItems(disciple.items).forEach(function (progressItem) {
         if (!progressItem || typeof progressItem !== "object") return;
-        var savedName = String(progressItem.name == null ? "" : progressItem.name);
+        var savedName = String(progressItem.equipmentName || progressItem.forgeName || progressItem.name || "");
         if (!savedName) return;
 
-        var item = findItem(data, savedName);
-        if (normalizeSearch(savedName).indexOf(q) !== -1) {
+        var item = findItem(data, progressItem.forgeName || progressItem.name);
+        var option = catalogMatch(catalog, progressItem, false);
+        var searchable = [savedName, progressItem.forgeName || ""].concat(option ? option.aliases : []);
+        if (searchable.some(function (value) { return normalizeSearch(value).indexOf(q) !== -1; })) {
           result.owned.push({
             disciple: disciple,
             progressItem: progressItem,
@@ -125,9 +201,10 @@
         }
 
         if (!item || !Array.isArray(item.stages)) return;
-        var progress = Math.max(0, Math.min(progressItem.progress | 0, item.stages.length));
+        var limit = Math.min(item.stages.length, qualityStageLimit(progressItem.quality));
+        var progress = Math.max(0, Math.min(progressItem.progress | 0, limit));
         var hits = [];
-        for (var si = progress; si < item.stages.length; si++) {
+        for (var si = progress; si < limit; si++) {
           var stage = item.stages[si] || {};
           var tokenHits = [];
           (Array.isArray(stage.tokens) ? stage.tokens : []).forEach(function (token, tokenIdx) {
@@ -177,6 +254,11 @@
 
   return {
     findItem: findItem,
+    qualityStageLimit: qualityStageLimit,
+    convertQuality: convertQuality,
+    requiresQualityDowngradeConfirmation: requiresQualityDowngradeConfirmation,
+    progressStatus: progressStatus,
+    normalizeProgressStore: normalizeProgressStore,
     remainingStages: remainingStages,
     nextStage: nextStage,
     sortMaterialTokens: sortMaterialTokens,

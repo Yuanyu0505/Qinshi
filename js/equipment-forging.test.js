@@ -166,3 +166,39 @@ test("橙装锻造反向跳转：清除命中条件但保留主属性显示和�
   });
   assert.deepStrictEqual(current.filters, ["速", "抗暴"]);
 });
+
+test("个人进度目录：普通名和神兵名归一到首选神兵", () => {
+  const catalog = EquipmentForging.buildProgressEquipmentCatalog(forgingItems, equipmentItems);
+  assert.deepStrictEqual(
+    EquipmentForging.searchProgressEquipmentCatalog(catalog, "墨眉").map((entry) => [entry.forgeName, entry.equipmentName]),
+    [["墨眉", "神兵墨眉"]]
+  );
+  assert.deepStrictEqual(
+    EquipmentForging.searchProgressEquipmentCatalog(catalog, "神兵墨眉").map((entry) => [entry.forgeName, entry.equipmentName]),
+    [["墨眉", "神兵墨眉"]]
+  );
+  assert.deepStrictEqual(
+    EquipmentForging.searchProgressEquipmentCatalog(catalog, "鬼谷子").map((entry) => [entry.forgeName, entry.equipmentName]),
+    [["神兵鬼谷子", "神兵鬼谷子"]]
+  );
+});
+
+test("个人进度目录：四组稀缺装备保留普通和神兵两个选项", () => {
+  const catalog = EquipmentForging.buildProgressEquipmentCatalog(forgingItems, equipmentItems);
+  assert.deepStrictEqual(
+    EquipmentForging.searchProgressEquipmentCatalog(catalog, "魔铠").map((entry) => entry.equipmentName),
+    ["地煞魔铠", "神兵魔铠"]
+  );
+  assert.deepStrictEqual(
+    EquipmentForging.searchProgressEquipmentCatalog(catalog, "月光").map((entry) => entry.equipmentName),
+    ["月光耳坠", "神兵月光"]
+  );
+  assert.deepStrictEqual(
+    EquipmentForging.searchProgressEquipmentCatalog(catalog, "寒霜").map((entry) => entry.equipmentName),
+    ["寒霜挂坠", "神兵寒霜"]
+  );
+  assert.deepStrictEqual(
+    EquipmentForging.searchProgressEquipmentCatalog(catalog, "百家").map((entry) => entry.equipmentName),
+    ["百家杂记", "神兵百家"]
+  );
+});

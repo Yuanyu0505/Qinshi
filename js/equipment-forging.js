@@ -49,6 +49,12 @@
     "神兵百家": "百家杂记",
     "神兵南华": "南华真经"
   };
+  var PROGRESS_VARIANT_EXCEPTIONS = {
+    "地煞魔铠": "神兵魔铠",
+    "月光耳坠": "神兵月光",
+    "寒霜挂坠": "神兵寒霜",
+    "百家杂记": "神兵百家"
+  };
 
   function resolveForgeTarget(name, forgingItems) {
     var sourceName = String(name == null ? "" : name).trim();
@@ -117,11 +123,79 @@
     return next;
   }
 
+  function progressAliases(forgeName, equipmentName) {
+    var values = [forgeName, equipmentName];
+    if (equipmentName.indexOf("神兵") === 0) values.push(equipmentName.slice(2));
+    if (forgeName === "地煞魔铠") values.push("魔铠");
+    if (forgeName === "月光耳坠") values.push("月光");
+    if (forgeName === "寒霜挂坠") values.push("寒霜");
+    if (forgeName === "百家杂记") values.push("百家");
+    return values.filter(function (value, index, list) { return value && list.indexOf(value) === index; });
+  }
+
+  function progressOption(forgeItem, equipment, preferred) {
+    var equipmentName = equipment ? equipment.name : forgeItem.name;
+    return {
+      forgeName: forgeItem.name,
+      equipmentName: equipmentName,
+      equipmentId: equipment ? equipment.id : null,
+      cat: forgeItem.cat,
+      aliases: progressAliases(forgeItem.name, equipmentName),
+      preferred: preferred !== false
+    };
+  }
+
+  function buildProgressEquipmentCatalog(forgingItems, equipmentItems) {
+    if (!Array.isArray(forgingItems) || !Array.isArray(equipmentItems)) return [];
+    var hasDivineGhost = forgingItems.some(function (item) { return item.name === "神兵鬼谷子"; });
+    var catalog = [];
+    forgingItems.forEach(function (forgeItem) {
+      if (!forgeItem || !forgeItem.name) return;
+      if (forgeItem.name === "鬼谷子" && hasDivineGhost) return;
+      var divineException = PROGRESS_VARIANT_EXCEPTIONS[forgeItem.name];
+      if (divineException) {
+        var ordinary = equipmentItems.find(function (item) { return item.name === forgeItem.name; });
+        var divine = equipmentItems.find(function (item) { return item.name === divineException; });
+        if (ordinary) catalog.push(progressOption(forgeItem, ordinary, false));
+        if (divine) catalog.push(progressOption(forgeItem, divine, true));
+        if (!ordinary && !divine) catalog.push(progressOption(forgeItem, null, true));
+        return;
+      }
+      catalog.push(progressOption(forgeItem, resolveEquipmentTarget(forgeItem.name, equipmentItems, forgingItems), true));
+    });
+    return catalog;
+  }
+
+  function normalizeProgressKeyword(value) {
+    return String(value == null ? "" : value).trim().toLowerCase();
+  }
+
+  function searchProgressEquipmentCatalog(catalog, keyword) {
+    var query = normalizeProgressKeyword(keyword);
+    return (Array.isArray(catalog) ? catalog : []).filter(function (entry) {
+      return !query || entry.aliases.some(function (alias) {
+        return normalizeProgressKeyword(alias).indexOf(query) !== -1;
+      });
+    });
+  }
+
+  function preferredProgressEquipment(catalog, savedName) {
+    var name = normalizeProgressKeyword(savedName);
+    var matches = (Array.isArray(catalog) ? catalog : []).filter(function (entry) {
+      return normalizeProgressKeyword(entry.forgeName) === name || normalizeProgressKeyword(entry.equipmentName) === name ||
+        entry.aliases.some(function (alias) { return normalizeProgressKeyword(alias) === name; });
+    });
+    return matches.find(function (entry) { return entry.preferred; }) || matches[0] || null;
+  }
+
   return {
     FORGE_NAME_ALIASES: FORGE_NAME_ALIASES,
     resolveForgeTarget: resolveForgeTarget,
     buildForgeNavigation: buildForgeNavigation,
     resolveEquipmentTarget: resolveEquipmentTarget,
+    buildProgressEquipmentCatalog: buildProgressEquipmentCatalog,
+    searchProgressEquipmentCatalog: searchProgressEquipmentCatalog,
+    preferredProgressEquipment: preferredProgressEquipment,
     createReturnSession: createReturnSession,
     matchesReturnSession: matchesReturnSession,
     buildReverseEquipmentView: buildReverseEquipmentView

@@ -104,12 +104,26 @@
       session.forgeName === String(forgeName == null ? "" : forgeName).trim());
   }
 
+  function buildReverseEquipmentView(currentView, targetName) {
+    var next = JSON.parse(JSON.stringify(currentView || {}));
+    next.search = String(targetName == null ? "" : targetName).trim();
+    next.category = null;
+    next.favoritesOnly = false;
+    next.main = null;
+    next.filters = [];
+    next.sortAttr = null;
+    next.valueSource = "max";
+    next.activated = true;
+    return next;
+  }
+
   return {
     FORGE_NAME_ALIASES: FORGE_NAME_ALIASES,
     resolveForgeTarget: resolveForgeTarget,
     buildForgeNavigation: buildForgeNavigation,
     resolveEquipmentTarget: resolveEquipmentTarget,
     createReturnSession: createReturnSession,
-    matchesReturnSession: matchesReturnSession
+    matchesReturnSession: matchesReturnSession,
+    buildReverseEquipmentView: buildReverseEquipmentView
   };
 });

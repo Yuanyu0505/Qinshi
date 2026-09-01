@@ -492,6 +492,15 @@ header.top {
 }
 .eq-orange { background: #f79646; color: #1c1507; }
 .eq-purple { background: #7030a0; color: #fff; }
+.forging-equipment-link {
+  appearance: none;
+  border: 0;
+  font-family: inherit;
+  line-height: inherit;
+  cursor: pointer;
+}
+.forging-equipment-link:hover { filter: brightness(1.1); box-shadow: 0 0 8px rgba(212, 175, 55, .4); }
+.forging-equipment-link:focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; }
 .forge-scroll { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; background: var(--bg2); }
 .forge-h-table { width: 100%; min-width: 1120px; border-collapse: collapse; }
 .forge-h-table thead th {
@@ -2443,6 +2452,7 @@ figcaption { color: var(--muted); font-size: 13px; margin-top: 8px; }
   #partition-equipment .equipment-main-visibility { padding: 7px 11px; }
   #partition-equipment .equipment-forge-link { min-height: 44px; touch-action: manipulation; }
   #partition-equipment .equipment-favorite-toggle { width: 44px; height: 44px; padding: 0; }
+  .forging-equipment-link { min-height: 44px; touch-action: manipulation; }
   #partition-equipment .equipment-compare-card,
   #partition-machine-beasts .machine-school-plan-beast,
   #partition-machine-beasts .machine-school-plan-summary > div { overflow: hidden; }

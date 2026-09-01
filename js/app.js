@@ -50,6 +50,8 @@
   };
   const forgeState = { mode: "main", query: "" };
   let activeBookDetail = null;
+  let forgeReturnSession = null;
+  let switchPartition = function () {};
 
   const el = {
     search: document.getElementById("search"),
@@ -188,6 +190,50 @@
     apply();
   }
 
+  function captureEquipmentView() {
+    return {
+      search: state.search,
+      category: state.category,
+      favoritesOnly: state.favoritesOnly,
+      main: state.main,
+      showMain: state.showMain,
+      filters: state.filters.slice(),
+      sortAttr: state.sortAttr,
+      valueSource: state.valueSource,
+      activated: state.activated,
+      comparison: JSON.parse(JSON.stringify(state.comparison))
+    };
+  }
+
+  function restoreEquipmentView(view) {
+    state.search = view.search || "";
+    state.category = view.category === undefined ? null : view.category;
+    state.favoritesOnly = Boolean(view.favoritesOnly);
+    state.main = view.main === undefined ? null : view.main;
+    state.showMain = Boolean(view.showMain);
+    state.filters = Array.isArray(view.filters) ? view.filters.slice() : [];
+    state.sortAttr = view.sortAttr || null;
+    state.valueSource = view.valueSource || "max";
+    state.activated = Boolean(view.activated);
+    state.comparison = view.comparison ? JSON.parse(JSON.stringify(view.comparison)) : state.comparison;
+    el.search.value = state.search;
+  }
+
+  function invalidateForgeReturnSession(reason) {
+    if (forgeReturnSession) forgeReturnSession.valid = false;
+    forgeReturnSession = null;
+  }
+
+  function returnToEquipmentFromForge(session) {
+    forgeReturnSession = null;
+    restoreEquipmentView(session.equipmentView);
+    switchPartition("equipment", { source: "forge-return", preserveEquipment: true });
+    apply();
+    requestAnimationFrame(function () {
+      window.scrollTo({ top: session.scrollY, behavior: "auto" });
+    });
+  }
+
   function bindTabs() {
     const partitionButtons = Array.prototype.slice.call(document.querySelectorAll("[data-partition]"));
     const mobileMoreToggle = document.getElementById("mobile-more-toggle");
@@ -222,11 +268,15 @@
       document.title = title;
     }
 
-    function switchPartition(name) {
+    switchPartition = function (name, options) {
+      const navigationOptions = options || {};
       if (!parts[name]) return;
+      if ((navigationOptions.source || "user") === "user" && name !== "forging") {
+        invalidateForgeReturnSession("partition");
+      }
       closeBookDetailPopover();
       setPartitionTitle(name);
-      if (name === "equipment") resetEquipmentView();
+      if (name === "equipment" && !navigationOptions.preserveEquipment) resetEquipmentView();
       partitionButtons.forEach((button) => {
         button.classList.toggle("active", button.dataset.partition === name);
       });
@@ -237,10 +287,10 @@
         mobileMoreToggle.classList.toggle("active", secondaryPartitions.includes(name));
       }
       setMoreOpen(false);
-    }
+    };
 
     partitionButtons.forEach((button) => {
-      button.addEventListener("click", () => switchPartition(button.dataset.partition));
+      button.addEventListener("click", () => switchPartition(button.dataset.partition, { source: "user" }));
     });
     if (mobileMoreToggle) {
       mobileMoreToggle.addEventListener("click", () => {
@@ -911,6 +961,7 @@
     el.forgeView.addEventListener("click", (e) => {
       const btn = e.target.closest("button[data-view]");
       if (!btn) return;
+      if (progState.view !== btn.dataset.view) invalidateForgeReturnSession("forge-view");
       progState.view = btn.dataset.view;
       applyForgeView();
     });
@@ -1279,12 +1330,34 @@
     el.forgeMode.addEventListener("click", (e) => {
       const btn = e.target.closest("button[data-mode]");
       if (!btn) return;
+      if (forgeState.mode !== btn.dataset.mode) invalidateForgeReturnSession("forge-mode");
       forgeState.mode = btn.dataset.mode;
       applyForging();
     });
     el.forgeSearch.addEventListener("input", () => {
+      invalidateForgeReturnSession("forge-search");
       forgeState.query = el.forgeSearch.value;
       applyForging();
+    });
+    el.forgeResults.addEventListener("click", (event) => {
+      const button = event.target.closest("button[data-forging-equipment]");
+      if (!button) return;
+      const forgeName = button.dataset.forgingEquipment;
+      if (EQUIP_FORGING.matchesReturnSession(forgeReturnSession, forgeName)) {
+        const session = forgeReturnSession;
+        returnToEquipmentFromForge(session);
+        return;
+      }
+      invalidateForgeReturnSession("different-forging-equipment");
+      const target = EQUIP_FORGING.resolveEquipmentTarget(forgeName, DATA.items, FDATA.items);
+      if (!target) return;
+      const nextView = EQUIP_FORGING.buildReverseEquipmentView(captureEquipmentView(), target.name);
+      restoreEquipmentView(nextView);
+      switchPartition("equipment", { source: "forge-link", preserveEquipment: true });
+      apply();
+      requestAnimationFrame(function () {
+        el.results.scrollIntoView({ behavior: "smooth", block: "start" });
+      });
     });
   }
 
@@ -1299,9 +1372,15 @@
     const materialMode = Array.isArray(hits);
     const stageHit = hits ? new Set(hits.map((h) => h.stageIdx)) : null;
     const tokenHit = hits ? new Map(hits.map((h) => [`${h.stageIdx}:${h.tokenIdx}`, true])) : null;
+    const equipmentTarget = EQUIP_FORGING.resolveEquipmentTarget(item.name, DATA.items, FDATA.items);
+    const isReturnTarget = EQUIP_FORGING.matchesReturnSession(forgeReturnSession, item.name);
+    const equipmentName = `${escapeHtml(item.cat)}-${escapeHtml(item.name)}`;
+    const equipmentNameHtml = equipmentTarget
+      ? `<button type="button" class="eq-block ${eqClass} forging-equipment-link" data-forging-equipment="${escapeHtml(item.name)}" title="${isReturnTarget ? "返回装备属性筛选结果" : "查看对应装备属性"}">${equipmentName}</button>`
+      : `<span class="eq-block ${eqClass}">${equipmentName}</span>`;
     return `<tr${stageHit ? ' class="hit-row"' : ""}>
       <td class="forge-eq">
-        <span class="eq-block ${eqClass}">${item.cat}-${item.name}</span>
+        ${equipmentNameHtml}
       </td>
       ${item.stages.map((st, si) => {
         const cellHit = stageHit ? stageHit.has(si) : false;
@@ -1418,8 +1497,13 @@
         const item = DATA.items.find((entry) => entry.id === forgeButton.dataset.equipmentForge);
         const navigation = item ? EQUIP_FORGING.buildForgeNavigation(item.name, FDATA.items) : null;
         if (!navigation) return;
-        const partitionButton = document.querySelector(`[data-partition="${navigation.partition}"]`);
-        if (partitionButton) partitionButton.click();
+        forgeReturnSession = EQUIP_FORGING.createReturnSession(
+          item.id,
+          navigation.query,
+          captureEquipmentView(),
+          window.scrollY
+        );
+        switchPartition(navigation.partition, { source: "equipment-link", preserveEquipment: true });
         progState.view = navigation.view;
         applyForgeView();
         forgeState.mode = navigation.mode;

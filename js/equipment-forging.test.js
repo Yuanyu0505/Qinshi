@@ -135,3 +135,34 @@ test("橙装锻造返回会话：深拷贝装备视图并且只匹配有效的�
   assert.strictEqual(EquipmentForging.matchesReturnSession(session, "韩非子"), false);
   assert.strictEqual(EquipmentForging.matchesReturnSession(null, "韩非子"), false);
 });
+
+test("橙装锻造反向跳转：清除命中条件但保留主属性显示和装备对比", () => {
+  const current = {
+    search: "旧关键词",
+    category: "典籍",
+    favoritesOnly: true,
+    main: "攻",
+    showMain: true,
+    filters: ["速", "抗暴"],
+    sortAttr: "速",
+    valueSource: "红金",
+    activated: true,
+    comparison: { itemIds: ["b-1"], dimensions: ["速"], expanded: true }
+  };
+
+  const next = EquipmentForging.buildReverseEquipmentView(current, "神兵韩非子");
+
+  assert.deepStrictEqual(next, {
+    search: "神兵韩非子",
+    category: null,
+    favoritesOnly: false,
+    main: null,
+    showMain: true,
+    filters: [],
+    sortAttr: null,
+    valueSource: "max",
+    activated: true,
+    comparison: { itemIds: ["b-1"], dimensions: ["速"], expanded: true }
+  });
+  assert.deepStrictEqual(current.filters, ["速", "抗暴"]);
+});

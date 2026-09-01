@@ -572,6 +572,42 @@ test("兵法包含详情与综合计算子分区，并保存计算配置", async
   });
 });
 
+test("装备属性与橙装锻造支持一次性原页返回", async () => {
+  await withServer(async (port) => {
+    const app = await get(port, "/js/app.js");
+    assert.strictEqual(app.status, 200);
+    assert.match(app.body, /let forgeReturnSession = null/);
+    assert.match(app.body, /function captureEquipmentView/);
+    assert.match(app.body, /function restoreEquipmentView/);
+    assert.match(app.body, /EQUIP_FORGING\.createReturnSession\([\s\S]*?window\.scrollY/);
+    assert.match(app.body, /switchPartition\("equipment",\s*\{\s*source:\s*"forge-return",\s*preserveEquipment:\s*true\s*\}\)/);
+    assert.match(app.body, /requestAnimationFrame\([\s\S]*?window\.scrollTo\(\{\s*top:\s*session\.scrollY,\s*behavior:\s*"auto"\s*\}\)/);
+    assert.match(app.body, /invalidateForgeReturnSession\("forge-search"\)/);
+    assert.match(app.body, /invalidateForgeReturnSession\("forge-mode"\)/);
+    assert.match(app.body, /invalidateForgeReturnSession\("forge-view"\)/);
+    assert.match(app.body, /invalidateForgeReturnSession\("partition"\)/);
+  });
+});
+
+test("橙装锻造结果装备名支持返回与神兵优先反向跳转", async () => {
+  await withServer(async (port) => {
+    const [app, css] = await Promise.all([
+      get(port, "/js/app.js"),
+      get(port, "/css/style.css")
+    ]);
+    assert.strictEqual(app.status, 200);
+    assert.strictEqual(css.status, 200);
+    assert.match(app.body, /EQUIP_FORGING\.resolveEquipmentTarget\(item\.name, DATA\.items, FDATA\.items\)/);
+    assert.match(app.body, /data-forging-equipment=/);
+    assert.match(app.body, /返回装备属性筛选结果/);
+    assert.match(app.body, /查看对应装备属性/);
+    assert.match(app.body, /EQUIP_FORGING\.matchesReturnSession\(forgeReturnSession, forgeName\)/);
+    assert.match(app.body, /EQUIP_FORGING\.buildReverseEquipmentView\(captureEquipmentView\(\), target\.name\)/);
+    assert.match(css.body, /\.forging-equipment-link:focus-visible/);
+    assert.match(css.body, /@media \(max-width: 1024px\)[\s\S]*?\.forging-equipment-link\s*\{[\s\S]*?min-height:\s*44px/);
+  });
+});
+
 test("PWA 1.0.21 发布装备锻造跳转与现有手机和平板资源", async () => {
   const pagesWorkflow = fs.readFileSync(path.join(__dirname, ".github", "workflows", "pages.yml"), "utf8");
   assert.match(pagesWorkflow, /js\/tactics\.js/);

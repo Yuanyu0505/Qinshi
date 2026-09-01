@@ -616,6 +616,7 @@ test("锻造个人进度使用神兵名称底色、品质换算和锻数状态",
     assert.match(app.body, /data-act="switch-quality"/);
     assert.match(app.body, /data-progress-equipment=/);
     assert.match(app.body, /progressStatus/);
+    assert.match(app.body, /progress-equipment-unavailable[^\n]*暂无装备属性/);
     assert.doesNotMatch(app.body, /\$\{item\.quality\}色/);
     assert.match(css.body, /\.progress-equipment-red-gold/);
     assert.match(css.body, /@media \(max-width: 1024px\)[\s\S]*?\.progress-equipment-link[\s\S]*?min-height:\s*44px/);

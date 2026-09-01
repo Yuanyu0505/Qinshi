@@ -1218,12 +1218,14 @@
     const nameHtml = it.equipmentId
       ? `<button type="button" class="progress-equipment-name progress-equipment-${status.tier} progress-equipment-link" data-progress-equipment="${escapeHtml(displayName)}" data-progress-record="${escapeHtml(it.id)}" title="查看${escapeHtml(displayName)}装备属性">${escapeHtml(displayName)}</button>`
       : `<span class="progress-equipment-name progress-equipment-${status.tier}" title="暂无装备属性">${escapeHtml(displayName)}</span>`;
+    const unavailableHtml = it.equipmentId ? "" : '<span class="muted progress-equipment-unavailable">暂无装备属性</span>';
     const nextHtml = next ? `${next.stage}：${stageTokensHtml(next.tokens)}` : "全部锻造完成";
     const remRows = remaining.map((st) => `<tr><td><div class="prog-stage-label">${st.stage}</div></td><td><div class="prog-stage-materials">${stageTokensHtml(st.tokens)}</div></td></tr>`).join("");
     return `<div class="prog-equip">
       <div class="prog-equip-head">
         <span class="cat">${item.cat}</span>
         ${nameHtml}
+        ${unavailableHtml}
         <span class="muted progress-forge-status">${status.label}</span>
         ${readOnly ? "" : `<button type="button" class="seg progress-quality-toggle" data-act="switch-quality" data-disciple="${d.id}" data-item="${it.id}" aria-label="切换${escapeHtml(displayName)}品质">切换品质</button>`}
         ${readOnly ? "" : `<button type="button" class="seg danger" data-act="remove-item" data-disciple="${d.id}" data-item="${it.id}">移除</button>`}

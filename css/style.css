@@ -1045,6 +1045,28 @@ td.name { font-weight: 600; white-space: nowrap; }
   gap: 5px;
   max-width: 100%;
 }
+.equipment-forge-link {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  line-height: inherit;
+  cursor: pointer;
+}
+.equipment-forge-link:hover .equipment-name-badge {
+  filter: brightness(1.12);
+  box-shadow: 0 0 8px rgba(212, 175, 55, .4);
+}
+.equipment-forge-link:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 3px;
+  border-radius: 7px;
+}
 .equipment-favorite-toggle {
   display: inline-flex;
   flex: 0 0 auto;
@@ -2412,12 +2434,14 @@ figcaption { color: var(--muted); font-size: 13px; margin-top: 8px; }
   #partition-forbidden .forbidden-subtitle { overflow-wrap: anywhere; }
   #partition-forbidden #forbidden-search { width: 100%; min-width: 0; box-sizing: border-box; }
   #partition-equipment .equipment-main-visibility,
+  #partition-equipment .equipment-forge-link,
   #partition-equipment .equipment-favorite-toggle,
   #partition-equipment .equipment-compare-toggle,
   #partition-equipment .equipment-compare-start,
   #partition-equipment .equipment-compare-add,
   #partition-equipment .equipment-compare-dimensions .chip { min-height: 44px; touch-action: manipulation; }
   #partition-equipment .equipment-main-visibility { padding: 7px 11px; }
+  #partition-equipment .equipment-forge-link { min-height: 44px; touch-action: manipulation; }
   #partition-equipment .equipment-favorite-toggle { width: 44px; height: 44px; padding: 0; }
   #partition-equipment .equipment-compare-card,
   #partition-machine-beasts .machine-school-plan-beast,

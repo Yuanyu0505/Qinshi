@@ -29,6 +29,7 @@ NAME_OVERRIDES = {
     "神兵月狼": "神兵月狼锦纱",
     "神兵月华": "神兵月华袍",
     "神兵火魅": "神兵火魅耳环",
+    "伍德终始": "五德终始",
 }
 TIER_OVERRIDES = {
     "神兵破阵弓": {
@@ -169,6 +170,7 @@ def parse_book_sheet(wb):
         name = str(ws.cell(row_number, 1).value or "").strip()
         if not name:
             continue
+        name = NAME_OVERRIDES.get(name, name)
         main = str(ws.cell(row_number, 2).value or "").strip()
         main_key = main.split("、", 1)[0].strip()
         if row_number <= 19:

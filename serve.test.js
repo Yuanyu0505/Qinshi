@@ -117,7 +117,8 @@ test("首页提供机关兽个人进度、方案计算、资料图表及其三�
       const response = await get(port, resource);
       assert.strictEqual(response.status, 200, resource);
       assert.match(response.headers["content-type"], /javascript/, resource);
-  }
+    }
+  });
 });
 
 test("机关兽方案计算提供单只与目标流派阶数子页面", () => {
@@ -137,22 +138,20 @@ test("机关兽方案计算提供单只与目标流派阶数子页面", () => {
   assert.match(ui, /同时满足自由等级与效果档位优化/);
   assert.match(ui, /仅0阶/);
   assert.match(ui, /0–7阶/);
-  assert.match(ui, /data-new-rank-mode-scope="single"/);
-  assert.match(ui, /data-new-rank-mode-scope="school"/);
+  assert.match(ui, /newRankModeSelector\("single", state\.singleNewRankMode\)/);
+  assert.match(ui, /newRankModeSelector\("school", draft\.newRankMode\)/);
   assert.match(css, /\.machine-owned-inventory-grid/);
   assert.match(css, /\.machine-school-calculator-grid/);
   assert.match(css, /\.machine-school-plan-summary/);
   assert.match(css, /\.machine-new-rank-mode\s*\{[\s\S]*?flex-wrap:\s*nowrap/);
   assert.match(css, /\.machine-new-rank-mode label\s*\{[^}]*white-space:\s*nowrap/);
 });
-});
 
 test("机关兽新增投入突出需求，资料图表使用纵向自适应卡片", () => {
   const ui = fs.readFileSync(path.join(__dirname, "js", "machine-beasts-ui.js"), "utf8");
   const css = fs.readFileSync(path.join(__dirname, "css", "style.css"), "utf8");
 
-  assert.match(ui, /class="machine-investment-demand"/);
-  assert.match(ui, /machine-owned-investment/);
+  assert.match(ui, /emphasisClass[\s\S]*?"machine-owned-investment"[\s\S]*?"machine-investment-demand"/);
   assert.match(ui, /itemList\(result\.selected\.ownedItems,[\s\S]*?"owned"\)/);
   assert.match(ui, /itemList\(result\.selected\.newItems,[\s\S]*?true\)/);
   assert.match(ui, /machine-threshold-grid/);
@@ -450,7 +449,9 @@ test("已收藏图鉴可保存魂魄和逐件装备库存，未收藏不展示�
     assert.match(app.body, /库存达标/);
     assert.match(atlas.body, /function soulInventoryStatus/);
     assert.match(css.body, /\.atlas-equipment-owned/);
-    assert.match(index.body, /图鉴等级与收藏库存/);
+    assert.match(app.body, /class="atlas-head-secondary"/);
+    assert.match(app.body, />编辑库存<\/button>/);
+    assert.match(app.body, /class="atlas-level-label">图鉴等级/);
   });
 });
 
@@ -571,7 +572,7 @@ test("兵法包含详情与综合计算子分区，并保存计算配置", async
   });
 });
 
-test("PWA 1.0.14 发布图鉴备注来源严格筛选及现有手机和平板资源", async () => {
+test("PWA 1.0.21 发布装备锻造跳转与现有手机和平板资源", async () => {
   const pagesWorkflow = fs.readFileSync(path.join(__dirname, ".github", "workflows", "pages.yml"), "utf8");
   assert.match(pagesWorkflow, /js\/tactics\.js/);
   assert.match(pagesWorkflow, /js\/tactics-ui\.js/);
@@ -581,16 +582,18 @@ test("PWA 1.0.14 发布图鉴备注来源严格筛选及现有手机和平板资
   assert.match(pagesWorkflow, /js\/machine-beast-school-planner\.js/);
   assert.match(pagesWorkflow, /js\/machine-beasts-ui\.js/);
   assert.match(pagesWorkflow, /js\/equipment-compare\.js/);
+  assert.match(pagesWorkflow, /js\/equipment-forging\.js/);
   assert.match(pagesWorkflow, /js\/forbidden\.js/);
   assert.match(pagesWorkflow, /js\/forbidden-ui\.js/);
   await withServer(async (port) => {
-    const [index, worker, pwa, css, schoolPlanner, equipmentCompare, forbiddenData, forbiddenCore, forbiddenUi] = await Promise.all([
+    const [index, worker, pwa, css, schoolPlanner, equipmentCompare, equipmentForging, forbiddenData, forbiddenCore, forbiddenUi] = await Promise.all([
       get(port, "/"),
       get(port, "/service-worker.js"),
       get(port, "/js/pwa.js"),
       get(port, "/css/style.css"),
       get(port, "/js/machine-beast-school-planner.js"),
       get(port, "/js/equipment-compare.js"),
+      get(port, "/js/equipment-forging.js"),
       get(port, "/data/forbidden.js"),
       get(port, "/js/forbidden.js"),
       get(port, "/js/forbidden-ui.js")
@@ -601,12 +604,13 @@ test("PWA 1.0.14 发布图鉴备注来源严格筛选及现有手机和平板资
     assert.strictEqual(css.status, 200);
     assert.strictEqual(schoolPlanner.status, 200);
     assert.strictEqual(equipmentCompare.status, 200);
+    assert.strictEqual(equipmentForging.status, 200);
     assert.strictEqual(forbiddenData.status, 200);
     assert.strictEqual(forbiddenCore.status, 200);
     assert.strictEqual(forbiddenUi.status, 200);
-    assert.match(index.body, /id="pwa-version">1\.0\.13<\/strong>/);
-    assert.match(worker.body, /CACHE_NAME\s*=\s*CACHE_PREFIX\s*\+\s*"1\.0\.14"/);
-    assert.match(pwa.body, /APP_VERSION\s*=\s*"1\.0\.14"/);
+    assert.match(index.body, /id="pwa-version">1\.0\.21<\/strong>/);
+    assert.match(worker.body, /CACHE_NAME\s*=\s*CACHE_PREFIX\s*\+\s*"1\.0\.21"/);
+    assert.match(pwa.body, /APP_VERSION\s*=\s*"1\.0\.21"/);
     assert.match(worker.body, /"\.\/data\/tactics\.js"/);
     assert.match(worker.body, /"\.\/js\/tactics\.js"/);
     assert.match(worker.body, /"\.\/js\/tactics-ui\.js"/);
@@ -618,6 +622,7 @@ test("PWA 1.0.14 发布图鉴备注来源严格筛选及现有手机和平板资
     assert.match(worker.body, /"\.\/js\/machine-beast-school-planner\.js"/);
     assert.match(worker.body, /"\.\/js\/machine-beasts-ui\.js"/);
     assert.match(worker.body, /"\.\/js\/equipment-compare\.js"/);
+    assert.match(worker.body, /"\.\/js\/equipment-forging\.js"/);
     assert.match(worker.body, /"\.\/data\/forbidden\.js"/);
     assert.match(worker.body, /"\.\/js\/forbidden\.js"/);
     assert.match(worker.body, /"\.\/js\/forbidden-ui\.js"/);

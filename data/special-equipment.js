@@ -11943,7 +11943,7 @@ window.SPECIAL_EQUIPMENT_DATA = {
     {
       "id": "b-0016",
       "cat": "典籍",
-      "name": "伍德终始",
+      "name": "五德终始",
       "main": "攻、内力",
       "mainKey": "攻",
       "bookGroup": "初始紫色典籍",

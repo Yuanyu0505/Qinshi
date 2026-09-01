@@ -1,7 +1,7 @@
 "use strict";
 
 const CACHE_PREFIX = "qinshi-site-";
-const CACHE_NAME = CACHE_PREFIX + "1.0.20";
+const CACHE_NAME = CACHE_PREFIX + "1.0.21";
 const PRECACHE_URLS = [
   "./",
   "./index.html",
@@ -34,6 +34,7 @@ const PRECACHE_URLS = [
   "./js/machine-beast-school-planner.js",
   "./js/machine-beasts-ui.js",
   "./js/equipment-compare.js",
+  "./js/equipment-forging.js",
   "./js/settings.js",
   "./js/pwa.js",
   "./js/app.js",

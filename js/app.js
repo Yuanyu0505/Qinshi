@@ -8,6 +8,7 @@
   const DATA = window.SPECIAL_EQUIPMENT_DATA;
   const Q = window.QSQuery;
   const EQUIP_COMPARE = window.QSEquipmentCompare;
+  const EQUIP_FORGING = window.EquipmentForging;
   const FDATA = window.FORGING_DATA;
   const FORG = window.FORGING;
   const DROP_DATA = window.DROP_DATA;
@@ -1412,6 +1413,22 @@
         toggleEquipmentFavorite(favoriteButton.dataset.equipmentFavorite);
         return;
       }
+      const forgeButton = event.target.closest("[data-equipment-forge]");
+      if (forgeButton) {
+        const item = DATA.items.find((entry) => entry.id === forgeButton.dataset.equipmentForge);
+        const navigation = item ? EQUIP_FORGING.buildForgeNavigation(item.name, FDATA.items) : null;
+        if (!navigation) return;
+        const partitionButton = document.querySelector(`[data-partition="${navigation.partition}"]`);
+        if (partitionButton) partitionButton.click();
+        progState.view = navigation.view;
+        applyForgeView();
+        forgeState.mode = navigation.mode;
+        forgeState.query = navigation.query;
+        el.forgeSearch.value = navigation.query;
+        applyForging();
+        el.forgeQuery.scrollIntoView({ behavior: "smooth", block: "start" });
+        return;
+      }
       const compareButton = event.target.closest("[data-compare-add]");
       if (compareButton) {
         toggleEquipmentComparison(compareButton.dataset.compareAdd);
@@ -1793,7 +1810,11 @@
 
   function equipmentResultNameHtml(item) {
     const favorite = state.favorites.includes(item.id);
-    return `<span class="equipment-result-name">${equipmentNameHtml(item)}<button type="button" class="equipment-favorite-toggle${favorite ? " is-favorite" : ""}" data-equipment-favorite="${escapeHtml(item.id)}" aria-pressed="${favorite}" title="${favorite ? "取消收藏" : "收藏装备"}" aria-label="${favorite ? "取消收藏" : "收藏装备"}">${favorite ? "★" : "☆"}</button></span>`;
+    const forgeTarget = EQUIP_FORGING.resolveForgeTarget(item.name, FDATA.items);
+    const name = forgeTarget
+      ? `<button type="button" class="equipment-forge-link" data-equipment-forge="${escapeHtml(item.id)}" title="查看${escapeHtml(forgeTarget)}锻造材料" aria-label="查看${escapeHtml(item.name)}锻造材料">${equipmentNameHtml(item)}</button>`
+      : equipmentNameHtml(item);
+    return `<span class="equipment-result-name">${name}<button type="button" class="equipment-favorite-toggle${favorite ? " is-favorite" : ""}" data-equipment-favorite="${escapeHtml(item.id)}" aria-pressed="${favorite}" title="${favorite ? "取消收藏" : "收藏装备"}" aria-label="${favorite ? "取消收藏" : "收藏装备"}">${favorite ? "★" : "☆"}</button></span>`;
   }
 
   function equipmentTableHtml(items, tiers, title) {

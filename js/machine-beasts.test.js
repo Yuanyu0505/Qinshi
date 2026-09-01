@@ -5,6 +5,18 @@ const DATA = require("../data/machine-beasts.js");
 const CORE = require("./machine-beasts.js");
 const PLANNER = require("./machine-beast-school-planner.js");
 
+function setSchoolTotalLevel(school, targetLevel, progress) {
+  let remaining = targetLevel;
+  school.beastIds.forEach(id => {
+    if (remaining <= 0) return;
+    const beast = DATA.beasts.find(item => item.id === id);
+    const level = Math.min(beast.maxLevel, remaining);
+    progress[id] = { research: DATA.researchThresholds[level] };
+    remaining -= level;
+  });
+  assert.strictEqual(remaining, 0, "测试流派应有足够的等级上限达到目标累计等级");
+}
+
 test("machine beast data: detailed names, schools and stage effects stay complete", () => {
   assert.strictEqual(DATA.beasts.length, 27);
   assert.strictEqual(new Set(DATA.beasts.map(item => item.id)).size, 27);
@@ -122,7 +134,7 @@ test("schoolSnapshot: calculates all five school stages from cumulative level", 
   assert.strictEqual(snapshot.nextStage.requiredTotalLevel, 90);
   assert.ok(snapshot.nextStage.beastEffect);
 
-  school.beastIds.slice(0, 9).forEach(id => { progress[id] = { research: DATA.researchThresholds[25] }; });
+  setSchoolTotalLevel(school, 225, progress);
   snapshot = CORE.schoolSnapshot(school, progress, DATA);
   assert.strictEqual(snapshot.totalLevel, 225);
   assert.strictEqual(snapshot.currentStage, 5);
@@ -283,8 +295,7 @@ test("school planner: defaults to the next school stage", () => {
   const school = DATA.schools.find(item => item.id === "hegemonic");
   const progress = {};
   assert.strictEqual(PLANNER.defaultTargetStage(DATA, school, progress), 1);
-  progress[school.beastIds[0]] = { research: DATA.researchThresholds[25] };
-  progress[school.beastIds[1]] = { research: DATA.researchThresholds[20] };
+  setSchoolTotalLevel(school, 45, progress);
   assert.strictEqual(PLANNER.defaultTargetStage(DATA, school, progress), 2);
 });
 
@@ -310,8 +321,7 @@ test("school planner: maps target stages and keeps excluded beasts in the baseli
 test("school planner: an achieved target returns one merged zero-cost plan", () => {
   const school = DATA.schools.find(item => item.id === "nonAttack");
   const progress = {};
-  progress[school.beastIds[0]] = { research: DATA.researchThresholds[25] };
-  progress[school.beastIds[1]] = { research: DATA.researchThresholds[20] };
+  setSchoolTotalLevel(school, 45, progress);
   const result = PLANNER.calculateSchoolPlans(DATA, school, progress, { targetStage: 1 });
   assert.strictEqual(result.valid, true);
   assert.strictEqual(result.plans.length, 1);

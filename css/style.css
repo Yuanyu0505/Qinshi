@@ -729,6 +729,9 @@ tr.hit-row td { background: rgba(212, 175, 55, .06); }
   padding: 9px 12px;
   cursor: pointer;
   font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
 }
 .prog-item-opt:hover { background: rgba(212, 175, 55, .12); }
 .prog-add-tip { color: var(--red); font-size: 12px; }
@@ -871,6 +874,27 @@ tr.hit-row td { background: rgba(212, 175, 55, .06); }
   margin-bottom: 12px;
 }
 .prog-equip-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; }
+.progress-equipment-name {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 30px;
+  padding: 4px 10px;
+  border: 2px solid transparent;
+  border-radius: 7px;
+  color: #fff;
+  font: inherit;
+  font-weight: 700;
+  line-height: 1.2;
+}
+.progress-equipment-orange { background: #f79646; color: #1c1507; border-color: #f79646; }
+.progress-equipment-orange-gold { background: linear-gradient(135deg, #f79646, #d4af37); color: #1c1507; border-color: #f0cf63; }
+.progress-equipment-red { background: #b03a2e; border-color: #c95647; }
+.progress-equipment-red-gold { background: linear-gradient(135deg, #8e221c, #b03a2e); border-color: #d4af37; box-shadow: inset 0 0 0 1px rgba(255, 218, 112, .45); }
+.progress-equipment-link { appearance: none; cursor: pointer; }
+.progress-equipment-link:hover { filter: brightness(1.1); }
+.progress-equipment-link:focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; }
+.progress-forge-status { font-weight: 700; }
 .prog-stages { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
 .prog-stage {
   background: var(--bg2);
@@ -2453,6 +2477,9 @@ figcaption { color: var(--muted); font-size: 13px; margin-top: 8px; }
   #partition-equipment .equipment-forge-link { min-height: 44px; touch-action: manipulation; }
   #partition-equipment .equipment-favorite-toggle { width: 44px; height: 44px; padding: 0; }
   .forging-equipment-link { min-height: 44px; touch-action: manipulation; }
+  .progress-equipment-link,
+  .progress-quality-toggle,
+  .prog-item-opt { min-height: 44px; touch-action: manipulation; }
   #partition-equipment .equipment-compare-card,
   #partition-machine-beasts .machine-school-plan-beast,
   #partition-machine-beasts .machine-school-plan-summary > div { overflow: hidden; }

@@ -608,6 +608,20 @@ test("橙装锻造结果装备名支持返回与神兵优先反向跳转", async
   });
 });
 
+test("锻造个人进度使用神兵名称底色、品质换算和锻数状态", async () => {
+  await withServer(async (port) => {
+    const [app, css] = await Promise.all([get(port, "/js/app.js"), get(port, "/css/style.css")]);
+    assert.match(app.body, /buildProgressEquipmentCatalog/);
+    assert.match(app.body, /normalizeProgressStore/);
+    assert.match(app.body, /data-act="switch-quality"/);
+    assert.match(app.body, /data-progress-equipment=/);
+    assert.match(app.body, /progressStatus/);
+    assert.doesNotMatch(app.body, /\$\{item\.quality\}色/);
+    assert.match(css.body, /\.progress-equipment-red-gold/);
+    assert.match(css.body, /@media \(max-width: 1024px\)[\s\S]*?\.progress-equipment-link[\s\S]*?min-height:\s*44px/);
+  });
+});
+
 test("PWA 1.0.22 发布装备锻造双向跳转与现有手机和平板资源", async () => {
   const pagesWorkflow = fs.readFileSync(path.join(__dirname, ".github", "workflows", "pages.yml"), "utf8");
   assert.match(pagesWorkflow, /js\/tactics\.js/);

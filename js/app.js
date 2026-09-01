@@ -15,6 +15,7 @@
   const DROPS = window.DROPS;
   const PROG = window.PROGRESS;
   const PROG_STORE_KEY = "qinshi_forging_progress_v1";
+  const progressEquipmentCatalog = EQUIP_FORGING.buildProgressEquipmentCatalog(FDATA.items, DATA.items);
   const ATLAS_DATA = window.ATLAS_DATA;
   const ATLAS = window.ATLAS;
   const QUIZ_DATA = window.QUIZ_DATA;
@@ -929,7 +930,7 @@
       const raw = localStorage.getItem(PROG_STORE_KEY);
       if (!raw) return [];
       const parsed = JSON.parse(raw);
-      return Array.isArray(parsed.disciples) ? parsed.disciples : [];
+      return PROG.normalizeProgressStore(parsed, progressEquipmentCatalog, FDATA.items).disciples;
     } catch (e) {
       return [];
     }
@@ -937,7 +938,7 @@
 
   function saveProgress() {
     try {
-      localStorage.setItem(PROG_STORE_KEY, JSON.stringify({ disciples: progState.disciples }));
+      localStorage.setItem(PROG_STORE_KEY, JSON.stringify({ version: 2, disciples: progState.disciples }));
       el.progSaveTip.textContent = "已保存 " + new Date().toLocaleTimeString();
     } catch (e) {
       el.progSaveTip.textContent = "保存失败：浏览器本地存储不可用";
@@ -1005,8 +1006,8 @@
       if (act === "pick-item") {
         const form = btn.closest("[data-add-form]");
         if (form) {
-          form.querySelector(".prog-item-search").value = btn.dataset.name;
-          form.dataset.selected = btn.dataset.name;
+          form.querySelector(".prog-item-search").value = btn.dataset.equipmentName;
+          form.dataset.selected = btn.dataset.optionKey;
           form.querySelector(".prog-item-list").hidden = true;
           const tip = form.querySelector(".prog-add-tip");
           if (tip) tip.textContent = "";
@@ -1031,14 +1032,16 @@
         }
       } else if (act === "add-item") {
         const form = el.progDisciples.querySelector(`[data-add-form="${dId}"]`);
-        const raw = (form.dataset.selected || form.querySelector(".prog-item-search").value || "").trim();
-        const item = FDATA.items.find((i) => i.name === raw);
+        const selected = progressEquipmentCatalog.find((option) => `${option.forgeName}::${option.equipmentName}` === form.dataset.selected);
         const tip = form.querySelector(".prog-add-tip");
-        if (!item) {
-          if (tip) tip.textContent = "未找到该橙装，请从匹配列表中选择";
+        if (!selected) {
+          if (tip) tip.textContent = "未找到该装备，请从匹配列表中选择";
           return;
         }
-        d.items.push({ id: uid(), name: item.name, cat: item.cat, progress: 0 });
+        d.items.push({
+          id: uid(), forgeName: selected.forgeName, equipmentName: selected.equipmentName,
+          equipmentId: selected.equipmentId, cat: selected.cat, quality: "red", progress: 0
+        });
         resetAddForm(form);
         saveProgress();
         renderProgress();
@@ -1048,6 +1051,15 @@
           saveProgress();
           renderProgress();
         }
+      } else if (act === "switch-quality") {
+        const it = d.items.find((x) => x.id === btn.dataset.item);
+        if (!it) return;
+        const nextQuality = it.quality === "orange" ? "red" : "orange";
+        if (PROG.requiresQualityDowngradeConfirmation(it, nextQuality) &&
+          !confirm("当前红色高锻进度将折算为橙金，原高锻进度无法恢复，是否继续？")) return;
+        Object.assign(it, PROG.convertQuality(it, nextQuality));
+        saveProgress();
+        renderProgress();
       } else if (act === "remove-disciple") {
         if (confirm("确定移除该弟子及其全部装备？")) {
           progState.disciples = progState.disciples.filter((x) => x.id !== dId);
@@ -1088,17 +1100,14 @@
   }
 
   function matchOrangeItems(keyword) {
-    const q = keyword.trim().toLowerCase();
-    return FDATA.items
-      .filter((i) => !q || i.name.toLowerCase().includes(q))
-      .slice(0, 20);
+    return EQUIP_FORGING.searchProgressEquipmentCatalog(progressEquipmentCatalog, keyword).slice(0, 20);
   }
 
   function renderItemOptions(form, keyword) {
     const list = form.querySelector(".prog-item-list");
     const matches = matchOrangeItems(keyword);
     list.innerHTML = matches.map((i) =>
-      `<button type="button" class="prog-item-opt" data-act="pick-item" data-name="${escapeHtml(i.name)}">${escapeHtml(i.name)}（${i.cat}·${i.quality}色）</button>`
+      `<button type="button" class="prog-item-opt" data-act="pick-item" data-option-key="${escapeHtml(`${i.forgeName}::${i.equipmentName}`)}" data-equipment-name="${escapeHtml(i.equipmentName)}"><span class="progress-equipment-name progress-equipment-red">${escapeHtml(i.equipmentName)}</span><span class="muted">${escapeHtml(i.cat)}</span></button>`
     ).join("");
     list.hidden = matches.length === 0;
   }
@@ -1127,27 +1136,33 @@
     const opts = options || {};
     const hitStageIndexes = opts.hitStageIndexes || new Set();
     const readOnly = opts.readOnly === true;
-    const item = PROG.findItem(FDATA, it.name);
+    const item = PROG.findItem(FDATA, it.forgeName || it.name);
     if (!item) {
-      return `<div class="prog-equip"><span class="forge-name">${escapeHtml(it.name)}</span><span class="muted">（锻造数据缺失）</span></div>`;
+      return `<div class="prog-equip"><span class="forge-name">${escapeHtml(it.equipmentName || it.name)}</span><span class="muted">（锻造数据缺失）</span></div>`;
     }
-    const chips = item.stages.map((st, i) => {
+    const limit = PROG.qualityStageLimit(it.quality);
+    const chips = item.stages.slice(0, limit).map((st, i) => {
       let cls = "prog-stage";
       if (i < it.progress) cls += " done";
       if (i === it.progress) cls += " next";
       if (hitStageIndexes.has(i)) cls += " search-hit";
       return `<button type="button" class="${cls}" data-act="set-stage" data-disciple="${d.id}" data-item="${it.id}" data-idx="${i}" title="${readOnly ? st.stage : `点击设为当前锻造阶段：${st.stage}`}"${readOnly ? " disabled" : ""}>${st.stage}</button>`;
-    }).join("") + `<button type="button" class="prog-stage done-all${it.progress >= item.stages.length ? " next" : ""}" data-act="set-stage" data-disciple="${d.id}" data-item="${it.id}" data-idx="${item.stages.length}" title="${readOnly ? "全部完成" : "点击设为全部完成"}"${readOnly ? " disabled" : ""}>全部完成</button>`;
-    const next = PROG.nextStage(item, it.progress);
-    const remaining = PROG.remainingStages(item, it.progress);
+    }).join("") + `<button type="button" class="prog-stage done-all${it.progress >= limit ? " next" : ""}" data-act="set-stage" data-disciple="${d.id}" data-item="${it.id}" data-idx="${limit}" title="${readOnly ? "全部完成" : "点击设为全部完成"}"${readOnly ? " disabled" : ""}>全部完成</button>`;
+    const next = PROG.nextStage(item, it.progress, it.quality);
+    const remaining = PROG.remainingStages(item, it.progress, it.quality);
+    const status = PROG.progressStatus(it);
+    const displayName = it.equipmentName || item.name;
+    const nameHtml = it.equipmentId
+      ? `<button type="button" class="progress-equipment-name progress-equipment-${status.tier} progress-equipment-link" data-progress-equipment="${escapeHtml(displayName)}" data-progress-record="${escapeHtml(it.id)}" title="查看${escapeHtml(displayName)}装备属性">${escapeHtml(displayName)}</button>`
+      : `<span class="progress-equipment-name progress-equipment-${status.tier}" title="暂无装备属性">${escapeHtml(displayName)}</span>`;
     const nextHtml = next ? `${next.stage}：${stageTokensHtml(next.tokens)}` : "全部锻造完成";
     const remRows = remaining.map((st) => `<tr><td><div class="prog-stage-label">${st.stage}</div></td><td><div class="prog-stage-materials">${stageTokensHtml(st.tokens)}</div></td></tr>`).join("");
     return `<div class="prog-equip">
       <div class="prog-equip-head">
         <span class="cat">${item.cat}</span>
-        <span class="forge-name">${escapeHtml(item.name)}</span>
-        <span class="q-badge ${item.quality === "紫" ? "q-purple" : "q-orange"}">${item.quality}色</span>
-        <span class="muted">${it.progress}/${item.stages.length} 阶段</span>
+        ${nameHtml}
+        <span class="muted progress-forge-status">${status.label}</span>
+        ${readOnly ? "" : `<button type="button" class="seg progress-quality-toggle" data-act="switch-quality" data-disciple="${d.id}" data-item="${it.id}" aria-label="切换${escapeHtml(displayName)}品质">切换品质</button>`}
         ${readOnly ? "" : `<button type="button" class="seg danger" data-act="remove-item" data-disciple="${d.id}" data-item="${it.id}">移除</button>`}
       </div>
       <div class="prog-stages">${chips}</div>
@@ -1174,7 +1189,7 @@
       </div>
       <div class="prog-add-form" data-add-form="${d.id}" hidden>
         <div class="prog-pick">
-          <input class="prog-item-search" placeholder="输入关键词自动匹配橙装（无需选分区）…" autocomplete="off">
+        <input class="prog-item-search" placeholder="输入普通名或神兵名自动匹配装备…" autocomplete="off">
           <div class="prog-item-list" hidden></div>
         </div>
         <button type="button" class="seg" data-act="add-item" data-disciple="${d.id}">添加</button>
@@ -1213,7 +1228,7 @@
 
   function renderProgressSearch() {
     const disciples = PROG.searchDisciples(progState.disciples, progState.query);
-    const result = PROG.searchEquipment(FDATA, progState.disciples, progState.query);
+    const result = PROG.searchEquipment(FDATA, progState.disciples, progState.query, progressEquipmentCatalog);
     if (!disciples.length && !result.owned.length && !result.required.length) {
       el.progSearchResults.innerHTML = '<div class="empty"><p>未找到匹配的弟子或装备</p></div>';
       return;

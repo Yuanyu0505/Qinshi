@@ -12,7 +12,15 @@ function loadForgingItems() {
   return context.window.FORGING_DATA.items;
 }
 
+function loadEquipmentItems() {
+  const context = { window: {} };
+  const source = fs.readFileSync(path.join(__dirname, "..", "data", "special-equipment.js"), "utf8");
+  vm.runInNewContext(source, context);
+  return context.window.SPECIAL_EQUIPMENT_DATA.items;
+}
+
 const forgingItems = loadForgingItems();
+const equipmentItems = loadEquipmentItems();
 
 test("装备锻造跳转：普通装备与同名神兵使用现有锻造名称", () => {
   assert.strictEqual(EquipmentForging.resolveForgeTarget("墨眉", forgingItems), "墨眉");
@@ -84,4 +92,46 @@ test("装备锻造跳转：生成查询页主锻造模式导航状态", () => {
     { partition: "forging", view: "query", mode: "main", query: "墨眉" }
   );
   assert.strictEqual(EquipmentForging.buildForgeNavigation("虎年勋章", forgingItems), null);
+});
+
+test("橙装锻造反向跳转：存在普通和神兵时优先返回神兵装备", () => {
+  assert.strictEqual(EquipmentForging.resolveEquipmentTarget("非攻九变", equipmentItems, forgingItems).name, "神兵非攻");
+  assert.strictEqual(EquipmentForging.resolveEquipmentTarget("韩非子", equipmentItems, forgingItems).name, "神兵韩非子");
+  assert.strictEqual(EquipmentForging.resolveEquipmentTarget("霜血双剑", equipmentItems, forgingItems).name, "神兵霜血");
+});
+
+test("橙装锻造反向跳转：鬼谷子统一映射神兵且无神兵时回退普通装备", () => {
+  assert.strictEqual(EquipmentForging.resolveEquipmentTarget("鬼谷子", equipmentItems, forgingItems).name, "神兵鬼谷子");
+  assert.strictEqual(EquipmentForging.resolveEquipmentTarget("神兵鬼谷子", equipmentItems, forgingItems).name, "神兵鬼谷子");
+  assert.strictEqual(EquipmentForging.resolveEquipmentTarget("五德终始", equipmentItems, forgingItems).name, "五德终始");
+  assert.strictEqual(EquipmentForging.resolveEquipmentTarget("银针", equipmentItems, forgingItems), null);
+});
+
+test("橙装锻造返回会话：深拷贝装备视图并且只匹配有效的同名锻造结果", () => {
+  const view = {
+    search: "韩非子",
+    filters: ["速"],
+    comparison: { itemIds: ["b-1"], dimensions: ["速"] }
+  };
+  const session = EquipmentForging.createReturnSession("b-1", "韩非子", view, 640);
+
+  view.filters.push("暴击");
+  view.comparison.itemIds.push("b-2");
+
+  assert.deepStrictEqual(session, {
+    sourceItemId: "b-1",
+    forgeName: "韩非子",
+    equipmentView: {
+      search: "韩非子",
+      filters: ["速"],
+      comparison: { itemIds: ["b-1"], dimensions: ["速"] }
+    },
+    scrollY: 640,
+    valid: true
+  });
+  assert.strictEqual(EquipmentForging.matchesReturnSession(session, "韩非子"), true);
+  assert.strictEqual(EquipmentForging.matchesReturnSession(session, "非攻九变"), false);
+  session.valid = false;
+  assert.strictEqual(EquipmentForging.matchesReturnSession(session, "韩非子"), false);
+  assert.strictEqual(EquipmentForging.matchesReturnSession(null, "韩非子"), false);
 });

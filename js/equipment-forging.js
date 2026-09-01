@@ -75,9 +75,41 @@
     };
   }
 
+  function resolveEquipmentTarget(forgeName, equipmentItems, forgingItems) {
+    var targetName = String(forgeName == null ? "" : forgeName).trim();
+    if (!targetName || !Array.isArray(equipmentItems) || !Array.isArray(forgingItems)) return null;
+    if (targetName === "鬼谷子" || targetName === "神兵鬼谷子") {
+      return equipmentItems.find(function (item) { return item.name === "神兵鬼谷子"; }) || null;
+    }
+    var candidates = equipmentItems.filter(function (item) {
+      return resolveForgeTarget(item.name, forgingItems) === targetName;
+    });
+    return candidates.find(function (item) { return item.name.indexOf("神兵") === 0; }) ||
+      candidates.find(function (item) { return item.name === targetName; }) ||
+      candidates[0] || null;
+  }
+
+  function createReturnSession(sourceItemId, forgeName, equipmentView, scrollY) {
+    return {
+      sourceItemId: String(sourceItemId == null ? "" : sourceItemId),
+      forgeName: String(forgeName == null ? "" : forgeName).trim(),
+      equipmentView: JSON.parse(JSON.stringify(equipmentView || {})),
+      scrollY: Number.isFinite(Number(scrollY)) ? Math.max(0, Number(scrollY)) : 0,
+      valid: true
+    };
+  }
+
+  function matchesReturnSession(session, forgeName) {
+    return Boolean(session && session.valid === true && session.forgeName &&
+      session.forgeName === String(forgeName == null ? "" : forgeName).trim());
+  }
+
   return {
     FORGE_NAME_ALIASES: FORGE_NAME_ALIASES,
     resolveForgeTarget: resolveForgeTarget,
-    buildForgeNavigation: buildForgeNavigation
+    buildForgeNavigation: buildForgeNavigation,
+    resolveEquipmentTarget: resolveEquipmentTarget,
+    createReturnSession: createReturnSession,
+    matchesReturnSession: matchesReturnSession
   };
 });

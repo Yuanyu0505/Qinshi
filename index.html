@@ -33,6 +33,7 @@
       <button type="button" class="tab mobile-secondary" data-partition="inscription">铭文</button>
       <button type="button" class="tab mobile-secondary" data-partition="machine-beasts">机关兽</button>
       <button type="button" class="tab mobile-secondary" data-partition="tactics">兵法</button>
+      <button type="button" class="tab mobile-secondary" data-partition="battle-box-pill-pouch">战匣丹囊</button>
       <button type="button" class="tab mobile-secondary" data-partition="formations">合阵</button>
       <button type="button" class="tab mobile-secondary" data-partition="loulan">楼兰棋阵</button>
       <button type="button" class="tab mobile-secondary" data-partition="quiz">答题</button>
@@ -275,6 +276,26 @@
       <div id="tactics-cost-mode" hidden></div>
     </section>
 
+    <section id="partition-battle-box-pill-pouch" hidden>
+      <div id="battle-pouch-modes" class="segs battle-pouch-modes">
+        <button type="button" class="seg active" data-battle-pouch-mode="progress">个人进度</button>
+        <button type="button" class="seg" data-battle-pouch-mode="calculator">目标计算</button>
+        <button type="button" class="seg" data-battle-pouch-mode="reference">资料图表</button>
+      </div>
+      <div id="battle-pouch-error" class="error" role="alert" hidden></div>
+      <section id="battle-pouch-progress">
+        <div id="battle-pouch-account"></div>
+        <section class="panel battle-pouch-add-panel">
+          <label for="battle-pouch-disciple-search">添加弟子</label>
+          <input id="battle-pouch-disciple-search" type="search" autocomplete="off" placeholder="从图鉴弟子库搜索；无结果时可自由新增">
+          <div id="battle-pouch-disciple-suggestions" class="battle-pouch-suggestions" hidden></div>
+        </section>
+        <div id="battle-pouch-progress-list" class="battle-pouch-progress-list"></div>
+      </section>
+      <section id="battle-pouch-calculator" hidden></section>
+      <section id="battle-pouch-reference" hidden></section>
+    </section>
+
     <section id="partition-formations" hidden>
       <section class="panel formation-selector-panel">
         <div class="filter-row formation-selector-row">
@@ -495,7 +516,7 @@
         <div class="panel-title">应用与离线状态</div>
         <div class="settings-list">
           <div><span>应用名称</span><strong>Qin</strong></div>
-          <div><span>当前版本</span><strong id="pwa-version">1.0.25</strong></div>
+          <div><span>当前版本</span><strong id="pwa-version">1.0.26</strong></div>
           <div><span>运行状态</span><strong id="pwa-mode-status">正在检查…</strong></div>
         </div>
         <div class="settings-actions">
@@ -508,7 +529,7 @@
 
       <section class="panel settings-panel">
         <div class="panel-title">本机进度备份</div>
-        <p class="settings-copy">备份包含本机保存的图鉴等级、收藏、置顶与库存、橙装锻造进度、禁地本期需求、铭文进度、机关兽进度、兵法进度与计算设置、合阵个人进度及历史答题修订数据，不包含工具自带题库和查询数据。</p>
+        <p class="settings-copy">备份包含本机保存的图鉴等级、收藏、置顶与库存、橙装锻造进度、禁地本期需求、铭文进度、机关兽进度、兵法进度与计算设置、战匣丹囊进度、合阵个人进度及历史答题修订数据，不包含工具自带题库和查询数据。</p>
         <div class="settings-actions">
           <button id="settings-export" type="button" class="seg active">导出备份</button>
           <button id="settings-import-trigger" type="button" class="seg">导入备份</button>
@@ -535,6 +556,7 @@
       <button type="button" data-partition="inscription">铭文</button>
       <button type="button" data-partition="machine-beasts">机关兽</button>
       <button type="button" data-partition="tactics">兵法</button>
+      <button type="button" data-partition="battle-box-pill-pouch">战匣丹囊</button>
       <button type="button" data-partition="formations">合阵</button>
       <button type="button" data-partition="loulan">楼兰棋阵</button>
       <button type="button" data-partition="quiz">答题</button>
@@ -546,6 +568,7 @@
 <script src="data/tactics.js"></script>
 <script src="data/formations.js"></script>
 <script src="data/machine-beasts.js"></script>
+<script src="data/battle-box-pill-pouch.js"></script>
 <script src="data/special-equipment.js"></script>
 <script src="data/forging.js"></script>
 <script src="data/drops.js"></script>
@@ -557,6 +580,7 @@
 <script src="js/formations.js"></script>
 <script src="js/machine-beasts.js"></script>
 <script src="js/machine-beast-school-planner.js"></script>
+<script src="js/battle-box-pill-pouch.js"></script>
 <script src="js/query.js"></script>
 <script src="js/equipment-compare.js"></script>
 <script src="js/equipment-forging.js"></script>
@@ -572,6 +596,7 @@
 <script src="js/tactics-ui.js"></script>
 <script src="js/formations-ui.js"></script>
 <script src="js/machine-beasts-ui.js"></script>
+<script src="js/battle-box-pill-pouch-ui.js"></script>
 <script src="js/forbidden-ui.js"></script>
 <script src="js/app.js"></script>
 </body>

@@ -645,7 +645,7 @@ test("个人进度装备可进入装备属性并一次性返回原页", async ()
   });
 });
 
-test("PWA 1.0.25 发布手机交互优化与现有离线资源", async () => {
+test("PWA 1.0.26 发布战匣丹囊与现有离线资源", async () => {
   const pagesWorkflow = fs.readFileSync(path.join(__dirname, ".github", "workflows", "pages.yml"), "utf8");
   assert.match(pagesWorkflow, /js\/tactics\.js/);
   assert.match(pagesWorkflow, /js\/tactics-ui\.js/);
@@ -658,6 +658,8 @@ test("PWA 1.0.25 发布手机交互优化与现有离线资源", async () => {
   assert.match(pagesWorkflow, /js\/equipment-forging\.js/);
   assert.match(pagesWorkflow, /js\/forbidden\.js/);
   assert.match(pagesWorkflow, /js\/forbidden-ui\.js/);
+  assert.match(pagesWorkflow, /js\/battle-box-pill-pouch\.js/);
+  assert.match(pagesWorkflow, /js\/battle-box-pill-pouch-ui\.js/);
   await withServer(async (port) => {
     const [index, worker, pwa, css, schoolPlanner, equipmentCompare, equipmentForging, forbiddenData, forbiddenCore, forbiddenUi] = await Promise.all([
       get(port, "/"),
@@ -681,9 +683,9 @@ test("PWA 1.0.25 发布手机交互优化与现有离线资源", async () => {
     assert.strictEqual(forbiddenData.status, 200);
     assert.strictEqual(forbiddenCore.status, 200);
     assert.strictEqual(forbiddenUi.status, 200);
-    assert.match(index.body, /id="pwa-version">1\.0\.25<\/strong>/);
-    assert.match(worker.body, /CACHE_NAME\s*=\s*CACHE_PREFIX\s*\+\s*"1\.0\.25"/);
-    assert.match(pwa.body, /APP_VERSION\s*=\s*"1\.0\.25"/);
+    assert.match(index.body, /id="pwa-version">1\.0\.26<\/strong>/);
+    assert.match(worker.body, /CACHE_NAME\s*=\s*CACHE_PREFIX\s*\+\s*"1\.0\.26"/);
+    assert.match(pwa.body, /APP_VERSION\s*=\s*"1\.0\.26"/);
     assert.match(worker.body, /"\.\/data\/tactics\.js"/);
     assert.match(worker.body, /"\.\/js\/tactics\.js"/);
     assert.match(worker.body, /"\.\/js\/tactics-ui\.js"/);
@@ -699,6 +701,9 @@ test("PWA 1.0.25 发布手机交互优化与现有离线资源", async () => {
     assert.match(worker.body, /"\.\/data\/forbidden\.js"/);
     assert.match(worker.body, /"\.\/js\/forbidden\.js"/);
     assert.match(worker.body, /"\.\/js\/forbidden-ui\.js"/);
+    assert.match(worker.body, /"\.\/data\/battle-box-pill-pouch\.js"/);
+    assert.match(worker.body, /"\.\/js\/battle-box-pill-pouch\.js"/);
+    assert.match(worker.body, /"\.\/js\/battle-box-pill-pouch-ui\.js"/);
     assert.match(css.body, /@media \(max-width: 1024px\)[\s\S]*?\.atlas-favorite-toggle\s*\{[\s\S]*?width:\s*44px;[\s\S]*?height:\s*44px;/);
     assert.match(css.body, /#partition-tactics \.tactics-selector \.seg,[\s\S]*?#partition-equipment \.book-detail-toggle\s*\{[\s\S]*?min-height:\s*44px;/);
     assert.match(css.body, /#partition-tactics \.tactics-form-grid select,[\s\S]*?#partition-tactics \.tactics-form-grid input\s*\{[\s\S]*?font-size:\s*16px;/);
@@ -771,4 +776,89 @@ test("锻造和铭文宽表提供手机横向滑动提示与可聚焦区域", ()
   assert.match(app, /forgeScrollHintHtml/);
   assert.match(inscription, /mobile-scroll-hint/);
   assert.match(css, /\.mobile-scroll-region/);
+});
+
+test("首页提供战匣丹囊三子分区及三层脚本", async () => {
+  await withServer(async (port) => {
+    const page = await get(port, "/");
+    assert.strictEqual(page.status, 200);
+    assert.match(page.body, /id="partition-battle-box-pill-pouch"/);
+    assert.match(page.body, /data-battle-pouch-mode="progress">个人进度/);
+    assert.match(page.body, /data-battle-pouch-mode="calculator">目标计算/);
+    assert.match(page.body, /data-battle-pouch-mode="reference">资料图表/);
+    assert.match(page.body, /<script src="data\/battle-box-pill-pouch\.js"><\/script>/);
+    assert.match(page.body, /<script src="js\/battle-box-pill-pouch\.js"><\/script>/);
+    assert.match(page.body, /<script src="js\/battle-box-pill-pouch-ui\.js"><\/script>/);
+    for (const resource of [
+      "/data/battle-box-pill-pouch.js",
+      "/js/battle-box-pill-pouch.js",
+      "/js/battle-box-pill-pouch-ui.js"
+    ]) {
+      const response = await get(port, resource);
+      assert.strictEqual(response.status, 200, resource);
+      assert.match(response.headers["content-type"], /javascript/, resource);
+    }
+  });
+});
+
+test("战匣丹囊个人进度提供弟子搜索、自由新增和固定槽位", () => {
+  const html = fs.readFileSync(path.join(__dirname, "index.html"), "utf8");
+  const ui = fs.readFileSync(path.join(__dirname, "js", "battle-box-pill-pouch-ui.js"), "utf8");
+  assert.match(html, /id="battle-pouch-account"/);
+  assert.match(html, /id="battle-pouch-disciple-search"/);
+  assert.match(html, /id="battle-pouch-progress-list"/);
+  assert.match(ui, /qinshi_battle_box_pill_pouch_v1/);
+  assert.match(ui, /以此名称新增/);
+  assert.match(ui, /武器/);
+  assert.match(ui, /防具/);
+  assert.match(ui, /饰品/);
+  assert.match(ui, /典籍/);
+  assert.match(ui, /八个内丹槽位/);
+});
+
+test("战匣丹囊目标计算提供多弟子排序、共享库存和购买补足", () => {
+  const ui = fs.readFileSync(path.join(__dirname, "js", "battle-box-pill-pouch-ui.js"), "utf8");
+  assert.match(ui, /一键全部设为各自实际等级上限/);
+  assert.match(ui, /上移/);
+  assert.match(ui, /下移/);
+  assert.match(ui, /战匣优先/);
+  assert.match(ui, /丹囊优先/);
+  assert.match(ui, /共享库存/);
+  assert.match(ui, /购买补足/);
+  assert.match(ui, /可达到/);
+});
+
+test("战匣丹囊资料显示单级口径、三种视图和槽位规则说明", () => {
+  const ui = fs.readFileSync(path.join(__dirname, "js", "battle-box-pill-pouch-ui.js"), "utf8");
+  assert.match(ui, /上一等级升至本等级所需/);
+  assert.match(ui, /data-label=/);
+  assert.match(ui, /当前附近/);
+  assert.match(ui, /关键节点/);
+  assert.match(ui, /全部等级/);
+  assert.match(ui, /槽位分级解锁规则待准确数据补充/);
+  assert.match(ui, /参照弟子/);
+});
+
+test("战匣丹囊在桌面和移动导航中位于兵法与合阵之间", () => {
+  const html = fs.readFileSync(path.join(__dirname, "index.html"), "utf8");
+  const app = fs.readFileSync(path.join(__dirname, "js", "app.js"), "utf8");
+  const desktop = html.slice(html.indexOf('<nav class="tabs"'), html.indexOf('</nav>'));
+  const mobile = html.slice(html.indexOf('class="mobile-more-grid"'), html.indexOf('</div>', html.indexOf('class="mobile-more-grid"')));
+  [desktop, mobile].forEach(fragment => {
+    assert.ok(fragment.indexOf('data-partition="tactics"') < fragment.indexOf('data-partition="battle-box-pill-pouch"'));
+    assert.ok(fragment.indexOf('data-partition="battle-box-pill-pouch"') < fragment.indexOf('data-partition="formations"'));
+  });
+  assert.match(app, /"battle-box-pill-pouch": "战匣丹囊"/);
+  assert.match(app, /"battle-box-pill-pouch": document\.getElementById\("partition-battle-box-pill-pouch"\)/);
+});
+
+test("战匣丹囊样式覆盖手机单列和平板双列布局", () => {
+  const css = fs.readFileSync(path.join(__dirname, "css", "style.css"), "utf8");
+  assert.match(css, /#partition-battle-box-pill-pouch/);
+  assert.match(css, /\.battle-pouch-progress-list\s*\{[\s\S]*?grid-template-columns:/);
+  assert.match(css, /\.battle-pouch-editor-columns\s*\{[\s\S]*?grid-template-columns:/);
+  assert.match(css, /\.battle-pouch-pill-slots\s*\{[\s\S]*?grid-template-columns:/);
+  assert.match(css, /@media \(max-width: 1024px\)[\s\S]*?\.battle-pouch-progress-list/);
+  assert.match(css, /@media \(max-width: 720px\)[\s\S]*?\.battle-pouch-editor/);
+  assert.match(css, /#partition-battle-box-pill-pouch input\[type="number"\]::-webkit-inner-spin-button/);
 });

@@ -37,6 +37,7 @@
     inscription: "铭文",
     "machine-beasts": "机关兽",
     tactics: "兵法",
+    "battle-box-pill-pouch": "战匣丹囊",
     formations: "合阵",
     quiz: "答题",
     loulan: "楼兰棋阵",
@@ -323,7 +324,7 @@
     const mobileMoreLayer = document.getElementById("mobile-more-layer");
     const mobileMoreClose = document.getElementById("mobile-more-close");
     const appShell = document.querySelector(".app-shell");
-    const secondaryPartitions = ["forbidden", "inscription", "machine-beasts", "tactics", "formations", "loulan", "quiz", "settings"];
+    const secondaryPartitions = ["forbidden", "inscription", "machine-beasts", "tactics", "battle-box-pill-pouch", "formations", "loulan", "quiz", "settings"];
     const partitionScrollPositions = Object.create(null);
     let activePartition = "atlas";
     let mobileMoreRestoreTarget = null;
@@ -338,6 +339,7 @@
       inscription: document.getElementById("partition-inscription"),
       "machine-beasts": document.getElementById("partition-machine-beasts"),
       tactics: document.getElementById("partition-tactics"),
+      "battle-box-pill-pouch": document.getElementById("partition-battle-box-pill-pouch"),
       formations: document.getElementById("partition-formations"),
       settings: document.getElementById("partition-settings")
     };

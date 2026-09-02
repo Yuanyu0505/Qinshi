@@ -136,3 +136,129 @@ test("归一化账号保留共享库存和可编辑购买参数", () => {
     systemPriority: "pouch"
   });
 });
+
+test("材料按上一等级升至本等级逐行累计", () => {
+  assert.strictEqual(CORE.costBetween(DATA.battleLevels, 50, 51).pearls, 217);
+  const expectedPearls = DATA.battleLevels.slice(51, 56)
+    .reduce((sum, row) => sum + row.pearls, 0);
+  const expectedShells = DATA.battleLevels.slice(51, 56)
+    .reduce((sum, row) => sum + row.shells, 0);
+  assert.deepStrictEqual(CORE.costBetween(DATA.battleLevels, 50, 55), {
+    pearls: expectedPearls,
+    shells: expectedShells
+  });
+  assert.deepStrictEqual(CORE.costBetween(DATA.pouchLevels, 0, 1), {
+    pearls: DATA.pouchLevels[1].pearls,
+    shells: DATA.pouchLevels[1].shells
+  });
+});
+
+test("属性差值按当前与目标等级分别计算", () => {
+  assert.deepStrictEqual(CORE.attributeDelta("battle", 50, 51, DATA), {
+    attack: DATA.battleLevels[51].attack - DATA.battleLevels[50].attack,
+    defense: DATA.battleLevels[51].defense - DATA.battleLevels[50].defense,
+    health: DATA.battleLevels[51].health - DATA.battleLevels[50].health,
+    pvpMitigation: DATA.battleLevels[51].pvpMitigation - DATA.battleLevels[50].pvpMitigation
+  });
+  assert.deepStrictEqual(CORE.attributeDelta("pouch", 40, 50, DATA), {
+    bonusPercent: 50
+  });
+});
+
+function plannerDisciple(id, battleLevel, pouchLevel) {
+  return CORE.normalizeDisciple({
+    id,
+    name: id,
+    battle: {
+      currentLevel: battleLevel,
+      slots: DATA.equipmentSlots.map(slot => ({
+        slotId: slot.id,
+        itemName: slot.name,
+        quality: "redGold"
+      }))
+    },
+    pouch: {
+      currentLevel: pouchLevel,
+      slots: Array(8).fill({ quality: "divine" })
+    }
+  }, DATA);
+}
+
+test("共享库存先满足排在前面的弟子", () => {
+  const first = plannerDisciple("甲", 0, 0);
+  const second = plannerDisciple("乙", 0, 0);
+  const oneLevel = CORE.costBetween(DATA.battleLevels, 0, 1);
+  const account = CORE.normalizeAccount({
+    playerLevel: 80,
+    inventory: oneLevel,
+    systemPriority: "battle"
+  }, DATA);
+  const selections = [first, second].map(disciple => ({
+    disciple,
+    battleEnabled: true,
+    battleTarget: 1,
+    pouchEnabled: false,
+    pouchTarget: 0
+  }));
+  const result = CORE.calculatePlan(selections, account, DATA);
+  assert.deepStrictEqual(result.allocations.map(item => [item.discipleId, item.reachableLevel]), [
+    ["甲", 1],
+    ["乙", 0]
+  ]);
+  const reversed = CORE.calculatePlan(selections.slice().reverse(), account, DATA);
+  assert.deepStrictEqual(reversed.allocations.map(item => [item.discipleId, item.reachableLevel]), [
+    ["乙", 1],
+    ["甲", 0]
+  ]);
+});
+
+test("同一弟子内的战匣丹囊优先级决定材料分配", () => {
+  const disciple = plannerDisciple("甲", 0, 0);
+  const battleOne = CORE.costBetween(DATA.battleLevels, 0, 1);
+  const account = CORE.normalizeAccount({
+    playerLevel: 80,
+    inventory: battleOne,
+    systemPriority: "battle"
+  }, DATA);
+  const base = {
+    disciple,
+    battleEnabled: true,
+    battleTarget: 1,
+    pouchEnabled: true,
+    pouchTarget: 1
+  };
+  const battleFirst = CORE.calculatePlan([{ ...base, systemPriority: "battle" }], account, DATA);
+  assert.deepStrictEqual(battleFirst.allocations.map(item => [item.kind, item.reachableLevel]), [
+    ["battle", 1],
+    ["pouch", 0]
+  ]);
+  const pouchFirst = CORE.calculatePlan([{ ...base, systemPriority: "pouch" }], account, DATA);
+  assert.strictEqual(pouchFirst.allocations[0].kind, "pouch");
+  assert.strictEqual(pouchFirst.allocations[0].reachableLevel, 1);
+});
+
+test("完整目标缺口不受分配顺序影响并按整包购买", () => {
+  const first = plannerDisciple("甲", 0, 0);
+  const second = plannerDisciple("乙", 0, 0);
+  const account = CORE.normalizeAccount({
+    playerLevel: 80,
+    inventory: { pearls: 1, shells: 0 }
+  }, DATA);
+  const selections = [first, second].map(disciple => ({
+    disciple,
+    battleEnabled: false,
+    battleTarget: 0,
+    pouchEnabled: true,
+    pouchTarget: 1
+  }));
+  const result = CORE.calculatePlan(selections, account, DATA);
+  const totalPearls = DATA.pouchLevels[1].pearls * 2;
+  const totalShells = DATA.pouchLevels[1].shells * 2;
+  assert.strictEqual(result.fullTarget.totals.pearls, totalPearls);
+  assert.strictEqual(result.fullTarget.totals.shells, totalShells);
+  assert.strictEqual(result.fullTarget.shortage.pearls, totalPearls - 1);
+  assert.strictEqual(result.fullTarget.purchase.pearls.packs, Math.ceil((totalPearls - 1) / 5));
+  assert.strictEqual(result.fullTarget.purchase.shells.packs, Math.ceil(totalShells / 10));
+  assert.strictEqual(result.fullTarget.purchase.totalPrice,
+    result.fullTarget.purchase.pearls.packs * 20 + result.fullTarget.purchase.shells.packs * 300);
+});

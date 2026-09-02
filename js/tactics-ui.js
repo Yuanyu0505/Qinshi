@@ -771,9 +771,10 @@
     var selected = state.cost.selected[tactic.id] !== false;
     var row = findRank(tactic, config.start.rank);
     var rehearsal = row && row.rehearsal;
+    var disclosureOpen = !window.matchMedia('(max-width: 767px), (max-width: 932px) and (max-height: 500px) and (orientation: landscape)').matches;
     var html = '<article class="tactics-cost-tactic' + (selected ? ' is-selected' : '') + '"><div class="tactics-cost-tactic-head">' +
       '<label class="tactics-cost-check"><input type="checkbox" data-cost-selected="' + escapeHtml(tactic.id) + '"' + (selected ? ' checked' : '') + '>参与合计</label>' +
-      '<h3>' + escapeHtml(tactic.name) + '</h3></div><div class="tactics-cost-config-grid">' +
+      '<h3>' + escapeHtml(tactic.name) + '</h3></div><details class="tactics-cost-config-disclosure"' + (disclosureOpen ? ' open' : '') + '><summary>起止与真言设置</summary><div class="tactics-cost-config-grid">' +
       '<div class="tactics-cost-range-row"><div class="tactics-cost-range-name">兵法</div>' +
       '<label><span>起点</span><select data-cost-tactic-id="' + escapeHtml(tactic.id) + '" data-cost-side="start" data-cost-field="rank">' + rankOptions(config.start.rank) + '</select></label>' +
       '<label><span>终点</span><select data-cost-tactic-id="' + escapeHtml(tactic.id) + '" data-cost-side="target" data-cost-field="rank">' + rankOptions(config.target.rank) + '</select></label></div>';
@@ -781,7 +782,7 @@
       html += '<div class="tactics-cost-range-row is-spent"><div class="tactics-cost-range-name"></div><label class="tactics-cost-spent"><span>起点阶已消耗号角</span><input type="text" inputmode="numeric" pattern="[0-9]*" value="' + escapeHtml(config.start.rehearsalSpent) + '" data-cost-tactic-id="' +
         escapeHtml(tactic.id) + '" data-cost-side="start" data-cost-field="rehearsalSpent"></label></div>';
     }
-    html += tactic.mantras.map(function (mantra) { return costMantraFieldsHtml(tactic, config, mantra); }).join('') + '</div></article>';
+    html += tactic.mantras.map(function (mantra) { return costMantraFieldsHtml(tactic, config, mantra); }).join('') + '</div></details></article>';
     return html;
   }
 
@@ -845,14 +846,16 @@
   function renderCostMode() {
     if (!el.costMode || !state.cost) return;
     var catalog = CORE.materialCatalog(orderedTactics());
+    var disclosureOpen = !window.matchMedia('(max-width: 767px), (max-width: 932px) and (max-height: 500px) and (orientation: landscape)').matches;
     var tacticControls = '<section class="tactics-cost-tactics"><h2>六兵法起点与终点</h2><div class="tactics-cost-tactic-grid">' + orderedTactics().map(costTacticCardHtml).join('') + '</div></section>';
-    var materialControls = '<section class="panel tactics-cost-materials"><div class="panel-title">库存与购买包价格</div><div class="tactics-cost-material-head"><span>材料</span><span>库存</span><span>每包数量</span><span>每包元宝</span></div>' +
-      catalog.map(costMaterialRowHtml).join('') + '</section>';
+    var materialControls = '<details class="tactics-cost-material-disclosure"' + (disclosureOpen ? ' open' : '') + '><summary>库存与购买包价格</summary><section class="panel tactics-cost-materials"><div class="tactics-cost-material-head"><span>材料</span><span>库存</span><span>每包数量</span><span>每包元宝</span></div>' +
+      catalog.map(costMaterialRowHtml).join('') + '</section></details>';
+    var floatingCalculate = '<button type="button" class="seg active tactics-cost-floating-calculate" data-cost-action="calculate">计算元宝</button>';
     el.costMode.innerHTML = '<section class="panel tactics-cost-toolbar"><div><div class="panel-title">综合材料与元宝计算</div><p class="muted-tip">功勋、号角、统真言碎片、极真言碎片为共享库存；其他材料分别计算。</p></div>' +
       '<div class="tactics-cost-actions"><button type="button" class="seg" data-cost-action="select-all">全选</button><button type="button" class="seg" data-cost-action="clear-all">清空</button>' +
       '<button type="button" class="seg" data-cost-action="restore-progress">从个人进度重新读取</button><button type="button" class="seg active" data-cost-action="calculate">计算元宝</button></div>' +
       (state.costError ? '<div class="error" role="alert">' + escapeHtml(state.costError) + '</div>' : '') + '</section>' +
-      (state.costOutcome ? costResultsHtml() + tacticControls + materialControls : tacticControls + materialControls + costResultsHtml());
+      (state.costOutcome ? costResultsHtml() + tacticControls + materialControls : tacticControls + materialControls + costResultsHtml()) + floatingCalculate;
   }
 
   function setTacticsMode(mode) {
@@ -889,6 +892,10 @@
     } else if (action === 'calculate') {
       state.costOutcome = CORE.aggregateCostPlans(orderedTactics(), state.cost, state.progress);
       renderCostMode();
+      requestAnimationFrame(function () {
+        var results = el.costMode && el.costMode.querySelector('.tactics-cost-results');
+        if (results) results.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
     }
   }
 

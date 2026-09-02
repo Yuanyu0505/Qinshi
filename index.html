@@ -46,7 +46,7 @@
 
       <main id="app">
     <section id="partition-equipment" hidden>
-      <input id="search" type="search" placeholder="输入装备名或分类，如：墨眉 / 武器 / 韩非子 / 神兵典籍" autocomplete="off">
+      <input id="search" type="search" aria-label="搜索装备" placeholder="输入装备名或分类，如：墨眉 / 武器 / 韩非子 / 神兵典籍" autocomplete="off">
 
       <section class="panel">
         <div class="filter-row">
@@ -66,11 +66,15 @@
             <span>展示主属性</span>
           </label>
         </div>
-        <div class="filter-row">
-          <span class="filter-label">副属性</span>
-          <div id="chips" class="chips"></div>
-        </div>
-        <div id="sort-panel" class="sort-panel" hidden>
+        <button id="equipment-advanced-toggle" type="button" class="mobile-filter-toggle" aria-expanded="false" aria-controls="equipment-advanced-content">
+          <span>高级筛选</span><span aria-hidden="true">▾</span>
+        </button>
+        <div id="equipment-advanced-content" class="mobile-collapsible-content is-collapsed">
+          <div class="filter-row">
+            <span class="filter-label">副属性</span>
+            <div id="chips" class="chips"></div>
+          </div>
+          <div id="sort-panel" class="sort-panel" hidden>
           <div class="sort-row">
             <span>排序属性（取副属性数值）</span>
             <div id="sort-attr" class="segs"></div>
@@ -83,6 +87,7 @@
               <button type="button" class="seg" data-tier="红色">红色</button>
               <button type="button" class="seg" data-tier="红金">红金</button>
             </div>
+          </div>
           </div>
         </div>
         <button id="clear-all" type="button" class="link-btn">清除全部条件</button>
@@ -154,7 +159,7 @@
       <section class="panel">
         <div class="filter-row">
           <span class="filter-label">关键词</span>
-          <input id="quiz-search" type="search" placeholder="输入题目关键词，如：石兰 / 机关 / 墨家" autocomplete="off">
+          <input id="quiz-search" type="search" aria-label="搜索答题题库" placeholder="输入题目关键词，如：石兰 / 机关 / 墨家" autocomplete="off">
         </div>
         <div class="muted-tip">仅匹配题目文字；结果只展示图片中标红的正确答案。</div>
       </section>
@@ -165,7 +170,7 @@
       <section class="panel forbidden-toolbar">
         <div class="filter-row">
           <span class="filter-label">关键词</span>
-          <input id="forbidden-search" type="search" placeholder="搜索日期、弟子、图鉴属性或奖励，如：秋骊 / 8.27 / 神血" autocomplete="off">
+          <input id="forbidden-search" type="search" aria-label="搜索禁地" placeholder="搜索日期、弟子、图鉴属性或奖励，如：秋骊 / 8.27 / 神血" autocomplete="off">
         </div>
         <div class="forbidden-control-row">
           <div class="filter-row forbidden-size-row">
@@ -303,7 +308,7 @@
           </div>
           <div class="filter-row">
             <span class="filter-label">装备名</span>
-            <input id="forge-search" type="search" placeholder="如：雷神锤 / 非攻" autocomplete="off">
+            <input id="forge-search" type="search" aria-label="搜索锻造装备" placeholder="如：雷神锤 / 非攻" autocomplete="off">
           </div>
           <div class="muted-tip">「—」表示该阶段不需要额外装备材料；<span class="q-dot q-dot-purple"></span>紫色素材为紫色装备，<span class="q-dot q-dot-orange"></span>橙色素材与主装备为橙色装备。</div>
         </section>
@@ -312,7 +317,8 @@
 
         <div class="summary-card">
           <h3 class="mode-title">锻造材料总览（四大类通用）</h3>
-          <div class="summary-table-scroll">
+          <p class="mobile-scroll-hint" aria-hidden="true">左右滑动查看全部阶段 →</p>
+          <div class="summary-table-scroll mobile-scroll-region" tabindex="0" aria-label="锻造材料总览，可左右滑动">
             <table class="summary-table">
               <thead id="forging-summary-head"></thead>
               <tbody id="forging-summary"></tbody>
@@ -329,7 +335,7 @@
         <section class="panel prog-search-panel">
           <div class="filter-row">
             <span class="filter-label">搜索</span>
-            <input id="prog-search" type="search" placeholder="搜索已保存弟子、弟子持有装备或尚未完成的锻造材料…" autocomplete="off">
+            <input id="prog-search" type="search" aria-label="搜索锻造个人进度" placeholder="搜索已保存弟子、弟子持有装备或尚未完成的锻造材料…" autocomplete="off">
           </div>
           <div class="muted-tip">支持搜索已保存弟子和跨弟子装备关系；材料需求只统计尚未完成的锻造阶段。</div>
         </section>
@@ -348,7 +354,7 @@
       <section class="panel">
         <div class="filter-row">
           <span class="filter-label">道具名</span>
-          <input id="drop-search" type="search" placeholder="输入道具关键字，如：银针 / 苍云甲 / 赤霄" autocomplete="off">
+          <input id="drop-search" type="search" aria-label="搜索掉落道具" placeholder="输入道具关键字，如：银针 / 苍云甲 / 赤霄" autocomplete="off">
         </div>
         <div class="muted-tip">展示顺序：普通关卡在最上方，其次英雄关卡，其次声望奖励；同一分区的掉落结果合并展示。</div>
       </section>
@@ -397,7 +403,7 @@
             <option value="acquire">获取途径</option>
             <option value="level">等级</option>
           </select>
-          <input id="atlas-search" type="search" placeholder="输入关键词；等级可输入 9、9级、10级以下" autocomplete="off">
+          <input id="atlas-search" type="search" aria-label="搜索图鉴" placeholder="输入关键词；等级可输入 9、9级、10级以下" autocomplete="off">
         </div>
         <div class="filter-row">
           <span class="filter-label">等级筛选</span>
@@ -409,9 +415,13 @@
         </div>
         <div class="filter-row">
           <span class="filter-label">目标等级</span>
-          <input id="atlas-target-level" type="number" min="1" step="1">
+          <input id="atlas-target-level" type="number" min="1" step="1" aria-label="图鉴目标等级">
         </div>
         <div class="muted-tip">图鉴等级为个人进度（可直接修改）；达到目标等级即视为完成，14级后不再获得成长值。</div>
+        <button id="atlas-advanced-toggle" type="button" class="mobile-filter-toggle" aria-expanded="false" aria-controls="atlas-advanced-content">
+          <span>高级筛选</span><span aria-hidden="true">▾</span>
+        </button>
+        <div id="atlas-advanced-content" class="mobile-collapsible-content is-collapsed">
         <div class="atlas-advanced-filters" aria-label="图鉴库存筛选">
           <label id="atlas-favorite-type-wrap" class="atlas-filter-control" hidden>
             <span>图鉴类型</span>
@@ -474,6 +484,7 @@
           </label>
           <button id="atlas-filter-clear" type="button" class="seg atlas-filter-clear">清除新增条件</button>
         </div>
+        </div>
       </section>
       <div id="atlas-upgrade-summary" hidden></div>
       <div id="atlas-results" hidden></div>
@@ -484,7 +495,7 @@
         <div class="panel-title">应用与离线状态</div>
         <div class="settings-list">
           <div><span>应用名称</span><strong>Qin</strong></div>
-          <div><span>当前版本</span><strong id="pwa-version">1.0.24</strong></div>
+          <div><span>当前版本</span><strong id="pwa-version">1.0.25</strong></div>
           <div><span>运行状态</span><strong id="pwa-mode-status">正在检查…</strong></div>
         </div>
         <div class="settings-actions">

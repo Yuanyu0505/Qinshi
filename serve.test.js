@@ -645,7 +645,7 @@ test("个人进度装备可进入装备属性并一次性返回原页", async ()
   });
 });
 
-test("PWA 1.0.24 发布金色品质强化样式与现有手机和平板资源", async () => {
+test("PWA 1.0.25 发布手机交互优化与现有离线资源", async () => {
   const pagesWorkflow = fs.readFileSync(path.join(__dirname, ".github", "workflows", "pages.yml"), "utf8");
   assert.match(pagesWorkflow, /js\/tactics\.js/);
   assert.match(pagesWorkflow, /js\/tactics-ui\.js/);
@@ -681,9 +681,9 @@ test("PWA 1.0.24 发布金色品质强化样式与现有手机和平板资源", 
     assert.strictEqual(forbiddenData.status, 200);
     assert.strictEqual(forbiddenCore.status, 200);
     assert.strictEqual(forbiddenUi.status, 200);
-    assert.match(index.body, /id="pwa-version">1\.0\.24<\/strong>/);
-    assert.match(worker.body, /CACHE_NAME\s*=\s*CACHE_PREFIX\s*\+\s*"1\.0\.24"/);
-    assert.match(pwa.body, /APP_VERSION\s*=\s*"1\.0\.24"/);
+    assert.match(index.body, /id="pwa-version">1\.0\.25<\/strong>/);
+    assert.match(worker.body, /CACHE_NAME\s*=\s*CACHE_PREFIX\s*\+\s*"1\.0\.25"/);
+    assert.match(pwa.body, /APP_VERSION\s*=\s*"1\.0\.25"/);
     assert.match(worker.body, /"\.\/data\/tactics\.js"/);
     assert.match(worker.body, /"\.\/js\/tactics\.js"/);
     assert.match(worker.body, /"\.\/js\/tactics-ui\.js"/);
@@ -711,4 +711,64 @@ test("PWA 1.0.24 发布金色品质强化样式与现有手机和平板资源", 
     assert.match(css.body, /@media \(max-width: 1024px\)[\s\S]*?#partition-forbidden \.forbidden-token\s*\{[\s\S]*?min-height:\s*44px/);
     assert.match(css.body, /@media \(max-width: 767px\),[\s\S]*?#partition-forbidden \.forbidden-reward-row\.has-label\s*\{[\s\S]*?grid-template-columns:\s*38px minmax\(0, 1fr\)/);
   });
+});
+
+test("手机导航提供历史返回、滚动恢复和更多弹层焦点管理", () => {
+  const app = fs.readFileSync(path.join(__dirname, "js", "app.js"), "utf8");
+  const css = fs.readFileSync(path.join(__dirname, "css", "style.css"), "utf8");
+  assert.match(app, /partitionScrollPositions/);
+  assert.match(app, /window\.history\.pushState/);
+  assert.match(app, /window\.addEventListener\("popstate"/);
+  assert.match(app, /mobileMoreRestoreTarget/);
+  assert.match(app, /appShell\.inert/);
+  assert.match(app, /trapMobileMoreFocus/);
+  assert.match(css, /mobile short landscape navigation reset/);
+  assert.match(css, /\.tabs\s*\{[\s\S]*?min-height:\s*0;[\s\S]*?height:\s*auto;/);
+});
+
+test("图鉴和装备属性提供手机高级筛选折叠区与统一触控尺寸", () => {
+  const html = fs.readFileSync(path.join(__dirname, "index.html"), "utf8");
+  const app = fs.readFileSync(path.join(__dirname, "js", "app.js"), "utf8");
+  const css = fs.readFileSync(path.join(__dirname, "css", "style.css"), "utf8");
+  assert.match(html, /id="equipment-advanced-toggle"/);
+  assert.match(html, /id="equipment-advanced-content"/);
+  assert.match(html, /id="atlas-advanced-toggle"/);
+  assert.match(html, /id="atlas-advanced-content"/);
+  assert.match(app, /bindMobileDisclosure/);
+  assert.match(css, /mobile-filter-toggle/);
+  assert.match(css, /mobile touch target normalization/);
+  assert.match(css, /min-height:\s*44px/);
+  assert.match(app, /el\.progPrev\.hidden\s*=\s*total === 0/);
+  assert.match(app, /mobile-result-summary/);
+});
+
+test("手机装备结果将品质改为折叠卡片", () => {
+  const app = fs.readFileSync(path.join(__dirname, "js", "app.js"), "utf8");
+  const css = fs.readFileSync(path.join(__dirname, "css", "style.css"), "utf8");
+  assert.match(app, /function equipmentMobileTierHtml/);
+  assert.match(app, /<details class="equipment-mobile-tier"/);
+  assert.match(app, /<summary>/);
+  assert.match(css, /\.equipment-mobile-tier/);
+});
+
+test("兵法综合计算在手机端折叠长表单并提供悬浮计算入口", () => {
+  const ui = fs.readFileSync(path.join(__dirname, "js", "tactics-ui.js"), "utf8");
+  const css = fs.readFileSync(path.join(__dirname, "css", "style.css"), "utf8");
+  assert.match(ui, /tactics-cost-config-disclosure/);
+  assert.match(ui, /tactics-cost-material-disclosure/);
+  assert.match(ui, /tactics-cost-floating-calculate/);
+  assert.match(ui, /scrollIntoView/);
+  assert.match(css, /\.tactics-cost-floating-calculate/);
+});
+
+test("锻造和铭文宽表提供手机横向滑动提示与可聚焦区域", () => {
+  const html = fs.readFileSync(path.join(__dirname, "index.html"), "utf8");
+  const app = fs.readFileSync(path.join(__dirname, "js", "app.js"), "utf8");
+  const inscription = fs.readFileSync(path.join(__dirname, "js", "inscription.js"), "utf8");
+  const css = fs.readFileSync(path.join(__dirname, "css", "style.css"), "utf8");
+  assert.match(html, /mobile-scroll-hint/);
+  assert.match(html, /aria-label="锻造材料总览，可左右滑动"/);
+  assert.match(app, /forgeScrollHintHtml/);
+  assert.match(inscription, /mobile-scroll-hint/);
+  assert.match(css, /\.mobile-scroll-region/);
 });

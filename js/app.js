@@ -175,6 +175,7 @@
   function init() {
     initManualNumberInputs();
     bindTabs();
+    initMobileDisclosures();
     initForging();
     initDrops();
     initProgress();
@@ -190,6 +191,35 @@
     renderChips();
     bindEvents();
     apply();
+  }
+
+  function bindMobileDisclosure(toggleId, contentId) {
+    const toggle = document.getElementById(toggleId);
+    const content = document.getElementById(contentId);
+    if (!toggle || !content) return;
+    const mobileQuery = window.matchMedia("(max-width: 767px), (max-width: 932px) and (max-height: 500px) and (orientation: landscape)");
+    let mobileExpanded = false;
+
+    function sync() {
+      const collapsed = mobileQuery.matches && !mobileExpanded;
+      content.classList.toggle("is-collapsed", collapsed);
+      toggle.setAttribute("aria-expanded", String(!collapsed));
+      const marker = toggle.querySelector("[aria-hidden='true']");
+      if (marker) marker.textContent = collapsed ? "▾" : "▴";
+    }
+
+    toggle.addEventListener("click", function () {
+      mobileExpanded = !mobileExpanded;
+      sync();
+    });
+    if (typeof mobileQuery.addEventListener === "function") mobileQuery.addEventListener("change", sync);
+    else if (typeof mobileQuery.addListener === "function") mobileQuery.addListener(sync);
+    sync();
+  }
+
+  function initMobileDisclosures() {
+    bindMobileDisclosure("equipment-advanced-toggle", "equipment-advanced-content");
+    bindMobileDisclosure("atlas-advanced-toggle", "atlas-advanced-content");
   }
 
   function captureEquipmentView() {
@@ -292,7 +322,11 @@
     const mobileMoreToggle = document.getElementById("mobile-more-toggle");
     const mobileMoreLayer = document.getElementById("mobile-more-layer");
     const mobileMoreClose = document.getElementById("mobile-more-close");
+    const appShell = document.querySelector(".app-shell");
     const secondaryPartitions = ["forbidden", "inscription", "machine-beasts", "tactics", "formations", "loulan", "quiz", "settings"];
+    const partitionScrollPositions = Object.create(null);
+    let activePartition = "atlas";
+    let mobileMoreRestoreTarget = null;
     const parts = {
       equipment: document.getElementById("partition-equipment"),
       loulan: document.getElementById("partition-loulan"),
@@ -308,11 +342,44 @@
       settings: document.getElementById("partition-settings")
     };
 
+    function mobileMoreFocusable() {
+      if (!mobileMoreLayer) return [];
+      return Array.from(mobileMoreLayer.querySelectorAll("button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex='-1'])"))
+        .filter((node) => node.getClientRects().length > 0);
+    }
+
+    function trapMobileMoreFocus(event) {
+      if (event.key !== "Tab" || !mobileMoreLayer || mobileMoreLayer.hidden) return;
+      const focusable = mobileMoreFocusable();
+      if (!focusable.length) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    }
+
     function setMoreOpen(open) {
       if (!mobileMoreLayer || !mobileMoreToggle) return;
+      const wasOpen = !mobileMoreLayer.hidden;
+      if (open && !wasOpen) mobileMoreRestoreTarget = document.activeElement;
       mobileMoreLayer.hidden = !open;
       mobileMoreToggle.setAttribute("aria-expanded", String(open));
       document.body.classList.toggle("mobile-menu-open", open);
+      if (appShell) appShell.inert = open;
+      if (open) {
+        requestAnimationFrame(function () {
+          const focusable = mobileMoreFocusable();
+          if (focusable.length) focusable[0].focus();
+        });
+      } else if (wasOpen && mobileMoreRestoreTarget && typeof mobileMoreRestoreTarget.focus === "function") {
+        mobileMoreRestoreTarget.focus();
+        mobileMoreRestoreTarget = null;
+      }
     }
 
     function setPartitionTitle(name) {
@@ -324,7 +391,9 @@
     switchPartition = function (name, options) {
       const navigationOptions = options || {};
       if (!parts[name]) return;
-      if ((navigationOptions.source || "user") === "user") {
+      const source = navigationOptions.source || "user";
+      if (activePartition && activePartition !== name) partitionScrollPositions[activePartition] = window.scrollY;
+      if (source === "user") {
         if (name !== "forging") invalidateForgeReturnSession("partition");
         invalidateProgressReturnSession("partition");
       }
@@ -339,8 +408,20 @@
       });
       if (mobileMoreToggle) {
         mobileMoreToggle.classList.toggle("active", secondaryPartitions.includes(name));
+        const title = secondaryPartitions.includes(name) ? (PARTITION_TITLES[name] || "更多") : "更多";
+        mobileMoreToggle.textContent = title;
+        mobileMoreToggle.setAttribute("aria-label", secondaryPartitions.includes(name) ? title + "，打开更多分区" : "打开更多分区");
       }
       setMoreOpen(false);
+      activePartition = name;
+      if (source === "user") {
+        if (window.location.hash !== "#" + name) window.history.pushState({ partition: name }, "", "#" + name);
+        requestAnimationFrame(function () { window.scrollTo({ top: 0, behavior: "auto" }); });
+      } else if (source === "history") {
+        requestAnimationFrame(function () {
+          window.scrollTo({ top: partitionScrollPositions[name] || 0, behavior: "auto" });
+        });
+      }
     };
 
     partitionButtons.forEach((button) => {
@@ -356,10 +437,19 @@
       mobileMoreLayer.addEventListener("click", (event) => {
         if (event.target === mobileMoreLayer) setMoreOpen(false);
       });
+      mobileMoreLayer.addEventListener("keydown", trapMobileMoreFocus);
     }
     document.addEventListener("keydown", (event) => {
       if (event.key === "Escape") setMoreOpen(false);
     });
+    window.addEventListener("popstate", function () {
+      const name = window.location.hash.replace(/^#/, "") || "atlas";
+      switchPartition(parts[name] ? name : "atlas", { source: "history", preserveEquipment: true });
+    });
+
+    const initialPartition = window.location.hash.replace(/^#/, "");
+    if (parts[initialPartition]) switchPartition(initialPartition, { source: "history", preserveEquipment: true });
+    else window.history.replaceState({ partition: "atlas" }, "", "#atlas");
   }
 
   function initForging() {
@@ -904,7 +994,7 @@
     el.quizResults.hidden = false;
     var items = QUIZ.search(quizState.items, quizState.query);
     el.quizResults.innerHTML = items.length
-      ? items.map(function (item) {
+      ? '<div class="mobile-result-summary">找到 ' + items.length + ' 道题</div>' + items.map(function (item) {
           return `<article class="quiz-item">
             <div class="quiz-question">${escapeHtml(item.question)}</div>
             <div class="quiz-answer"><span>正确答案</span>${escapeHtml(item.answer)}</div>
@@ -1346,6 +1436,8 @@
       return;
     }
     el.progSearchResults.innerHTML = "";
+    el.progPrev.hidden = total === 0;
+    el.progNext.hidden = total === 0;
     el.progPageTitle.textContent = page === 0
       ? "全体弟子剩余材料汇总"
       : (progState.disciples[page - 1] ? progState.disciples[page - 1].name : "弟子");
@@ -1487,14 +1579,18 @@
     if (forgeState.mode === "main") {
       const items = FORG.findMain(FDATA.items, q);
       el.forgeResults.innerHTML = items.length
-        ? `<div class="forge-scroll forge-scroll-main"><table class="forge-h-table"><thead>${tableHead}</thead><tbody>${items.map((i) => forgingRowHtml(i, null)).join("")}</tbody></table></div>`
+        ? forgeScrollHintHtml("主锻造装备材料表") + `<div class="forge-scroll forge-scroll-main mobile-scroll-region" tabindex="0" aria-label="主锻造装备材料表，可左右滑动"><table class="forge-h-table"><thead>${tableHead}</thead><tbody>${items.map((i) => forgingRowHtml(i, null)).join("")}</tbody></table></div>`
         : '<div class="empty"><p>未找到该主锻造装备</p></div>';
     } else {
       const found = FORG.findAsMaterial(FDATA.items, q);
       el.forgeResults.innerHTML = found.length
-        ? `<div class="forge-scroll forge-scroll-material"><table class="forge-h-table"><thead>${tableHead}</thead><tbody>${found.map((r) => forgingRowHtml(r.item, r.hits)).join("")}</tbody></table></div>`
+        ? forgeScrollHintHtml("素材装备匹配表") + `<div class="forge-scroll forge-scroll-material mobile-scroll-region" tabindex="0" aria-label="素材装备匹配表，可左右滑动"><table class="forge-h-table"><thead>${tableHead}</thead><tbody>${found.map((r) => forgingRowHtml(r.item, r.hits)).join("")}</tbody></table></div>`
         : '<div class="empty"><p>未找到使用该素材的主锻造装备</p></div>';
     }
+  }
+
+  function forgeScrollHintHtml(label) {
+    return `<p class="mobile-scroll-hint" aria-hidden="true">${escapeHtml(label)} · 左右滑动查看全部阶段 →</p>`;
   }
 
   function renderChips() {
@@ -1988,10 +2084,19 @@
 
   function bookCardTiersHtml(item) {
     const tiers = bookDisplayTiers(item);
-    return tiers.map((tier) => `<div class="book-card-tier">
-      <div class="book-card-tier-label">${tier}</div>
-      ${bookTierHtml(item, tier)}
-    </div>`).join("");
+    return tiers.map((tier, index) => equipmentMobileTierHtml(item, tier, bookTierHtml(item, tier), equipmentCardTierExpanded(index))).join("");
+  }
+
+  function equipmentCardTierExpanded(index) {
+    const mobile = window.matchMedia("(max-width: 767px), (max-width: 932px) and (max-height: 500px) and (orientation: landscape)").matches;
+    return !mobile || index === 0;
+  }
+
+  function equipmentMobileTierHtml(item, tier, content, expanded) {
+    return `<details class="equipment-mobile-tier"${expanded ? " open" : ""}>
+      <summary><span class="tier-label">${escapeHtml(tier)}</span><span class="equipment-mobile-tier-hint">查看属性</span></summary>
+      <div class="equipment-mobile-tier-body"><span class="equipment-mobile-tier-body-label">${escapeHtml(tier)}</span>${content}</div>
+    </details>`;
   }
 
   function equipmentNameHtml(item) {
@@ -2053,11 +2158,11 @@
 
   function renderCards(items) {
     const hasFilter = state.filters.length > 0;
-    el.cards.innerHTML = items.map((item) => {
+    el.cards.innerHTML = `<div class="mobile-result-summary">共 ${items.length} 件装备</div>` + items.map((item) => {
       const badge = hasFilter ? sortBadge(item) : "";
       const tierHtml = item.bookGroup
         ? bookCardTiersHtml(item)
-        : Q.TIER_ORDER.map((tier) => `<div class="card-tier"><span class="tier-label">${tier}</span>${tokenHtml(item.tiers[tier])}</div>`).join("");
+        : Q.TIER_ORDER.map((tier, index) => equipmentMobileTierHtml(item, tier, tokenHtml(item.tiers[tier]), equipmentCardTierExpanded(index))).join("");
       return `<div class="card${item.bookGroup ? " book-card" : ""}">
         <div class="card-head">
           <span class="cat">${item.cat}</span>

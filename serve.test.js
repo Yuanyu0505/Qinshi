@@ -901,3 +901,29 @@ test("战匣丹囊资料表各列水平居中且上下对齐", () => {
   assert.match(css, /\.battle-pouch-reference-table th:first-child,\s*\n\.battle-pouch-reference-table td:first-child\s*\{[^}]*text-align:\s*center/);
   assert.match(css, /@media \(max-width: 720px\)[\s\S]*?\.battle-pouch-reference-table td\s*\{[^}]*align-items:\s*center/);
 });
+
+test("典雅水墨秦风主题统一三端层级并保护既有交互", async () => {
+  await withServer(async (port) => {
+    const css = await get(port, "/css/style.css");
+    assert.strictEqual(css.status, 200);
+
+    const start = css.body.indexOf("Qin elegant ink final theme");
+    assert.ok(start >= 0, "应提供唯一的最终典雅水墨秦风主题层");
+    const theme = css.body.slice(start);
+
+    assert.match(theme, /--qin-space-1:\s*4px/);
+    assert.match(theme, /--qin-space-6:\s*24px/);
+    assert.match(theme, /--qin-surface-panel:/);
+    assert.match(theme, /--qin-color-cinnabar:/);
+    assert.match(theme, /font-variant-numeric:\s*tabular-nums/);
+    assert.match(theme, /\.panel::before,\s*\n\.panel::after\s*\{\s*display:\s*none/);
+    assert.match(theme, /\.wrap::before,\s*\n\.app-content::before,\s*\n\.app-content::after\s*\{\s*display:\s*none/);
+    assert.match(theme, /\.battle-pouch-modes\s*\{[^}]*position:\s*static;[^}]*border:\s*0/);
+    assert.match(theme, /\.battle-pouch-progress-list\s*>\s*\.empty\s*\{\s*grid-column:\s*1\s*\/\s*-1/);
+    assert.match(theme, /@media \(min-width:\s*1025px\)/);
+    assert.match(theme, /@media \(min-width:\s*768px\) and \(max-width:\s*1024px\)/);
+    assert.match(theme, /@media \(max-width:\s*767px\),/);
+    assert.match(theme, /min-height:\s*44px/);
+    assert.match(theme, /@media \(prefers-reduced-motion:\s*reduce\)/);
+  });
+});

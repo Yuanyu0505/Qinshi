@@ -4550,3 +4550,826 @@ body {
   .battle-pouch-reference-table td:first-child { color: var(--gold); font-weight: 700; }
   .battle-pouch-rules > :last-child { grid-column: auto; }
 }
+
+/* ========================================================================== */
+/* Qin elegant ink final theme · 典雅水墨秦风三端统一视觉层 · 2026-09-03      */
+/* 只统一材质、层级、间距与响应式密度，不改变业务结构或交互状态。             */
+/* ========================================================================== */
+
+:root {
+  --qin-color-ink: #080705;
+  --qin-color-ink-soft: #0e0b08;
+  --qin-color-lacquer: #15110c;
+  --qin-color-lacquer-raised: #1d160f;
+  --qin-color-lacquer-high: #261c12;
+  --qin-color-bronze: #8f6b31;
+  --qin-color-bronze-deep: #4d391f;
+  --qin-color-gold: #d5aa48;
+  --qin-color-gold-bright: #efcb70;
+  --qin-color-cinnabar: #a93d31;
+  --qin-color-cinnabar-bright: #ca5747;
+  --qin-color-jade: #4cb77a;
+  --qin-color-text: #eadfc9;
+  --qin-color-muted: #a79a84;
+  --qin-surface-page: rgba(8, 7, 5, .94);
+  --qin-surface-panel: rgba(29, 22, 15, .94);
+  --qin-surface-panel-soft: rgba(22, 17, 12, .82);
+  --qin-surface-inset: rgba(13, 10, 7, .82);
+  --qin-line-strong: rgba(143, 107, 49, .76);
+  --qin-line: rgba(112, 82, 41, .62);
+  --qin-line-soft: rgba(91, 67, 36, .42);
+  --qin-space-1: 4px;
+  --qin-space-2: 8px;
+  --qin-space-3: 12px;
+  --qin-space-4: 16px;
+  --qin-space-5: 20px;
+  --qin-space-6: 24px;
+  --qin-radius-control: 4px;
+  --qin-radius-panel: 6px;
+  --qin-radius-overlay: 10px;
+  --qin-shadow-panel: 0 14px 32px -26px rgba(0, 0, 0, .95), inset 0 1px 0 rgba(239, 203, 112, .035);
+  --qin-shadow-raised: 0 18px 46px rgba(0, 0, 0, .5), inset 0 1px 0 rgba(239, 203, 112, .05);
+  --qin-focus-ring: 0 0 0 2px rgba(213, 170, 72, .18), 0 0 18px rgba(213, 170, 72, .07);
+  --qin-duration-fast: 140ms;
+  --qin-duration-normal: 180ms;
+
+  --bg: var(--qin-color-ink);
+  --bg2: var(--qin-color-lacquer);
+  --panel: #1d160f;
+  --line: #46351f;
+  --gold: var(--qin-color-gold);
+  --gold-dim: #a8833d;
+  --red: var(--qin-color-cinnabar);
+  --text: var(--qin-color-text);
+  --muted: var(--qin-color-muted);
+}
+
+html {
+  color-scheme: dark;
+  background: var(--qin-color-ink);
+  scrollbar-color: var(--qin-color-bronze-deep) var(--qin-color-ink);
+}
+
+body {
+  min-width: 0;
+  overflow-x: hidden;
+  color: var(--qin-color-text);
+  background-color: var(--qin-color-ink);
+  background-image:
+    linear-gradient(180deg, rgba(4, 3, 2, .08), rgba(4, 3, 2, .42)),
+    radial-gradient(ellipse at 74% 14%, rgba(118, 84, 40, .075), transparent 34%),
+    url("../images/qin-ink-landscape.webp"),
+    repeating-linear-gradient(126deg, transparent 0 45px, rgba(222, 184, 96, .01) 46px, transparent 47px);
+  background-repeat: no-repeat, no-repeat, no-repeat, repeat;
+  background-position: center, center, center top, center;
+  background-size: cover, cover, cover, auto;
+  background-attachment: fixed;
+  font-variant-numeric: tabular-nums;
+  text-rendering: optimizeLegibility;
+}
+
+body::before {
+  display: block;
+  opacity: .24;
+  background:
+    radial-gradient(75% 16% at 16% 102%, transparent 65%, rgba(126, 103, 57, .1) 66% 67%, transparent 68%),
+    radial-gradient(76% 15% at 86% 102%, transparent 65%, rgba(126, 103, 57, .07) 66% 67%, transparent 68%);
+}
+
+::selection {
+  color: #fff9eb;
+  background: rgba(169, 61, 49, .84);
+}
+
+.wrap {
+  width: min(100%, 1540px);
+  padding: var(--qin-space-5) clamp(14px, 2vw, 28px) 44px;
+}
+
+.wrap::before,
+.app-content::before,
+.app-content::after {
+  display: none;
+}
+
+header.top {
+  min-height: 52px;
+  margin-bottom: var(--qin-space-5);
+  padding: 4px 0 var(--qin-space-3);
+  border: 0;
+  border-bottom: 1px solid var(--qin-line-soft);
+  background: transparent;
+  box-shadow: none;
+}
+
+header.top::before,
+header.top::after,
+h1::after {
+  display: none;
+}
+
+h1 {
+  color: var(--qin-color-gold-bright);
+  font-size: clamp(25px, 2.2vw, 34px);
+  letter-spacing: .2em;
+  line-height: 1.2;
+  text-shadow: 0 1px 0 #2d1c08, 0 0 18px rgba(213, 170, 72, .18);
+}
+
+.meta,
+.muted-tip,
+.filter-label {
+  color: var(--qin-color-muted);
+}
+
+.app-shell {
+  gap: clamp(16px, 2vw, 28px);
+}
+
+.app-content {
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+#app > section[id^="partition-"] {
+  min-width: 0;
+  min-height: auto;
+  padding: 0;
+}
+
+#app > section[id^="partition-"]::before {
+  display: none;
+}
+
+#app > section[id^="partition-"] > :first-child {
+  margin-top: 0;
+}
+
+/* 目录保留原有剑形选中项，普通项仅统一字色与节奏。 */
+@media (min-width: 768px) {
+  .tabs {
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .tabs::after {
+    display: none;
+  }
+
+  .tab:not(.active) {
+    color: #b2a286;
+    transition: color var(--qin-duration-normal) ease, transform var(--qin-duration-normal) ease;
+  }
+
+  .tab:not(.active)::before {
+    border-color: rgba(176, 132, 49, .78);
+    background: #151008;
+    box-shadow: inset 0 0 0 1px #4a3418, 0 0 7px rgba(213, 170, 72, .1);
+  }
+
+  .tab:not(.active):hover {
+    color: var(--qin-color-gold-bright);
+  }
+
+  .tab.active {
+    color: #f4be36;
+    filter: drop-shadow(0 4px 5px rgba(0, 0, 0, .68)) drop-shadow(0 0 5px rgba(213, 170, 72, .12));
+  }
+}
+
+/* 一级面板使用直线框；不添加面板角纹。 */
+.panel,
+.summary-card,
+.mode-block,
+.drop-item,
+.answer-card,
+.quiz-item,
+.atlas-item,
+.card,
+.book-card,
+.equipment-compare-panel,
+.equipment-compare-card,
+.ins-editor,
+.ins-card,
+.ins-progress-card,
+.ins-query-card,
+.ins-reference-block,
+.forbidden-card,
+.formation-progress-card,
+.formation-recommend-card,
+.formation-reference-card,
+.formation-slot-card,
+.machine-beast-card,
+.machine-effect-card,
+.machine-reference-card,
+.machine-research-card,
+.machine-school-stage-card,
+.tactics-cost-result-card,
+.battle-pouch-plan-row,
+.battle-pouch-result-item {
+  border-color: var(--qin-line);
+  border-radius: var(--qin-radius-panel);
+  background-color: var(--qin-surface-panel);
+  background-image:
+    linear-gradient(135deg, rgba(239, 203, 112, .026), transparent 28%),
+    linear-gradient(180deg, rgba(255, 245, 218, .014), rgba(0, 0, 0, .13)),
+    repeating-linear-gradient(90deg, rgba(90, 66, 32, .018) 0 1px, transparent 1px 10px);
+  background-repeat: repeat;
+  background-size: auto;
+  box-shadow: var(--qin-shadow-panel);
+}
+
+.panel,
+.summary-card {
+  padding: var(--qin-space-4);
+}
+
+.panel::before,
+.panel::after {
+  display: none;
+}
+
+.summary-card::before,
+.summary-card::after {
+  display: none;
+}
+
+#app .panel .panel,
+#app .panel fieldset,
+#app .panel .card-tier,
+#app .panel .book-card-tier,
+#app .panel .ins-editor-slot,
+#app .panel .ins-saved-slot,
+#app .panel .ins-query-slot,
+#app .panel .battle-pouch-disciple-summary > div,
+#app .panel .battle-pouch-equipment-slot,
+#app .panel .battle-pouch-pill-slot,
+#app .panel .battle-pouch-result-grid > div,
+#app .panel .battle-pouch-rule-grid > span {
+  border-color: var(--qin-line-soft);
+  background-color: var(--qin-surface-inset);
+  box-shadow: none;
+}
+
+.panel-title {
+  gap: var(--qin-space-2);
+  margin-bottom: var(--qin-space-2);
+  color: #cdb583;
+  font-family: "STKaiti", "KaiTi", "FangSong", "SimSun", serif;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: .09em;
+}
+
+.panel-title::before {
+  width: 18px;
+  height: 1px;
+  flex: 0 0 18px;
+  border: 0;
+  background: linear-gradient(90deg, var(--qin-color-gold), rgba(213, 170, 72, .08));
+  box-shadow: none;
+  transform: none;
+}
+
+.mode-title,
+.equipment-group-title,
+.formation-section-title,
+.machine-section-title,
+.tactics-section-title,
+.panel h2,
+.panel h3 {
+  color: var(--qin-color-gold-bright);
+  text-wrap: balance;
+}
+
+.filter-row,
+.segs,
+.chips,
+.progress-toolbar,
+.ins-progress-toolbar,
+.ins-query-controls,
+.settings-actions {
+  gap: var(--qin-space-2);
+}
+
+.filter-row + .filter-row {
+  margin-top: var(--qin-space-3);
+}
+
+/* 黑漆控件、朱砂主状态、暗金聚焦。 */
+.seg,
+.chip,
+.equipment-main-visibility,
+.mobile-filter-toggle,
+.mobile-more-grid button,
+button.book-detail-toggle,
+button.book-detail-close {
+  border-color: var(--qin-line);
+  border-radius: var(--qin-radius-control);
+  color: var(--qin-color-text);
+  background-color: rgba(17, 13, 9, .88);
+  background-image: linear-gradient(180deg, rgba(255, 243, 207, .028), rgba(0, 0, 0, .14));
+  box-shadow: inset 0 1px 0 rgba(255, 243, 207, .025);
+  transition:
+    color var(--qin-duration-fast) ease,
+    border-color var(--qin-duration-fast) ease,
+    background-color var(--qin-duration-fast) ease,
+    box-shadow var(--qin-duration-fast) ease,
+    transform var(--qin-duration-fast) ease;
+}
+
+.seg:hover,
+.chip:hover,
+.equipment-main-visibility:hover,
+.mobile-filter-toggle:hover,
+.mobile-more-grid button:hover {
+  color: #fff1cd;
+  border-color: rgba(171, 128, 52, .94);
+  background-color: rgba(26, 19, 12, .95);
+  box-shadow: inset 0 1px 0 rgba(255, 241, 199, .06), 0 0 0 1px rgba(213, 170, 72, .035);
+}
+
+.seg:active,
+.chip:active,
+.equipment-main-visibility:active,
+.mobile-more-grid button:active {
+  transform: translateY(1px);
+}
+
+.seg.active,
+.segs .seg.active,
+.chip.active,
+.mobile-more-grid button.active {
+  color: #fff9eb;
+  border-color: #d16951;
+  background:
+    linear-gradient(90deg, rgba(255, 219, 176, .14), transparent 18%, transparent 82%, rgba(255, 219, 176, .08)),
+    linear-gradient(180deg, #bd4b3d, #81281f);
+  box-shadow: inset 0 1px 0 rgba(255, 226, 191, .16), 0 5px 14px rgba(66, 14, 10, .24);
+}
+
+.seg.danger {
+  color: #e88a7f;
+  border-color: rgba(166, 60, 49, .7);
+  background-color: rgba(72, 23, 19, .22);
+}
+
+.seg.danger:hover {
+  color: #ffc1b9;
+  border-color: #bd594d;
+  background-color: rgba(99, 29, 23, .32);
+}
+
+.link-btn {
+  color: #d5b66c;
+  text-underline-offset: 4px;
+  text-decoration-color: rgba(213, 182, 108, .42);
+  transition: color var(--qin-duration-fast) ease, text-decoration-color var(--qin-duration-fast) ease;
+}
+
+.link-btn:hover {
+  color: var(--qin-color-gold-bright);
+  text-decoration-color: currentColor;
+}
+
+input[type="search"],
+input[type="text"],
+input[type="number"],
+select,
+textarea,
+#search {
+  border-color: var(--qin-line);
+  border-radius: var(--qin-radius-control);
+  color: var(--qin-color-text);
+  background-color: rgba(13, 10, 7, .9);
+  background-image: linear-gradient(180deg, rgba(255, 246, 217, .012), rgba(0, 0, 0, .1));
+  box-shadow: inset 0 2px 8px rgba(0, 0, 0, .22);
+  transition: border-color var(--qin-duration-fast) ease, box-shadow var(--qin-duration-fast) ease, background-color var(--qin-duration-fast) ease;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: #817563;
+  opacity: 1;
+}
+
+input[type="search"]:focus,
+input[type="text"]:focus,
+input[type="number"]:focus,
+select:focus,
+textarea:focus,
+#search:focus {
+  outline: none;
+  border-color: var(--qin-color-gold);
+  background-color: #17110b;
+  box-shadow: inset 0 2px 8px rgba(0, 0, 0, .2), var(--qin-focus-ring);
+}
+
+input[type="number"] {
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  margin: 0;
+  -webkit-appearance: none;
+}
+
+button:focus-visible,
+a:focus-visible,
+summary:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--qin-color-gold-bright);
+  outline-offset: 3px;
+}
+
+input[type="checkbox"],
+input[type="radio"] {
+  accent-color: var(--qin-color-cinnabar-bright);
+}
+
+.error,
+.is-error {
+  border-color: rgba(185, 74, 63, .82);
+  background-color: rgba(84, 25, 20, .38);
+  box-shadow: inset 3px 0 0 rgba(211, 81, 66, .5);
+}
+
+.atlas-saved,
+.is-saved,
+.is-complete,
+.saved {
+  text-shadow: 0 0 10px rgba(76, 183, 122, .12);
+}
+
+.success,
+.success-text {
+  color: var(--qin-color-jade);
+}
+
+.empty {
+  min-height: 150px;
+  padding: 40px var(--qin-space-4);
+  color: var(--qin-color-muted);
+}
+
+/* 数据表强调对齐与扫描效率，手机端既有卡片化规则继续优先。 */
+.table-wrap,
+.summary-table-scroll,
+.forge-scroll,
+.tactics-table-scroll,
+.battle-pouch-reference-table {
+  max-width: 100%;
+  border-color: var(--qin-line-soft);
+  border-radius: var(--qin-radius-control);
+  background: rgba(11, 8, 6, .62);
+  box-shadow: inset 0 0 20px rgba(0, 0, 0, .15);
+}
+
+table {
+  font-variant-numeric: tabular-nums;
+}
+
+thead th {
+  color: #ddb554;
+  border-bottom-color: rgba(123, 91, 42, .74);
+  background-color: #20170e;
+  background-image: linear-gradient(180deg, rgba(239, 203, 112, .06), rgba(0, 0, 0, .1));
+  box-shadow: inset 0 1px 0 rgba(239, 203, 112, .035);
+  vertical-align: middle;
+}
+
+tbody td,
+.mini-table th,
+.mini-table td {
+  border-bottom-color: var(--qin-line-soft);
+  vertical-align: middle;
+}
+
+tbody tr:nth-child(even) {
+  background-color: rgba(94, 68, 32, .026);
+}
+
+tbody tr:hover {
+  background-color: rgba(213, 170, 72, .055);
+}
+
+.mobile-more-sheet,
+.book-detail-popover,
+.atlas-note-menu,
+.ins-suggestions,
+.battle-pouch-suggestions,
+.battle-pouch-editor {
+  border-color: var(--qin-line-strong);
+  border-radius: var(--qin-radius-overlay);
+  background-color: #19130d;
+  background-image: linear-gradient(180deg, rgba(239, 203, 112, .035), rgba(0, 0, 0, .14));
+  box-shadow: var(--qin-shadow-raised);
+}
+
+/* 战匣丹囊模式栏必须跟随页面正常滚动，且不出现整体外框。 */
+.battle-pouch-modes {
+  position: static;
+  margin-bottom: var(--qin-space-4);
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+
+.battle-pouch-reference-table th,
+.battle-pouch-reference-table td {
+  text-align: center;
+  vertical-align: middle;
+}
+
+.battle-pouch-progress-list > .empty {
+  grid-column: 1 / -1;
+}
+
+/* 桌面：舒展的一级层级和沉浸式剑形目录。 */
+@media (min-width: 1025px) {
+  header.top {
+    margin-left: 254px;
+  }
+
+  .app-shell {
+    grid-template-columns: 230px minmax(0, 1fr);
+  }
+
+  .tabs {
+    top: 18px;
+    gap: var(--qin-space-2);
+  }
+
+  #app > section[id^="partition-"] > .panel,
+  #app > section[id^="partition-"] > .summary-card {
+    margin-bottom: var(--qin-space-4);
+    padding: var(--qin-space-5);
+  }
+
+  .cards,
+  .atlas-grid,
+  .machine-reference-grid,
+  .formation-recommend-grid {
+    gap: var(--qin-space-4);
+  }
+
+  .table-wrap,
+  .summary-table-scroll,
+  .forge-scroll,
+  .tactics-table-scroll {
+    scrollbar-gutter: stable;
+  }
+}
+
+/* 平板：保留两列能力，降低装饰和外围留白。 */
+@media (min-width: 768px) and (max-width: 1024px) {
+  .wrap {
+    padding: var(--qin-space-4) var(--qin-space-3) 36px;
+  }
+
+  header.top {
+    min-height: 46px;
+    margin-left: 174px;
+    margin-bottom: var(--qin-space-4);
+  }
+
+  .app-shell {
+    grid-template-columns: 150px minmax(0, 1fr);
+    gap: var(--qin-space-3);
+  }
+
+  .panel,
+  .summary-card {
+    padding: 14px;
+  }
+
+  .panel,
+  .summary-card,
+  .mode-block,
+  .drop-item,
+  .answer-card,
+  .quiz-item,
+  .atlas-item,
+  .card,
+  .book-card,
+  .equipment-compare-card,
+  .ins-progress-card,
+  .ins-query-card,
+  .forbidden-card,
+  .formation-progress-card,
+  .formation-recommend-card,
+  .machine-beast-card,
+  .machine-effect-card,
+  .machine-reference-card,
+  .tactics-cost-result-card {
+    background-image: linear-gradient(180deg, rgba(255, 244, 212, .014), rgba(0, 0, 0, .1));
+    box-shadow: inset 0 1px 0 rgba(239, 203, 112, .022), 0 8px 20px -22px #000;
+  }
+
+  #app .seg,
+  #app .chip,
+  #app button,
+  #app select,
+  #app input,
+  #app summary[role="button"] {
+    min-height: 44px;
+    touch-action: manipulation;
+  }
+
+  .filter-row,
+  .segs,
+  .chips {
+    row-gap: var(--qin-space-2);
+  }
+}
+
+/* 手机：单列、低装饰、稳定触控；保留既有底部导航与更多抽屉。 */
+@media (max-width: 767px),
+       (max-width: 932px) and (max-height: 500px) and (orientation: landscape) {
+  body {
+    background-image:
+      linear-gradient(180deg, rgba(5, 4, 3, .22), rgba(5, 4, 3, .5)),
+      url("../images/qin-ink-landscape.webp");
+    background-repeat: no-repeat;
+    background-position: center, left top;
+    background-size: cover, auto 100vh;
+    background-attachment: fixed;
+  }
+
+  body::before {
+    display: none;
+  }
+
+  .wrap {
+    width: 100%;
+    padding: 10px 8px calc(82px + env(safe-area-inset-bottom));
+  }
+
+  header.top {
+    min-height: 0;
+    margin: 0 0 var(--qin-space-3);
+    padding: 4px 2px 10px;
+  }
+
+  h1 {
+    font-size: 24px;
+    letter-spacing: .14em;
+  }
+
+  .app-shell {
+    display: block;
+  }
+
+  .app-content {
+    width: 100%;
+    min-width: 0;
+  }
+
+  #app > section[id^="partition-"] {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .tabs {
+    min-height: 58px;
+    padding: 5px 5px calc(5px + env(safe-area-inset-bottom));
+    border: 0;
+    border-top: 1px solid var(--qin-line-strong);
+    background:
+      linear-gradient(180deg, rgba(72, 50, 22, .2), transparent 38%),
+      rgba(15, 11, 8, .985);
+    box-shadow: 0 -9px 24px rgba(0, 0, 0, .5), inset 0 1px 0 rgba(239, 203, 112, .03);
+  }
+
+  .tabs::before,
+  .tabs::after,
+  .tab::before,
+  .tab::after {
+    display: none !important;
+  }
+
+  .tab {
+    min-height: 48px;
+    border-radius: var(--qin-radius-control);
+    color: #a99b84;
+    text-shadow: none;
+    filter: none;
+    transform: none;
+  }
+
+  .tab.active {
+    color: #fff1c5;
+    border-color: #a34b3b;
+    background: linear-gradient(180deg, rgba(183, 68, 55, .95), rgba(113, 34, 27, .97));
+    box-shadow: inset 0 1px 0 rgba(255, 229, 199, .13), 0 0 10px rgba(130, 40, 31, .13);
+  }
+
+  .panel,
+  .summary-card {
+    margin-bottom: var(--qin-space-3);
+    padding: var(--qin-space-3);
+    border-radius: var(--qin-radius-panel);
+  }
+
+  .panel,
+  .summary-card,
+  .mode-block,
+  .drop-item,
+  .answer-card,
+  .quiz-item,
+  .atlas-item,
+  .card,
+  .book-card,
+  .equipment-compare-card,
+  .ins-progress-card,
+  .ins-query-card,
+  .forbidden-card,
+  .formation-progress-card,
+  .formation-recommend-card,
+  .machine-beast-card,
+  .machine-effect-card,
+  .machine-reference-card,
+  .tactics-cost-result-card {
+    background-image: linear-gradient(180deg, rgba(255, 244, 212, .012), rgba(0, 0, 0, .1));
+    box-shadow: inset 0 1px 0 rgba(239, 203, 112, .02);
+  }
+
+  .panel-title {
+    margin-bottom: 6px;
+    font-size: 14px;
+  }
+
+  .panel-title::before {
+    width: 12px;
+    flex-basis: 12px;
+  }
+
+  .filter-row,
+  .segs,
+  .chips,
+  .settings-actions,
+  .progress-toolbar {
+    gap: 7px;
+  }
+
+  #app .seg,
+  #app .chip,
+  #app .link-btn,
+  #app button,
+  #app select,
+  #app input,
+  #app summary,
+  .mobile-more-head .link-btn {
+    min-height: 44px;
+    touch-action: manipulation;
+  }
+
+  #app input[type="checkbox"],
+  #app input[type="radio"] {
+    width: 18px;
+    height: 18px;
+    min-height: 18px;
+  }
+
+  .mobile-more-sheet {
+    background: linear-gradient(180deg, #211910, #130f0a);
+  }
+
+  .empty {
+    min-height: 118px;
+    padding: 30px var(--qin-space-3);
+  }
+
+  .table-wrap,
+  .summary-table-scroll,
+  .forge-scroll,
+  .tactics-table-scroll,
+  .mobile-scroll-region {
+    max-width: 100%;
+    overscroll-behavior-inline: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html:focus-within {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: .01ms !important;
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}

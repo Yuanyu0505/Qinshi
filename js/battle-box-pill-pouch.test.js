@@ -153,6 +153,24 @@ test("材料按上一等级升至本等级逐行累计", () => {
   });
 });
 
+test("关键节点材料累计相邻节点之间的逐级消耗", () => {
+  const originalBattleTen = { ...DATA.battleLevels[10] };
+  const originalPouchTen = { ...DATA.pouchLevels[10] };
+  const battleRows = CORE.keyReferenceRows(DATA.battleLevels);
+  const pouchRows = CORE.keyReferenceRows(DATA.pouchLevels);
+
+  assert.deepStrictEqual(
+    battleRows.slice(0, 3).map(row => [row.level, row.pearls, row.shells]),
+    [[1, 12, 1], [10, 198, 13], [20, 465, 28]]
+  );
+  assert.deepStrictEqual(
+    pouchRows.slice(0, 3).map(row => [row.level, row.pearls, row.shells]),
+    [[1, 11, 1], [10, 144, 9], [20, 255, 10]]
+  );
+  assert.deepStrictEqual(DATA.battleLevels[10], originalBattleTen);
+  assert.deepStrictEqual(DATA.pouchLevels[10], originalPouchTen);
+});
+
 test("属性差值按当前与目标等级分别计算", () => {
   assert.deepStrictEqual(CORE.attributeDelta("battle", 50, 51, DATA), {
     attack: DATA.battleLevels[51].attack - DATA.battleLevels[50].attack,

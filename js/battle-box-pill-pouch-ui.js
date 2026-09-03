@@ -350,9 +350,7 @@
   function referenceRows(kind, view, disciple) {
     var levels = kind === "battle" ? DATA.battleLevels : DATA.pouchLevels;
     if (view === "all") return levels.slice(1);
-    if (view === "key") {
-      return levels.filter(function (row) { return row.level === 1 || row.level % 10 === 0; });
-    }
+    if (view === "key") return CORE.keyReferenceRows(levels);
     var current = disciple ? disciple[kind].currentLevel : 1;
     var start = Math.max(1, current - 3);
     var end = Math.min(90, current + 3);
@@ -368,9 +366,9 @@
     return classes.join(" ");
   }
 
-  function referenceTable(kind, rows, disciple, caps) {
+  function referenceTable(kind, rows, disciple, caps, view) {
     var headers = kind === "battle"
-      ? ["等级", "攻击", "防御", "血量", "玩家对战免伤", "沧海珠", "玄龟甲"]
+      ? ["等级", "攻击", "防御", "血量", "PVP免伤", "沧海珠", "玄龟甲"]
       : ["等级", "基础属性加成", "沧海珠", "玄龟甲"];
     var body = rows.map(function (row) {
       var cells = kind === "battle"
@@ -380,7 +378,10 @@
         return '<td data-label="' + escapeHtml(headers[index]) + '">' + cell + '</td>';
       }).join("") + '</tr>';
     }).join("");
-    return '<p class="muted-tip">材料含义：上一等级升至本等级所需。</p><div class="battle-pouch-reference-table"><table><thead><tr>' +
+    var materialHint = view === "key"
+      ? "材料含义：上一关键节点升至本关键节点的累计消耗。"
+      : "材料含义：上一等级升至本等级所需。";
+    return '<p class="muted-tip">' + materialHint + '</p><div class="battle-pouch-reference-table"><table><thead><tr>' +
       headers.map(function (header) { return '<th>' + header + '</th>'; }).join("") + '</tr></thead><tbody>' + body + '</tbody></table></div>';
   }
 
@@ -404,7 +405,7 @@
       '<label><span>参照弟子</span><select data-reference-disciple><option value="">不选择弟子</option>' +
       state.disciples.map(function (item) { return '<option value="' + escapeHtml(item.id) + '"' +
         (item.id === state.referenceDiscipleId ? " selected" : "") + '>' + escapeHtml(item.name) + '</option>'; }).join("") +
-      '</select></label></section><section class="panel">' + referenceTable(state.referenceKind, rows, disciple, caps) + '</section>' +
+      '</select></label></section><section class="panel">' + referenceTable(state.referenceKind, rows, disciple, caps, state.referenceView) + '</section>' +
       '<div class="battle-pouch-rules">' + rulesTable("战匣装备品质上限", DATA.battleQualityNames, DATA.battleQualityCaps) +
       rulesTable("丹囊内丹品质上限", DATA.pouchQualityNames, DATA.pouchQualityCaps) +
       '<section class="panel battle-pouch-rule-card"><h3>等级与槽位规则</h3><p>玩家46级解锁战匣与丹囊；实际等级上限取玩家上限与物品上限中的较小值。</p>' +

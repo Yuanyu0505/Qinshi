@@ -844,9 +844,13 @@ test("战匣丹囊目标计算提供多弟子排序、共享库存和购买补�
   assert.match(ui, /可达到/);
 });
 
-test("战匣丹囊资料显示单级口径、三种视图和槽位规则说明", () => {
+test("战匣丹囊资料区分单级与关键节点累计口径", () => {
   const ui = fs.readFileSync(path.join(__dirname, "js", "battle-box-pill-pouch-ui.js"), "utf8");
   assert.match(ui, /上一等级升至本等级所需/);
+  assert.match(ui, /上一关键节点升至本关键节点的累计消耗/);
+  assert.match(ui, /if \(view === "key"\) return CORE\.keyReferenceRows\(levels\)/);
+  assert.match(ui, /PVP免伤/);
+  assert.doesNotMatch(ui, /\["等级", "攻击", "防御", "血量", "玩家对战免伤"/);
   assert.match(ui, /data-label=/);
   assert.match(ui, /当前附近/);
   assert.match(ui, /关键节点/);
@@ -877,4 +881,23 @@ test("战匣丹囊样式覆盖手机单列和平板双列布局", () => {
   assert.match(css, /@media \(max-width: 1024px\)[\s\S]*?\.battle-pouch-progress-list/);
   assert.match(css, /@media \(max-width: 720px\)[\s\S]*?\.battle-pouch-editor/);
   assert.match(css, /#partition-battle-box-pill-pouch input\[type="number"\]::-webkit-inner-spin-button/);
+});
+
+test("战匣丹囊子页签随页面滚动且没有整体外框", () => {
+  const css = fs.readFileSync(path.join(__dirname, "css", "style.css"), "utf8");
+  const modes = css.match(/\.battle-pouch-modes\s*\{([\s\S]*?)\}/);
+  assert.ok(modes, "应存在战匣丹囊子页签样式");
+  assert.match(modes[1], /position:\s*static/);
+  assert.match(modes[1], /padding:\s*0/);
+  assert.match(modes[1], /background:\s*transparent/);
+  assert.match(modes[1], /border:\s*0/);
+  assert.doesNotMatch(modes[1], /position:\s*sticky/);
+});
+
+test("战匣丹囊资料表各列水平居中且上下对齐", () => {
+  const css = fs.readFileSync(path.join(__dirname, "css", "style.css"), "utf8");
+  assert.match(css, /\.battle-pouch-reference-table table\s*\{[^}]*table-layout:\s*fixed/);
+  assert.match(css, /\.battle-pouch-reference-table th,\s*\n\.battle-pouch-reference-table td\s*\{[^}]*text-align:\s*center;[^}]*vertical-align:\s*middle/);
+  assert.match(css, /\.battle-pouch-reference-table th:first-child,\s*\n\.battle-pouch-reference-table td:first-child\s*\{[^}]*text-align:\s*center/);
+  assert.match(css, /@media \(max-width: 720px\)[\s\S]*?\.battle-pouch-reference-table td\s*\{[^}]*align-items:\s*center/);
 });

@@ -166,6 +166,17 @@
     return totals;
   }
 
+  function keyReferenceRows(levels) {
+    var previousLevel = 0;
+    return levels.filter(function (row) {
+      return row && (row.level === 1 || row.level % 10 === 0) && row.level > 0;
+    }).map(function (row) {
+      var totals = costBetween(levels, previousLevel, row.level);
+      previousLevel = row.level;
+      return Object.assign({}, row, totals);
+    });
+  }
+
   function attributeDelta(kind, currentLevel, targetLevel, data) {
     var levels = kind === "pouch" ? data.pouchLevels : data.battleLevels;
     var maximum = levels.length - 1;
@@ -345,6 +356,7 @@
     normalizeAccount: normalizeAccount,
     effectiveCaps: effectiveCaps,
     costBetween: costBetween,
+    keyReferenceRows: keyReferenceRows,
     attributeDelta: attributeDelta,
     buildPlanItems: buildPlanItems,
     allocateInventory: allocateInventory,

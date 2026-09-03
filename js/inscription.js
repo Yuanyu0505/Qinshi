@@ -2,6 +2,7 @@
   "use strict";
 
   var DATA = window.INSCRIPTION_DATA;
+  var PERFORMANCE = window.INSCRIPTION_PERFORMANCE;
   var STORE_KEY = "qinshi_inscription_progress_v2";
   var TIANS = ["天府", "天相", "天同", "天梁", "天机"];
   var SHIELDS = ["天盾", "地盾", "人盾", "神盾", "鬼盾", "龙盾", "虎盾", "风盾", "云盾"];
@@ -44,9 +45,10 @@
   var progress = loadProgress();
   var editingKey = "";
   var el = {};
+  var renderCoordinator;
 
   function init() {
-    if (!DATA || !document.getElementById("partition-inscription")) return;
+    if (!DATA || !PERFORMANCE || !document.getElementById("partition-inscription")) return;
     el.modes = document.getElementById("inscription-modes");
     el.progressSearch = document.getElementById("ins-progress-search");
     el.suggestions = document.getElementById("ins-progress-suggestions");
@@ -65,14 +67,22 @@
     el.editor.addEventListener("click", handleEditorClick);
     el.editor.addEventListener("change", refreshEditorMain);
     el.progressList.addEventListener("click", handleProgressAction);
-    [el.quality, el.tian, el.shield, el.search].forEach(function (control) {
-      control.addEventListener("input", renderQuery);
-      control.addEventListener("change", renderQuery);
+    renderCoordinator = PERFORMANCE.createRenderCoordinator({
+      renderers: {
+        progress: renderProgressList,
+        query: renderQuery,
+        reference: renderReference
+      },
+      schedule: function (callback, delay) { return window.setTimeout(callback, delay); },
+      cancel: function (id) { window.clearTimeout(id); },
+      queryDelay: 120
     });
+    [el.quality, el.tian, el.shield].forEach(function (control) {
+      control.addEventListener("change", function () { renderCoordinator.invalidate("query"); });
+    });
+    el.search.addEventListener("input", function () { renderCoordinator.scheduleQuery(); });
 
-    renderProgressList();
-    renderQuery();
-    renderReference();
+    renderCoordinator.activate("progress");
   }
 
   function keyOf(item) { return item.quality + "\u0000" + item.name; }
@@ -116,6 +126,7 @@
   function switchMode(event) {
     var button = event.target.closest("button[data-mode]");
     if (!button) return;
+    renderCoordinator.activate(button.dataset.mode);
     el.modes.querySelectorAll("button").forEach(function (item) { item.classList.toggle("active", item === button); });
     ["progress", "query", "reference"].forEach(function (mode) {
       document.getElementById("inscription-" + mode).hidden = mode !== button.dataset.mode;
@@ -202,8 +213,8 @@
     saveProgress();
     editingKey = "";
     el.editor.innerHTML = "";
-    renderProgressList();
-    renderQuery();
+    renderCoordinator.invalidate("progress");
+    renderCoordinator.markDirty("query");
   }
 
   function renderProgressList() {
@@ -235,8 +246,8 @@
       delete progress[deleteKey];
       saveProgress();
       if (editingKey === deleteKey) { editingKey = ""; el.editor.innerHTML = ""; }
-      renderProgressList();
-      renderQuery();
+      renderCoordinator.invalidate("progress");
+      renderCoordinator.markDirty("query");
       return;
     }
     editingKey = decodeURIComponent(button.dataset.editKey);

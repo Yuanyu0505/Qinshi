@@ -1496,8 +1496,8 @@
       FDATA.meta.stageNames.map((s) => `<th>${s}</th>`).join("") +
       "<th>合计</th></tr>";
     el.forgeSummary.innerHTML = FDATA.summary.map((s) => "<tr><td class=\"cat\">" + s.cat + "</td>" +
-      s.stages.map((v) => `<td>${FORG.splitMaterials(v).map((p) => `<div class="mat-line">${p}</div>`).join("")}</td>`).join("") +
-      `<td class="badge">${s.total}</td></tr>`).join("");
+      s.stages.map((v, index) => `<td data-label="${escapeHtml(FDATA.meta.stageNames[index])}">${FORG.splitMaterials(v).map((p) => `<div class="mat-line">${p}</div>`).join("")}</td>`).join("") +
+      `<td class="badge" data-label="合计">${FORG.splitMaterials(s.total).map((p) => `<div class="mat-line">${p}</div>`).join("")}</td></tr>`).join("");
   }
 
   function bindForging() {
@@ -1596,8 +1596,9 @@
   }
 
   function renderChips() {
+    const compactLabels = { "敌方减攻": "减攻", "敌方减防": "减防", "敌方减血": "减血" };
     el.chips.innerHTML = DATA.meta.attrTypes
-      .map((a) => `<button type="button" class="chip" data-attr="${a}">${a}</button>`)
+      .map((a) => `<button type="button" class="chip" data-attr="${escapeHtml(a)}" aria-label="${escapeHtml(a)}" title="${escapeHtml(a)}"><span class="equipment-chip-full">${escapeHtml(a)}</span><span class="equipment-chip-short" aria-hidden="true">${escapeHtml(compactLabels[a] || a)}</span></button>`)
       .join("");
   }
 

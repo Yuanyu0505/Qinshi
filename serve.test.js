@@ -782,16 +782,67 @@ test("兵法综合计算在手机端折叠长表单并提供悬浮计算入口",
   assert.match(css, /\.tactics-cost-floating-calculate/);
 });
 
-test("锻造和铭文宽表提供手机横向滑动提示与可聚焦区域", () => {
+test("锻造查询和铭文宽表保留滑动提示而锻造总览改为响应式布局", () => {
   const html = fs.readFileSync(path.join(__dirname, "index.html"), "utf8");
   const app = fs.readFileSync(path.join(__dirname, "js", "app.js"), "utf8");
   const inscription = fs.readFileSync(path.join(__dirname, "js", "inscription.js"), "utf8");
   const css = fs.readFileSync(path.join(__dirname, "css", "style.css"), "utf8");
-  assert.match(html, /mobile-scroll-hint/);
-  assert.match(html, /aria-label="锻造材料总览，可左右滑动"/);
+  assert.match(html, /class="summary-table-scroll forging-summary-table-wrap"[^>]*aria-label="锻造材料总览"/);
+  assert.doesNotMatch(html, /aria-label="锻造材料总览，可左右滑动"/);
   assert.match(app, /forgeScrollHintHtml/);
+  assert.match(app, /aria-label="主锻造装备材料表，可左右滑动"/);
   assert.match(inscription, /mobile-scroll-hint/);
   assert.match(css, /\.mobile-scroll-region/);
+});
+
+test("铭文性能协调器先于页面逻辑加载并加入离线资源", async () => {
+  await withServer(async (port) => {
+    const page = await get(port, "/");
+    const helper = await get(port, "/js/inscription-performance.js");
+    const helperScript = '<script src="js/inscription-performance.js"></script>';
+    const pageScript = '<script src="js/inscription.js"></script>';
+    assert.strictEqual(helper.status, 200);
+    assert.match(helper.headers["content-type"], /javascript/);
+    assert.ok(page.body.indexOf(helperScript) >= 0, "首页应加载铭文性能协调器");
+    assert.ok(page.body.indexOf(helperScript) < page.body.indexOf(pageScript), "协调器必须先于铭文页面逻辑加载");
+  });
+  const serviceWorker = fs.readFileSync(path.join(__dirname, "service-worker.js"), "utf8");
+  assert.match(serviceWorker, /\.\/js\/inscription-performance\.js/);
+});
+
+test("铭文长列表跳过视口外绘制且星形不使用滤镜", () => {
+  const css = fs.readFileSync(path.join(__dirname, "css", "style.css"), "utf8");
+  assert.match(css, /#ins-results\s*\{[^}]*contain:\s*layout style;/);
+  assert.match(css, /#ins-results \.ins-query-card[\s\S]*?content-visibility:\s*auto;[\s\S]*?contain-intrinsic-size:\s*auto 640px;/);
+  const starRule = css.match(/\.ins-rank-star\s*\{([^}]*)\}/);
+  assert.ok(starRule, "应存在铭文星形样式");
+  assert.match(starRule[1], /text-shadow:/);
+  assert.doesNotMatch(starRule[1], /filter:/);
+});
+
+test("装备副属性筛选与进阶详情保持单行并自适应压缩", () => {
+  const html = fs.readFileSync(path.join(__dirname, "index.html"), "utf8");
+  const app = fs.readFileSync(path.join(__dirname, "js", "app.js"), "utf8");
+  const css = fs.readFileSync(path.join(__dirname, "css", "style.css"), "utf8");
+  assert.match(html, /class="filter-row equipment-sub-filter"/);
+  assert.match(css, /#partition-equipment #chips\s*\{[^}]*flex-wrap:\s*nowrap;/);
+  assert.match(css, /#partition-equipment #chips \.chip\s*\{[^}]*white-space:\s*nowrap;/);
+  assert.match(css, /#partition-equipment \.book-detail-toggle\s*\{[^}]*white-space:\s*nowrap;/);
+  assert.doesNotMatch(css, /#partition-equipment #chips\s*\{[^}]*overflow-x:\s*auto;/);
+  assert.match(app, /equipment-chip-short/);
+  assert.match(css, /\.equipment-chip-short\s*\{\s*display:\s*none;/);
+});
+
+test("锻造材料总览三端均不依赖横向滑动", () => {
+  const html = fs.readFileSync(path.join(__dirname, "index.html"), "utf8");
+  const app = fs.readFileSync(path.join(__dirname, "js", "app.js"), "utf8");
+  const css = fs.readFileSync(path.join(__dirname, "css", "style.css"), "utf8");
+  assert.match(html, /class="summary-table-scroll forging-summary-table-wrap"[^>]*aria-label="锻造材料总览"/);
+  assert.doesNotMatch(html, /锻造材料总览，可左右滑动/);
+  assert.match(app, /data-label="\$\{escapeHtml\(FDATA\.meta\.stageNames\[index\]\)\}"/);
+  assert.match(css, /#partition-forging \.forging-summary-table-wrap\s*\{[^}]*overflow:\s*visible;/);
+  assert.match(css, /#partition-forging \.summary-table\s*\{[^}]*min-width:\s*0;[^}]*table-layout:\s*fixed;/);
+  assert.match(css, /#partition-forging \.forging-summary-table-wrap \.summary-table td::before/);
 });
 
 test("首页提供战匣丹囊三子分区及三层脚本", async () => {

@@ -645,7 +645,7 @@ test("个人进度装备可进入装备属性并一次性返回原页", async ()
   });
 });
 
-test("PWA 1.0.27 发布移动端装备属性分级展示与现有离线资源", async () => {
+test("PWA 1.0.28 发布铭文性能优化与响应式表格资源", async () => {
   const pagesWorkflow = fs.readFileSync(path.join(__dirname, ".github", "workflows", "pages.yml"), "utf8");
   assert.match(pagesWorkflow, /js\/tactics\.js/);
   assert.match(pagesWorkflow, /js\/tactics-ui\.js/);
@@ -660,6 +660,7 @@ test("PWA 1.0.27 发布移动端装备属性分级展示与现有离线资源", 
   assert.match(pagesWorkflow, /js\/forbidden-ui\.js/);
   assert.match(pagesWorkflow, /js\/battle-box-pill-pouch\.js/);
   assert.match(pagesWorkflow, /js\/battle-box-pill-pouch-ui\.js/);
+  assert.match(pagesWorkflow, /js\/inscription-performance\.js/);
   await withServer(async (port) => {
     const [index, worker, pwa, css, schoolPlanner, equipmentCompare, equipmentForging, forbiddenData, forbiddenCore, forbiddenUi] = await Promise.all([
       get(port, "/"),
@@ -683,9 +684,9 @@ test("PWA 1.0.27 发布移动端装备属性分级展示与现有离线资源", 
     assert.strictEqual(forbiddenData.status, 200);
     assert.strictEqual(forbiddenCore.status, 200);
     assert.strictEqual(forbiddenUi.status, 200);
-    assert.match(index.body, /id="pwa-version">1\.0\.27<\/strong>/);
-    assert.match(worker.body, /CACHE_NAME\s*=\s*CACHE_PREFIX\s*\+\s*"1\.0\.27"/);
-    assert.match(pwa.body, /APP_VERSION\s*=\s*"1\.0\.27"/);
+    assert.match(index.body, /id="pwa-version">1\.0\.28<\/strong>/);
+    assert.match(worker.body, /CACHE_NAME\s*=\s*CACHE_PREFIX\s*\+\s*"1\.0\.28"/);
+    assert.match(pwa.body, /APP_VERSION\s*=\s*"1\.0\.28"/);
     assert.match(worker.body, /"\.\/data\/tactics\.js"/);
     assert.match(worker.body, /"\.\/js\/tactics\.js"/);
     assert.match(worker.body, /"\.\/js\/tactics-ui\.js"/);

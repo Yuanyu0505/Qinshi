@@ -2090,7 +2090,7 @@
   }
 
   function equipmentCardTierExpanded(tier) {
-    const mobile = window.matchMedia("(max-width: 767px), (max-width: 932px) and (max-height: 500px) and (orientation: landscape)").matches;
+    const mobile = window.matchMedia("(max-width: 1024px)").matches;
     return !mobile || tier === "红色" || tier === "红金";
   }
 

@@ -756,11 +756,20 @@ test("手机装备结果将品质改为折叠卡片", () => {
   assert.match(css, /\.equipment-mobile-tier/);
 });
 
-test("手机和平板装备卡保持品质顺序但默认展开红色与红金", () => {
+test("手机和平板装备卡保持品质顺序且在1024像素内默认展开红色与红金", () => {
   const app = fs.readFileSync(path.join(__dirname, "js", "app.js"), "utf8");
   assert.match(app, /Q\.TIER_ORDER\.map\(\(tier\) => equipmentMobileTierHtml\(item, tier, tokenHtml\(item\.tiers\[tier\]\), equipmentCardTierExpanded\(tier\)\)\)/);
   assert.match(app, /function equipmentCardTierExpanded\(tier\)/);
+  assert.match(app, /window\.matchMedia\("\(max-width: 1024px\)"\)/);
   assert.match(app, /return !mobile \|\| tier === "红色" \|\| tier === "红金";/);
+});
+
+test("平板装备结果使用品质折叠卡片而不是横向宽表", () => {
+  const css = fs.readFileSync(path.join(__dirname, "css", "style.css"), "utf8");
+  const tablet = css.match(/@media \(min-width: 768px\) and \(max-width: 1024px\) \{([\s\S]*?)\n\}/);
+  assert.ok(tablet, "应存在768至1024像素的平板样式");
+  assert.match(tablet[1], /#partition-equipment #table-wrap\s*\{\s*display:\s*none;/);
+  assert.match(tablet[1], /#partition-equipment \.cards\s*\{\s*display:\s*block;/);
 });
 
 test("兵法综合计算在手机端折叠长表单并提供悬浮计算入口", () => {

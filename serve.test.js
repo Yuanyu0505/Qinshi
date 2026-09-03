@@ -756,6 +756,13 @@ test("手机装备结果将品质改为折叠卡片", () => {
   assert.match(css, /\.equipment-mobile-tier/);
 });
 
+test("手机和平板装备卡保持品质顺序但默认展开红色与红金", () => {
+  const app = fs.readFileSync(path.join(__dirname, "js", "app.js"), "utf8");
+  assert.match(app, /Q\.TIER_ORDER\.map\(\(tier\) => equipmentMobileTierHtml\(item, tier, tokenHtml\(item\.tiers\[tier\]\), equipmentCardTierExpanded\(tier\)\)\)/);
+  assert.match(app, /function equipmentCardTierExpanded\(tier\)/);
+  assert.match(app, /return !mobile \|\| tier === "红色" \|\| tier === "红金";/);
+});
+
 test("兵法综合计算在手机端折叠长表单并提供悬浮计算入口", () => {
   const ui = fs.readFileSync(path.join(__dirname, "js", "tactics-ui.js"), "utf8");
   const css = fs.readFileSync(path.join(__dirname, "css", "style.css"), "utf8");

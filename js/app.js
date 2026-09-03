@@ -2086,12 +2086,12 @@
 
   function bookCardTiersHtml(item) {
     const tiers = bookDisplayTiers(item);
-    return tiers.map((tier, index) => equipmentMobileTierHtml(item, tier, bookTierHtml(item, tier), equipmentCardTierExpanded(index))).join("");
+    return tiers.map((tier) => equipmentMobileTierHtml(item, tier, bookTierHtml(item, tier), equipmentCardTierExpanded(tier))).join("");
   }
 
-  function equipmentCardTierExpanded(index) {
+  function equipmentCardTierExpanded(tier) {
     const mobile = window.matchMedia("(max-width: 767px), (max-width: 932px) and (max-height: 500px) and (orientation: landscape)").matches;
-    return !mobile || index === 0;
+    return !mobile || tier === "红色" || tier === "红金";
   }
 
   function equipmentMobileTierHtml(item, tier, content, expanded) {
@@ -2164,7 +2164,7 @@
       const badge = hasFilter ? sortBadge(item) : "";
       const tierHtml = item.bookGroup
         ? bookCardTiersHtml(item)
-        : Q.TIER_ORDER.map((tier, index) => equipmentMobileTierHtml(item, tier, tokenHtml(item.tiers[tier]), equipmentCardTierExpanded(index))).join("");
+        : Q.TIER_ORDER.map((tier) => equipmentMobileTierHtml(item, tier, tokenHtml(item.tiers[tier]), equipmentCardTierExpanded(tier))).join("");
       return `<div class="card${item.bookGroup ? " book-card" : ""}">
         <div class="card-head">
           <span class="cat">${item.cat}</span>

@@ -1049,12 +1049,12 @@ tr.hit-row td { background: rgba(212, 175, 55, .06); }
 #partition-equipment #chips {
   display: flex;
   flex-wrap: nowrap;
-  justify-content: space-between;
+  justify-content: flex-start;
   min-width: 0;
   gap: clamp(1px, .35vw, 6px);
 }
 #partition-equipment #chips .chip {
-  flex: 0 1 auto;
+  flex: 1 1 auto;
   min-width: 0;
   padding-inline: clamp(2px, .5vw, 8px);
   font-size: clamp(7px, 1.3vw, 13px);
@@ -1622,6 +1622,7 @@ figcaption { color: var(--muted); font-size: 13px; margin-top: 8px; }
   background: var(--bg2);
 }
 #partition-tactics .tactics-reference-table { min-width: 980px; }
+#partition-tactics .tactics-mantra-fragment { white-space: nowrap; }
 #partition-tactics .tactics-reference-table th,
 #partition-tactics .tactics-reference-table td { line-height: 1.55; }
 #partition-tactics .tactics-reference-table tbody th {

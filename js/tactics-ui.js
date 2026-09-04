@@ -186,7 +186,11 @@
     }
     var progress = cloneProgress(tactic, state.progress[tactic.id]);
     var target = cloneProgress(tactic, progress);
+    target.rank = Math.min(progress.rank + 1, 15);
     target.rehearsalSpent = 0;
+    tactic.mantras.forEach(function (mantra) {
+      target.mantras[mantra.id] = CORE.allowedMantraRank(tactic, mantra.id, target.rank);
+    });
     state.calculator = {
       start: cloneProgress(tactic, progress),
       target: target
@@ -428,7 +432,7 @@
     var html = '<section class="panel tactics-calculator-panel"><div class="ins-card-head"><div><div class="panel-title">目标计算</div><h2>自由调整起点与终点</h2></div>' +
       '<div class="tactics-calculator-actions"><button type="button" class="seg" data-action="restore-progress">恢复为个人进度</button><button type="button" class="seg active" data-action="maximize-target">一键升至允许上限</button></div></div>' +
       '<div class="tactics-calculator-grid">' + calculatorSideHtml(tactic, "start", state.calculator) + calculatorSideHtml(tactic, "target", state.calculator) +
-      '</div><div data-tactics-result></div></section>';
+      '</div></section>';
     el.calculator.innerHTML = html;
     renderCalculatorResult();
   }
@@ -549,7 +553,7 @@
 
   function renderCalculatorResult() {
     var tactic = selectedTactic();
-    var result = el.calculator && el.calculator.querySelector("[data-tactics-result]");
+    var result = el.result;
     if (!tactic || !result || !state.calculator) return;
     var outcome = calculatorOutcome(tactic);
     if (outcome.errors.length) {
@@ -680,7 +684,7 @@
     return stages.map(function (item) {
       var previousRank = item.stage.rank - 1;
       var path = rankText(previousRank) + "→" + rankText(item.stage.rank);
-      return "<div>" + escapeHtml(item.mantra.materialName + "：" + path + " · " + formatNumber(item.stage.fragments) + "片") + "</div>";
+      return '<div class="tactics-mantra-fragment">' + escapeHtml(item.mantra.name + "：" + path + "（" + formatNumber(item.stage.fragments) + "片）") + "</div>";
     }).join("");
   }
 
@@ -1028,10 +1032,11 @@
     el.costMode = document.getElementById("tactics-cost-mode");
     el.workspace = document.getElementById("tactics-workspace");
     el.progress = document.getElementById("tactics-progress");
+    el.result = document.querySelector("#tactics-result [data-tactics-result]");
     el.calculator = document.getElementById("tactics-calculator");
     el.reference = document.getElementById("tactics-reference");
 
-    if (!el.selector || !el.modes || !el.detailMode || !el.costMode || !el.workspace || !el.progress || !el.calculator || !el.reference || !validDependencies()) {
+    if (!el.selector || !el.modes || !el.detailMode || !el.costMode || !el.workspace || !el.progress || !el.result || !el.calculator || !el.reference || !validDependencies()) {
       showDataError();
       return;
     }

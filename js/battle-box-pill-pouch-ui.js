@@ -289,12 +289,12 @@
   function ensureCalcEntry(disciple) {
     if (!state.calcById[disciple.id]) {
       state.calcById[disciple.id] = {
-        selected: false,
+        selected: true,
         battleEnabled: true,
         battleTarget: disciple.battle.targetLevel,
-        pouchEnabled: true,
+        pouchEnabled: false,
         pouchTarget: disciple.pouch.targetLevel,
-        systemPriority: state.account.systemPriority
+        systemPriority: "battle"
       };
     }
     if (state.calcOrder.indexOf(disciple.id) === -1) state.calcOrder.push(disciple.id);
@@ -322,7 +322,7 @@
     var targetKey = kind + "Target";
     var disabled = !cap.unlocked || cap.overCap;
     return '<div class="battle-pouch-plan-target"><label><input type="checkbox" data-calc-field="' + enabledKey +
-      '" data-disciple-id="' + escapeHtml(disciple.id) + '"' + (entry[enabledKey] ? " checked" : "") +
+      '" data-disciple-id="' + escapeHtml(disciple.id) + '"' + (entry[enabledKey] && !disabled ? " checked" : "") +
       (disabled ? " disabled" : "") + '><span>' + label + '</span></label><input type="number" min="' +
       disciple[kind].currentLevel + '" max="' + (cap.effectiveCap === null ? disciple[kind].currentLevel : cap.effectiveCap) +
       '" step="1" inputmode="numeric" value="' + entry[targetKey] + '" data-calc-field="' + targetKey +
@@ -340,7 +340,7 @@
   function purchaseFields(name, key, setting) {
     return '<fieldset><legend>' + name + '</legend>' +
       numberField("每包数量", key + "PackSize", setting.packSize, 1, "purchase") +
-      numberField("每包元宝", key + "PackPrice", setting.packPrice, 0, "purchase") + '</fieldset>';
+      numberField("每包剑玦", key + "PackPrice", setting.packPrice, 0, "purchase") + '</fieldset>';
   }
 
   function selectedForCore() {
@@ -358,6 +358,10 @@
       formatNumber(delta.health) + '、玩家对战免伤 +' + delta.pvpMitigation;
   }
 
+  function costTone(value) {
+    return Number(value) > 0 ? "battle-pouch-cost-positive" : "battle-pouch-cost-zero";
+  }
+
   function renderCalcResult(result) {
     if (!result) return "";
     if (!result.items.length) return '<section class="panel empty"><p>请至少选择一位弟子和一个计算分区。</p></section>';
@@ -366,17 +370,62 @@
       return '<article class="battle-pouch-result-item"><div><strong>' + escapeHtml(item.discipleName) + ' · ' +
         (item.kind === "battle" ? "战匣" : "丹囊") + '</strong><span>' + item.currentLevel + '级 → 目标' + item.targetLevel +
         '级</span></div>' + (item.valid ? '<p>现有共享库存可达到 <b>' + item.reachableLevel +
-        '级</b>' + (item.shortageAt ? '，从' + item.shortageAt + '级开始材料不足' : '，目标可完成') + '</p><p>完整目标需要：沧海珠' +
-        formatNumber(item.required.pearls) + '、玄龟甲' + formatNumber(item.required.shells) + '</p><p>目标属性提升：' +
+        '级</b>，' + (item.shortageAt ? '<span class="battle-pouch-shortage">从' + item.shortageAt + '级开始材料不足</span>' :
+          '<span class="battle-pouch-complete">目标可完成</span>') + '</p><p>完整目标需要：<span class="battle-pouch-required"><span class="' +
+        costTone(item.required.pearls) + '">沧海珠' + formatNumber(item.required.pearls) + '</span><span class="battle-pouch-required-separator">、</span><span class="' +
+        costTone(item.required.shells) + '">玄龟甲' + formatNumber(item.required.shells) + '</span></span></p><p>目标属性提升：' +
         attributeText(item.kind, item.targetDelta) + '</p>' : '<p class="error-text">' + escapeHtml(item.errors.join("；")) + '</p>') + '</article>';
     }).join("");
     return '<section class="panel battle-pouch-result-overview"><div class="panel-title">共享库存与完整目标总览</div>' +
-      '<div class="battle-pouch-result-grid"><div><span>沧海珠总需求</span><b>' + formatNumber(full.totals.pearls) +
-      '</b><small>缺少' + formatNumber(full.shortage.pearls) + '</small></div><div><span>玄龟甲总需求</span><b>' +
-      formatNumber(full.totals.shells) + '</b><small>缺少' + formatNumber(full.shortage.shells) + '</small></div><div><span>分配后剩余</span><b>' +
-      formatNumber(result.remaining.pearls) + '／' + formatNumber(result.remaining.shells) + '</b><small>沧海珠／玄龟甲</small></div><div><span>购买补足</span><b>' +
-      formatNumber(full.purchase.totalPrice) + '元宝</b><small>沧海珠' + full.purchase.pearls.packs + '包，玄龟甲' +
-      full.purchase.shells.packs + '包</small></div></div></section><section class="battle-pouch-result-list">' + rows + '</section>';
+      '<div class="battle-pouch-result-grid"><div><div class="battle-pouch-summary-line">沧海珠总需求：<b>' + formatNumber(full.totals.pearls) +
+      '</b></div><div class="battle-pouch-summary-line">缺少数量：<b class="' + costTone(full.shortage.pearls) + '">' + formatNumber(full.shortage.pearls) +
+      '</b></div></div><div><div class="battle-pouch-summary-line">玄龟甲总需求：<b>' + formatNumber(full.totals.shells) +
+      '</b></div><div class="battle-pouch-summary-line">缺少数量：<b class="' + costTone(full.shortage.shells) + '">' + formatNumber(full.shortage.shells) +
+      '</b></div></div><div><div class="battle-pouch-summary-line">分配后剩余</div><div class="battle-pouch-summary-line">沧海珠<b>' +
+      formatNumber(result.remaining.pearls) + '</b>，玄龟甲<b>' + formatNumber(result.remaining.shells) +
+      '</b></div></div><div><div class="battle-pouch-summary-line">购买补足花费：<b><span class="' + costTone(full.purchase.totalPrice) + '">' + formatNumber(full.purchase.totalPrice) +
+      '</span>剑玦</b></div><div class="battle-pouch-summary-line battle-pouch-purchase-packs">沧海珠<span class="' +
+      costTone(full.purchase.pearls.packs) + '">' + formatNumber(full.purchase.pearls.packs) + '</span>包，玄龟甲<span class="' +
+      costTone(full.purchase.shells.packs) + '">' + formatNumber(full.purchase.shells.packs) +
+      '</span>包</div></div></div></section><section class="battle-pouch-result-list">' + rows + '</section>';
+  }
+
+  function calcSelectionControls(kind) {
+    var selector = kind === "disciples" ? "[data-calc-select]" : '[data-calc-field="' + kind + 'Enabled"]:not(:disabled)';
+    return Array.from(el.calculator.querySelectorAll(selector));
+  }
+
+  function updateCalcSelectionButtons() {
+    el.calculator.querySelectorAll("[data-calc-toggle-all]").forEach(function (button) {
+      var kind = button.dataset.calcToggleAll;
+      var controls = calcSelectionControls(kind);
+      var allSelected = controls.length > 0 && controls.every(function (control) { return control.checked; });
+      var label = kind === "disciples" ? "弟子" : kind === "battle" ? "战匣" : "丹囊";
+      button.textContent = label + "：" + (allSelected ? "全部取消选中" : "全选");
+      button.disabled = !controls.length;
+      button.setAttribute("aria-pressed", String(allSelected));
+    });
+  }
+
+  function invalidateCalcResult() {
+    state.calcResult = null;
+    var result = document.getElementById("battle-pouch-calculation-result");
+    if (result) result.innerHTML = "";
+  }
+
+  function toggleCalcSelection(kind) {
+    if (["disciples", "battle", "pouch"].indexOf(kind) === -1) return;
+    var controls = calcSelectionControls(kind);
+    var selected = !controls.every(function (control) { return control.checked; });
+    controls.forEach(function (control) {
+      var id = kind === "disciples" ? control.dataset.calcSelect : control.dataset.discipleId;
+      var entry = state.calcById[id];
+      if (!entry) return;
+      entry[kind === "disciples" ? "selected" : kind + "Enabled"] = selected;
+      control.checked = selected;
+    });
+    invalidateCalcResult();
+    updateCalcSelectionButtons();
   }
 
   function renderCalculator() {
@@ -385,11 +434,15 @@
     var ordered = state.calcOrder.map(discipleById).filter(Boolean);
     el.calculator.innerHTML = '<section class="panel battle-pouch-plan-toolbar"><div class="panel-title">选择弟子并设置目标</div>' +
       '<p class="muted-tip">按当前顺序分配共享库存；同一弟子再按战匣优先或丹囊优先。</p>' +
-      '<button type="button" class="seg" data-battle-pouch-action="targets-to-cap">一键全部设为各自实际等级上限</button></section>' +
+      '<div class="battle-pouch-selection-actions"><button type="button" class="seg" data-calc-toggle-all="disciples">弟子：全选</button>' +
+      '<button type="button" class="seg" data-calc-toggle-all="battle">战匣：全选</button>' +
+      '<button type="button" class="seg" data-calc-toggle-all="pouch">丹囊：全选</button>' +
+      '<button type="button" class="seg" data-battle-pouch-action="targets-to-cap">一键全部设为各自实际等级上限</button></div></section>' +
+      '<div id="battle-pouch-calculation-result">' + renderCalcResult(state.calcResult) + '</div>' +
       '<div class="battle-pouch-plan-list">' + (ordered.length ? ordered.map(calcRow).join("") :
         '<section class="panel empty"><p>请先在个人进度中添加弟子。</p></section>') + '</div>' +
-      renderPurchaseSettings() + '<div class="battle-pouch-calculate-actions"><button type="button" class="seg active" data-battle-pouch-action="calculate">计算目标</button></div>' +
-      '<div id="battle-pouch-calculation-result">' + renderCalcResult(state.calcResult) + '</div>';
+      renderPurchaseSettings() + '<div class="battle-pouch-calculate-actions"><button type="button" class="seg active" data-battle-pouch-action="calculate">计算目标</button></div>';
+    updateCalcSelectionButtons();
   }
 
   function referenceRows(kind, view, disciple) {
@@ -433,7 +486,7 @@
   function rulesTable(title, names, caps) {
     return '<section class="panel battle-pouch-rule-card"><h3>' + title + '</h3><div class="battle-pouch-rule-grid">' +
       Object.keys(names).map(function (key) {
-        return '<span class="quality-' + key + '"><b>' + escapeHtml(names[key]) + '</b><small>增加' + caps[key] + '级上限</small></span>';
+        return '<span class="quality-' + key + '"><b>' + escapeHtml(names[key]) + '</b><small>增加<b class="battle-pouch-rule-increase">' + caps[key] + '</b>级上限</small></span>';
       }).join("") + '</div></section>';
   }
 
@@ -580,20 +633,27 @@
         refreshEditorStatus();
       } else if (target.dataset.calcSelect) {
         ensureCalcEntry(discipleById(target.dataset.calcSelect)).selected = target.checked;
-        state.calcResult = null;
+        invalidateCalcResult();
+        updateCalcSelectionButtons();
       } else if (target.dataset.calcField) {
         var entry = state.calcById[target.dataset.discipleId];
         if (!entry) return;
         if (/Enabled$/.test(target.dataset.calcField)) entry[target.dataset.calcField] = target.checked;
         else if (/Target$/.test(target.dataset.calcField)) entry[target.dataset.calcField] = CORE.integer(target.value, 0, 90);
         else entry[target.dataset.calcField] = target.value;
-        state.calcResult = null;
+        invalidateCalcResult();
+        updateCalcSelectionButtons();
       } else if (target.dataset.referenceDisciple !== undefined) {
         state.referenceDiscipleId = target.value;
         renderReference();
       }
     });
     document.getElementById("partition-battle-box-pill-pouch").addEventListener("click", function (event) {
+      var selectionToggle = event.target.closest("[data-calc-toggle-all]");
+      if (selectionToggle) {
+        if (!selectionToggle.disabled) toggleCalcSelection(selectionToggle.dataset.calcToggleAll);
+        return;
+      }
       var equipmentChoice = event.target.closest("[data-pick-battle-equipment]");
       if (equipmentChoice && state.editDraft) {
         var equipmentInput = equipmentChoice.closest(".battle-pouch-equipment-slot").querySelector("[data-edit-equipment]");
@@ -664,6 +724,7 @@
       } else if (action.dataset.battlePouchAction === "calculate") {
         state.calcResult = CORE.calculatePlan(selectedForCore(), state.account, DATA);
         renderCalculator();
+        document.getElementById("battle-pouch-calculation-result").scrollIntoView({ block: "start", behavior: "instant" });
       }
     });
     document.getElementById("partition-battle-box-pill-pouch").addEventListener("wheel", function (event) {

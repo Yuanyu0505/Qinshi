@@ -98,6 +98,115 @@ test('战匣丹囊调整等级保留编辑输入与其他弟子节点', async ()
   } finally { await page.close(); }
 });
 
+for (const width of [390, 900, 1440]) test('战匣丹囊批量选择独立切换并保留目标与顺序 / ' + width, async () => {
+  const page = await pageFor('battle-box-pill-pouch', width);
+  try {
+    await page.evaluate(() => localStorage.setItem('qinshi_battle_box_pill_pouch_v1', JSON.stringify({
+      account: { playerLevel: 54 }, disciples: ['甲', '乙'].map((name, i) => ({
+        id: 'bulk-' + i, name, sourceType: 'custom',
+        battle: { currentLevel: 0, targetLevel: 1 }, pouch: { currentLevel: 0, targetLevel: 1 }
+      }))
+    })));
+    await page.reload({ waitUntil: 'networkidle' });
+    await page.evaluate(() => document.querySelector('.tab[data-partition="battle-box-pill-pouch"]').click());
+    await page.locator('[data-battle-pouch-mode="calculator"]').click();
+    const selected = field => page.locator(field).evaluateAll(nodes => nodes.map(node => node.checked));
+    const toggle = kind => page.locator('[data-calc-toggle-all="' + kind + '"]');
+    assert.deepEqual(await selected('[data-calc-select]'), [true, true]);
+    assert.deepEqual(await selected('[data-calc-field="battleEnabled"]'), [true, true]);
+    assert.deepEqual(await selected('[data-calc-field="pouchEnabled"]'), [false, false]);
+    assert.deepEqual(await page.locator('[data-calc-field="systemPriority"]').evaluateAll(nodes => nodes.map(n => n.value)), ['battle', 'battle']);
+    await page.locator('[data-plan-move="down"]').first().click();
+    await page.locator('[data-calc-field="battleTarget"]').first().fill('2');
+    await page.locator('[data-calc-field="battleTarget"]').first().press('Tab');
+    await page.locator('[data-battle-pouch-action="calculate"]').click();
+    assert.equal(await page.locator('.battle-pouch-result-item').count(), 2);
+    assert.equal(await page.locator('.battle-pouch-plan-toolbar + #battle-pouch-calculation-result').count(), 1);
+    assert.equal(await page.locator('#battle-pouch-calculation-result + .battle-pouch-plan-list').count(), 1);
+    assert.equal(await page.locator('.battle-pouch-result-grid > div > .battle-pouch-summary-line').count(), 8);
+    assert.equal(await page.locator('.battle-pouch-result-item .battle-pouch-required').count(), 2);
+    assert.match(await page.locator('.battle-pouch-result-overview').innerText(), /剑玦/);
+    assert.equal(await page.locator('.battle-pouch-purchase-settings').getByText('每包剑玦', { exact: true }).count(), 2);
+    await toggle('disciples').click();
+    assert.deepEqual(await selected('[data-calc-select]'), [false, false]);
+    assert.equal(await page.locator('#battle-pouch-calculation-result').innerHTML(), '');
+    assert.deepEqual(await selected('[data-calc-field="battleEnabled"]'), [true, true]);
+    await toggle('disciples').click();
+    await toggle('pouch').click();
+    assert.deepEqual(await selected('[data-calc-field="pouchEnabled"]'), [true, true]);
+    await page.locator('[data-calc-field="pouchEnabled"]').first().uncheck();
+    assert.equal(await toggle('pouch').innerText(), '丹囊：全选');
+    await toggle('pouch').click();
+    await toggle('pouch').click();
+    await toggle('battle').click();
+    assert.deepEqual(await selected('[data-calc-field="pouchEnabled"]'), [false, false]);
+    assert.deepEqual(await selected('[data-calc-field="battleEnabled"]'), [false, false]);
+    await toggle('battle').click();
+    await page.locator('[data-battle-pouch-mode="progress"]').click();
+    await page.locator('[data-battle-pouch-mode="calculator"]').click();
+    assert.deepEqual(await page.locator('[data-plan-row]').evaluateAll(nodes => nodes.map(n => n.dataset.planRow)), ['bulk-1', 'bulk-0']);
+    assert.equal(await page.locator('[data-calc-field="battleTarget"]').first().inputValue(), '2');
+    assert.deepEqual(await selected('[data-calc-field="pouchEnabled"]'), [false, false]);
+  } finally { await page.close(); }
+});
+
+for (const width of [390, 1440]) test('战匣丹囊结果状态与资料当前等级、上限突出显示 / ' + width, async () => {
+  const page = await pageFor('battle-box-pill-pouch', width);
+  try {
+    await page.evaluate(() => localStorage.setItem('qinshi_battle_box_pill_pouch_v1', JSON.stringify({
+      account: { playerLevel: 54, inventory: { pearls: 0, shells: 0 } },
+      disciples: [{ id: 'highlight', name: '提示测试', sourceType: 'custom',
+        battle: { currentLevel: 42, targetLevel: 42 }, pouch: { currentLevel: 0, targetLevel: 1 } }]
+    })));
+    await page.reload({ waitUntil: 'networkidle' });
+    await page.evaluate(() => document.querySelector('.tab[data-partition="battle-box-pill-pouch"]').click());
+    await page.locator('[data-battle-pouch-mode="calculator"]').click();
+    await page.locator('[data-calc-toggle-all="pouch"]').click();
+    await page.locator('[data-battle-pouch-action="calculate"]').click();
+    assert.equal(await page.locator('.battle-pouch-complete').innerText(), '目标可完成');
+    assert.equal(await page.locator('.battle-pouch-shortage').innerText(), '从1级开始材料不足');
+    assert.equal(await page.locator('.battle-pouch-shortage').evaluate(n => getComputedStyle(n).color), 'rgb(255, 51, 51)');
+    assert.equal(await page.locator('.battle-pouch-complete').evaluate(n => getComputedStyle(n).color), 'rgb(57, 255, 122)');
+    assert.deepEqual(await page.locator('.battle-pouch-required').first().locator('span').allTextContents(), ['沧海珠0', '、', '玄龟甲0']);
+    assert.deepEqual(await page.locator('.battle-pouch-required').first().locator('span').evaluateAll(nodes => nodes.map(n => getComputedStyle(n).color)), ['rgb(57, 255, 122)', 'rgb(255, 255, 255)', 'rgb(57, 255, 122)']);
+    assert.ok(await page.locator('.battle-pouch-required .battle-pouch-cost-positive').count());
+    const costs = page.locator('.battle-pouch-result-grid .battle-pouch-cost-positive');
+    assert.ok(await costs.count());
+    assert.ok((await costs.evaluateAll(nodes => nodes.map(n => getComputedStyle(n).color))).every(color => color === 'rgb(255, 51, 51)'));
+    const packCounts = page.locator('.battle-pouch-purchase-packs span');
+    assert.ok((await packCounts.evaluateAll(nodes => nodes.map(n => ({ count: Number(n.textContent.replace(/,/g, '')), color: getComputedStyle(n).color })))).every(item => item.color === (item.count > 0 ? 'rgb(255, 51, 51)' : 'rgb(57, 255, 122)')));
+    await page.locator('[data-calc-toggle-all="pouch"]').click();
+    await page.locator('[data-battle-pouch-action="calculate"]').click();
+    assert.deepEqual(await page.locator('.battle-pouch-result-grid .battle-pouch-cost-zero').allTextContents(), ['0', '0', '0', '0', '0']);
+    assert.deepEqual(await page.locator('.battle-pouch-result-grid .battle-pouch-cost-zero').evaluateAll(nodes => nodes.map(n => getComputedStyle(n).color)), Array(5).fill('rgb(57, 255, 122)'));
+    assert.deepEqual(await packCounts.allTextContents(), ['0', '0']);
+    await page.locator('[data-battle-pouch-mode="reference"]').click();
+    await page.locator('[data-reference-disciple]').selectOption('highlight');
+    const row = page.locator('.battle-pouch-reference-table tr.is-current.is-cap');
+    assert.equal(await row.locator('td').first().evaluate(n => getComputedStyle(n).color), 'rgb(57, 255, 122)');
+    const divider = width < 721 ? row : row.locator('td').first();
+    assert.match(await divider.evaluate(n => getComputedStyle(n).boxShadow), /rgb\(255, 51, 51\).*?-4px/);
+    assert.equal(await page.locator('.battle-pouch-rule-grid > span').first().evaluate(n => getComputedStyle(n).borderTopWidth), '3px');
+    assert.equal(await page.locator('.battle-pouch-rule-increase').first().evaluate(n => getComputedStyle(n).color), 'rgb(255, 255, 255)');
+  } finally { await page.close(); }
+});
+
+test('战匣丹囊空名单与未解锁分区不允许批量勾选', async () => {
+  const page = await pageFor('battle-box-pill-pouch');
+  try {
+    await page.locator('[data-battle-pouch-mode="calculator"]').click();
+    assert.deepEqual(await page.locator('[data-calc-toggle-all]').evaluateAll(nodes => nodes.map(n => n.disabled)), [true, true, true]);
+    await page.evaluate(() => localStorage.setItem('qinshi_battle_box_pill_pouch_v1', JSON.stringify({
+      account: { playerLevel: 45 }, disciples: [{ id: 'locked', name: '未解锁弟子', sourceType: 'custom' }]
+    })));
+    await page.reload({ waitUntil: 'networkidle' });
+    await page.evaluate(() => document.querySelector('.tab[data-partition="battle-box-pill-pouch"]').click());
+    await page.locator('[data-battle-pouch-mode="calculator"]').click();
+    assert.deepEqual(await page.locator('[data-calc-toggle-all]').evaluateAll(nodes => nodes.map(n => n.disabled)), [false, true, true]);
+    assert.deepEqual(await page.locator('[data-calc-field$="Enabled"]').evaluateAll(nodes => nodes.map(n => n.checked)), [false, false]);
+  } finally { await page.close(); }
+});
+
 test('战匣装备先输入再匹配，不使用原生列表，并保留自由输入', async () => {
   const page = await pageFor('battle-box-pill-pouch');
   try {

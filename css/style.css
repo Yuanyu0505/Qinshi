@@ -4380,6 +4380,7 @@ body {
 .battle-pouch-disciple-head span,
 .battle-pouch-editor-head span { color: var(--muted); font-size: 12px; }
 .battle-pouch-card-actions,
+.battle-pouch-selection-actions,
 .battle-pouch-editor-actions,
 .battle-pouch-calculate-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .battle-pouch-card-actions .link-btn { margin: 0; }
@@ -4529,7 +4530,7 @@ body {
 .battle-pouch-purchase-grid legend { color: var(--gold); }
 .battle-pouch-calculate-actions { position: sticky; bottom: 10px; z-index: 16; justify-content: flex-end; margin: 12px 0; }
 .battle-pouch-calculate-actions .seg { min-width: 180px; box-shadow: 0 8px 24px rgba(0, 0, 0, .36); }
-.battle-pouch-result-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.battle-pouch-result-grid { grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); }
 .battle-pouch-result-grid > div {
   display: grid;
   gap: 3px;
@@ -4538,9 +4539,18 @@ body {
   border: 1px solid var(--line);
   border-radius: 8px;
 }
-.battle-pouch-result-grid span,
-.battle-pouch-result-grid small { color: var(--muted); }
+.battle-pouch-summary-line { color: var(--muted); line-height: 1.6; }
 .battle-pouch-result-grid b { color: var(--gold); font-size: 18px; }
+#battle-pouch-calculation-result { scroll-margin-top: 20px; }
+#battle-pouch-calculation-result:not(:empty) { margin-bottom: 16px; }
+.battle-pouch-result-item .battle-pouch-required,
+.battle-pouch-result-item .battle-pouch-shortage { color: #ff3333; font-weight: 700; }
+.battle-pouch-result-item .battle-pouch-complete { color: #39ff7a; font-weight: 700; }
+.battle-pouch-result-item .battle-pouch-required-separator { color: #fff; }
+.battle-pouch-result-item .battle-pouch-cost-positive,
+.battle-pouch-result-grid .battle-pouch-cost-positive { color: #ff3333; font-weight: 700; }
+.battle-pouch-result-item .battle-pouch-cost-zero,
+.battle-pouch-result-grid .battle-pouch-cost-zero { color: #39ff7a; font-weight: 700; }
 .battle-pouch-result-item > div { display: flex; justify-content: space-between; gap: 12px; }
 .battle-pouch-result-item strong { color: var(--gold); }
 .battle-pouch-result-item p { margin: 6px 0 0; }
@@ -4556,15 +4566,17 @@ body {
 .battle-pouch-reference-table td { padding: 9px 10px; border-bottom: 1px solid var(--line); text-align: center; vertical-align: middle; white-space: nowrap; }
 .battle-pouch-reference-table th:first-child,
 .battle-pouch-reference-table td:first-child { position: sticky; left: 0; z-index: 1; background: var(--panel); text-align: center; }
-.battle-pouch-reference-table tr.is-current td { color: #5bd584; background-color: rgba(40, 130, 73, .12); }
 .battle-pouch-reference-table tr.is-target td { color: #ff7168; }
-.battle-pouch-reference-table tr.is-cap td { box-shadow: inset 0 -2px 0 var(--gold); }
+.battle-pouch-reference-table tr.is-current td,
+.battle-pouch-reference-table tr.is-current td:first-child { color: #39ff7a; font-weight: 800; background-color: rgba(57, 255, 122, .14); }
+.battle-pouch-reference-table tr.is-cap td { box-shadow: inset 0 -4px 0 #ff3333; }
 .battle-pouch-rules { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .battle-pouch-rule-card { margin: 0; }
 .battle-pouch-rule-card h3 { margin-top: 0; color: var(--gold); }
 .battle-pouch-rule-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; }
-.battle-pouch-rule-grid > span { display: grid; gap: 2px; padding: 8px; border: 1px solid var(--line); border-radius: 7px; }
+.battle-pouch-rule-grid > span { display: grid; gap: 2px; padding: 8px; border: 3px solid var(--line); border-radius: 7px; }
 .battle-pouch-rule-grid small { color: var(--muted); }
+.battle-pouch-rule-grid .battle-pouch-rule-increase { color: #fff; font-size: 16px; font-weight: 800; margin: 0 2px; }
 
 @media (max-width: 1024px) {
   .battle-pouch-progress-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -4618,6 +4630,9 @@ body {
   .battle-pouch-reference-table td { position: static !important; display: flex; align-items: center; justify-content: space-between; border: 0; background: transparent !important; }
   .battle-pouch-reference-table td::before { content: attr(data-label); color: var(--muted); margin-right: 14px; font-weight: 400; }
   .battle-pouch-reference-table td:first-child { color: var(--gold); font-weight: 700; }
+  .battle-pouch-reference-table tr.is-current { background: rgba(57, 255, 122, .14); }
+  .battle-pouch-reference-table tr.is-cap { box-shadow: inset 0 -4px 0 #ff3333; }
+  .battle-pouch-reference-table tr.is-cap td { box-shadow: none; }
   .battle-pouch-rules > :last-child { grid-column: auto; }
 }
 

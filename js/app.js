@@ -20,6 +20,7 @@
   const ATLAS = window.ATLAS;
   const QUIZ_DATA = window.QUIZ_DATA;
   const QUIZ = window.QUIZ;
+  const UI_PERFORMANCE = window.UI_PERFORMANCE;
   const ATLAS_LEVELS_KEY = "qinshi_atlas_levels_v1";
   const ATLAS_TARGET_LEVEL_KEY = "qinshi_atlas_target_level_v1";
   const ATLAS_FAVORITES_KEY = "qinshi_atlas_favorites_v1";
@@ -51,6 +52,11 @@
     comparison: { itemIds: [], group: null, tier: "红金", dimensions: [], expanded: false, started: false }
   };
   const forgeState = { mode: "main", query: "" };
+  const equipmentRefresh = UI_PERFORMANCE.createRefreshQueue(apply);
+  const atlasRefresh = UI_PERFORMANCE.createRefreshQueue(applyAtlas);
+  const forgingRefresh = UI_PERFORMANCE.createRefreshQueue(applyForging);
+  const progressRefresh = UI_PERFORMANCE.createRefreshQueue(applyProgressSearch);
+  const equipmentMobileQuery = window.matchMedia("(max-width: 1024px)");
   let activeBookDetail = null;
   let forgeReturnSession = null;
   let progressReturnSession = null;
@@ -662,26 +668,25 @@
       atlasState.tab = btn.dataset.atlas;
       applyAtlas();
     });
-    el.atlasSearch.addEventListener("input", () => {
+    UI_PERFORMANCE.bindInput(el.atlasSearch, () => {
       atlasState.query = el.atlasSearch.value;
       if (atlasState.query.trim()) atlasState.activated = true;
-      applyAtlas();
-    });
+    }, atlasRefresh);
     el.atlasSearchField.addEventListener("change", () => {
       atlasState.activated = true;
       atlasState.searchField = el.atlasSearchField.value;
       applyAtlas();
     });
     [el.atlasLevelMin, el.atlasLevelMax].forEach((input) => {
-      input.addEventListener("input", () => {
+      UI_PERFORMANCE.bindInput(input, () => {
         atlasState.activated = true;
         atlasState.levelMin = normalizeAtlasFilterLevel(el.atlasLevelMin.value, 0);
         atlasState.levelMax = normalizeAtlasFilterLevel(el.atlasLevelMax.value, atlasMaxLevel());
-        applyAtlas();
-      });
+      }, atlasRefresh);
       input.addEventListener("change", () => {
         el.atlasLevelMin.value = String(atlasState.levelMin);
         el.atlasLevelMax.value = String(atlasState.levelMax);
+        atlasRefresh.flush();
       });
     });
     el.atlasTargetLevel.addEventListener("change", () => {
@@ -756,7 +761,9 @@
         if (atlasState.inventoryDraft && atlasState.inventoryDraft.equipment[key]) {
           atlasState.inventoryDraft.equipment[key].owned = e.target.value === "owned";
           if (atlasState.inventoryDraft.equipment[key].owned) atlasState.inventoryDraft.equipment[key].note = "";
-          applyAtlas();
+          const note = e.target.closest(".atlas-inventory-equipment-row").querySelector("[data-atlas-inventory-note]");
+          note.hidden = atlasState.inventoryDraft.equipment[key].owned;
+          note.value = atlasState.inventoryDraft.equipment[key].note;
         }
       }
     });
@@ -803,15 +810,18 @@
         const item = ATLAS_DATA.items.find((candidate) => String(candidate.id) === id);
         if (!item || !atlasState.favorites.includes(id)) return;
         const plan = ATLAS.upgradePlan(item, ATLAS.levelOf(item, atlasState.levels), atlasState.targetLevel, ATLAS_DATA.meta.upgradeStages);
+        const previousId = atlasState.inventoryEditingId;
         atlasState.inventoryEditingId = id;
         atlasState.inventoryDraft = makeAtlasInventoryDraft(id, plan);
         atlasState.inventoryError = "";
-        applyAtlas();
+        if (previousId && previousId !== id) refreshAtlasCard(previousId);
+        refreshAtlasCard(id);
         return;
       }
       if (e.target.closest("button[data-atlas-inventory-cancel]")) {
+        const id = atlasState.inventoryEditingId;
         closeAtlasInventoryEditor();
-        applyAtlas();
+        refreshAtlasCard(id);
         return;
       }
       const saveButton = e.target.closest("button[data-atlas-inventory-save]");
@@ -819,7 +829,7 @@
         const rawSouls = String(atlasState.inventoryDraft.soulsOwned == null ? "" : atlasState.inventoryDraft.soulsOwned).trim();
         if (rawSouls && !/^\d+$/.test(rawSouls)) {
           atlasState.inventoryError = "已有魂魄只能填写大于或等于 0 的整数";
-          applyAtlas();
+          refreshAtlasCard(atlasState.inventoryEditingId);
           return;
         }
         const id = saveButton.dataset.atlasInventorySave;
@@ -1029,7 +1039,15 @@
     </div>`;
   }
 
+  function refreshAtlasCard(id) {
+    const card = Array.from(el.atlasResults.querySelectorAll("[data-atlas-item]"))
+      .find((node) => node.dataset.atlasItem === id);
+    const item = ATLAS_DATA.items.find((candidate) => String(candidate.id) === id);
+    if (card && item) card.outerHTML = atlasItemHtml(item);
+  }
+
   function applyAtlas() {
+    atlasRefresh.cancel();
     el.atlasTabs.querySelectorAll("button").forEach((b) => {
       b.classList.toggle("active", b.dataset.atlas === atlasState.tab);
     });
@@ -1117,16 +1135,9 @@
       saveProgress();
       renderProgress();
     });
-    el.progSearch.addEventListener("input", () => {
-      const query = el.progSearch.value;
-      const exact = PROG.searchDisciples(progState.disciples, query).find((entry) => entry.exact);
-      if (exact) {
-        openProgressDisciple(exact.index);
-        return;
-      }
-      progState.query = query;
-      renderProgress();
-    });
+    UI_PERFORMANCE.bindInput(el.progSearch, () => {
+      progState.query = el.progSearch.value;
+    }, progressRefresh);
     el.progSearchResults.addEventListener("click", (e) => {
       const equipmentLink = e.target.closest("button[data-progress-equipment]");
       if (equipmentLink) {
@@ -1421,7 +1432,14 @@
       progressSearchSection("尚未完成的锻造材料需求", result.required.length, requiredHtml, "没有尚未完成的材料需求");
   }
 
+  function applyProgressSearch() {
+    const exact = PROG.searchDisciples(progState.disciples, progState.query).find((entry) => entry.exact);
+    if (exact) openProgressDisciple(exact.index);
+    else renderProgress();
+  }
+
   function renderProgress() {
+    progressRefresh.cancel();
     const total = progState.disciples.length;
     if (progState.page > total) progState.page = total;
     if (progState.page < 0) progState.page = 0;
@@ -1508,11 +1526,10 @@
       forgeState.mode = btn.dataset.mode;
       applyForging();
     });
-    el.forgeSearch.addEventListener("input", () => {
+    UI_PERFORMANCE.bindInput(el.forgeSearch, () => {
       invalidateForgeReturnSession("forge-search");
       forgeState.query = el.forgeSearch.value;
-      applyForging();
-    });
+    }, forgingRefresh);
     el.forgeResults.addEventListener("click", (event) => {
       const button = event.target.closest("button[data-forging-equipment]");
       if (!button) return;
@@ -1567,6 +1584,7 @@
   }
 
   function applyForging() {
+    forgingRefresh.cancel();
     const q = FORG.normalizeName(forgeState.query);
     const tableHead = `<tr><th>装备</th>${FDATA.meta.stageNames.map((s) => `<th>${s}</th>`).join("")}</tr>`;
     el.forgeMode.querySelectorAll("button").forEach((btn) => {
@@ -1610,11 +1628,13 @@
   }
 
   function bindEvents() {
-    el.search.addEventListener("input", () => {
+    UI_PERFORMANCE.bindInput(el.search, () => {
       invalidateProgressReturnSession("equipment-filter");
       state.search = el.search.value;
       state.activated = hasEquipmentConditions();
-      apply();
+    }, equipmentRefresh);
+    equipmentMobileQuery.addEventListener("change", () => {
+      if (state.activated) apply();
     });
     el.categoryBtns.addEventListener("click", (e) => {
       const btn = e.target.closest("button[data-category]");
@@ -1920,6 +1940,7 @@
   }
 
   function apply() {
+    equipmentRefresh.cancel();
     closeBookDetailPopover();
     renderControls();
     renderEquipmentComparison();
@@ -1939,8 +1960,13 @@
     if (state.favoritesOnly) {
       items = items.filter((item) => state.favorites.includes(item.id));
     }
-    renderTable(items);
-    renderCards(items);
+    if (equipmentMobileQuery.matches) {
+      el.tableWrap.innerHTML = "";
+      renderCards(items);
+    } else {
+      el.cards.innerHTML = "";
+      renderTable(items);
+    }
     const isEmpty = items.length === 0;
     el.results.hidden = isEmpty;
     el.empty.hidden = !isEmpty;

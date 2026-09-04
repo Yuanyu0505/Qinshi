@@ -7,6 +7,7 @@
   var core = null;
   var elements = {};
   var tokenPointer = null;
+  var searchRefresh = window.UI_PERFORMANCE.createRefreshQueue(render);
   var state = {
     query: "",
     size: "",
@@ -270,6 +271,7 @@
   }
 
   function render() {
+    searchRefresh.cancel();
     if (!elements.content) return;
     updateControls();
     var listMode = Boolean(state.query || state.size || state.selectedOnly || state.showSchedule);
@@ -289,11 +291,10 @@
   }
 
   function bindEvents() {
-    elements.search.addEventListener("input", function () {
+    window.UI_PERFORMANCE.bindInput(elements.search, function () {
       state.query = elements.search.value;
       state.expanded = {};
-      render();
-    });
+    }, searchRefresh);
     elements.sizeFilter.addEventListener("click", function (event) {
       var button = event.target.closest("[data-forbidden-size]");
       if (!button) return;

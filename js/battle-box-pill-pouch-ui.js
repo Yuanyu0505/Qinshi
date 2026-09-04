@@ -213,6 +213,30 @@
       : '<section class="panel empty"><p>尚未添加弟子。请先从图鉴弟子库搜索，或自由输入弟子名称。</p></section>';
   }
 
+  function refreshEditorStatus() {
+    var editor = el.progressList.querySelector(".battle-pouch-editor");
+    if (!editor || !state.editDraft) return;
+    var draft = state.editDraft;
+    var caps = CORE.effectiveCaps(state.account.playerLevel, draft, DATA);
+    var summaries = editor.querySelectorAll(".battle-pouch-cap-summary");
+    summaries[0].outerHTML = capSummary("战匣等级上限", caps.battle);
+    summaries[1].outerHTML = capSummary("丹囊等级上限", caps.pouch);
+    editor.querySelector('[data-edit-field="battleLevel"]').value = draft.battle.currentLevel;
+    editor.querySelector('[data-edit-field="pouchLevel"]').value = draft.pouch.currentLevel;
+    editor.querySelectorAll(".battle-pouch-equipment-slot").forEach(function (node, index) {
+      var slot = draft.battle.slots[index];
+      node.querySelector(".battle-pouch-slot-title span").textContent = "+" + (slot.itemName ? DATA.battleQualityCaps[slot.quality] : 0) + "级上限";
+      var quality = node.querySelector("[data-edit-equipment-quality]");
+      quality.disabled = !slot.itemName;
+      quality.value = slot.quality || "";
+    });
+    editor.querySelectorAll(".battle-pouch-pill-slot").forEach(function (node, index) {
+      var quality = draft.pouch.slots[index].quality;
+      node.className = "battle-pouch-pill-slot quality-" + (quality || "empty");
+      node.querySelector("small").textContent = "+" + (quality ? DATA.pouchQualityCaps[quality] : 0) + "级上限";
+    });
+  }
+
   function atlasMatches(query) {
     var keyword = normalizedSearch(query);
     if (!keyword || !ATLAS_DATA || !Array.isArray(ATLAS_DATA.items)) return [];
@@ -500,7 +524,7 @@
       } else if (target.dataset.editField && state.editDraft) {
         if (target.dataset.editField === "battleLevel") state.editDraft.battle.currentLevel = CORE.integer(target.value, 0, 90);
         if (target.dataset.editField === "pouchLevel") state.editDraft.pouch.currentLevel = CORE.integer(target.value, 0, 90);
-        renderProgress();
+        refreshEditorStatus();
       } else if (target.dataset.editEquipment && state.editDraft) {
         var definition = DATA.equipmentSlots.find(function (slot) { return slot.id === target.dataset.editEquipment; });
         var slot = state.editDraft.battle.slots.find(function (item) { return item.slotId === definition.id; });
@@ -510,14 +534,14 @@
         slot.itemId = catalog ? String(catalog.id) : null;
         slot.sourceType = catalog ? "catalog" : name ? "custom" : null;
         slot.quality = name ? (slot.quality || DATA.defaults.defaultQuality) : null;
-        renderProgress();
+        refreshEditorStatus();
       } else if (target.dataset.editEquipmentQuality && state.editDraft) {
         var equipment = state.editDraft.battle.slots.find(function (item) { return item.slotId === target.dataset.editEquipmentQuality; });
         equipment.quality = target.value;
-        renderProgress();
+        refreshEditorStatus();
       } else if (target.dataset.editPouchQuality !== undefined && state.editDraft) {
         state.editDraft.pouch.slots[Number(target.dataset.editPouchQuality)].quality = target.value || null;
-        renderProgress();
+        refreshEditorStatus();
       } else if (target.dataset.calcSelect) {
         ensureCalcEntry(discipleById(target.dataset.calcSelect)).selected = target.checked;
         state.calcResult = null;

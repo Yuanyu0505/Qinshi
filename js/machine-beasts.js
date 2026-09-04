@@ -215,6 +215,10 @@
       var quantities = Array(types.length).fill(0);
       var resourcesByType = types.map(function (type) { return itemResources(type.researchEach, data); });
       function recordCompact() {
+        var possibleResearch = quantities.reduce(function (total, quantity, index) {
+          return total + types[index].researchEach * quantity;
+        }, 0);
+        if (possibleResearch < minimumNeeded || possibleResearch > limit) return;
         var research = 0;
         var awakeningBlueprints = 0;
         var organPieces = 0;
@@ -257,6 +261,8 @@
       return sortedStates(compact);
     }
     var states = Array.from({ length: exactCount + 1 }, function () { return new Map(); });
+    var maximumPerWeight = Math.max.apply(null, types.map(function (type) { return type.researchEach / type.investedWeight; }));
+    var minimumPerWeight = Math.min.apply(null, types.map(function (type) { return type.researchEach / type.investedWeight; }));
     states[0].set(0, { research: 0, newCount: 0, newInvestedCount: 0, awakeningBlueprints: 0, organPieces: 0, items: [] });
     for (var weight = 0; weight <= exactCount; weight += 1) {
       if (!states[weight].size) continue;
@@ -266,6 +272,9 @@
           if (nextWeight > exactCount) return;
           var nextResearch = state.research + type.researchEach;
           if (nextResearch > limit) return;
+          var remainingWeight = exactCount - nextWeight;
+          if (nextResearch + remainingWeight * maximumPerWeight < minimumNeeded) return;
+          if (nextResearch + remainingWeight * minimumPerWeight > limit) return;
           var resources = itemResources(type.researchEach, data);
           addState(states[nextWeight], {
             research: nextResearch,
@@ -432,6 +441,7 @@
     owned.forEach(function (item) { maximumResearch = Math.max(maximumResearch, item.researchEach); });
     var limit = maximumDeficit + maximumResearch;
     var maximumInvestedCount = Math.ceil(maximumDeficit / bestNewType.researchEach) * bestNewType.investedWeight + bestNewType.investedWeight;
+    var ownedStates = buildBoundedStates(owned, maximumInvestedCount, limit, data);
     return {
       beastId: beast.id,
       progressResearch: progress.research,
@@ -440,8 +450,14 @@
       owned: owned,
       limit: limit,
       maximumInvestedCount: maximumInvestedCount,
-      ownedStates: buildBoundedStates(owned, maximumInvestedCount, limit, data),
-      newStateCache: {}
+      ownedStates: ownedStates,
+      ownedMaximums: ownedStates.map(function (states) {
+        var maximum = 0;
+        states.forEach(function (state) { maximum = Math.max(maximum, state.research); });
+        return maximum;
+      }),
+      newStateCache: {},
+      newStateMinimums: {}
     };
   }
 
@@ -472,13 +488,26 @@
       Math.ceil(deficit / bestNewType.researchEach) * bestNewType.investedWeight + bestNewType.investedWeight);
     var ownedStates = workspace.ownedStates;
     var newStateCache = workspace.newStateCache;
+    var newStateMinimums = workspace.newStateMinimums;
     var best = null;
 
-    for (var totalCount = 0; totalCount <= maximumInvestedCount && !best; totalCount += 1) {
+    // 即使假定最佳库存可以无限使用，少于此投入数也不可能达标。
+    // 采用单位投入研发度，兼容高阶机关兽的七阶等价权重。
+    var maximumResearchPerInvestment = Math.max.apply(null, purchasable.concat(owned).map(function (type) {
+      return type.researchEach / type.investedWeight;
+    }));
+    var minimumCount = Math.ceil(deficit / maximumResearchPerInvestment);
+
+    for (var totalCount = minimumCount; totalCount <= maximumInvestedCount && !best; totalCount += 1) {
       for (var ownedCount = 0; ownedCount <= totalCount; ownedCount += 1) {
         var newCount = totalCount - ownedCount;
-        if (!ownedStates[ownedCount]) continue;
-        if (!newStateCache[newCount]) newStateCache[newCount] = buildExactUnlimitedStates(purchasable, newCount, 0, limit, data);
+        if (!ownedStates[ownedCount] || !ownedStates[ownedCount].size) continue;
+        var minimumNeeded = Math.max(0, deficit - workspace.ownedMaximums[ownedCount]);
+        // 缓存可供更高缺口复用；缺口变小时必须重建，不能漏掉低研发组合。
+        if (!newStateCache[newCount] || newStateMinimums[newCount] > minimumNeeded) {
+          newStateCache[newCount] = buildExactUnlimitedStates(purchasable, newCount, minimumNeeded, limit, data);
+          newStateMinimums[newCount] = minimumNeeded;
+        }
         if (!newStateCache[newCount].length) continue;
         ownedStates[ownedCount].forEach(function (ownedState) {
           var addedState = lowerBound(newStateCache[newCount], Math.max(0, deficit - ownedState.research));

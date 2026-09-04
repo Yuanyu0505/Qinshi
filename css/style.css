@@ -319,6 +319,16 @@ header.top {
   content-visibility: auto;
   contain-intrinsic-size: auto 320px;
 }
+/* 保留所有结果节点，仅延后远离视口的卡片布局与绘制。 */
+#atlas-results > .atlas-item,
+#partition-equipment #cards > .card {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 420px;
+}
+#forbidden-content .forbidden-list > .forbidden-card {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 600px;
+}
 .ins-query-card.saved,
 .ins-progress-card { box-shadow: inset 3px 0 0 var(--gold); }
 .ins-card-head {

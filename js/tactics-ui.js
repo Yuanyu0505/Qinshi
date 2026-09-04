@@ -870,10 +870,18 @@
     if (state.mode === 'cost') renderCostMode();
   }
 
-  function saveAndRenderCost() {
+  function saveAndRenderCost(materialControl) {
+    var hadOutcome = Boolean(state.costOutcome);
     state.cost = CORE.normalizeCostState(orderedTactics(), state.cost, state.progress);
     state.costOutcome = null;
     saveCostState();
+    if (materialControl && !hadOutcome) {
+      var value = state.cost.materials[materialControl.dataset.costMaterial][materialControl.dataset.costMaterialField];
+      materialControl.value = value == null ? "" : String(value);
+      var error = el.costMode.querySelector(".tactics-cost-toolbar .error");
+      if (error) error.remove();
+      return;
+    }
     renderCostMode();
   }
 
@@ -939,9 +947,10 @@
         showCostError(materialField === 'packSize' ? '每包数量必须为空或填写大于0的整数' : '库存和每包元宝必须填写非负整数');
         return;
       }
+      var hadInputError = Boolean(state.costError);
       state.cost.materials[materialKey][materialField] = value;
       state.costError = '';
-      saveAndRenderCost();
+      saveAndRenderCost(hadInputError ? null : control);
       return;
     }
     if (!control.matches('[data-cost-tactic-id]')) return;

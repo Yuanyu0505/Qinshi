@@ -27,6 +27,7 @@ const PRECACHE_URLS = [
   "./js/forbidden-ui.js",
   "./js/quiz.js",
   "./js/inscription-performance.js",
+  "./js/ui-performance.js",
   "./js/inscription.js",
   "./js/tactics.js",
   "./js/tactics-ui.js",

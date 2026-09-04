@@ -89,6 +89,19 @@ test("槽位品质从基础十级计算物品上限", () => {
   assert.strictEqual(CORE.pouchItemCap(Array(8).fill({ quality: "divine" }), DATA), 90);
 });
 
+test("战匣名称选填：空名称按品质计算上限，旧空槽补齐橙色", () => {
+  const disciple = CORE.normalizeDisciple({ id: "optional-name", name: "测试弟子", battle: {
+    currentLevel: 60,
+    slots: [{ slotId: DATA.equipmentSlots[0].id, itemName: "", quality: "red", itemId: "old-id" }]
+  } }, DATA);
+  assert.deepStrictEqual(disciple.battle.slots.map(slot => slot.quality), ["red", "orange", "orange", "orange"]);
+  assert.strictEqual(disciple.battle.slots[0].itemName, "");
+  assert.strictEqual(disciple.battle.slots[0].itemId, null);
+  assert.strictEqual(disciple.battle.currentLevel, 60);
+  assert.strictEqual(CORE.battleItemCap(disciple.battle.slots, DATA), 49);
+  assert.strictEqual(CORE.battleItemCap(DATA.equipmentSlots.map(() => ({ itemName: "", quality: "redGold" })), DATA), 90);
+});
+
 test("降低品质保留当前等级并标记超限", () => {
   const disciple = CORE.normalizeDisciple({
     id: "atlas-t-0001",

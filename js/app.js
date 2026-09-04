@@ -932,7 +932,7 @@
     const status = ATLAS.soulInventoryStatus(souls, record.soulsOwned);
     if (status.state === "unset") return base;
     if (status.state === "enough") return `${base}<span class="atlas-inventory-suffix">（库存达标）</span>`;
-    return `${base}<span class="atlas-inventory-suffix">（已有${status.owned}，还差${status.missing}）</span>`;
+    return `${base}<span class="atlas-inventory-suffix is-short">（已有${status.owned}，还差<span class="atlas-inventory-missing">${status.missing}</span>）</span>`;
   }
 
   function atlasItemHtml(item) {
@@ -1116,6 +1116,17 @@
     return progState.disciples.find((d) => d.id === id);
   }
 
+  function setProgressStage(button) {
+    if (button.disabled) return;
+    const disciple = findDisciple(button.dataset.disciple);
+    const item = disciple && disciple.items.find((entry) => entry.id === button.dataset.item);
+    const stage = Number(button.dataset.idx);
+    if (!item || !Number.isInteger(stage) || stage < 0 || stage > PROG.qualityStageLimit(item.quality)) return;
+    item.progress = stage;
+    saveProgress();
+    renderProgress();
+  }
+
   function escapeHtml(s) {
     return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
   }
@@ -1139,6 +1150,11 @@
       progState.query = el.progSearch.value;
     }, progressRefresh);
     el.progSearchResults.addEventListener("click", (e) => {
+      const stageButton = e.target.closest('button[data-act="set-stage"]');
+      if (stageButton) {
+        setProgressStage(stageButton);
+        return;
+      }
       const equipmentLink = e.target.closest("button[data-progress-equipment]");
       if (equipmentLink) {
         openEquipmentFromProgress(equipmentLink);
@@ -1184,12 +1200,7 @@
       const d = findDisciple(dId);
       if (!d) return;
       if (act === "set-stage") {
-        const it = d.items.find((x) => x.id === btn.dataset.item);
-        if (it) {
-          it.progress = Number(btn.dataset.idx);
-          saveProgress();
-          renderProgress();
-        }
+        setProgressStage(btn);
       } else if (act === "toggle-add") {
         const form = el.progDisciples.querySelector(`[data-add-form="${dId}"]`);
         if (form) {
@@ -1302,6 +1313,7 @@
     const opts = options || {};
     const hitStageIndexes = opts.hitStageIndexes || new Set();
     const readOnly = opts.readOnly === true;
+    const stageReadOnly = readOnly && opts.editStage !== true;
     const item = PROG.findItem(FDATA, it.forgeName || it.name);
     if (!item) {
       return `<div class="prog-equip"><span class="forge-name">${escapeHtml(it.equipmentName || it.name)}</span><span class="muted">（锻造数据缺失）</span></div>`;
@@ -1312,8 +1324,8 @@
       if (i < it.progress) cls += " done";
       if (i === it.progress) cls += " next";
       if (hitStageIndexes.has(i)) cls += " search-hit";
-      return `<button type="button" class="${cls}" data-act="set-stage" data-disciple="${d.id}" data-item="${it.id}" data-idx="${i}" title="${readOnly ? st.stage : `点击设为当前锻造阶段：${st.stage}`}"${readOnly ? " disabled" : ""}>${st.stage}</button>`;
-    }).join("") + `<button type="button" class="prog-stage done-all${it.progress >= limit ? " next" : ""}" data-act="set-stage" data-disciple="${d.id}" data-item="${it.id}" data-idx="${limit}" title="${readOnly ? "全部完成" : "点击设为全部完成"}"${readOnly ? " disabled" : ""}>全部完成</button>`;
+      return `<button type="button" class="${cls}" data-act="set-stage" data-disciple="${d.id}" data-item="${it.id}" data-idx="${i}" title="${stageReadOnly ? st.stage : `点击设为当前锻造阶段：${st.stage}`}"${stageReadOnly ? " disabled" : ""}>${st.stage}</button>`;
+    }).join("") + `<button type="button" class="prog-stage done-all${it.progress >= limit ? " next" : ""}" data-act="set-stage" data-disciple="${d.id}" data-item="${it.id}" data-idx="${limit}" title="${stageReadOnly ? "全部完成" : "点击设为全部完成"}"${stageReadOnly ? " disabled" : ""}>全部完成</button>`;
     const next = PROG.nextStage(item, it.progress, it.quality);
     const remaining = PROG.remainingStages(item, it.progress, it.quality);
     const status = PROG.progressStatus(it);
@@ -1409,7 +1421,7 @@
 
     const ownedHtml = result.owned.map((entry) => `<div class="prog-search-relation">
       <div class="prog-search-context">${escapeHtml(entry.disciple.name || "未命名弟子")} · 直接持有</div>
-      ${equipmentHtml(entry.disciple, entry.progressItem, { readOnly: true })}
+      ${equipmentHtml(entry.disciple, entry.progressItem, { readOnly: true, editStage: true })}
     </div>`).join("");
 
     const requiredHtml = result.required.map((entry) => {

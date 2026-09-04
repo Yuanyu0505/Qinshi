@@ -98,6 +98,55 @@ test('战匣丹囊调整等级保留编辑输入与其他弟子节点', async ()
   } finally { await page.close(); }
 });
 
+test('战匣装备先输入再匹配，不使用原生列表，并保留自由输入', async () => {
+  const page = await pageFor('battle-box-pill-pouch');
+  try {
+    await page.evaluate(() => localStorage.setItem('qinshi_battle_box_pill_pouch_v1', JSON.stringify({
+      account: { playerLevel: 54 }, disciples: [BATTLE_BOX_PILL_POUCH_CORE.normalizeDisciple(
+        { id: 'equipment-search', name: '搜索测试弟子', sourceType: 'custom' }, BATTLE_BOX_PILL_POUCH_DATA)]
+    })));
+    await page.reload({ waitUntil: 'networkidle' });
+    await page.evaluate(() => document.querySelector('.tab[data-partition="battle-box-pill-pouch"]').click());
+    await page.locator('[data-battle-pouch-action="edit"]').click();
+    const fields = page.locator('[data-edit-equipment]');
+    for (let index = 0; index < await fields.count(); index++) {
+      await fields.nth(index).click();
+      assert.equal(await fields.nth(index).getAttribute('list'), null);
+      assert.equal(await page.locator('.battle-pouch-equipment-matches:visible').count(), 0);
+    }
+    const field = fields.first();
+    const quality = page.locator('[data-edit-equipment-quality]').first();
+    assert.equal(await quality.isEnabled(), true);
+    assert.equal(await quality.inputValue(), 'orange');
+    await field.fill('墨眉');
+    const choices = page.locator('[data-pick-battle-equipment]');
+    assert.ok(await choices.count() > 0);
+    assert.ok((await choices.allTextContents()).every(name => name.includes('墨眉')));
+    const selected = await choices.first().innerText();
+    await choices.first().click();
+    assert.equal(await field.inputValue(), selected);
+    assert.equal(await page.locator('.battle-pouch-equipment-matches:visible').count(), 0);
+    await quality.selectOption('red');
+    await field.fill('');
+    await field.press('Tab');
+    assert.equal(await quality.isEnabled(), true);
+    assert.equal(await quality.inputValue(), 'red');
+    assert.equal(await page.locator('.battle-pouch-slot-title span').first().innerText(), '+15级上限');
+    await page.locator('[data-battle-pouch-action="save-edit"]').click();
+    const emptyNameSlot = await page.evaluate(() => JSON.parse(localStorage.getItem('qinshi_battle_box_pill_pouch_v1'))
+      .disciples[0].battle.slots[0]);
+    assert.equal(emptyNameSlot.itemName, '');
+    assert.equal(emptyNameSlot.quality, 'red');
+    await page.locator('[data-battle-pouch-action="edit"]').click();
+    await field.fill('自定义测试装备');
+    assert.equal(await choices.count(), 0);
+    await field.press('Tab');
+    await page.locator('[data-battle-pouch-action="save-edit"]').click();
+    assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('qinshi_battle_box_pill_pouch_v1'))
+      .disciples[0].battle.slots[0].itemName), '自定义测试装备');
+  } finally { await page.close(); }
+});
+
 test('兵法填写库存后不重建尚未计算的材料表', async () => {
   const page = await pageFor('tactics');
   try {

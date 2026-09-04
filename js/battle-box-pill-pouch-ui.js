@@ -132,8 +132,11 @@
 
   function capLabel(snapshot) {
     if (!snapshot.unlocked) return '<span class="battle-pouch-status is-locked">未解锁</span>';
-    if (snapshot.overCap) return '<span class="battle-pouch-status is-over">当前' + snapshot.currentLevel + '级，超过上限' + snapshot.effectiveCap + '级</span>';
-    return '<span class="battle-pouch-status">当前' + snapshot.currentLevel + '级／上限' + snapshot.effectiveCap + '级</span>';
+    return '<span class="battle-pouch-status"' + (snapshot.overCap ? ' title="当前等级超过实际上限，不能继续升级"' : '') +
+      '><span class="battle-pouch-level-row"><span>当前等级</span><span><b class="battle-pouch-level-current">' + snapshot.currentLevel +
+      '</b>级</span></span><span class="battle-pouch-level-row"><span>实际上限</span><span><b class="battle-pouch-level-effective">' +
+      snapshot.effectiveCap + '</b>级</span></span><span class="battle-pouch-level-row"><span>玩家上限</span><span><b class="battle-pouch-level-player">' +
+      snapshot.playerCap + '</b>级</span></span></span>';
   }
 
   function equipmentCatalog(definition) {
@@ -143,17 +146,39 @@
 
   function equipmentSlotEditor(definition, slot) {
     var listId = "battle-pouch-equipment-" + definition.id;
-    var options = equipmentCatalog(definition).map(function (item) {
-      return '<option value="' + escapeHtml(item.name) + '"></option>';
-    }).join("");
     return '<article class="battle-pouch-equipment-slot"><div class="battle-pouch-slot-title"><strong>' +
-      escapeHtml(definition.name) + '</strong><span>+' + (slot.itemName ? DATA.battleQualityCaps[slot.quality] : 0) +
-      '级上限</span></div><label><span>装备名称</span><input type="search" autocomplete="off" list="' + listId +
+      escapeHtml(definition.name) + '</strong><span>+' + DATA.battleQualityCaps[slot.quality] +
+      '级上限</span></div><label><span>装备名称（选填）</span><input type="search" autocomplete="off" aria-controls="' + listId +
       '" value="' + escapeHtml(slot.itemName) + '" data-edit-equipment="' + definition.id +
-      '" placeholder="搜索装备；无结果可自由输入"></label><datalist id="' + listId + '">' + options +
-      '</datalist><label><span>品质</span><select data-edit-equipment-quality="' + definition.id + '"' +
-      (slot.itemName ? "" : " disabled") + '>' + qualityOptions(DATA.battleQualityNames, slot.quality, false) +
+      '" placeholder="可留空，输入关键词匹配装备"></label><div id="' + listId +
+      '" class="battle-pouch-equipment-matches" role="group" aria-label="装备匹配结果" hidden></div><label><span>品质（必填）</span><select required data-edit-equipment-quality="' + definition.id + '">' +
+      qualityOptions(DATA.battleQualityNames, slot.quality, false) +
       '</select></label></article>';
+  }
+
+  function hideEquipmentMatches() {
+    el.progressList.querySelectorAll(".battle-pouch-equipment-matches").forEach(function (list) {
+      list.hidden = true;
+      list.innerHTML = "";
+    });
+  }
+
+  function renderEquipmentMatches(input) {
+    hideEquipmentMatches();
+    var query = normalizedSearch(input.value);
+    if (!query || !state.editDraft) return;
+    var definition = DATA.equipmentSlots.find(function (slot) { return slot.id === input.dataset.editEquipment; });
+    if (!definition) return;
+    var matches = equipmentCatalog(definition).filter(function (item) {
+      return normalizedSearch(item.name).indexOf(query) !== -1;
+    });
+    var list = input.closest(".battle-pouch-equipment-slot").querySelector(".battle-pouch-equipment-matches");
+    list.innerHTML = matches.slice(0, 8).map(function (item) {
+      return '<button type="button" class="seg" data-pick-battle-equipment="' + escapeHtml(item.name) + '">' +
+        escapeHtml(item.name) + '</button>';
+    }).join("") + (!matches.length ? '<span class="muted-tip">未找到匹配装备，可直接保留输入的名称。</span>' :
+      matches.length > 8 ? '<span class="muted-tip">仅显示前8项，请继续输入以缩小范围。</span>' : "");
+    list.hidden = false;
   }
 
   function pouchSlotEditor(slot, index) {
@@ -179,7 +204,7 @@
       '</span></div><button type="button" class="link-btn" data-battle-pouch-action="cancel-edit">关闭</button></div>' +
       '<div class="battle-pouch-editor-columns"><section><h3>战匣</h3>' +
       numberField("当前战匣等级", "battleLevel", draft.battle.currentLevel, 0, "edit") +
-      capSummary("战匣等级上限", caps.battle) + '<p class="muted-tip">固定槽位：武器、防具、饰品、典籍。</p><div class="battle-pouch-equipment-slots">' +
+      capSummary("战匣等级上限", caps.battle) + '<p class="muted-tip">固定槽位：武器、防具、饰品、典籍。名称选填，品质必填；仅按品质计算上限。</p><div class="battle-pouch-equipment-slots">' +
       DATA.equipmentSlots.map(function (definition, index) {
         return equipmentSlotEditor(definition, draft.battle.slots[index]);
       }).join("") + '</div></section><section><h3>丹囊</h3>' +
@@ -200,10 +225,7 @@
       escapeHtml(disciple.id) + '">加入计算</button><button type="button" class="seg" data-battle-pouch-action="edit" data-disciple-id="' +
       escapeHtml(disciple.id) + '">编辑</button><button type="button" class="link-btn" data-battle-pouch-action="delete" data-disciple-id="' +
       escapeHtml(disciple.id) + '">删除</button></div></div><div class="battle-pouch-disciple-summary"><div><b>战匣</b>' +
-      capLabel(caps.battle) + '<small>玩家上限' + (caps.battle.playerCap === null ? "未解锁" : caps.battle.playerCap) +
-      '／物品上限' + caps.battle.itemCap + '</small></div><div><b>丹囊</b>' + capLabel(caps.pouch) +
-      '<small>玩家上限' + (caps.pouch.playerCap === null ? "未解锁" : caps.pouch.playerCap) +
-      '／物品上限' + caps.pouch.itemCap + '</small></div></div></article>';
+      capLabel(caps.battle) + '</div><div><b>丹囊</b>' + capLabel(caps.pouch) + '</div></div></article>';
   }
 
   function renderProgress() {
@@ -225,10 +247,9 @@
     editor.querySelector('[data-edit-field="pouchLevel"]').value = draft.pouch.currentLevel;
     editor.querySelectorAll(".battle-pouch-equipment-slot").forEach(function (node, index) {
       var slot = draft.battle.slots[index];
-      node.querySelector(".battle-pouch-slot-title span").textContent = "+" + (slot.itemName ? DATA.battleQualityCaps[slot.quality] : 0) + "级上限";
+      node.querySelector(".battle-pouch-slot-title span").textContent = "+" + DATA.battleQualityCaps[slot.quality] + "级上限";
       var quality = node.querySelector("[data-edit-equipment-quality]");
-      quality.disabled = !slot.itemName;
-      quality.value = slot.quality || "";
+      quality.value = slot.quality;
     });
     editor.querySelectorAll(".battle-pouch-pill-slot").forEach(function (node, index) {
       var quality = draft.pouch.slots[index].quality;
@@ -494,6 +515,21 @@
   }
 
   function bindEvents() {
+    el.progressList.addEventListener("input", function (event) {
+      if (event.target.matches("[data-edit-equipment]") && !event.isComposing) renderEquipmentMatches(event.target);
+    });
+    el.progressList.addEventListener("compositionstart", function (event) {
+      if (event.target.matches("[data-edit-equipment]")) hideEquipmentMatches();
+    });
+    el.progressList.addEventListener("compositionend", function (event) {
+      if (event.target.matches("[data-edit-equipment]")) renderEquipmentMatches(event.target);
+    });
+    el.progressList.addEventListener("keydown", function (event) {
+      if (event.key === "Escape") hideEquipmentMatches();
+    });
+    document.addEventListener("click", function (event) {
+      if (!event.target.closest("[data-edit-equipment], .battle-pouch-equipment-matches")) hideEquipmentMatches();
+    });
     document.getElementById("battle-pouch-modes").addEventListener("click", function (event) {
       var button = event.target.closest("[data-battle-pouch-mode]");
       if (button) setMode(button.dataset.battlePouchMode);
@@ -533,7 +569,7 @@
         slot.itemName = name;
         slot.itemId = catalog ? String(catalog.id) : null;
         slot.sourceType = catalog ? "catalog" : name ? "custom" : null;
-        slot.quality = name ? (slot.quality || DATA.defaults.defaultQuality) : null;
+        slot.quality = slot.quality || DATA.defaults.defaultQuality;
         refreshEditorStatus();
       } else if (target.dataset.editEquipmentQuality && state.editDraft) {
         var equipment = state.editDraft.battle.slots.find(function (item) { return item.slotId === target.dataset.editEquipmentQuality; });
@@ -558,6 +594,15 @@
       }
     });
     document.getElementById("partition-battle-box-pill-pouch").addEventListener("click", function (event) {
+      var equipmentChoice = event.target.closest("[data-pick-battle-equipment]");
+      if (equipmentChoice && state.editDraft) {
+        var equipmentInput = equipmentChoice.closest(".battle-pouch-equipment-slot").querySelector("[data-edit-equipment]");
+        equipmentInput.value = equipmentChoice.dataset.pickBattleEquipment;
+        equipmentInput.dispatchEvent(new Event("change", { bubbles: true }));
+        hideEquipmentMatches();
+        equipmentInput.focus({ preventScroll: true });
+        return;
+      }
       var action = event.target.closest("[data-battle-pouch-action]");
       var move = event.target.closest("[data-plan-move]");
       var referenceKind = event.target.closest("[data-reference-kind]");
@@ -586,6 +631,9 @@
         state.editDraft = null;
         renderProgress();
       } else if (action.dataset.battlePouchAction === "save-edit") {
+        var invalidQuality = Array.from(el.progressList.querySelectorAll("[data-edit-equipment-quality]"))
+          .find(function (control) { return !control.validity.valid; });
+        if (invalidQuality) { invalidQuality.reportValidity(); return; }
         var index = state.disciples.findIndex(function (disciple) { return disciple.id === state.editingId; });
         if (index >= 0) state.disciples[index] = CORE.normalizeDisciple(state.editDraft, DATA);
         state.editingId = null;

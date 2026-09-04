@@ -32,7 +32,7 @@
 
   function battleItemCap(slots, data) {
     return (Array.isArray(slots) ? slots : []).reduce(function (total, slot) {
-      if (!slot || !String(slot.itemName || "").trim()) return total;
+      if (!slot) return total;
       return total + integer(data.battleQualityCaps[slot.quality]);
     }, data.defaults.baseCap);
   }
@@ -47,9 +47,9 @@
   function normalizeEquipmentSlot(definition, raw, data) {
     var source = raw && typeof raw === "object" ? raw : {};
     var itemName = String(source.itemName || "").trim();
-    var quality = itemName && data.battleQualityCaps[source.quality]
+    var quality = data.battleQualityCaps[source.quality]
       ? source.quality
-      : itemName ? data.defaults.defaultQuality : null;
+      : data.defaults.defaultQuality;
     return {
       slotId: definition.id,
       itemId: itemName && source.itemId ? String(source.itemId) : null,

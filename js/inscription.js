@@ -4,6 +4,14 @@
   var DATA = window.INSCRIPTION_DATA;
   var PERFORMANCE = window.INSCRIPTION_PERFORMANCE;
   var STORE_KEY = "qinshi_inscription_progress_v2";
+  var COMMON_STORE_KEY = "qinshi_inscription_common_v1";
+  var INITIAL_COMMON_NAMES = [
+    "神王道少羽", "神侠道天明", "神兰轩紫女", "神凤吟弄玉", "神天宗晓梦",
+    "神寒蝉吴旷", "神将威龙且", "神荼蘼田蜜", "神惊鲵田言", "神贯侯钟离昧",
+    "神赤霄刘季", "神逆天而行", "神极诣星魂", "神霸道田虎", "神森罗大司命",
+    "神渊虹盖聂", "神潜蛟韩信", "神鬼谷盖聂", "神鲨齿卫庄", "神黑龙天", "神逍遥子"
+  ];
+  var commonKeys = new Set();
   var TIANS = ["天府", "天相", "天同", "天梁", "天机"];
   var SHIELDS = ["天盾", "地盾", "人盾", "神盾", "鬼盾", "龙盾", "虎盾", "风盾", "云盾"];
   var MAIN = {
@@ -60,8 +68,12 @@
     el.search = document.getElementById("ins-search");
     el.results = document.getElementById("ins-results");
     el.reference = document.getElementById("inscription-reference");
+    el.commonStatus = document.getElementById("ins-common-status");
+    el.quality.value = "红色神将";
+    loadCommonDisciples();
 
     el.modes.addEventListener("click", switchMode);
+    document.getElementById("partition-inscription").addEventListener("click", handleCommonAction);
     el.progressSearch.addEventListener("input", renderSuggestions);
     el.suggestions.addEventListener("click", selectSuggestion);
     el.editor.addEventListener("click", handleEditorClick);
@@ -122,6 +134,78 @@
     return attrs.some(function (attr) { return attr.x && attr.n === withoutThree; }) ? withoutThree : normalized;
   }
   function saveProgress() { localStorage.setItem(STORE_KEY, JSON.stringify(progress)); }
+
+  function commonStatus(message) {
+    if (!el.commonStatus) return;
+    el.commonStatus.textContent = message;
+    el.commonStatus.hidden = !message;
+  }
+  function saveCommonDisciples(keys) {
+    try {
+      localStorage.setItem(COMMON_STORE_KEY, JSON.stringify({ version: 1, keys: Array.from(keys) }));
+      commonStatus("");
+      return true;
+    } catch (error) {
+      commonStatus("常用弟子保存失败，请检查浏览器存储权限或可用空间；本次更改未保存。");
+      return false;
+    }
+  }
+  function loadCommonDisciples() {
+    try {
+      var raw = localStorage.getItem(COMMON_STORE_KEY);
+      if (raw === null) {
+        commonKeys = new Set(DATA.items.filter(function (item) {
+          return item.quality === "红色神将" && INITIAL_COMMON_NAMES.indexOf(item.name) !== -1;
+        }).map(keyOf));
+        saveCommonDisciples(commonKeys);
+        return;
+      }
+      var stored = JSON.parse(raw);
+      if (!stored || stored.version !== 1 || !Array.isArray(stored.keys)) throw new Error("Invalid common disciples");
+      // 已保存的空名单同样有效，不再补回初始名单。
+      commonKeys = new Set(stored.keys.filter(function (key) { return typeof key === "string" && itemByKey(key); }));
+    } catch (error) {
+      commonKeys = new Set();
+      commonStatus("常用弟子读取失败，已保留原始记录；铭文个人进度不受影响。");
+    }
+  }
+  function commonButtonHtml(item) {
+    var common = commonKeys.has(keyOf(item));
+    return '<button type="button" class="ins-common-toggle' + (common ? ' is-common' : '') +
+      '" data-ins-common-key="' + encodedKey(item) + '" aria-pressed="' + common +
+      '" aria-label="' + escapeHtml((common ? "取消常用：" : "设为常用：") + item.name) +
+      '" title="' + (common ? "点击取消常用" : "设为常用") + '">' + (common ? "常用 · 取消" : "设为常用") + '</button>';
+  }
+  function handleCommonAction(event) {
+    var button = event.target.closest("button[data-ins-common-key]");
+    if (!button) return;
+    var key = decodeURIComponent(button.dataset.insCommonKey);
+    var item = itemByKey(key);
+    if (!item) return;
+    var next = new Set(commonKeys);
+    if (next.has(key)) next.delete(key); else next.add(key);
+    if (!saveCommonDisciples(next)) return;
+    commonKeys = next;
+    var common = commonKeys.has(key);
+    document.querySelectorAll("#partition-inscription [data-ins-common-key]").forEach(function (control) {
+      if (control.dataset.insCommonKey !== button.dataset.insCommonKey) return;
+      control.classList.toggle("is-common", common);
+      control.setAttribute("aria-pressed", String(common));
+      control.setAttribute("aria-label", (common ? "取消常用：" : "设为常用：") + item.name);
+      control.title = common ? "点击取消常用" : "设为常用";
+      control.textContent = common ? "常用 · 取消" : "设为常用";
+    });
+    // 只移动现有卡片，不重建铭文内容，也不清除正在输入的筛选条件。
+    var cards = Array.from(el.results.querySelectorAll(".ins-query-card[data-ins-query-key]"));
+    cards.sort(function (a, b) {
+      return compareQueryItems(itemByKey(decodeURIComponent(a.dataset.insQueryKey)), itemByKey(decodeURIComponent(b.dataset.insQueryKey)));
+    });
+    var keepFocus = document.activeElement === button;
+    cards.forEach(function (card, index) {
+      if (el.results.children[index] !== card) el.results.insertBefore(card, el.results.children[index] || null);
+    });
+    if (keepFocus) button.focus({ preventScroll: true });
+  }
 
   function switchMode(event) {
     var button = event.target.closest("button[data-mode]");
@@ -220,7 +304,7 @@
   function renderProgressList() {
     var entries = Object.keys(progress).map(function (key) { return { key: key, saved: progress[key], item: itemByKey(key) }; }).filter(function (entry) { return entry.item; });
     el.progressList.innerHTML = entries.length ? entries.map(function (entry) {
-      return '<article class="ins-progress-card"><div class="ins-card-head"><div><span class="ins-quality ' + (entry.item.quality === "红色神将" ? "red" : "orange") + '">' + entry.item.quality + '</span><b>' + escapeHtml(entry.item.name) + '</b></div><div class="ins-progress-actions"><button type="button" class="seg" data-edit-key="' + encodeURIComponent(entry.key) + '">编辑</button><button type="button" class="seg danger" data-delete-key="' + encodeURIComponent(entry.key) + '">删除</button></div></div><div class="ins-saved-slots">' + entry.saved.slots.map(savedSlotHtml).join("") + '</div></article>';
+      return '<article class="ins-progress-card"><div class="ins-card-head"><div><span class="ins-quality ' + (entry.item.quality === "红色神将" ? "red" : "orange") + '">' + entry.item.quality + '</span><b>' + escapeHtml(entry.item.name) + '</b>' + commonButtonHtml(entry.item) + '</div><div class="ins-progress-actions"><button type="button" class="seg" data-edit-key="' + encodeURIComponent(entry.key) + '">编辑</button><button type="button" class="seg danger" data-delete-key="' + encodeURIComponent(entry.key) + '">删除</button></div></div><div class="ins-saved-slots">' + entry.saved.slots.map(savedSlotHtml).join("") + '</div></article>';
     }).join("") : '<div class="empty ins-empty"><p>尚未保存弟子铭文</p></div>';
   }
   function savedSlotHtml(slot) {
@@ -266,8 +350,9 @@
     el.results.innerHTML = items.length ? items.map(queryCardHtml).join("") : '<div class="empty"><p>未找到匹配弟子</p></div>';
   }
   function compareQueryItems(a, b) {
-    var savedDifference = Number(Boolean(progress[keyOf(b)])) - Number(Boolean(progress[keyOf(a)]));
-    if (savedDifference) return savedDifference;
+    var aGroup = progress[keyOf(a)] ? 0 : commonKeys.has(keyOf(a)) ? 1 : 2;
+    var bGroup = progress[keyOf(b)] ? 0 : commonKeys.has(keyOf(b)) ? 1 : 2;
+    if (aGroup !== bGroup) return aGroup - bGroup;
     var qualityDifference = Number(b.quality === "红色神将") - Number(a.quality === "红色神将");
     if (qualityDifference) return qualityDifference;
     return a.name.localeCompare(b.name, "zh-CN", { sensitivity: "base" });
@@ -279,7 +364,7 @@
     var savedProgress = progress[keyOf(item)];
     var saved = Boolean(savedProgress);
     var visibleSlots = item.slots.filter(slotMatchesFilter);
-    return '<article class="ins-query-card' + (saved ? " saved" : "") + '"><div class="ins-card-head"><div><span class="ins-quality ' + (item.quality === "红色神将" ? "red" : "orange") + '">' + item.quality + '</span><b class="' + (saved ? "ins-saved-name" : "") + '">' + escapeHtml(item.name) + '</b>' + (saved ? '<span class="ins-saved-mark">个人进度已保存</span>' : "") + '</div></div><div class="ins-query-slots">' + visibleSlots.map(function (slot) {
+    return '<article class="ins-query-card' + (saved ? " saved" : "") + '" data-ins-query-key="' + encodedKey(item) + '"><div class="ins-card-head"><div><span class="ins-quality ' + (item.quality === "红色神将" ? "red" : "orange") + '">' + item.quality + '</span><b class="' + (saved ? "ins-saved-name" : "") + '">' + escapeHtml(item.name) + '</b>' + commonButtonHtml(item) + (saved ? '<span class="ins-saved-mark">个人进度已保存</span>' : "") + '</div></div><div class="ins-query-slots">' + visibleSlots.map(function (slot) {
       var savedSlot = savedProgress && savedProgress.slots.find(function (entry) { return entry.tian === slot.tian && entry.shield === slot.shield; });
       return '<div class="ins-query-slot"><div class="ins-slot-title">' + slot.tian + ' · ' + slot.shield + extremeNoteHtml(slot.shield) + '</div>' + queryMainHtml(slot, savedSlot) + '<div class="ins-query-substats"><div class="ins-sub-list"><span class="ins-sub-label">可洗练副属性</span>' + SUBS[slot.shield].map(subTagHtml).join("") + '</div>' + currentSubstatsHtml(savedSlot) + '</div></div>';
     }).join("") + '</div></article>';

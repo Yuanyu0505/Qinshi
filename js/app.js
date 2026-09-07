@@ -1526,8 +1526,8 @@
       FDATA.meta.stageNames.map((s) => `<th>${s}</th>`).join("") +
       "<th>合计</th></tr>";
     el.forgeSummary.innerHTML = FDATA.summary.map((s) => "<tr><td class=\"cat\">" + s.cat + "</td>" +
-      s.stages.map((v, index) => `<td data-label="${escapeHtml(FDATA.meta.stageNames[index])}">${FORG.splitMaterials(v).map((p) => `<div class="mat-line">${p}</div>`).join("")}</td>`).join("") +
-      `<td class="badge" data-label="合计">${FORG.splitMaterials(s.total).map((p) => `<div class="mat-line">${p}</div>`).join("")}</td></tr>`).join("");
+      s.stages.map((v, index) => `<td data-label="${escapeHtml(FDATA.meta.stageNames[index])}"><div class="forge-summary-materials">${FORG.splitMaterials(v).map((p) => `<div class="mat-line">${p}</div>`).join("")}</div></td>`).join("") +
+      `<td class="badge" data-label="合计"><div class="forge-summary-materials">${FORG.splitMaterials(s.total).map((p) => `<div class="mat-line">${p}</div>`).join("")}</div></td></tr>`).join("");
   }
 
   function bindForging() {
@@ -1587,10 +1587,10 @@
       </td>
       ${item.stages.map((st, si) => {
         const cellHit = stageHit ? stageHit.has(si) : false;
-        return `<td${cellHit ? ' class="hit-cell"' : ""}>${st.tokens.map((tk, ti) => {
+        return `<td data-label="${escapeHtml(FDATA.meta.stageNames[si])}"${cellHit ? ' class="hit-cell"' : ""}><div class="forge-stage-materials">${st.tokens.map((tk, ti) => {
           const hit = tokenHit ? tokenHit.has(`${si}:${ti}`) : false;
           return `<div class="mat-line">${forgingTokenHtml(tk, hit, materialMode)}</div>`;
-        }).join("")}</td>`;
+        }).join("")}</div></td>`;
       }).join("")}
     </tr>`;
   }

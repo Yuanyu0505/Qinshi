@@ -3,6 +3,7 @@
 
   var DATA = window.TACTICS_DATA;
   var CORE = window.TACTICS;
+  var PERFORMANCE = window.UI_PERFORMANCE;
   var STORE_KEY = "qinshi_tactics_progress_v1";
   var COST_STORE_KEY = "qinshi_tactics_cost_calculator_v1";
   var state = {
@@ -20,6 +21,9 @@
     costError: ""
   };
   var el = {};
+  var partitionActivated = false;
+  var costModeRendered = false;
+  var calculatorRefresh = null;
 
   function escapeHtml(value) {
     return String(value == null ? "" : value).replace(/[&<>"']/g, function (character) {
@@ -552,6 +556,7 @@
   }
 
   function renderCalculatorResult() {
+    if (calculatorRefresh) calculatorRefresh.cancel();
     var tactic = selectedTactic();
     var result = el.result;
     if (!tactic || !result || !state.calculator) return;
@@ -605,7 +610,7 @@
   function handleCalculatorInput(event) {
     if (event.target.dataset.calcField !== "start-rehearsalSpent" || !state.calculator) return;
     state.calculator.start.rehearsalSpent = event.target.value;
-    renderCalculatorResult();
+    calculatorRefresh.schedule();
   }
 
   function handleSelectorClick(event) {
@@ -860,6 +865,7 @@
       '<button type="button" class="seg" data-cost-action="restore-progress">从个人进度重新读取</button><button type="button" class="seg active" data-cost-action="calculate">计算元宝</button></div>' +
       (state.costError ? '<div class="error" role="alert">' + escapeHtml(state.costError) + '</div>' : '') + '</section>' +
       (state.costOutcome ? costResultsHtml() + tacticControls + materialControls : tacticControls + materialControls + costResultsHtml()) + floatingCalculate;
+    costModeRendered = true;
   }
 
   function setTacticsMode(mode) {
@@ -871,7 +877,7 @@
     }
     if (el.detailMode) el.detailMode.hidden = state.mode !== 'detail';
     if (el.costMode) el.costMode.hidden = state.mode !== 'cost';
-    if (state.mode === 'cost') renderCostMode();
+    if (state.mode === 'cost' && !costModeRendered) renderCostMode();
   }
 
   function saveAndRenderCost(materialControl) {
@@ -1005,7 +1011,7 @@
   }
 
   function validDependencies() {
-    return DATA && Array.isArray(DATA.items) && CORE &&
+    return DATA && Array.isArray(DATA.items) && CORE && PERFORMANCE && typeof PERFORMANCE.createRefreshQueue === "function" &&
       typeof CORE.normalizeProgress === "function" &&
       typeof CORE.changeRank === "function" &&
       typeof CORE.allowedMantraRank === "function" &&
@@ -1041,6 +1047,8 @@
       return;
     }
 
+    calculatorRefresh = PERFORMANCE.createRefreshQueue(renderCalculatorResult, 120);
+
     el.selector.addEventListener("click", handleSelectorClick);
     el.progress.addEventListener("click", handleProgressClick);
     el.progress.addEventListener("change", handleProgressChange);
@@ -1058,8 +1066,19 @@
 
     loadProgress();
     loadCostState();
-    renderAll();
-    setTacticsMode("detail");
+    function activatePartition(event) {
+      if (event && (!event.detail || event.detail.name !== "tactics")) {
+        if (calculatorRefresh) calculatorRefresh.cancel();
+        return;
+      }
+      if (!partitionActivated) {
+        partitionActivated = true;
+        renderAll();
+      }
+      setTacticsMode(state.mode);
+    }
+    document.addEventListener("qinshi:partitionchange", activatePartition);
+    if (!partition.hidden) activatePartition();
   }
 
   document.addEventListener("DOMContentLoaded", init);

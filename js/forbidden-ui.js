@@ -7,6 +7,7 @@
   var core = null;
   var elements = {};
   var tokenPointer = null;
+  var partitionRendered = false;
   var searchRefresh = window.UI_PERFORMANCE.createRefreshQueue(render);
   var state = {
     query: "",
@@ -276,6 +277,7 @@
     updateControls();
     var listMode = Boolean(state.query || state.size || state.selectedOnly || state.showSchedule);
     elements.content.innerHTML = listMode ? listHtml() : defaultHtml();
+    partitionRendered = true;
   }
 
   function toggleNeed(eventId, type, name) {
@@ -359,7 +361,15 @@
     }
     state.needs = loadNeeds();
     bindEvents();
-    render();
+    function activatePartition(event) {
+      if (event && (!event.detail || event.detail.name !== "forbidden")) {
+        searchRefresh.cancel();
+        return;
+      }
+      if (!partitionRendered) render();
+    }
+    document.addEventListener("qinshi:partitionchange", activatePartition);
+    if (!elements.partition.hidden) activatePartition();
   }
 
   window.FORBIDDEN_UI = { init: init };

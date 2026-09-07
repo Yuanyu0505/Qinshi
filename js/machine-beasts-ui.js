@@ -4,6 +4,7 @@
   var DATA = window.MACHINE_BEAST_DATA;
   var CORE = window.MACHINE_BEAST_CORE;
   var PLANNER = window.MACHINE_BEAST_SCHOOL_PLANNER;
+  var PERFORMANCE = window.UI_PERFORMANCE;
   var STORE_KEY = "qinshi_machine_beasts_progress_v1";
   var state = {
     mode: "progress",
@@ -26,6 +27,9 @@
     composingSearch: { progress: false, calculator: false, reference: false }
   };
   var el = {};
+  var rendered = { progress: false, calculator: false, reference: false };
+  var searchRefresh = {};
+  var pendingSearches = {};
 
   function escapeHtml(value) {
     return String(value === undefined || value === null ? "" : value)
@@ -230,6 +234,7 @@
       '<div class="machine-stage-one"><b>' + stageCopy + '</b><span>' + progressCopy + '</span><small>各阶累计觉醒等级要求：45／90／135／180／225</small></div></div>' +
       '<div class="machine-effect-grid">' + effectBlock("当前生效", snapshot.currentEffects, "尚未达成1阶") + effectBlock("下一阶预览", snapshot.nextStage, "已达到当前最高阶") + '</div>' +
       '<div class="machine-beast-list">' + cards + '</div></section>';
+    rendered.progress = true;
   }
 
   function inventoryPolicy(progress) {
@@ -280,6 +285,7 @@
   }
 
   function resetCalculator(beastId) {
+    rendered.calculator = false;
     var beast = beastById(beastId || state.calcBeastId || DATA.beasts[0].id);
     state.calcBeastId = beast.id;
     state.calcDraft = clone(getProgress(beast));
@@ -290,6 +296,7 @@
   }
 
   function resetSchoolCalculator(schoolId) {
+    rendered.calculator = false;
     var school = DATA.schools.find(function (item) { return item.id === (schoolId || (state.schoolDraft && state.schoolDraft.schoolId)); }) || DATA.schools[0];
     var progressByBeast = {};
     var participating = {};
@@ -392,6 +399,7 @@
   function renderCalculatorControls() {
     if (state.calculatorMode === "school") renderSchoolCalculatorControls();
     else renderSingleCalculatorControls();
+    rendered.calculator = true;
   }
 
   function itemLabel(item) {
@@ -521,6 +529,7 @@
 
   function renderReference() {
     el.referenceContent.innerHTML = beastReference() + schoolReference() + thresholdReference() + researchReference();
+    rendered.reference = true;
   }
 
   function setMode(mode) {
@@ -529,8 +538,9 @@
     el.progress.hidden = mode !== "progress";
     el.calculator.hidden = mode !== "calculator";
     el.reference.hidden = mode !== "reference";
-    if (mode === "calculator") renderCalculatorControls();
-    if (mode === "reference" && !el.referenceContent.innerHTML) renderReference();
+    if (mode === "progress" && !rendered.progress) renderProgress();
+    if (mode === "calculator" && !rendered.calculator) renderCalculatorControls();
+    if (mode === "reference" && !rendered.reference) renderReference();
   }
 
   function updateInventory(draft, target) {
@@ -578,16 +588,24 @@
     renderSearchResults(scope);
   }
 
+  function scheduleSearchInput(scope, value) {
+    pendingSearches[scope] = value;
+    searchRefresh[scope].schedule();
+  }
+
   function handleSearchCompositionStart(event) {
     var scope = event.target && event.target.dataset ? event.target.dataset.machineSearch : "";
-    if (scope && Object.prototype.hasOwnProperty.call(state.composingSearch, scope)) state.composingSearch[scope] = true;
+    if (scope && Object.prototype.hasOwnProperty.call(state.composingSearch, scope)) {
+      state.composingSearch[scope] = true;
+      searchRefresh[scope].cancel();
+    }
   }
 
   function handleSearchCompositionEnd(event) {
     var scope = event.target && event.target.dataset ? event.target.dataset.machineSearch : "";
     if (!scope || !Object.prototype.hasOwnProperty.call(state.composingSearch, scope)) return;
     state.composingSearch[scope] = false;
-    applySearchInput(scope, event.target.value);
+    scheduleSearchInput(scope, event.target.value);
   }
 
   function handleProgressClick(event) {
@@ -631,7 +649,7 @@
   function handleProgressInput(event) {
     if (event.target.matches('[data-machine-search="progress"]')) {
       if (event.isComposing || state.composingSearch.progress) return;
-      applySearchInput("progress", event.target.value);
+      scheduleSearchInput("progress", event.target.value);
       return;
     }
     if (!state.editDraft) return;
@@ -703,7 +721,7 @@
     var target = event.target;
     if (target.matches('[data-machine-search="calculator"]')) {
       if (event.isComposing || state.composingSearch.calculator) return;
-      applySearchInput("calculator", target.value);
+      scheduleSearchInput("calculator", target.value);
       return;
     }
     if (target.matches("[data-calc-field]")) state.calcDraft[target.dataset.calcField] = CORE.integer(target.value);
@@ -792,11 +810,11 @@
   function handleReferenceInput(event) {
     if (!event.target.matches('[data-machine-search="reference"]')) return;
     if (event.isComposing || state.composingSearch.reference) return;
-    applySearchInput("reference", event.target.value);
+    scheduleSearchInput("reference", event.target.value);
   }
 
   function validDependencies() {
-    return DATA && CORE && PLANNER && Array.isArray(DATA.beasts) && typeof CORE.searchBeasts === "function" && typeof CORE.calculateInvestmentPlan === "function" &&
+    return DATA && CORE && PLANNER && PERFORMANCE && typeof PERFORMANCE.createRefreshQueue === "function" && Array.isArray(DATA.beasts) && typeof CORE.searchBeasts === "function" && typeof CORE.calculateInvestmentPlan === "function" &&
       typeof PLANNER.calculateSchoolPlans === "function" && typeof PLANNER.defaultTargetStage === "function";
   }
 
@@ -826,8 +844,12 @@
     el.progressSearch.innerHTML = searchBar("progress", "搜索名称、品质、流派或研发效果");
     el.calculatorSearch.innerHTML = searchBar("calculator", "搜索名称、品质、流派或研发效果");
     el.referenceSearch.innerHTML = searchBar("reference", "搜索名称、品质、流派或研发效果");
-    renderProgress();
-    renderCalculatorControls();
+    ["progress", "calculator", "reference"].forEach(function (scope) {
+      pendingSearches[scope] = state.searches[scope];
+      searchRefresh[scope] = PERFORMANCE.createRefreshQueue(function () {
+        applySearchInput(scope, pendingSearches[scope]);
+      }, 120);
+    });
     el.modes.addEventListener("click", function (event) {
       var button = event.target.closest("[data-machine-beast-mode]");
       if (button) setMode(button.dataset.machineBeastMode);
@@ -844,7 +866,15 @@
       container.addEventListener("compositionstart", handleSearchCompositionStart);
       container.addEventListener("compositionend", handleSearchCompositionEnd);
     });
-    setMode("progress");
+    function activatePartition(event) {
+      if (event && (!event.detail || event.detail.name !== "machine-beasts")) {
+        Object.keys(searchRefresh).forEach(function (scope) { searchRefresh[scope].cancel(); });
+        return;
+      }
+      setMode(state.mode);
+    }
+    document.addEventListener("qinshi:partitionchange", activatePartition);
+    if (!partition.hidden) activatePartition();
   }
 
   window.MACHINE_BEAST_UI = { init: init };

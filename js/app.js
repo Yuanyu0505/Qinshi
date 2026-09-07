@@ -164,6 +164,7 @@
     inventoryError: ""
   };
   const quizState = { query: "", items: loadQuizItems() };
+  let forgingViewRendered = false;
 
   function initManualNumberInputs() {
     document.addEventListener("keydown", (event) => {
@@ -400,6 +401,13 @@
       const navigationOptions = options || {};
       if (!parts[name]) return;
       const source = navigationOptions.source || "user";
+      const previousPartition = activePartition;
+      if (name !== "equipment") equipmentRefresh.cancel();
+      if (name !== "atlas") atlasRefresh.cancel();
+      if (name !== "forging") {
+        forgingRefresh.cancel();
+        progressRefresh.cancel();
+      }
       if (activePartition && activePartition !== name) partitionScrollPositions[activePartition] = window.scrollY;
       if (source === "user") {
         if (name !== "forging") invalidateForgeReturnSession("partition");
@@ -422,6 +430,9 @@
       }
       setMoreOpen(false);
       activePartition = name;
+      document.dispatchEvent(new CustomEvent("qinshi:partitionchange", {
+        detail: { name: name, previous: previousPartition, source: source }
+      }));
       if (source === "user") {
         if (window.location.hash !== "#" + name) window.history.pushState({ partition: name }, "", "#" + name);
         requestAnimationFrame(function () { window.scrollTo({ top: 0, behavior: "auto" }); });
@@ -462,9 +473,17 @@
 
   function initForging() {
     if (!FDATA || !FORG) return;
-    renderForgingSummary();
     bindForging();
-    applyForging();
+    const partition = document.getElementById("partition-forging");
+    const activateForging = (event) => {
+      if (event && (!event.detail || event.detail.name !== "forging")) return;
+      if (!forgingViewRendered) {
+        renderForgingSummary();
+        applyForging();
+      }
+    };
+    document.addEventListener("qinshi:partitionchange", activateForging);
+    if (partition && !partition.hidden) activateForging();
   }
 
   function initDrops() {
@@ -1528,6 +1547,7 @@
     el.forgeSummary.innerHTML = FDATA.summary.map((s) => "<tr><td class=\"cat\">" + s.cat + "</td>" +
       s.stages.map((v, index) => `<td data-label="${escapeHtml(FDATA.meta.stageNames[index])}"><div class="forge-summary-materials">${FORG.splitMaterials(v).map((p) => `<div class="mat-line">${p}</div>`).join("")}</div></td>`).join("") +
       `<td class="badge" data-label="合计"><div class="forge-summary-materials">${FORG.splitMaterials(s.total).map((p) => `<div class="mat-line">${p}</div>`).join("")}</div></td></tr>`).join("");
+    forgingViewRendered = true;
   }
 
   function bindForging() {

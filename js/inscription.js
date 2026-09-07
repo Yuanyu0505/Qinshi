@@ -56,7 +56,8 @@
   var renderCoordinator;
 
   function init() {
-    if (!DATA || !PERFORMANCE || !document.getElementById("partition-inscription")) return;
+    var partition = document.getElementById("partition-inscription");
+    if (!DATA || !PERFORMANCE || !partition) return;
     el.modes = document.getElementById("inscription-modes");
     el.progressSearch = document.getElementById("ins-progress-search");
     el.suggestions = document.getElementById("ins-progress-suggestions");
@@ -94,7 +95,16 @@
     });
     el.search.addEventListener("input", function () { renderCoordinator.scheduleQuery(); });
 
-    renderCoordinator.activate("progress");
+    function activatePartition(event) {
+      if (event && (!event.detail || event.detail.name !== "inscription")) {
+        renderCoordinator.cancelPendingQuery();
+        return;
+      }
+      var activeButton = el.modes.querySelector("button.active[data-mode]");
+      renderCoordinator.activate(activeButton ? activeButton.dataset.mode : "progress");
+    }
+    document.addEventListener("qinshi:partitionchange", activatePartition);
+    if (!partition.hidden) activatePartition();
   }
 
   function keyOf(item) { return item.quality + "\u0000" + item.name; }

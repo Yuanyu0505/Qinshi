@@ -21,6 +21,13 @@
     referenceDiscipleId: ""
   };
   var el = {};
+  var rendered = { progress: false, calculator: false, reference: false };
+
+  function invalidateViews() {
+    rendered.progress = false;
+    rendered.calculator = false;
+    rendered.reference = false;
+  }
 
   function escapeHtml(value) {
     return String(value === undefined || value === null ? "" : value)
@@ -233,6 +240,7 @@
     el.progressList.innerHTML = state.disciples.length
       ? state.disciples.map(discipleCard).join("")
       : '<section class="panel empty"><p>尚未添加弟子。请先从图鉴弟子库搜索，或自由输入弟子名称。</p></section>';
+    rendered.progress = true;
   }
 
   function refreshEditorStatus() {
@@ -443,6 +451,7 @@
         '<section class="panel empty"><p>请先在个人进度中添加弟子。</p></section>') + '</div>' +
       renderPurchaseSettings() + '<div class="battle-pouch-calculate-actions"><button type="button" class="seg active" data-battle-pouch-action="calculate">计算目标</button></div>';
     updateCalcSelectionButtons();
+    rendered.calculator = true;
   }
 
   function referenceRows(kind, view, disciple) {
@@ -508,6 +517,7 @@
       rulesTable("丹囊内丹品质上限", DATA.pouchQualityNames, DATA.pouchQualityCaps) +
       '<section class="panel battle-pouch-rule-card"><h3>等级与槽位规则</h3><p>玩家46级解锁战匣与丹囊；实际等级上限取玩家上限与物品上限中的较小值。</p>' +
       '<p class="muted-tip">槽位分级解锁规则待准确数据补充；当前版本在46级后开放全部槽位。</p></section></div>';
+    rendered.reference = true;
   }
 
   function setMode(mode) {
@@ -518,8 +528,9 @@
     el.progress.hidden = mode !== "progress";
     el.calculator.hidden = mode !== "calculator";
     el.reference.hidden = mode !== "reference";
-    if (mode === "calculator") renderCalculator();
-    if (mode === "reference") renderReference();
+    if (mode === "progress" && !rendered.progress) renderProgress();
+    if (mode === "calculator" && !rendered.calculator) renderCalculator();
+    if (mode === "reference" && !rendered.reference) renderReference();
   }
 
   function addDisciple(source) {
@@ -535,6 +546,7 @@
     var disciple = emptyDisciple(source);
     state.disciples.push(disciple);
     state.calcOrder.push(disciple.id);
+    invalidateViews();
     saveState();
     state.search = "";
     el.search.value = "";
@@ -605,6 +617,7 @@
       var target = event.target;
       if (target.dataset.accountField) {
         updateAccountField(target.dataset.accountField, target.value);
+        invalidateViews();
         renderProgress();
         if (state.mode === "calculator") renderCalculator();
         if (state.mode === "reference") renderReference();
@@ -699,6 +712,7 @@
         state.editingId = null;
         state.editDraft = null;
         saveState();
+        invalidateViews();
         renderProgress();
       } else if (action.dataset.battlePouchAction === "delete") {
         var disciple = discipleById(id);
@@ -707,9 +721,11 @@
         state.calcOrder = state.calcOrder.filter(function (itemId) { return itemId !== id; });
         delete state.calcById[id];
         saveState();
+        invalidateViews();
         renderProgress();
       } else if (action.dataset.battlePouchAction === "add-to-plan") {
         ensureCalcEntry(discipleById(id)).selected = true;
+        rendered.calculator = false;
         setMode("calculator");
       } else if (action.dataset.battlePouchAction === "targets-to-cap") {
         state.calcOrder.forEach(function (discipleId) {
@@ -769,10 +785,12 @@
     if (!el.progress || !el.account || !el.calculator || !el.reference) return;
     loadState();
     bindEvents();
-    renderProgress();
-    renderCalculator();
-    renderReference();
-    setMode("progress");
+    function activatePartition(event) {
+      if (event && (!event.detail || event.detail.name !== "battle-box-pill-pouch")) return;
+      setMode(state.mode);
+    }
+    document.addEventListener("qinshi:partitionchange", activatePartition);
+    if (!document.getElementById("partition-battle-box-pill-pouch").hidden) activatePartition();
   }
 
   document.addEventListener("DOMContentLoaded", init);

@@ -18,6 +18,105 @@ async function pageFor(part, width = 900) {
   return page;
 }
 
+test('大型隐藏分区仅在首次进入时渲染', async () => {
+  const page = await browser.newPage({ viewport: { width: 900, height: 900 }, serviceWorkers: 'block' });
+  try {
+    await page.goto(url, { waitUntil: 'networkidle' });
+    const targets = [
+      ['forging', '#forging-summary'],
+      ['inscription', '#ins-progress-list'],
+      ['machine-beasts', '#machine-beast-progress-content'],
+      ['tactics', '#tactics-selector'],
+      ['battle-box-pill-pouch', '#battle-pouch-account'],
+      ['forbidden', '#forbidden-content']
+    ];
+    for (const [, selector] of targets) {
+      assert.equal((await page.locator(selector).innerHTML()).trim(), '');
+    }
+    for (const [part, selector] of targets) {
+      await page.evaluate(name => document.querySelector('.tab[data-partition="' + name + '"]').click(), part);
+      assert.ok((await page.locator(selector).innerHTML()).trim(), part + ' should render after activation');
+    }
+  } finally { await page.close(); }
+});
+
+test('机关兽连续搜索只重绘最终结果', async () => {
+  const page = await pageFor('machine-beasts');
+  try {
+    await page.evaluate(() => {
+      window.machineRenderCount = 0;
+      new MutationObserver(records => { window.machineRenderCount += records.filter(record => record.type === 'childList').length; })
+        .observe(document.querySelector('#machine-beast-progress-content'), { childList: true });
+      const field = document.querySelector('[data-machine-search="progress"]');
+      ['霸', '霸道', '霸道机关'].forEach(query => {
+        field.value = query;
+        field.dispatchEvent(new Event('input', { bubbles: true }));
+      });
+    });
+    await page.waitForTimeout(350);
+    assert.equal(await page.evaluate(() => window.machineRenderCount), 1);
+  } finally { await page.close(); }
+});
+
+test('兵法连续填写演练消耗只刷新最终计算结果', async () => {
+  const page = await pageFor('tactics');
+  try {
+    await page.locator('[data-tactic-id]').first().click();
+    const field = page.locator('[data-calc-field="start-rehearsalSpent"]');
+    assert.equal(await field.count(), 1);
+    await page.evaluate(() => {
+      window.tacticsResultCount = 0;
+      new MutationObserver(records => { window.tacticsResultCount += records.filter(record => record.type === 'childList').length; })
+        .observe(document.querySelector('#tactics-result [data-tactics-result]'), { childList: true });
+      const input = document.querySelector('[data-calc-field="start-rehearsalSpent"]');
+      ['1', '12', '120'].forEach(value => {
+        input.value = value;
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+      });
+    });
+    await page.waitForTimeout(350);
+    assert.equal(await page.evaluate(() => window.tacticsResultCount), 1);
+  } finally { await page.close(); }
+});
+
+test('离开分区后取消尚未执行的搜索和计算刷新', async () => {
+  for (const scenario of [
+    { part: 'equipment', prepare: '', input: '#search', result: '#cards' },
+    { part: 'machine-beasts', prepare: '', input: '[data-machine-search="progress"]', result: '#machine-beast-progress-content' },
+    { part: 'tactics', prepare: '[data-tactic-id]', input: '[data-calc-field="start-rehearsalSpent"]', result: '#tactics-result [data-tactics-result]' }
+  ]) {
+    const page = await pageFor(scenario.part);
+    try {
+      if (scenario.prepare) await page.locator(scenario.prepare).first().click();
+      await page.evaluate(({ input, result }) => {
+        window.hiddenRefreshCount = 0;
+        new MutationObserver(records => { window.hiddenRefreshCount += records.filter(record => record.type === 'childList').length; })
+          .observe(document.querySelector(result), { childList: true });
+        const field = document.querySelector(input);
+        field.value = '12';
+        field.dispatchEvent(new Event('input', { bubbles: true }));
+        document.querySelector('.tab[data-partition="atlas"]').click();
+      }, scenario);
+      await page.waitForTimeout(250);
+      assert.equal(await page.evaluate(() => window.hiddenRefreshCount), 0, scenario.part);
+    } finally { await page.close(); }
+  }
+});
+
+for (const [part, firstMode, secondMode, stableSelector] of [
+  ['machine-beasts', 'calculator', 'progress', '#machine-beast-calculator-controls > *'],
+  ['battle-box-pill-pouch', 'calculator', 'progress', '#battle-pouch-calculator > *']
+]) test(part + ' 重复切换未变更模式时复用既有结果', async () => {
+  const page = await pageFor(part);
+  try {
+    await page.locator('[data-' + (part === 'machine-beasts' ? 'machine-beast' : 'battle-pouch') + '-mode="' + firstMode + '"]').click();
+    await page.evaluate(selector => { window.stableModeNode = document.querySelector(selector); }, stableSelector);
+    await page.locator('[data-' + (part === 'machine-beasts' ? 'machine-beast' : 'battle-pouch') + '-mode="' + secondMode + '"]').click();
+    await page.locator('[data-' + (part === 'machine-beasts' ? 'machine-beast' : 'battle-pouch') + '-mode="' + firstMode + '"]').click();
+    assert.equal(await page.evaluate(() => window.stableModeNode && window.stableModeNode.isConnected), true);
+  } finally { await page.close(); }
+});
+
 for (const [part, input, result, queries] of [
   ['equipment', '#search', '#cards', ['神', '神兵', '神兵墨眉']],
   ['atlas', '#atlas-search', '#atlas-results', ['神', '神·', '神·项羽']],

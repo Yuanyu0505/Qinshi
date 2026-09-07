@@ -135,7 +135,7 @@ test("机关兽方案计算提供单只与目标流派阶数子页面", () => {
   assert.match(ui, /data-machine-owned-limit/);
   assert.match(ui, /自由等级方案/);
   assert.match(ui, /效果档位方案/);
-  assert.match(ui, /同时满足自由等级与效果档位优化/);
+  assert.match(ui, /同时满足自由等级与同等投入效果档位优化/);
   assert.match(ui, /仅0阶/);
   assert.match(ui, /0–7阶/);
   assert.match(ui, /newRankModeSelector\("single", state\.singleNewRankMode\)/);
@@ -645,7 +645,7 @@ test("个人进度装备可进入装备属性并一次性返回原页", async ()
   });
 });
 
-test("PWA 1.0.33 发布整体交互性能优化", async () => {
+test("PWA 1.0.34 发布合阵优先级与机关兽方案说明", async () => {
   const pagesWorkflow = fs.readFileSync(path.join(__dirname, ".github", "workflows", "pages.yml"), "utf8");
   assert.match(pagesWorkflow, /js\/tactics\.js/);
   assert.match(pagesWorkflow, /js\/tactics-ui\.js/);
@@ -684,9 +684,9 @@ test("PWA 1.0.33 发布整体交互性能优化", async () => {
     assert.strictEqual(forbiddenData.status, 200);
     assert.strictEqual(forbiddenCore.status, 200);
     assert.strictEqual(forbiddenUi.status, 200);
-    assert.match(index.body, /id="pwa-version">1\.0\.33<\/strong>/);
-    assert.match(worker.body, /CACHE_NAME\s*=\s*CACHE_PREFIX\s*\+\s*"1\.0\.33"/);
-    assert.match(pwa.body, /APP_VERSION\s*=\s*"1\.0\.33"/);
+    assert.match(index.body, /id="pwa-version">1\.0\.34<\/strong>/);
+    assert.match(worker.body, /CACHE_NAME\s*=\s*CACHE_PREFIX\s*\+\s*"1\.0\.34"/);
+    assert.match(pwa.body, /APP_VERSION\s*=\s*"1\.0\.34"/);
     assert.match(worker.body, /"\.\/data\/tactics\.js"/);
     assert.match(worker.body, /"\.\/js\/tactics\.js"/);
     assert.match(worker.body, /"\.\/js\/tactics-ui\.js"/);

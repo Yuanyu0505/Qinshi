@@ -7,6 +7,7 @@
 
   var ATTRIBUTE_KEYS = { "攻": "attack", "血": "health", "防": "defense" };
   var ATTRIBUTE_LABELS = { level: "等级", attack: "攻", health: "血", defense: "防" };
+  var TARGET_PRIORITY = ["全体攻", "全体血", "追加伤害", "全体护盾", "全体内力", "全体防"];
 
   function normalizeName(value) {
     return String(value == null ? "" : value).replace(/[·•・\s]+/g, "").trim();
@@ -173,10 +174,27 @@
     return left.localeCompare(right, "zh-CN", { sensitivity: "base" });
   }
 
+  function addTargetValue(totals, targetAttribute, value) {
+    var next = Object.assign({}, totals);
+    next[targetAttribute] = (next[targetAttribute] || 0) + value;
+    return next;
+  }
+
+  function comparePlanPriority(left, right) {
+    for (var index = 0; index < TARGET_PRIORITY.length; index += 1) {
+      var targetAttribute = TARGET_PRIORITY[index];
+      var leftValue = Number(left.targetTotals[targetAttribute] || 0);
+      var rightValue = Number(right.targetTotals[targetAttribute] || 0);
+      if (leftValue !== rightValue) return leftValue > rightValue ? 1 : -1;
+    }
+    if (left.filled !== right.filled) return left.filled > right.filled ? 1 : -1;
+    return 0;
+  }
+
   function betterPlan(left, right) {
     if (!right) return true;
-    if (left.filled !== right.filled) return left.filled > right.filled;
-    if (Math.abs(left.score - right.score) > 1e-10) return left.score > right.score;
+    var priorityComparison = comparePlanPriority(left, right);
+    if (priorityComparison) return priorityComparison > 0;
     if (left.officialMatches !== right.officialMatches) return left.officialMatches > right.officialMatches;
     return compareTieKeys(left.tieKey, right.tieKey) < 0;
   }
@@ -187,7 +205,7 @@
 
     function solve(slotIndex, usedMask) {
       if (slotIndex >= slots.length) {
-        return { filled: 0, score: 0, officialMatches: 0, assignments: [], tieKey: "" };
+        return { filled: 0, score: 0, targetTotals: {}, officialMatches: 0, assignments: [], tieKey: "" };
       }
       var memoKey = slotIndex + "|" + usedMask;
       if (memo[memoKey]) return memo[memoKey];
@@ -196,6 +214,7 @@
       var best = {
         filled: skipped.filled,
         score: skipped.score,
+        targetTotals: Object.assign({}, skipped.targetTotals),
         officialMatches: skipped.officialMatches,
         assignments: skipped.assignments.slice(),
         tieKey: "~" + slot.position + ";" + skipped.tieKey,
@@ -222,6 +241,7 @@
         var candidate = {
           filled: tail.filled + 1,
           score: tail.score + normalizedScore,
+          targetTotals: addTargetValue(tail.targetTotals, assignment.targetAttribute, assignment.value),
           officialMatches: tail.officialMatches + (assignment.official ? 1 : 0),
           assignments: [assignment].concat(tail.assignments),
           tieKey: String(slot.position).padStart(2, "0") + ":" + entry.candidate.name + ";" + tail.tieKey,
@@ -237,8 +257,8 @@
 
   function betterMainPlan(left, right, formation) {
     if (!right) return true;
-    if (left.plan.filled !== right.plan.filled) return left.plan.filled > right.plan.filled;
-    if (Math.abs(left.plan.score - right.plan.score) > 1e-10) return left.plan.score > right.plan.score;
+    var priorityComparison = comparePlanPriority(left.plan, right.plan);
+    if (priorityComparison) return priorityComparison > 0;
     var leftOfficial = left.plan.officialMatches + (left.main.candidate.name === formation.officialMain ? 1 : 0);
     var rightOfficial = right.plan.officialMatches + (right.main.candidate.name === formation.officialMain ? 1 : 0);
     if (leftOfficial !== rightOfficial) return leftOfficial > rightOfficial;
@@ -282,7 +302,7 @@
       chosenMain = bestMainPlan.main;
       chosenPlan = bestMainPlan.plan;
     } else {
-      chosenPlan = { filled: 0, score: 0, officialMatches: 0, assignments: [], tieKey: "" };
+      chosenPlan = { filled: 0, score: 0, targetTotals: {}, officialMatches: 0, assignments: [], tieKey: "" };
     }
 
     var assignments = chosenPlan.assignments.slice().sort(function (left, right) {

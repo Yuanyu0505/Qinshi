@@ -120,6 +120,35 @@ test("recommendFormation：指定主将固定排除且优先填满位置", () =>
   assert.ok(result.assignments.every(item => item.candidateId !== "a"));
 });
 
+test("recommendFormation：严格按照攻血追加护盾内力防的顺序取舍", () => {
+  const priorities = ["全体攻", "全体血", "追加伤害", "全体护盾", "全体内力", "全体防"];
+
+  for (let index = 0; index < priorities.length - 1; index += 1) {
+    const formation = {
+      id: `priority-${index}`,
+      name: "优先级测试",
+      officialMain: "主将",
+      slots: [
+        { position: 1, sourceAttribute: "攻", ratePercent: 100, targetAttribute: priorities[index], officialDisciple: "高优先弟子" },
+        { position: 2, sourceAttribute: "防", ratePercent: 100, targetAttribute: priorities[index + 1], officialDisciple: "低优先弟子" },
+      ],
+      candidates: [
+        { id: "main", name: "主将", level1: { attack: 1, health: 1, defense: 1 }, officialPosition: null },
+        { id: "high", name: "高优先弟子", level1: { attack: 100, health: 1, defense: 100 }, officialPosition: 1 },
+        { id: "low", name: "低优先弟子", level1: { attack: 99, health: 1, defense: 1 }, officialPosition: 2 },
+      ],
+    };
+
+    const result = F.recommendFormation(formation, progressFor(formation, { mainId: "main" }));
+    const highPriorityAssignment = result.assignments.find(item => item.position === 1);
+    assert.strictEqual(
+      highPriorityAssignment.candidateId,
+      "high",
+      `${priorities[index]}应优先于${priorities[index + 1]}`,
+    );
+  }
+});
+
 test("recommendFormation：弟子不足时返回部分方案和缺少位置数", () => {
   const formation = fixture();
   const progress = progressFor(formation);

@@ -318,6 +318,23 @@ test("school planner: maps target stages and keeps excluded beasts in the baseli
   });
 });
 
+test("school planner: milestone plan only improves milestones for the same investment", () => {
+  const school = DATA.schools.find(item => item.id === "hegemonic");
+  const result = PLANNER.calculateSchoolPlans(DATA, school, {}, {
+    targetStage: 1,
+    useOwnedInventory: false,
+    newRankMode: "zeroToSeven",
+  });
+  const free = result.plans.find(plan => plan.kind === "free");
+  const milestone = result.plans.find(plan => plan.kind === "milestone");
+
+  assert.ok(free);
+  assert.ok(milestone);
+  assert.strictEqual(milestone.totals.investedCount, free.totals.investedCount);
+  assert.strictEqual(milestone.totals.newInvestedCount, free.totals.newInvestedCount);
+  assert.ok(milestone.totals.milestoneCount > free.totals.milestoneCount);
+});
+
 test("school planner: an achieved target returns one merged zero-cost plan", () => {
   const school = DATA.schools.find(item => item.id === "nonAttack");
   const progress = {};

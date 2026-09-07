@@ -390,6 +390,7 @@
       '<label><input type="checkbox" data-school-option="allowNewModifications"' + (draft.allowNewModifications ? ' checked' : '') + '>允许新增改造机关兽</label></div>' +
       newRankModeSelector("school", draft.newRankMode) +
       '<div class="machine-calculator-actions"><button type="button" class="seg" data-machine-action="reload-school-calculator">从个人进度重新读取</button><button type="button" class="seg active" data-machine-action="calculate-school">计算两套最优方案</button></div>' +
+      '<p class="muted-tip">效果档位方案仅在折算投入总数和新增投入数相同时，优先选择更多10、15、20、25级效果档位。</p>' +
       '<div class="machine-school-beast-controls">' + orderedBeastIds.map(function (beastId) {
         var beast = beastById(beastId);
         return renderSchoolBeastControl(beast, draft, Boolean(calculatorQuery) && isSearchMatch(beast, "calculator"));
@@ -444,8 +445,8 @@
 
   function schoolPlanTitle(kind) {
     if (kind === "free") return "自由等级方案";
-    if (kind === "milestone") return "效果档位方案";
-    return "同时满足自由等级与效果档位优化";
+    if (kind === "milestone") return "效果档位方案（同等投入优先）";
+    return "同时满足自由等级与同等投入效果档位优化";
   }
 
   function schoolResourceValue(value) {

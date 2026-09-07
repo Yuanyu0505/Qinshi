@@ -292,7 +292,7 @@
     var result = state.recommendation;
     if (!result) {
       return '<section class="panel formation-recommendation"><div class="formation-section-head"><div><span class="panel-title">自动推荐</span><h2>主将与助阵方案</h2></div></div>' +
-        '<div class="empty formation-empty"><p>点击“生成推荐方案”后展示综合最优安排。</p></div></section>';
+        '<div class="empty formation-empty"><p>点击“生成推荐方案”后，按攻、血、追加伤害、全体护盾、内力、防的优先级展示安排。</p></div></section>';
     }
     var assignments = formation.slots.map(function (slot) {
       var assignment = result.assignments.find(function (item) { return item.position === slot.position; });

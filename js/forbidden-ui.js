@@ -30,6 +30,10 @@
     { key: "orangeDrops", title: "刷出橙装" }
   ];
 
+  function clone(value) {
+    return JSON.parse(JSON.stringify(value == null ? {} : value));
+  }
+
   function escapeHtml(value) {
     return String(value == null ? "" : value)
       .replace(/&/g, "&amp;")
@@ -280,6 +284,38 @@
     partitionRendered = true;
   }
 
+  function captureView() {
+    return {
+      query: state.query,
+      size: state.size,
+      selectedOnly: state.selectedOnly,
+      showSchedule: state.showSchedule,
+      expanded: clone(state.expanded)
+    };
+  }
+
+  function restoreView(view) {
+    var saved = view || {};
+    state.query = String(saved.query || "");
+    state.size = String(saved.size || "");
+    state.selectedOnly = Boolean(saved.selectedOnly);
+    state.showSchedule = Boolean(saved.showSchedule);
+    state.expanded = clone(saved.expanded);
+    if (elements.search) elements.search.value = state.query;
+    render();
+  }
+
+  function applyNavigationQuery(name) {
+    state.query = String(name == null ? "" : name).trim();
+    state.size = "";
+    state.selectedOnly = false;
+    state.showSchedule = false;
+    state.expanded = {};
+    if (elements.search) elements.search.value = state.query;
+    render();
+    return captureView();
+  }
+
   function toggleNeed(eventId, type, name) {
     var entry = core.eventNeeds(state.needs, eventId);
     var key = type === "disciple" ? "disciples" : "items";
@@ -372,5 +408,10 @@
     if (!elements.partition.hidden) activatePartition();
   }
 
-  window.FORBIDDEN_UI = { init: init };
+  window.FORBIDDEN_UI = {
+    init: init,
+    captureView: captureView,
+    restoreView: restoreView,
+    applyNavigationQuery: applyNavigationQuery
+  };
 })();

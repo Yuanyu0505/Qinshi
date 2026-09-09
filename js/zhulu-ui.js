@@ -235,6 +235,14 @@
     });
   }
 
+  function applyNavigationQuery(bookName) {
+    var next = core.buildNavigationSeasonView(captureView(), bookName);
+    state.tab = next.tab;
+    state.seasonFilters = next.seasonFilters;
+    renderCurrent();
+    return captureView();
+  }
+
   function fillSelects() {
     var firstYear = Number(String(data.meta.firstSeason).slice(0, 4));
     var maxYear = Math.max(new Date().getFullYear() + 100, Number(String(data.meta.lastSeason).slice(0, 4)) + 100);
@@ -391,6 +399,7 @@
     init: init,
     captureView: captureView,
     restoreView: restoreView,
+    applyNavigationQuery: applyNavigationQuery,
     showError: setError
   };
 

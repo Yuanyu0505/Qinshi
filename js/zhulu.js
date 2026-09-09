@@ -274,6 +274,19 @@
     return Boolean(session && session.appliedFingerprint === fingerprint(currentTargetView || {}));
   }
 
+  function buildNavigationSeasonView(view, bookName) {
+    var next = JSON.parse(JSON.stringify(view || {}));
+    next.tab = "seasons";
+    next.seasonFilters = {
+      year: null,
+      month: null,
+      query: String(bookName == null ? "" : bookName).trim(),
+      quality: null,
+      progress: null
+    };
+    return next;
+  }
+
   return {
     normalizeText: normalizeText,
     locateProgressRewards: locateProgressRewards,
@@ -286,6 +299,7 @@
     groupFilteredSeasons: groupFilteredSeasons,
     groupDefaultSeasons: groupDefaultSeasons,
     resolveInitialBookQuality: resolveInitialBookQuality,
+    buildNavigationSeasonView: buildNavigationSeasonView,
     createJumpSession: createJumpSession,
     shouldRestoreJumpTarget: shouldRestoreJumpTarget
   };

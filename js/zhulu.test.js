@@ -113,3 +113,19 @@ test("目标页未改动时恢复旧状态，改动后不恢复", () => {
   assert.strictEqual(CORE.shouldRestoreJumpTarget(session, { query: "孟子", category: "全部" }), true);
   assert.strictEqual(CORE.shouldRestoreJumpTarget(session, { query: "孟子", category: "红色神将" }), false);
 });
+
+test("逐鹿导航查询切到赛季典籍并清空阻挡条件", () => {
+  assert.deepStrictEqual(CORE.buildNavigationSeasonView({
+    tab: "progress",
+    progressQuery: "150",
+    progressScrollY: 320,
+    seasonScrollY: 640,
+    seasonFilters: { year: 2025, month: 8, query: "六韬", quality: "红", progress: 2200 }
+  }, "孙子兵法"), {
+    tab: "seasons",
+    progressQuery: "150",
+    progressScrollY: 320,
+    seasonScrollY: 640,
+    seasonFilters: { year: null, month: null, query: "孙子兵法", quality: null, progress: null }
+  });
+});

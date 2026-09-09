@@ -21,6 +21,8 @@
   const QUIZ_DATA = window.QUIZ_DATA;
   const QUIZ = window.QUIZ;
   const UI_PERFORMANCE = window.UI_PERFORMANCE;
+  const ZHULU = window.ZHULU;
+  const ZHULU_UI = window.ZHULU_UI;
   const ATLAS_LEVELS_KEY = "qinshi_atlas_levels_v1";
   const ATLAS_TARGET_LEVEL_KEY = "qinshi_atlas_target_level_v1";
   const ATLAS_FAVORITES_KEY = "qinshi_atlas_favorites_v1";
@@ -42,6 +44,7 @@
     formations: "合阵",
     quiz: "答题",
     loulan: "楼兰棋阵",
+    zhulu: "逐鹿",
     settings: "设置"
   };
 
@@ -60,6 +63,7 @@
   let activeBookDetail = null;
   let forgeReturnSession = null;
   let progressReturnSession = null;
+  let zhuluJumpSession = null;
   let switchPartition = function () {};
 
   const el = {
@@ -133,6 +137,8 @@
     quizSearch: document.getElementById("quiz-search"),
     quizResults: document.getElementById("quiz-results")
   };
+  el.zhuluAtlasReturn = document.getElementById("zhulu-atlas-return");
+  el.zhuluForgingReturn = document.getElementById("zhulu-forging-return");
 
   const progState = {
     view: "query",
@@ -189,6 +195,7 @@
     initProgress();
     initAtlas();
     initQuiz();
+    initZhuluNavigation();
     if (window.FORBIDDEN_UI) window.FORBIDDEN_UI.init();
     if (window.FORMATIONS_UI) window.FORMATIONS_UI.init();
     if (!DATA || !Q || !EQUIP_COMPARE) {
@@ -276,6 +283,165 @@
     el.progSearch.value = saved.searchValue === undefined ? progState.query : saved.searchValue;
   }
 
+  function captureAtlasQueryView() {
+    return {
+      activated: atlasState.activated,
+      tab: atlasState.tab,
+      query: atlasState.query,
+      searchField: atlasState.searchField,
+      levelMin: atlasState.levelMin,
+      levelMax: atlasState.levelMax,
+      favoriteType: atlasState.favoriteType,
+      soulFilter: atlasState.soulFilter,
+      equipmentFilter: atlasState.equipmentFilter,
+      noteSources: atlasState.noteSources.slice(),
+      sortField: atlasState.sortField,
+      sortDirection: atlasState.sortDirection
+    };
+  }
+
+  function restoreAtlasQueryView(view) {
+    const saved = view || {};
+    atlasState.activated = Boolean(saved.activated);
+    atlasState.tab = saved.tab || "全部";
+    atlasState.query = saved.query || "";
+    atlasState.searchField = saved.searchField || "all";
+    atlasState.levelMin = Number.isFinite(Number(saved.levelMin)) ? Number(saved.levelMin) : 0;
+    atlasState.levelMax = Number.isFinite(Number(saved.levelMax)) ? Number(saved.levelMax) : 20;
+    atlasState.favoriteType = saved.favoriteType || "all";
+    atlasState.soulFilter = saved.soulFilter || "all";
+    atlasState.equipmentFilter = saved.equipmentFilter || "all";
+    atlasState.noteSources = Array.isArray(saved.noteSources) ? saved.noteSources.slice() : [];
+    atlasState.sortField = saved.sortField || "default";
+    atlasState.sortDirection = saved.sortDirection || "asc";
+    el.atlasSearch.value = atlasState.query;
+  }
+
+  function zhuluTargetPartition(target) {
+    return target === "atlas" ? "atlas" : "forging";
+  }
+
+  function captureZhuluTargetView(target) {
+    return target === "atlas" ? captureAtlasQueryView() : captureProgressView();
+  }
+
+  function restoreZhuluTargetView(target, view) {
+    if (target === "atlas") {
+      restoreAtlasQueryView(view);
+      applyAtlas();
+      return;
+    }
+    restoreProgressView(view);
+    applyForgeView();
+    applyProgressSearch();
+  }
+
+  function hideZhuluReturnBanners() {
+    [el.zhuluAtlasReturn, el.zhuluForgingReturn].forEach((banner) => {
+      if (banner) banner.hidden = true;
+    });
+  }
+
+  function showZhuluReturnBanner(target, bookName) {
+    hideZhuluReturnBanners();
+    const banner = target === "atlas" ? el.zhuluAtlasReturn : el.zhuluForgingReturn;
+    if (!banner) return;
+    const name = banner.querySelector("strong");
+    if (name) name.textContent = bookName;
+    const options = banner.querySelector(".zhulu-forging-match-options");
+    if (options) {
+      const matches = EQUIP_FORGING.searchProgressEquipmentCatalog(progressEquipmentCatalog, bookName)
+        .filter((item, index, items) => items.findIndex((candidate) => candidate.equipmentName === item.equipmentName) === index)
+        .slice(0, 8);
+      options.innerHTML = matches.length
+        ? '<span>可匹配装备：</span>' + matches.map((item) => `<button type="button" class="link-btn" data-zhulu-progress-choice="${escapeHtml(item.equipmentName)}">${escapeHtml(item.equipmentName)}</button>`).join("")
+        : '<span>未找到普通版或神兵版目录结果</span>';
+    }
+    banner.hidden = false;
+  }
+
+  function clearZhuluJumpSession() {
+    zhuluJumpSession = null;
+    hideZhuluReturnBanners();
+  }
+
+  function openZhuluTarget(detail) {
+    if (!ZHULU || !ZHULU_UI || !detail || !detail.bookName) return;
+    const target = detail.target === "atlas" ? "atlas" : "forging-progress";
+    const targetView = captureZhuluTargetView(target);
+    clearZhuluJumpSession();
+
+    if (target === "atlas") {
+      atlasState.activated = true;
+      atlasState.tab = "全部";
+      atlasState.query = detail.bookName;
+      atlasState.searchField = "all";
+      atlasState.levelMin = 0;
+      atlasState.levelMax = 20;
+      atlasState.favoriteType = "all";
+      atlasState.soulFilter = "all";
+      atlasState.equipmentFilter = "all";
+      atlasState.noteSources = [];
+      atlasState.sortField = "default";
+      atlasState.sortDirection = "asc";
+      el.atlasSearch.value = detail.bookName;
+    } else {
+      progState.view = "progress";
+      progState.page = 0;
+      progState.query = detail.bookName;
+      el.progSearch.value = detail.bookName;
+    }
+
+    const appliedTargetView = captureZhuluTargetView(target);
+    zhuluJumpSession = ZHULU.createJumpSession(target, detail.zhuluView || ZHULU_UI.captureView(), targetView, appliedTargetView);
+    zhuluJumpSession.bookName = detail.bookName;
+    switchPartition(zhuluTargetPartition(target), { source: "zhulu-link", preserveEquipment: true });
+    if (target === "atlas") applyAtlas();
+    else {
+      applyForgeView();
+      applyProgressSearch();
+    }
+    showZhuluReturnBanner(target, detail.bookName);
+    requestAnimationFrame(function () {
+      const banner = target === "atlas" ? el.zhuluAtlasReturn : el.zhuluForgingReturn;
+      if (banner) banner.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  }
+
+  function returnFromZhuluTarget() {
+    const session = zhuluJumpSession;
+    if (!session || !ZHULU || !ZHULU_UI) return;
+    const currentTargetView = captureZhuluTargetView(session.target);
+    if (ZHULU.shouldRestoreJumpTarget(session, currentTargetView)) {
+      restoreZhuluTargetView(session.target, session.targetView);
+    }
+    const zhuluView = session.zhuluView;
+    clearZhuluJumpSession();
+    switchPartition("zhulu", { source: "zhulu-return", preserveEquipment: true });
+    ZHULU_UI.restoreView(zhuluView);
+  }
+
+  function initZhuluNavigation() {
+    if (!ZHULU_UI || !ZHULU) return;
+    document.addEventListener("qinshi:zhulu-navigate", function (event) {
+      openZhuluTarget(event.detail);
+    });
+    [el.zhuluAtlasReturn, el.zhuluForgingReturn].forEach((banner) => {
+      if (!banner) return;
+      banner.addEventListener("click", function (event) {
+        const choice = event.target.closest("[data-zhulu-progress-choice]");
+        if (choice) {
+          progState.page = 0;
+          progState.query = choice.dataset.zhuluProgressChoice;
+          el.progSearch.value = progState.query;
+          applyProgressSearch();
+          return;
+        }
+        if (event.target.closest("[data-zhulu-return]")) returnFromZhuluTarget();
+      });
+    });
+  }
+
   function invalidateForgeReturnSession(reason) {
     if (forgeReturnSession) forgeReturnSession.valid = false;
     forgeReturnSession = null;
@@ -331,7 +497,7 @@
     const mobileMoreLayer = document.getElementById("mobile-more-layer");
     const mobileMoreClose = document.getElementById("mobile-more-close");
     const appShell = document.querySelector(".app-shell");
-    const secondaryPartitions = ["forbidden", "inscription", "machine-beasts", "tactics", "battle-box-pill-pouch", "formations", "loulan", "quiz", "settings"];
+    const secondaryPartitions = ["forbidden", "inscription", "machine-beasts", "tactics", "battle-box-pill-pouch", "formations", "loulan", "zhulu", "quiz", "settings"];
     const partitionScrollPositions = Object.create(null);
     let activePartition = "atlas";
     let mobileMoreRestoreTarget = null;
@@ -348,6 +514,7 @@
       tactics: document.getElementById("partition-tactics"),
       "battle-box-pill-pouch": document.getElementById("partition-battle-box-pill-pouch"),
       formations: document.getElementById("partition-formations"),
+      zhulu: document.getElementById("partition-zhulu"),
       settings: document.getElementById("partition-settings")
     };
 
@@ -410,6 +577,7 @@
       }
       if (activePartition && activePartition !== name) partitionScrollPositions[activePartition] = window.scrollY;
       if (source === "user") {
+        if (zhuluJumpSession) clearZhuluJumpSession();
         if (name !== "forging") invalidateForgeReturnSession("partition");
         invalidateProgressReturnSession("partition");
       }

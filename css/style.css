@@ -3501,6 +3501,171 @@ tbody tr:hover { background-color: rgba(217, 173, 60, .06); }
   }
 }
 
+/* 逐鹿资料 */
+#partition-zhulu { min-width: 0; }
+.zhulu-tabs { margin-bottom: 16px; }
+.zhulu-toolbar { display: grid; gap: 14px; }
+.zhulu-toolbar .filter-row { margin: 0; }
+.zhulu-toolbar .filter-row > input { flex: 1 1 320px; }
+.zhulu-season-primary-filters {
+  display: grid;
+  grid-template-columns: 150px 150px minmax(260px, 1fr);
+  gap: 12px;
+  align-items: end;
+}
+.zhulu-season-primary-filters label { display: grid; gap: 6px; color: var(--muted); }
+.zhulu-season-primary-filters select,
+.zhulu-season-primary-filters input { width: 100%; }
+.zhulu-filter-row { align-items: center; }
+.zhulu-filter-row .segs { min-width: 0; }
+.zhulu-progress-panel { padding: 0; overflow: hidden; }
+.zhulu-progress-table-wrap { width: 100%; overflow: visible; }
+.zhulu-progress-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+.zhulu-progress-table th,
+.zhulu-progress-table td { padding: 13px 18px; border-bottom: 1px solid var(--line); text-align: center; }
+.zhulu-progress-table th { color: var(--gold); background: rgba(113, 72, 19, .17); }
+.zhulu-progress-table th:first-child { width: 26%; }
+.zhulu-progress-table th:last-child { width: 20%; }
+.zhulu-progress-table tbody tr:last-child td { border-bottom: 0; }
+.zhulu-progress-table tr.is-located { background: rgba(184, 59, 52, .13); box-shadow: inset 4px 0 var(--red); }
+.zhulu-progress-book-link,
+.zhulu-progress-item-name { color: var(--text); font-weight: 700; }
+.zhulu-progress-book-link {
+  appearance: none;
+  padding: 5px 9px;
+  border: 1px solid rgba(205, 160, 61, .62);
+  border-radius: 6px;
+  background: rgba(103, 66, 18, .2);
+  cursor: pointer;
+}
+.zhulu-progress-book-link:hover,
+.zhulu-progress-book-link:focus-visible { border-color: var(--gold); color: var(--gold); }
+.zhulu-season-group { min-width: 0; margin-top: 20px; }
+.zhulu-season-group .mode-title { display: flex; align-items: baseline; gap: 8px; }
+.zhulu-season-card { min-width: 0; padding: 14px; }
+.zhulu-season-card.is-current { border-color: #37d77c; box-shadow: inset 4px 0 #37d77c, 0 0 18px rgba(55, 215, 124, .08); }
+.zhulu-season-card-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
+.zhulu-season-card-head h3 { margin: 0; color: var(--gold); font-size: 18px; }
+.zhulu-season-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 3px 9px;
+  border: 1px solid rgba(205, 160, 61, .64);
+  border-radius: 999px;
+  color: var(--gold);
+  background: rgba(103, 66, 18, .2);
+  font-size: 12px;
+  font-weight: 700;
+}
+.zhulu-season-badge.is-predicted { border-color: #b36de0; color: #ddb4f6; background: rgba(112, 48, 160, .2); }
+.zhulu-reward-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 9px; min-width: 0; }
+.zhulu-reward {
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  gap: 9px;
+  align-content: start;
+  min-width: 0;
+  padding: 10px;
+  border: 2px solid var(--line);
+  border-radius: 8px;
+  background: rgba(10, 8, 6, .52);
+}
+.zhulu-reward.zhulu-quality-purple { border-color: rgba(155, 79, 206, .72); }
+.zhulu-reward.zhulu-quality-orange { border-color: rgba(255, 152, 47, .72); }
+.zhulu-reward.zhulu-quality-red { border-color: rgba(201, 86, 71, .78); }
+.zhulu-reward-head { display: flex; align-items: center; justify-content: space-between; gap: 5px; color: var(--muted); font-size: 12px; }
+.zhulu-reward-head strong { color: var(--gold); white-space: nowrap; }
+.zhulu-book-name {
+  appearance: none;
+  width: 100%;
+  min-width: 0;
+  min-height: 38px;
+  padding: 7px 5px;
+  border: 2px solid transparent;
+  border-radius: 7px;
+  color: #fff;
+  font-weight: 800;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+}
+.zhulu-book-name.zhulu-quality-purple { border-color: #9b4fce; background: #66308f; }
+.zhulu-book-name.zhulu-quality-orange { border-color: #ff982f; background: #c96a18; color: #fff8e8; }
+.zhulu-book-name.zhulu-quality-red { border-color: #df6958; background: #a92e24; }
+.zhulu-book-name:hover,
+.zhulu-book-name:focus-visible { filter: brightness(1.15); box-shadow: 0 0 0 2px rgba(255, 211, 105, .35); }
+.zhulu-yuanbao { color: var(--muted); font-size: 12px; line-height: 1.35; text-align: center; }
+.zhulu-action-menu {
+  position: fixed;
+  z-index: 90;
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--gold);
+  border-radius: 10px;
+  background: #17110b;
+  box-shadow: 0 16px 44px rgba(0, 0, 0, .62);
+}
+.zhulu-action-menu[hidden] { display: none; }
+.zhulu-action-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding-bottom: 6px; border-bottom: 1px solid var(--line); }
+.zhulu-action-head strong { color: var(--gold); }
+.zhulu-action-menu > .seg { width: 100%; text-align: left; }
+.zhulu-return-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+  padding: 10px 14px;
+  border: 1px solid rgba(205, 160, 61, .58);
+  border-radius: 8px;
+  background: rgba(103, 66, 18, .18);
+}
+.zhulu-return-banner[hidden] { display: none; }
+.zhulu-return-banner strong { color: var(--gold); }
+.zhulu-forging-match-options { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; margin-top: 6px; color: var(--muted); font-size: 12px; }
+.zhulu-forging-match-options .link-btn { min-height: 28px; padding: 2px 0; }
+
+@media (max-width: 1024px) {
+  .zhulu-season-primary-filters { grid-template-columns: 1fr 1fr; }
+  .zhulu-book-search { grid-column: 1 / -1; }
+  .zhulu-reward-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .zhulu-progress-table,
+  .zhulu-progress-table tbody { display: block; width: 100%; }
+  .zhulu-progress-table thead { display: none; }
+  .zhulu-progress-table tr { display: grid; grid-template-columns: 100px minmax(0, 1fr) 84px; align-items: center; margin: 10px; border: 1px solid var(--line); border-radius: 8px; background: rgba(10, 8, 6, .46); }
+  .zhulu-progress-table tr.is-located { border-color: rgba(201, 86, 71, .72); }
+  .zhulu-progress-table td { display: grid; gap: 3px; width: auto; padding: 12px 10px; border-bottom: 0; text-align: center; }
+  .zhulu-progress-table td::before { content: attr(data-label); color: var(--muted); font-size: 12px; }
+}
+
+@media (max-width: 640px) {
+  .zhulu-tabs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .zhulu-tabs .seg { width: 100%; }
+  .zhulu-toolbar { gap: 12px; }
+  .zhulu-toolbar .filter-row { align-items: stretch; }
+  .zhulu-toolbar .filter-row > input { flex-basis: 100%; width: 100%; }
+  .zhulu-season-primary-filters { grid-template-columns: 1fr 1fr; gap: 9px; }
+  .zhulu-filter-row { display: grid; grid-template-columns: 1fr; gap: 7px; }
+  .zhulu-filter-row .segs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+  #zhulu-tier-filter { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .zhulu-filter-row .seg { min-width: 0; padding: 7px 2px; font-size: 12px; }
+  .zhulu-season-card { padding: 11px; }
+  .zhulu-season-card-head h3 { font-size: 17px; }
+  .zhulu-reward-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; }
+  .zhulu-reward { padding: 8px; }
+  .zhulu-progress-table tr { grid-template-columns: 78px minmax(0, 1fr) 64px; margin: 8px; }
+  .zhulu-progress-table td { padding: 10px 5px; }
+  .zhulu-progress-book-link { padding: 6px 4px; }
+  .zhulu-return-banner { align-items: stretch; flex-direction: column; }
+  .zhulu-return-banner .seg { width: 100%; }
+}
+
+@media (max-width: 360px) {
+  .zhulu-reward-grid { grid-template-columns: 1fr; }
+}
+
 /* ========================================================================== */
 /* Qin reference refinement · 以 2026-08-28 确认稿为视觉基准                  */
 /* ========================================================================== */

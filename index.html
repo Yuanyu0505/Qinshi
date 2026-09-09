@@ -36,6 +36,7 @@
       <button type="button" class="tab mobile-secondary" data-partition="battle-box-pill-pouch">战匣丹囊</button>
       <button type="button" class="tab mobile-secondary" data-partition="formations">合阵</button>
       <button type="button" class="tab mobile-secondary" data-partition="loulan">楼兰棋阵</button>
+      <button type="button" class="tab mobile-secondary" data-partition="zhulu">逐鹿</button>
       <button type="button" class="tab mobile-secondary" data-partition="quiz">答题</button>
       <button type="button" class="tab mobile-secondary" data-partition="settings">设置</button>
       <button id="mobile-more-toggle" type="button" class="tab mobile-more-toggle" aria-expanded="false" aria-controls="mobile-more-layer">更多</button>
@@ -153,6 +154,70 @@
           <figure><img src="images/棋阵/棋阵 (10).png" alt="棋阵 10"><figcaption>棋阵 10</figcaption></figure>
           <figure><img src="images/棋阵/棋阵(11).png" alt="棋阵 11"><figcaption>棋阵 11</figcaption></figure>
         </div>
+      </div>
+    </section>
+
+    <section id="partition-zhulu" hidden>
+      <div id="zhulu-tabs" class="segs zhulu-tabs" aria-label="逐鹿资料类型">
+        <button type="button" class="seg active" data-zhulu-tab="progress">进度奖励</button>
+        <button type="button" class="seg" data-zhulu-tab="seasons">赛季典籍</button>
+      </div>
+
+      <div id="zhulu-error" class="error" role="alert" hidden></div>
+
+      <section id="zhulu-progress-view">
+        <section class="panel zhulu-toolbar">
+          <div class="filter-row">
+            <span class="filter-label">查询</span>
+            <input id="zhulu-progress-search" type="search" aria-label="搜索逐鹿进度奖励" placeholder="输入进度或道具名称，如：150 / 元宝" autocomplete="off">
+            <button id="zhulu-progress-clear" type="button" class="link-btn">清除</button>
+          </div>
+          <p id="zhulu-progress-notice" class="muted-tip" aria-live="polite"></p>
+        </section>
+        <div id="zhulu-progress-results"></div>
+      </section>
+
+      <section id="zhulu-season-view" hidden>
+        <section class="panel zhulu-toolbar">
+          <div class="zhulu-season-primary-filters">
+            <label><span>年份</span><select id="zhulu-season-year" aria-label="筛选逐鹿年份"></select></label>
+            <label><span>月份</span><select id="zhulu-season-month" aria-label="筛选逐鹿月份"></select></label>
+            <label class="zhulu-book-search"><span>典籍</span><input id="zhulu-season-search" type="search" aria-label="搜索逐鹿赛季典籍" placeholder="输入典籍名称，如：三十六计" autocomplete="off"></label>
+          </div>
+          <div class="filter-row zhulu-filter-row">
+            <span class="filter-label">品质</span>
+            <div id="zhulu-quality-filter" class="segs">
+              <button type="button" class="seg active" data-zhulu-quality="">全部</button>
+              <button type="button" class="seg" data-zhulu-quality="紫">紫色</button>
+              <button type="button" class="seg" data-zhulu-quality="橙">橙色</button>
+              <button type="button" class="seg" data-zhulu-quality="红">红色</button>
+            </div>
+          </div>
+          <div class="filter-row zhulu-filter-row">
+            <span class="filter-label">进度档位</span>
+            <div id="zhulu-tier-filter" class="segs">
+              <button type="button" class="seg active" data-zhulu-tier="">全部</button>
+              <button type="button" class="seg" data-zhulu-tier="1000">1000</button>
+              <button type="button" class="seg" data-zhulu-tier="1200">1200</button>
+              <button type="button" class="seg" data-zhulu-tier="1400">1400</button>
+              <button type="button" class="seg" data-zhulu-tier="1800">1800</button>
+              <button type="button" class="seg" data-zhulu-tier="2200">2200</button>
+              <button type="button" class="seg" data-zhulu-tier="2500">2500</button>
+            </div>
+          </div>
+          <button id="zhulu-season-clear" type="button" class="link-btn">清除全部条件</button>
+        </section>
+        <div id="zhulu-season-results"></div>
+      </section>
+
+      <div id="zhulu-action-menu" class="zhulu-action-menu" role="dialog" aria-modal="false" aria-labelledby="zhulu-action-title" hidden>
+        <div class="zhulu-action-head">
+          <strong id="zhulu-action-title"></strong>
+          <button id="zhulu-action-close" type="button" class="link-btn">关闭</button>
+        </div>
+        <button type="button" class="seg" data-zhulu-action="seasons">查看出现赛季</button>
+        <button type="button" class="seg" data-zhulu-action="forging-progress">查看锻造进度</button>
+        <button type="button" class="seg" data-zhulu-action="atlas">查看图鉴需求</button>
       </div>
     </section>
 
@@ -312,6 +377,10 @@
     </section>
 
     <section id="partition-forging" hidden>
+      <div id="zhulu-forging-return" class="zhulu-return-banner" hidden>
+        <div><span>正在查看逐鹿典籍：<strong></strong></span><div class="zhulu-forging-match-options"></div></div>
+        <button type="button" class="seg" data-zhulu-return>返回逐鹿</button>
+      </div>
       <section class="panel">
         <div class="filter-row">
           <span class="filter-label">模式</span>
@@ -406,6 +475,10 @@
     </section>
 
     <section id="partition-atlas">
+      <div id="zhulu-atlas-return" class="zhulu-return-banner" hidden>
+        <span>正在查看逐鹿典籍：<strong></strong></span>
+        <button type="button" class="seg" data-zhulu-return>返回逐鹿</button>
+      </div>
       <section class="panel">
         <div class="filter-row">
           <span class="filter-label">分区</span>
@@ -520,7 +593,7 @@
         <div class="panel-title">应用与离线状态</div>
         <div class="settings-list">
           <div><span>应用名称</span><strong>Qin</strong></div>
-          <div><span>当前版本</span><strong id="pwa-version">1.0.34</strong></div>
+          <div><span>当前版本</span><strong id="pwa-version">1.0.35</strong></div>
           <div><span>运行状态</span><strong id="pwa-mode-status">正在检查…</strong></div>
         </div>
         <div class="settings-actions">
@@ -563,6 +636,7 @@
       <button type="button" data-partition="battle-box-pill-pouch">战匣丹囊</button>
       <button type="button" data-partition="formations">合阵</button>
       <button type="button" data-partition="loulan">楼兰棋阵</button>
+      <button type="button" data-partition="zhulu">逐鹿</button>
       <button type="button" data-partition="quiz">答题</button>
       <button type="button" data-partition="settings">设置</button>
     </div>
@@ -580,6 +654,7 @@
 <script src="data/forbidden.js"></script>
 <script src="data/quiz.js"></script>
 <script src="data/inscription.js"></script>
+<script src="data/zhulu.js"></script>
 <script src="js/tactics.js"></script>
 <script src="js/formations.js"></script>
 <script src="js/machine-beasts.js"></script>
@@ -597,6 +672,7 @@
 <script src="js/ui-performance.js"></script>
 <script src="js/inscription-performance.js"></script>
 <script src="js/inscription.js"></script>
+<script src="js/zhulu.js"></script>
 <script src="js/settings.js"></script>
 <script src="js/pwa.js"></script>
 <script src="js/tactics-ui.js"></script>
@@ -604,6 +680,7 @@
 <script src="js/machine-beasts-ui.js"></script>
 <script src="js/battle-box-pill-pouch-ui.js"></script>
 <script src="js/forbidden-ui.js"></script>
+<script src="js/zhulu-ui.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>

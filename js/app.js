@@ -64,6 +64,9 @@
   let forgeReturnSession = null;
   let progressReturnSession = null;
   let zhuluJumpSession = null;
+  let dropJumpSession = null;
+  let dropActionItem = "";
+  let dropActionTrigger = null;
   let switchPartition = function () {};
 
   const el = {
@@ -102,6 +105,10 @@
     dropSearch: document.getElementById("drop-search"),
     dropDefaultOrange: document.getElementById("drop-default-orange"),
     dropResults: document.getElementById("drop-results"),
+    dropPartition: document.getElementById("partition-drops"),
+    dropActionMenu: document.getElementById("drop-action-menu"),
+    dropActionTitle: document.getElementById("drop-action-title"),
+    dropActionClose: document.getElementById("drop-action-close"),
     forgeView: document.getElementById("forge-view"),
     forgeQuery: document.getElementById("forge-query"),
     forgeProgress: document.getElementById("forge-progress"),
@@ -139,6 +146,8 @@
   };
   el.zhuluAtlasReturn = document.getElementById("zhulu-atlas-return");
   el.zhuluForgingReturn = document.getElementById("zhulu-forging-return");
+  el.dropAtlasReturn = document.getElementById("drop-atlas-return");
+  el.dropForgingReturn = document.getElementById("drop-forging-return");
 
   const progState = {
     view: "query",
@@ -196,6 +205,7 @@
     initAtlas();
     initQuiz();
     initZhuluNavigation();
+    initDropNavigation();
     if (window.FORBIDDEN_UI) window.FORBIDDEN_UI.init();
     if (window.FORMATIONS_UI) window.FORMATIONS_UI.init();
     if (!DATA || !Q || !EQUIP_COMPARE) {
@@ -317,6 +327,205 @@
     el.atlasSearch.value = atlasState.query;
   }
 
+  function captureForgingView() {
+    return {
+      view: progState.view,
+      progress: captureProgressView(),
+      query: {
+        mode: forgeState.mode,
+        value: forgeState.query,
+        searchValue: el.forgeSearch.value
+      }
+    };
+  }
+
+  function restoreForgingView(view) {
+    const saved = view || {};
+    restoreProgressView(saved.progress || { view: saved.view });
+    progState.view = saved.view || progState.view;
+    const query = saved.query || {};
+    forgeState.mode = query.mode || "main";
+    forgeState.query = query.value || "";
+    el.forgeSearch.value = query.searchValue === undefined ? forgeState.query : query.searchValue;
+    applyForgeView();
+    if (progState.view === "progress") applyProgressSearch();
+    else applyForging();
+  }
+
+  function captureDropTargetView(target) {
+    return target === "atlas" ? captureAtlasQueryView() : captureForgingView();
+  }
+
+  function restoreDropTargetView(target, view) {
+    if (target === "atlas") {
+      restoreAtlasQueryView(view);
+      applyAtlas();
+      return;
+    }
+    restoreForgingView(view);
+  }
+
+  function hideDropReturnBanners() {
+    [el.dropAtlasReturn, el.dropForgingReturn].forEach((banner) => {
+      if (banner) banner.hidden = true;
+    });
+  }
+
+  function showDropReturnBanner(partition, item) {
+    hideDropReturnBanners();
+    const banner = partition === "atlas" ? el.dropAtlasReturn : el.dropForgingReturn;
+    if (!banner) return;
+    const name = banner.querySelector("strong");
+    if (name) name.textContent = item;
+    banner.hidden = false;
+  }
+
+  function clearDropJumpSession() {
+    dropJumpSession = null;
+    hideDropReturnBanners();
+  }
+
+  function captureDropSourceView() {
+    return { query: el.dropSearch.value, scrollY: window.scrollY };
+  }
+
+  function applyDropNavigationTarget(navigation) {
+    if (navigation.target === "atlas") {
+      atlasState.activated = true;
+      atlasState.tab = "全部";
+      atlasState.query = navigation.item;
+      atlasState.searchField = "all";
+      atlasState.levelMin = 0;
+      atlasState.levelMax = 20;
+      atlasState.favoriteType = "all";
+      atlasState.soulFilter = "all";
+      atlasState.equipmentFilter = "all";
+      atlasState.noteSources = [];
+      atlasState.sortField = "default";
+      atlasState.sortDirection = "asc";
+      el.atlasSearch.value = navigation.item;
+      return;
+    }
+    if (navigation.view === "progress") {
+      progState.view = "progress";
+      progState.page = 0;
+      progState.query = navigation.item;
+      el.progSearch.value = navigation.item;
+      return;
+    }
+    progState.view = "query";
+    forgeState.mode = navigation.mode;
+    forgeState.query = navigation.item;
+    el.forgeSearch.value = navigation.item;
+  }
+
+  function openDropTarget(action, item) {
+    if (!DROPS) return;
+    const navigation = DROPS.resolveNavigationTarget(action, item);
+    if (!navigation) return;
+    const sourceView = captureDropSourceView();
+    const targetView = captureDropTargetView(navigation.target);
+    clearDropJumpSession();
+    if (zhuluJumpSession) clearZhuluJumpSession();
+    invalidateForgeReturnSession("drop-link");
+    invalidateProgressReturnSession("drop-link");
+    applyDropNavigationTarget(navigation);
+    const appliedTargetView = captureDropTargetView(navigation.target);
+    dropJumpSession = DROPS.createNavigationSession(navigation.target, sourceView, targetView, appliedTargetView);
+    dropJumpSession.item = navigation.item;
+    switchPartition(navigation.partition, { source: "drop-link", preserveEquipment: true });
+    if (navigation.partition === "atlas") applyAtlas();
+    else if (navigation.view === "progress") {
+      applyForgeView();
+      applyProgressSearch();
+    } else {
+      applyForgeView();
+      applyForging();
+    }
+    showDropReturnBanner(navigation.partition, navigation.item);
+    requestAnimationFrame(function () {
+      const banner = navigation.partition === "atlas" ? el.dropAtlasReturn : el.dropForgingReturn;
+      if (banner) banner.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  }
+
+  function returnFromDropTarget() {
+    const session = dropJumpSession;
+    if (!session || !DROPS) return;
+    const currentTargetView = captureDropTargetView(session.target);
+    if (DROPS.shouldRestoreNavigationTarget(session, currentTargetView)) {
+      restoreDropTargetView(session.target, session.targetView);
+    }
+    const sourceView = session.sourceView || {};
+    clearDropJumpSession();
+    switchPartition("drops", { source: "drop-return", preserveEquipment: true });
+    el.dropSearch.value = sourceView.query || "";
+    applyDrops();
+    requestAnimationFrame(function () {
+      window.scrollTo({ top: Number(sourceView.scrollY) || 0, behavior: "auto" });
+    });
+  }
+
+  function closeDropActionMenu(restoreFocus) {
+    if (!el.dropActionMenu || el.dropActionMenu.hidden) return;
+    el.dropActionMenu.hidden = true;
+    el.dropActionMenu.style.left = "";
+    el.dropActionMenu.style.top = "";
+    if (restoreFocus && dropActionTrigger && typeof dropActionTrigger.focus === "function") dropActionTrigger.focus();
+    dropActionTrigger = null;
+    dropActionItem = "";
+  }
+
+  function openDropActionMenu(button) {
+    dropActionItem = button.dataset.dropItem || "";
+    if (!dropActionItem || !el.dropActionMenu) return;
+    dropActionTrigger = button;
+    el.dropActionTitle.textContent = dropActionItem;
+    el.dropActionMenu.hidden = false;
+    const rect = button.getBoundingClientRect();
+    const width = Math.min(320, window.innerWidth - 24);
+    const left = Math.min(Math.max(12, rect.left), window.innerWidth - width - 12);
+    const top = rect.bottom + 8;
+    el.dropActionMenu.style.width = width + "px";
+    el.dropActionMenu.style.left = left + "px";
+    el.dropActionMenu.style.top = Math.max(12, Math.min(top, window.innerHeight - el.dropActionMenu.offsetHeight - 12)) + "px";
+    const first = el.dropActionMenu.querySelector("[data-drop-action]");
+    if (first) first.focus();
+  }
+
+  function initDropNavigation() {
+    if (!DROPS || !el.dropPartition || !el.dropActionMenu) return;
+    el.dropPartition.addEventListener("click", function (event) {
+      const action = event.target.closest("[data-drop-action]");
+      if (action && dropActionItem) {
+        const item = dropActionItem;
+        closeDropActionMenu(false);
+        openDropTarget(action.dataset.dropAction, item);
+        return;
+      }
+      if (event.target.closest("#drop-action-close")) {
+        closeDropActionMenu(true);
+        return;
+      }
+      const item = event.target.closest("[data-drop-item]");
+      if (item) openDropActionMenu(item);
+    });
+    [el.dropAtlasReturn, el.dropForgingReturn].forEach((banner) => {
+      if (banner) banner.addEventListener("click", function (event) {
+        if (event.target.closest("[data-drop-return]")) returnFromDropTarget();
+      });
+    });
+    document.addEventListener("click", function (event) {
+      if (el.dropActionMenu.hidden) return;
+      if (!event.target.closest("#drop-action-menu") && !event.target.closest("[data-drop-item]")) closeDropActionMenu(false);
+    });
+    document.addEventListener("keydown", function (event) {
+      if (event.key === "Escape") closeDropActionMenu(true);
+    });
+    window.addEventListener("resize", function () { closeDropActionMenu(false); });
+    window.addEventListener("scroll", function () { closeDropActionMenu(false); }, true);
+  }
+
   function zhuluTargetPartition(target) {
     return target === "atlas" ? "atlas" : "forging";
   }
@@ -370,6 +579,7 @@
     const target = detail.target === "atlas" ? "atlas" : "forging-progress";
     const targetView = captureZhuluTargetView(target);
     clearZhuluJumpSession();
+    if (dropJumpSession) clearDropJumpSession();
 
     if (target === "atlas") {
       atlasState.activated = true;
@@ -578,8 +788,12 @@
       if (activePartition && activePartition !== name) partitionScrollPositions[activePartition] = window.scrollY;
       if (source === "user") {
         if (zhuluJumpSession) clearZhuluJumpSession();
+        if (dropJumpSession) clearDropJumpSession();
         if (name !== "forging") invalidateForgeReturnSession("partition");
         invalidateProgressReturnSession("partition");
+      } else if (dropJumpSession && source !== "drop-link" && source !== "drop-return") {
+        const targetPartition = dropJumpSession.target === "atlas" ? "atlas" : "forging";
+        if (name !== targetPartition) clearDropJumpSession();
       }
       closeBookDetailPopover();
       setPartitionTitle(name);
@@ -1688,7 +1902,7 @@
     const fmtStage = (e) => `<span class="drop-chip">${e.chapter}-${e.stage}</span>`;
     const fmtReward = (e) => `<span class="drop-chip">第${e.chapter}章</span>`;
     return `<div class="drop-item">
-      <h3 class="drop-item-title">${g.item}</h3>
+      <h3 class="drop-item-title"><button type="button" class="drop-result-item-link" data-drop-item="${escapeHtml(g.item)}" title="打开${escapeHtml(g.item)}查询选项">${escapeHtml(g.item)}</button></h3>
       ${dropSectionHtml("普通关卡", g.normal, fmtStage)}
       ${dropSectionHtml("英雄关卡", g.hero, fmtStage)}
       ${dropSectionHtml("声望奖励", g.reward, fmtReward)}

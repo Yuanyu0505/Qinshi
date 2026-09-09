@@ -54,9 +54,51 @@
     return order.map(function (k) { return groups[k]; });
   }
 
+  function resolveNavigationTarget(action, item) {
+    var name = String(item == null ? "" : item).trim();
+    if (!name) return null;
+    var targets = {
+      atlas: { target: "atlas", partition: "atlas", view: "query", mode: null },
+      "forging-progress": { target: "forging-progress", partition: "forging", view: "progress", mode: null },
+      "forging-main": { target: "forging-main", partition: "forging", view: "query", mode: "main" },
+      "forging-material": { target: "forging-material", partition: "forging", view: "query", mode: "material" }
+    };
+    if (!targets[action]) return null;
+    return Object.assign({}, targets[action], { item: name });
+  }
+
+  function stableValue(value) {
+    if (Array.isArray(value)) return value.map(stableValue);
+    if (!value || typeof value !== "object") return value;
+    return Object.keys(value).sort().reduce(function (result, key) {
+      result[key] = stableValue(value[key]);
+      return result;
+    }, {});
+  }
+
+  function fingerprint(value) {
+    return JSON.stringify(stableValue(value));
+  }
+
+  function createNavigationSession(target, sourceView, targetView, appliedTargetView) {
+    return {
+      target: target,
+      sourceView: stableValue(sourceView || {}),
+      targetView: stableValue(targetView || {}),
+      appliedFingerprint: fingerprint(appliedTargetView || {})
+    };
+  }
+
+  function shouldRestoreNavigationTarget(session, currentTargetView) {
+    return Boolean(session && session.appliedFingerprint === fingerprint(currentTargetView || {}));
+  }
+
   return {
     normalize: normalize,
     findDrops: findDrops,
-    groupDrops: groupDrops
+    groupDrops: groupDrops,
+    resolveNavigationTarget: resolveNavigationTarget,
+    createNavigationSession: createNavigationSession,
+    shouldRestoreNavigationTarget: shouldRestoreNavigationTarget
   };
 });

@@ -377,6 +377,10 @@
     </section>
 
     <section id="partition-forging" hidden>
+      <div id="drop-forging-return" class="drop-return-banner" hidden>
+        <span>正在查看关卡掉落道具：<strong></strong></span>
+        <button type="button" class="seg" data-drop-return>返回关卡掉落</button>
+      </div>
       <div id="zhulu-forging-return" class="zhulu-return-banner" hidden>
         <div><span>正在查看逐鹿典籍：<strong></strong></span><div class="zhulu-forging-match-options"></div></div>
         <button type="button" class="seg" data-zhulu-return>返回逐鹿</button>
@@ -458,23 +462,37 @@
             <tr><th>道具名称</th><th>普通关卡</th></tr>
           </thead>
           <tbody>
-            <tr><td><span class="mat material-token mat-orange">白羽绸衣</span></td><td>56-7、51-7</td></tr>
-            <tr><td><span class="mat material-token mat-orange">天问</span></td><td>56-5、51-5</td></tr>
-            <tr><td><span class="mat material-token mat-orange">醉梦</span></td><td>55-7、50-7</td></tr>
-            <tr><td><span class="mat material-token mat-orange">巨阙</span></td><td>55-5、50-5</td></tr>
-            <tr><td><span class="mat material-token mat-orange">纵横战袍</span></td><td>54-7、49-7</td></tr>
-            <tr><td><span class="mat material-token mat-orange">秋骊</span></td><td>54-5、49-5</td></tr>
-            <tr><td><span class="mat material-token mat-orange">苍云甲</span></td><td>53-7、48-7</td></tr>
-            <tr><td><span class="mat material-token mat-orange">墨眉</span></td><td>53-5、48-5</td></tr>
-            <tr><td><span class="mat material-token mat-orange">月华战袍</span></td><td>52-7</td></tr>
-            <tr><td><span class="mat material-token mat-orange">管事</span></td><td>52-5</td></tr>
+            <tr><td><button type="button" class="mat material-token mat-orange drop-item-link" data-drop-item="白羽绸衣">白羽绸衣</button></td><td>56-7、51-7</td></tr>
+            <tr><td><button type="button" class="mat material-token mat-orange drop-item-link" data-drop-item="天问">天问</button></td><td>56-5、51-5</td></tr>
+            <tr><td><button type="button" class="mat material-token mat-orange drop-item-link" data-drop-item="醉梦">醉梦</button></td><td>55-7、50-7</td></tr>
+            <tr><td><button type="button" class="mat material-token mat-orange drop-item-link" data-drop-item="巨阙">巨阙</button></td><td>55-5、50-5</td></tr>
+            <tr><td><button type="button" class="mat material-token mat-orange drop-item-link" data-drop-item="纵横战袍">纵横战袍</button></td><td>54-7、49-7</td></tr>
+            <tr><td><button type="button" class="mat material-token mat-orange drop-item-link" data-drop-item="秋骊">秋骊</button></td><td>54-5、49-5</td></tr>
+            <tr><td><button type="button" class="mat material-token mat-orange drop-item-link" data-drop-item="苍云甲">苍云甲</button></td><td>53-7、48-7</td></tr>
+            <tr><td><button type="button" class="mat material-token mat-orange drop-item-link" data-drop-item="墨眉">墨眉</button></td><td>53-5、48-5</td></tr>
+            <tr><td><button type="button" class="mat material-token mat-orange drop-item-link" data-drop-item="月华战袍">月华战袍</button></td><td>52-7</td></tr>
+            <tr><td><button type="button" class="mat material-token mat-orange drop-item-link" data-drop-item="管事">管事</button></td><td>52-5</td></tr>
           </tbody>
         </table>
       </section>
       <div id="drop-results"></div>
+      <div id="drop-action-menu" class="drop-action-menu" role="dialog" aria-modal="false" aria-labelledby="drop-action-title" hidden>
+        <div class="drop-action-head">
+          <strong id="drop-action-title"></strong>
+          <button id="drop-action-close" type="button" class="link-btn">关闭</button>
+        </div>
+        <button type="button" class="seg" data-drop-action="atlas">图鉴查询</button>
+        <button type="button" class="seg" data-drop-action="forging-progress">橙装锻造个人进度查询</button>
+        <button type="button" class="seg" data-drop-action="forging-main">作为主锻造装备查询</button>
+        <button type="button" class="seg" data-drop-action="forging-material">作为素材装备查询</button>
+      </div>
     </section>
 
     <section id="partition-atlas">
+      <div id="drop-atlas-return" class="drop-return-banner" hidden>
+        <span>正在查看关卡掉落道具：<strong></strong></span>
+        <button type="button" class="seg" data-drop-return>返回关卡掉落</button>
+      </div>
       <div id="zhulu-atlas-return" class="zhulu-return-banner" hidden>
         <span>正在查看逐鹿典籍：<strong></strong></span>
         <button type="button" class="seg" data-zhulu-return>返回逐鹿</button>

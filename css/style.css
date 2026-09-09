@@ -605,6 +605,21 @@ tr.hit-row td { background: rgba(212, 175, 55, .06); }
   color: var(--gold);
   letter-spacing: 1px;
 }
+.drop-result-item-link {
+  padding: 2px 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-weight: inherit;
+  letter-spacing: inherit;
+  cursor: pointer;
+}
+.drop-item-link { cursor: pointer; font-family: inherit; }
+.drop-result-item-link:hover,
+.drop-result-item-link:focus-visible { color: #ffe08a; text-decoration: underline; text-underline-offset: 4px; }
+.drop-item-link:hover,
+.drop-item-link:focus-visible { filter: brightness(1.14); box-shadow: 0 0 0 2px rgba(255, 211, 105, .35); }
 .drop-title {
   margin: 0 0 10px;
   font-size: 16px;
@@ -3626,7 +3641,8 @@ tbody tr:hover { background-color: rgba(217, 173, 60, .06); }
 .zhulu-book-name:hover,
 .zhulu-book-name:focus-visible { filter: brightness(1.15); box-shadow: 0 0 0 2px rgba(255, 211, 105, .35); }
 .zhulu-yuanbao { color: var(--muted); font-size: 12px; line-height: 1.35; text-align: center; }
-.zhulu-action-menu {
+.zhulu-action-menu,
+.drop-action-menu {
   position: fixed;
   z-index: 90;
   display: grid;
@@ -3637,11 +3653,16 @@ tbody tr:hover { background-color: rgba(217, 173, 60, .06); }
   background: #17110b;
   box-shadow: 0 16px 44px rgba(0, 0, 0, .62);
 }
-.zhulu-action-menu[hidden] { display: none; }
+.zhulu-action-menu[hidden],
+.drop-action-menu[hidden] { display: none; }
 .zhulu-action-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding-bottom: 6px; border-bottom: 1px solid var(--line); }
 .zhulu-action-head strong { color: var(--gold); }
-.zhulu-action-menu > .seg { width: 100%; text-align: left; }
-.zhulu-return-banner {
+.drop-action-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding-bottom: 6px; border-bottom: 1px solid var(--line); }
+.drop-action-head strong { color: var(--gold); }
+.zhulu-action-menu > .seg,
+.drop-action-menu > .seg { width: 100%; text-align: left; }
+.zhulu-return-banner,
+.drop-return-banner {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -3652,8 +3673,10 @@ tbody tr:hover { background-color: rgba(217, 173, 60, .06); }
   border-radius: 8px;
   background: rgba(103, 66, 18, .18);
 }
-.zhulu-return-banner[hidden] { display: none; }
-.zhulu-return-banner strong { color: var(--gold); }
+.zhulu-return-banner[hidden],
+.drop-return-banner[hidden] { display: none; }
+.zhulu-return-banner strong,
+.drop-return-banner strong { color: var(--gold); }
 .zhulu-forging-match-options { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; margin-top: 6px; color: var(--muted); font-size: 12px; }
 .zhulu-forging-match-options .link-btn { min-height: 28px; padding: 2px 0; }
 
@@ -3691,8 +3714,12 @@ tbody tr:hover { background-color: rgba(217, 173, 60, .06); }
   .zhulu-progress-table tr { grid-template-columns: 52px minmax(0, 1fr) 52px minmax(0, 1fr); margin: 8px; }
   .zhulu-progress-table td { padding: 10px 4px; font-size: 12px; }
   .zhulu-progress-book-link { padding: 6px 4px; }
-  .zhulu-return-banner { align-items: stretch; flex-direction: column; }
-  .zhulu-return-banner .seg { width: 100%; }
+  .zhulu-return-banner,
+  .drop-return-banner { align-items: stretch; flex-direction: column; }
+  .zhulu-return-banner .seg,
+  .drop-return-banner .seg { width: 100%; min-height: 44px; }
+  .drop-item-link,
+  .drop-result-item-link { min-height: 44px; }
 }
 
 @media (max-width: 360px) {

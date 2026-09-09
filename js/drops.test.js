@@ -75,3 +75,44 @@ test("groupDrops：空查询与无结果返回空数组", () => {
   assert.deepStrictEqual(D.groupDrops(fixture, ""), []);
   assert.deepStrictEqual(D.groupDrops(fixture, "不存在"), []);
 });
+
+test("resolveNavigationTarget：四个入口映射到正确的查询分区与模式", () => {
+  assert.deepStrictEqual(D.resolveNavigationTarget("atlas", "苍云甲"), {
+    target: "atlas", partition: "atlas", item: "苍云甲", view: "query", mode: null
+  });
+  assert.deepStrictEqual(D.resolveNavigationTarget("forging-progress", "苍云甲"), {
+    target: "forging-progress", partition: "forging", item: "苍云甲", view: "progress", mode: null
+  });
+  assert.deepStrictEqual(D.resolveNavigationTarget("forging-main", "苍云甲"), {
+    target: "forging-main", partition: "forging", item: "苍云甲", view: "query", mode: "main"
+  });
+  assert.deepStrictEqual(D.resolveNavigationTarget("forging-material", "苍云甲"), {
+    target: "forging-material", partition: "forging", item: "苍云甲", view: "query", mode: "material"
+  });
+  assert.strictEqual(D.resolveNavigationTarget("unknown", "苍云甲"), null);
+  assert.strictEqual(D.resolveNavigationTarget("atlas", "  "), null);
+});
+
+test("createNavigationSession：目标状态未改变时允许恢复跳转前状态", () => {
+  const sourceView = { query: "甲", scrollY: 618 };
+  const targetView = { tab: "全部", query: "天问" };
+  const appliedTargetView = { tab: "全部", query: "苍云甲" };
+  const session = D.createNavigationSession("atlas", sourceView, targetView, appliedTargetView);
+
+  assert.deepStrictEqual(session.sourceView, sourceView);
+  assert.deepStrictEqual(session.targetView, targetView);
+  assert.strictEqual(D.shouldRestoreNavigationTarget(session, { query: "苍云甲", tab: "全部" }), true);
+});
+
+test("shouldRestoreNavigationTarget：用户改动目标页后不恢复跳转前状态", () => {
+  const session = D.createNavigationSession(
+    "forging-main",
+    { query: "甲", scrollY: 618 },
+    { view: "query", mode: "material", query: "墨眉" },
+    { view: "query", mode: "main", query: "苍云甲" }
+  );
+
+  assert.strictEqual(D.shouldRestoreNavigationTarget(session, {
+    view: "query", mode: "main", query: "天问"
+  }), false);
+});

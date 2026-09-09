@@ -197,6 +197,48 @@ test("个人进度目录：普通名、神兵名和唯一别名解析为同一�
   assert.strictEqual(EquipmentForging.resolveProgressFamily(catalog, "神兵"), null);
 });
 
+test("锻造共享查询：神兵名和唯一简称统一为普通锻造装备族", () => {
+  const catalog = EquipmentForging.buildProgressEquipmentCatalog(forgingItems, equipmentItems);
+  assert.deepStrictEqual(
+    EquipmentForging.normalizeSharedForgingSearch(catalog, "神兵月光"),
+    { query: "月光耳坠", familyKey: "月光耳坠" }
+  );
+  assert.deepStrictEqual(
+    EquipmentForging.normalizeSharedForgingSearch(catalog, "月光"),
+    { query: "月光耳坠", familyKey: "月光耳坠" }
+  );
+  assert.deepStrictEqual(
+    EquipmentForging.normalizeSharedForgingSearch(catalog, "神兵"),
+    { query: "神兵", familyKey: null }
+  );
+  assert.deepStrictEqual(
+    EquipmentForging.normalizeSharedForgingSearch(catalog, "  秦时周年历  "),
+    { query: "秦时周年历", familyKey: null }
+  );
+});
+
+test("锻造共享查询会话：激活后持续采用最新装备族并可随页面状态恢复", () => {
+  const catalog = EquipmentForging.buildProgressEquipmentCatalog(forgingItems, equipmentItems);
+  const context = EquipmentForging.createSharedForgingSearchContext(catalog);
+
+  assert.deepStrictEqual(context.capture(), { active: false, query: "", familyKey: null });
+  assert.deepStrictEqual(context.activate("神兵月光"), {
+    active: true,
+    query: "月光耳坠",
+    familyKey: "月光耳坠"
+  });
+  assert.deepStrictEqual(context.update("神兵墨眉"), {
+    active: true,
+    query: "墨眉",
+    familyKey: "墨眉"
+  });
+
+  context.deactivate();
+  assert.deepStrictEqual(context.capture(), { active: false, query: "", familyKey: null });
+  context.restore({ active: true, query: "列子", familyKey: "列子" });
+  assert.deepStrictEqual(context.capture(), { active: true, query: "列子", familyKey: "列子" });
+});
+
 test("个人进度目录：四组稀缺装备保留普通和神兵两个选项", () => {
   const catalog = EquipmentForging.buildProgressEquipmentCatalog(forgingItems, equipmentItems);
   assert.deepStrictEqual(

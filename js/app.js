@@ -17,6 +17,7 @@
   const PROG = window.PROGRESS;
   const PROG_STORE_KEY = "qinshi_forging_progress_v1";
   const progressEquipmentCatalog = EQUIP_FORGING.buildProgressEquipmentCatalog(FDATA.items, DATA.items);
+  const sharedForgingSearch = EQUIP_FORGING.createSharedForgingSearchContext(progressEquipmentCatalog);
   const ATLAS_DATA = window.ATLAS_DATA;
   const ATLAS = window.ATLAS;
   const QUIZ_DATA = window.QUIZ_DATA;
@@ -333,6 +334,7 @@
   function captureForgingView() {
     return {
       view: progState.view,
+      sharedSearch: sharedForgingSearch.capture(),
       progress: captureProgressView(),
       query: {
         mode: forgeState.mode,
@@ -344,6 +346,7 @@
 
   function restoreForgingView(view) {
     const saved = view || {};
+    sharedForgingSearch.restore(saved.sharedSearch);
     restoreProgressView(saved.progress || { view: saved.view });
     progState.view = saved.view || progState.view;
     const query = saved.query || {};
@@ -353,6 +356,28 @@
     applyForgeView();
     if (progState.view === "progress") applyProgressSearch();
     else applyForging();
+  }
+
+  function applySharedForgingSearch(view, shared) {
+    const targetView = view || progState.view;
+    const context = shared || sharedForgingSearch.capture();
+    if (!context.active) return;
+    if (targetView === "progress") {
+      progState.page = 0;
+      progState.query = context.query;
+      progState.familyKey = context.familyKey;
+      el.progSearch.value = context.query;
+      return;
+    }
+    forgeState.query = context.query;
+    el.forgeSearch.value = context.query;
+  }
+
+  function syncSharedForgingSearchFrom(view) {
+    const current = sharedForgingSearch.capture();
+    if (!current.active) return current;
+    const keyword = view === "progress" ? el.progSearch.value : el.forgeSearch.value;
+    return sharedForgingSearch.update(keyword);
   }
 
   function cloneNavigationValue(value) {
@@ -388,19 +413,16 @@
 
   function applyForgingNavigation(item, options) {
     const target = options || {};
+    const shared = sharedForgingSearch.activate(item.forgeKey);
     if (target.view === "progress") {
       progState.view = "progress";
-      progState.page = 0;
-      progState.query = item.forgeKey;
-      progState.familyKey = item.familyKey;
-      el.progSearch.value = item.forgeKey;
+      applySharedForgingSearch("progress", shared);
       applyForgeView();
       applyProgressSearch();
     } else {
       progState.view = "query";
       forgeState.mode = target.mode || "main";
-      forgeState.query = item.forgeKey;
-      el.forgeSearch.value = item.forgeKey;
+      applySharedForgingSearch("query", shared);
       applyForgeView();
       applyForging();
     }
@@ -529,6 +551,7 @@
 
   function clearItemNavigation() {
     if (itemNavigationStack) itemNavigationStack.clear();
+    sharedForgingSearch.deactivate();
     updateItemNavigationReturn();
     closeItemNavigationMenu(false);
   }
@@ -1803,9 +1826,15 @@
     el.forgeView.addEventListener("click", (e) => {
       const btn = e.target.closest("button[data-view]");
       if (!btn) return;
-      if (progState.view !== btn.dataset.view) invalidateForgeReturnSession("forge-view");
-      progState.view = btn.dataset.view;
+      const nextView = btn.dataset.view;
+      if (progState.view !== nextView) {
+        invalidateForgeReturnSession("forge-view");
+        const shared = syncSharedForgingSearchFrom(progState.view);
+        progState.view = nextView;
+        applySharedForgingSearch(nextView, shared);
+      }
       applyForgeView();
+      if (progState.view === "query" && sharedForgingSearch.capture().active) applyForging();
     });
     el.progAddDisciple.addEventListener("click", () => {
       progState.disciples.push({ id: uid(), name: "弟子" + (progState.disciples.length + 1), items: [] });
@@ -1816,6 +1845,11 @@
     UI_PERFORMANCE.bindInput(el.progSearch, () => {
       progState.query = el.progSearch.value;
       progState.familyKey = EQUIP_FORGING.resolveProgressFamily(progressEquipmentCatalog, progState.query);
+      if (sharedForgingSearch.capture().active) {
+        const shared = sharedForgingSearch.update(progState.query);
+        progState.query = shared.query;
+        progState.familyKey = shared.familyKey;
+      }
     }, progressRefresh);
     el.progSearchResults.addEventListener("click", (e) => {
       const stageButton = e.target.closest('button[data-act="set-stage"]');
@@ -2211,6 +2245,7 @@
     UI_PERFORMANCE.bindInput(el.forgeSearch, () => {
       invalidateForgeReturnSession("forge-search");
       forgeState.query = el.forgeSearch.value;
+      if (sharedForgingSearch.capture().active) sharedForgingSearch.update(forgeState.query);
     }, forgingRefresh);
   }
 

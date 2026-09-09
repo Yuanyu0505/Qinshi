@@ -194,6 +194,57 @@
     return families.length === 1 ? families[0] : null;
   }
 
+  function normalizeSharedForgingSearch(catalog, keyword) {
+    var query = String(keyword == null ? "" : keyword).trim();
+    var familyKey = resolveProgressFamily(catalog, query);
+    return {
+      query: familyKey || query,
+      familyKey: familyKey
+    };
+  }
+
+  function createSharedForgingSearchContext(catalog) {
+    var state = { active: false, query: "", familyKey: null };
+
+    function capture() {
+      return {
+        active: state.active,
+        query: state.query,
+        familyKey: state.familyKey
+      };
+    }
+
+    function setKeyword(keyword) {
+      var normalized = normalizeSharedForgingSearch(catalog, keyword);
+      state.query = normalized.query;
+      state.familyKey = normalized.familyKey;
+      return capture();
+    }
+
+    return {
+      activate: function (keyword) {
+        state.active = true;
+        return setKeyword(keyword);
+      },
+      update: function (keyword) {
+        return setKeyword(keyword);
+      },
+      deactivate: function () {
+        state = { active: false, query: "", familyKey: null };
+        return capture();
+      },
+      capture: capture,
+      restore: function (saved) {
+        var value = saved || {};
+        if (!value.active) return this.deactivate();
+        state.active = true;
+        state.query = String(value.query == null ? "" : value.query).trim();
+        state.familyKey = value.familyKey == null ? resolveProgressFamily(catalog, state.query) : value.familyKey;
+        return capture();
+      }
+    };
+  }
+
   function preferredProgressEquipment(catalog, savedName) {
     var name = normalizeProgressKeyword(savedName);
     var matches = (Array.isArray(catalog) ? catalog : []).filter(function (entry) {
@@ -226,6 +277,8 @@
     buildProgressEquipmentCatalog: buildProgressEquipmentCatalog,
     searchProgressEquipmentCatalog: searchProgressEquipmentCatalog,
     resolveProgressFamily: resolveProgressFamily,
+    normalizeSharedForgingSearch: normalizeSharedForgingSearch,
+    createSharedForgingSearchContext: createSharedForgingSearchContext,
     preferredProgressEquipment: preferredProgressEquipment,
     createProgressReturnSession: createProgressReturnSession,
     matchesProgressReturnSession: matchesProgressReturnSession,

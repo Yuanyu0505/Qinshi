@@ -1,7 +1,7 @@
 "use strict";
 
 const CACHE_PREFIX = "qinshi-site-";
-const CACHE_NAME = CACHE_PREFIX + "1.0.34";
+const CACHE_NAME = CACHE_PREFIX + "1.0.35";
 const PRECACHE_URLS = [
   "./",
   "./index.html",
@@ -18,6 +18,7 @@ const PRECACHE_URLS = [
   "./data/formations.js",
   "./data/machine-beasts.js",
   "./data/battle-box-pill-pouch.js",
+  "./data/zhulu.js",
   "./js/query.js",
   "./js/forging.js",
   "./js/drops.js",
@@ -38,6 +39,8 @@ const PRECACHE_URLS = [
   "./js/machine-beasts-ui.js",
   "./js/battle-box-pill-pouch.js",
   "./js/battle-box-pill-pouch-ui.js",
+  "./js/zhulu.js",
+  "./js/zhulu-ui.js",
   "./js/equipment-compare.js",
   "./js/equipment-forging.js",
   "./js/settings.js",

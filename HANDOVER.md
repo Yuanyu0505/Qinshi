@@ -10,7 +10,7 @@
 
 ## 2. 项目简介
 
-可本地运行并可安装为 PWA 的秦时明月攻略工具，用于查询装备、锻造、关卡掉落、图鉴、禁地、铭文、兵法、合阵、答题和楼兰棋阵数据并记录个人进度。Windows 可直接双击打开；Android、iPhone 和 iPad 通过 GitHub Pages 首次联网缓存后可完全离线使用。
+可本地运行并可安装为 PWA 的秦时明月攻略工具，用于查询装备、锻造、关卡掉落、图鉴、禁地、铭文、兵法、合阵、逐鹿、答题和楼兰棋阵数据并记录个人进度。Windows 可直接双击打开；Android、iPhone 和 iPad 通过 GitHub Pages 首次联网缓存后可完全离线使用。
 
 ## 3. 运行方式
 
@@ -43,13 +43,14 @@
 | 图鉴 | 攻/血/内力/防四个图鉴分区；按弟子名、获取途径、所属图鉴、道具、等级（如 9级、10级以下）搜索；等级筛选（全部/5级以下/10级以下/15级以下）；图鉴等级为个人进度，等级 ≥ 10 无需装备，已超阶段自动隐藏；装备按紫/橙底色区分品质 | `data/atlas.js` |
 | 禁地 | 按日期、大小禁地、弟子、图鉴属性与奖励搜索；展示预测周期、贡献/排行/装备碎片/机关兽/神核/橙装奖励，并保存每期勾选需求 | `data/forbidden.js` |
 | 楼兰棋阵 | 楼兰 5 张、棋阵 11 张本地图片展示 | `images/` |
+| 逐鹿 | 5～2500 进度奖励定位；赛季典籍年月、名称、品质、档位组合筛选；2027 年起按稳定十个月周期提供明确标记的预测；典籍可临时跳转锻造个人进度或图鉴需求 | `data/zhulu.js` |
 | 铭文 | 个人进度、品质/天位/盾位查询筛选、天位主属性与盾位副属性资料图表 | `data/inscription.js` |
 | 兵法 | “兵法详情”保留六兵法个人进度、单项材料计算和 0–15 阶资料；“计算”统一配置六兵法起止进度、材料库存、整包价格，并展示单项及合计元宝 | `data/tactics.js` |
 | 合阵 | 19 个合阵官方资料；个人弟子等级与当前攻/血/防保存；自由试算、各助阵位置独立排序、主将/助阵精确联合推荐和转化属性汇总 | `data/formations.js` |
 | 机关兽 | 霸道/非攻流派切换进度；27 个机关兽累计研发度、阶数/改造库存与碎片保存；最少投入精确方案、研发材料和贡献元宝；三个子页面支持机关兽搜索与命中高亮；资料按归属效果、流派阶数、累计研发度、阶数改造研发度排列 | `data/machine-beasts.js` |
 | 答题 | 按题目关键词查询标红正确答案 | `data/quiz.js` |
 
-桌面导航顺序为图鉴、橙装锻造、关卡掉落、装备属性、禁地、铭文、机关兽、兵法、合阵、楼兰棋阵、答题、设置。手机端的图鉴、橙装锻造、关卡掉落、装备属性为主导航；其余功能位于“更多”面板。
+桌面导航顺序为图鉴、橙装锻造、关卡掉落、装备属性、禁地、铭文、机关兽、兵法、战匣丹囊、合阵、楼兰棋阵、逐鹿、答题、设置。手机端的图鉴、橙装锻造、关卡掉落、装备属性为主导航；其余功能位于“更多”面板。
 
 ## 5. 文件结构
 
@@ -71,6 +72,8 @@ deepseek/
 │  ├─ inscription.js               # 铭文查询和个人进度
 │  ├─ formations.js                # 合阵输入、矩阵、排序和精确推荐核心
 │  ├─ formations-ui.js             # 合阵个人进度、自由试算与响应式页面
+│  ├─ zhulu.js                     # 逐鹿奖励定位、赛季筛选、十个月预测和跳转会话核心
+│  ├─ zhulu-ui.js                  # 逐鹿资料响应式渲染与交互
 │  ├─ quiz.js                      # 只读题库搜索
 │  ├─ settings.js                  # 本机进度导出、导入与导入前备份
 │  ├─ pwa.js                       # 安装、离线状态和点击确认更新
@@ -100,6 +103,7 @@ $python = 'C:\Users\pghyl\.cache\codex-runtimes\codex-primary-runtime\dependenci
 & $python tools/build_atlas.py               # → data/atlas.js
 & $python tools/build_tactics.py             # → data/tactics.js
 & $python tools/build_formations.py          # → data/formations.js
+& $python tools/build_zhulu.py --workbook "秦时相关（更新贯侯钟离昧）20260618.xlsx" --output data/zhulu.js
 ```
 
 解析规则要点：
@@ -109,6 +113,7 @@ $python = 'C:\Users\pghyl\.cache\codex-runtimes\codex-primary-runtime\dependenci
 - 兵法：`data/tactics.js` 只能由 `tools/build_tactics.py` 从“新兵法”工作表生成，禁止手改。六个固定数据区域是 `B2:P20`、`B24:P42`、`B45:P63`、`B66:P84`、`S2:AD20`、`S24:AD42`。业务修正包括：常规真言按显示百分比解析且统真言为固定值；阴、雷小数百分比换算为显示百分比；火之印记由兵法名称生成以避开错误表头；风兵法 6 阶防属性修正为 240。
 - 名称纠错：图鉴与橙装锻造生成器在读取工作簿时统一执行 `墨梅→墨眉`、`惊倪→惊鲵`，工作簿源文件保持不变，禁止在生成后的 `data/*.js` 中手改绕过生成器。
 - 合阵：`data/formations.js` 只能由 `tools/build_formations.py` 从“合阵”工作表生成，禁止手改。资料区为 `B1:I59`、`K1:R71`、`U1:AB17`，官方主将/助阵汇总为 `J76:R95`。生成器严格校验 19 个合阵、144 条候选弟子、连续 5/6 个助阵位置、转换规则、推荐弟子关联和名称标准化；“神·弟子”统一显示为“神弟子”。
+- 逐鹿：`data/zhulu.js` 由 `tools/build_zhulu.py` 只读提取“逐鹿”工作表 `I2:K42` 与 `M2:S82`。2026 年 12 月以前只使用明确资料；2027 年起按 2024 年 3 月开始的稳定十个月组合循环预测，预测内容必须保留“预测”标识；派生数据统一使用“五德终始”。
 
 ## 7. 个人进度存储
 
@@ -147,6 +152,7 @@ $python = 'C:\Users\pghyl\.cache\codex-runtimes\codex-primary-runtime\dependenci
 
 - `service-worker.js` 的缓存名格式为 `qinshi-site-<版本号>`；每次发布静态资源变更时必须同步提升该版本号。
 - `js/pwa.js` 中的 `APP_VERSION` 必须与 Service Worker 缓存版本一致。
+- `1.0.35` 新增只读逐鹿分区、进度奖励定位、赛季典籍组合筛选、十个月循环预测和跨橙装锻造／图鉴临时查询；新增三个逐鹿运行时文件进入离线预缓存。
 - `1.0.14` 图鉴装备备注来源筛选改为严格互斥：单独“禁地”“碎片”不再包含组合来源，“碎片/禁地”仅匹配两种组合书写顺序。
 - `1.0.13` 新增图鉴弟子五行属性和禁地完整分区；禁地数据、核心与界面脚本纳入离线预缓存和 GitHub Pages 构建清单，并补齐手机/平板的单列奖励、触控、复制与搜索高亮布局。
 - `1.0.12` 汇总发布 2026-08-25 的图鉴库存筛选与置顶、机关兽流派计算、装备多维对比、锻造选择器及装备属性展示更新；补齐手机/平板响应式布局，并将 `js/machine-beast-school-planner.js`、`js/equipment-compare.js` 纳入离线预缓存和 GitHub Pages 构建清单。
@@ -162,7 +168,7 @@ $python = 'C:\Users\pghyl\.cache\codex-runtimes\codex-primary-runtime\dependenci
 
 ```powershell
 $python = 'C:\Users\pghyl\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe'
-node --test js/query.test.js js/forging.test.js js/drops.test.js js/progress.test.js js/atlas.test.js js/tactics.test.js js/formations.test.js serve.test.js
+node --test js/query.test.js js/forging.test.js js/drops.test.js js/progress.test.js js/atlas.test.js js/tactics.test.js js/formations.test.js js/zhulu.test.js serve.test.js
 & $python -m unittest discover -s tests
 ```
 

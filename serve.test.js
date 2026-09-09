@@ -75,6 +75,36 @@ test("index.html 引用数据与样式", async () => {
   });
 });
 
+test("首页提供逐鹿分区及数据、核心和界面脚本", async () => {
+  await withServer(async (port) => {
+    const page = await get(port, "/");
+    assert.strictEqual(page.status, 200);
+    assert.match(page.body, /id="partition-zhulu"/);
+    assert.match(page.body, /data-partition="zhulu">逐鹿</);
+    assert.match(page.body, /id="zhulu-atlas-return"/);
+    assert.match(page.body, /id="zhulu-forging-return"/);
+    assert.match(page.body, /<script src="data\/zhulu\.js"><\/script>/);
+    assert.match(page.body, /<script src="js\/zhulu\.js"><\/script>/);
+    assert.match(page.body, /<script src="js\/zhulu-ui\.js"><\/script>/);
+
+    for (const resource of ["/data/zhulu.js", "/js/zhulu.js", "/js/zhulu-ui.js"]) {
+      const response = await get(port, resource);
+      assert.strictEqual(response.status, 200, resource);
+      assert.match(response.headers["content-type"], /javascript/, resource);
+    }
+  });
+});
+
+test("PWA 1.0.35 离线缓存包含逐鹿资源", () => {
+  const worker = fs.readFileSync(path.join(__dirname, "service-worker.js"), "utf8");
+  const pwa = fs.readFileSync(path.join(__dirname, "js", "pwa.js"), "utf8");
+  assert.match(worker, /CACHE_NAME = CACHE_PREFIX \+ "1\.0\.35"/);
+  assert.match(worker, /\.\/data\/zhulu\.js/);
+  assert.match(worker, /\.\/js\/zhulu\.js/);
+  assert.match(worker, /\.\/js\/zhulu-ui\.js/);
+  assert.match(pwa, /APP_VERSION = "1\.0\.35"/);
+});
+
 test("GET /css/style.css 返回 200 且为 CSS", async () => {
   await withServer(async (port) => {
     const r = await get(port, "/css/style.css");
@@ -645,7 +675,7 @@ test("个人进度装备可进入装备属性并一次性返回原页", async ()
   });
 });
 
-test("PWA 1.0.34 发布合阵优先级与机关兽方案说明", async () => {
+test("PWA 1.0.35 发布逐鹿资料与既有完整资源", async () => {
   const pagesWorkflow = fs.readFileSync(path.join(__dirname, ".github", "workflows", "pages.yml"), "utf8");
   assert.match(pagesWorkflow, /js\/tactics\.js/);
   assert.match(pagesWorkflow, /js\/tactics-ui\.js/);
@@ -661,6 +691,8 @@ test("PWA 1.0.34 发布合阵优先级与机关兽方案说明", async () => {
   assert.match(pagesWorkflow, /js\/battle-box-pill-pouch\.js/);
   assert.match(pagesWorkflow, /js\/battle-box-pill-pouch-ui\.js/);
   assert.match(pagesWorkflow, /js\/inscription-performance\.js/);
+  assert.match(pagesWorkflow, /js\/zhulu\.js/);
+  assert.match(pagesWorkflow, /js\/zhulu-ui\.js/);
   await withServer(async (port) => {
     const [index, worker, pwa, css, schoolPlanner, equipmentCompare, equipmentForging, forbiddenData, forbiddenCore, forbiddenUi] = await Promise.all([
       get(port, "/"),
@@ -684,9 +716,9 @@ test("PWA 1.0.34 发布合阵优先级与机关兽方案说明", async () => {
     assert.strictEqual(forbiddenData.status, 200);
     assert.strictEqual(forbiddenCore.status, 200);
     assert.strictEqual(forbiddenUi.status, 200);
-    assert.match(index.body, /id="pwa-version">1\.0\.34<\/strong>/);
-    assert.match(worker.body, /CACHE_NAME\s*=\s*CACHE_PREFIX\s*\+\s*"1\.0\.34"/);
-    assert.match(pwa.body, /APP_VERSION\s*=\s*"1\.0\.34"/);
+    assert.match(index.body, /id="pwa-version">1\.0\.35<\/strong>/);
+    assert.match(worker.body, /CACHE_NAME\s*=\s*CACHE_PREFIX\s*\+\s*"1\.0\.35"/);
+    assert.match(pwa.body, /APP_VERSION\s*=\s*"1\.0\.35"/);
     assert.match(worker.body, /"\.\/data\/tactics\.js"/);
     assert.match(worker.body, /"\.\/js\/tactics\.js"/);
     assert.match(worker.body, /"\.\/js\/tactics-ui\.js"/);
@@ -705,6 +737,9 @@ test("PWA 1.0.34 发布合阵优先级与机关兽方案说明", async () => {
     assert.match(worker.body, /"\.\/data\/battle-box-pill-pouch\.js"/);
     assert.match(worker.body, /"\.\/js\/battle-box-pill-pouch\.js"/);
     assert.match(worker.body, /"\.\/js\/battle-box-pill-pouch-ui\.js"/);
+    assert.match(worker.body, /"\.\/data\/zhulu\.js"/);
+    assert.match(worker.body, /"\.\/js\/zhulu\.js"/);
+    assert.match(worker.body, /"\.\/js\/zhulu-ui\.js"/);
     assert.match(css.body, /@media \(max-width: 1024px\)[\s\S]*?\.atlas-favorite-toggle\s*\{[\s\S]*?width:\s*44px;[\s\S]*?height:\s*44px;/);
     assert.match(css.body, /#partition-tactics \.tactics-selector \.seg,[\s\S]*?#partition-equipment \.book-detail-toggle\s*\{[\s\S]*?min-height:\s*44px;/);
     assert.match(css.body, /#partition-tactics \.tactics-form-grid select,[\s\S]*?#partition-tactics \.tactics-form-grid input\s*\{[\s\S]*?font-size:\s*16px;/);

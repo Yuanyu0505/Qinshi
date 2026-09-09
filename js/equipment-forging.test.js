@@ -100,8 +100,8 @@ test("橙装锻造反向跳转：存在普通和神兵时优先返回神兵装�
   assert.strictEqual(EquipmentForging.resolveEquipmentTarget("霜血双剑", equipmentItems, forgingItems).name, "神兵霜血");
 });
 
-test("橙装锻造反向跳转：鬼谷子统一映射神兵且无神兵时回退普通装备", () => {
-  assert.strictEqual(EquipmentForging.resolveEquipmentTarget("鬼谷子", equipmentItems, forgingItems).name, "神兵鬼谷子");
+test("橙装锻造反向跳转：鬼谷子和神兵鬼谷子分别映射", () => {
+  assert.strictEqual(EquipmentForging.resolveEquipmentTarget("鬼谷子", equipmentItems, forgingItems).name, "鬼谷子");
   assert.strictEqual(EquipmentForging.resolveEquipmentTarget("神兵鬼谷子", equipmentItems, forgingItems).name, "神兵鬼谷子");
   assert.strictEqual(EquipmentForging.resolveEquipmentTarget("五德终始", equipmentItems, forgingItems).name, "五德终始");
   assert.strictEqual(EquipmentForging.resolveEquipmentTarget("银针", equipmentItems, forgingItems), null);
@@ -179,8 +179,22 @@ test("个人进度目录：普通名和神兵名归一到首选神兵", () => {
   );
   assert.deepStrictEqual(
     EquipmentForging.searchProgressEquipmentCatalog(catalog, "鬼谷子").map((entry) => [entry.forgeName, entry.equipmentName]),
-    [["神兵鬼谷子", "神兵鬼谷子"]]
+    [["鬼谷子", "鬼谷子"], ["神兵鬼谷子", "神兵鬼谷子"]]
   );
+});
+
+test("个人进度目录：鬼谷子和神兵鬼谷子保留为两个独立装备族", () => {
+  const catalog = EquipmentForging.buildProgressEquipmentCatalog(forgingItems, equipmentItems);
+  assert.strictEqual(EquipmentForging.resolveProgressFamily(catalog, "鬼谷子"), "鬼谷子");
+  assert.strictEqual(EquipmentForging.resolveProgressFamily(catalog, "神兵鬼谷子"), "神兵鬼谷子");
+});
+
+test("个人进度目录：普通名、神兵名和唯一别名解析为同一装备族", () => {
+  const catalog = EquipmentForging.buildProgressEquipmentCatalog(forgingItems, equipmentItems);
+  assert.strictEqual(EquipmentForging.resolveProgressFamily(catalog, "月光耳坠"), "月光耳坠");
+  assert.strictEqual(EquipmentForging.resolveProgressFamily(catalog, "神兵月光"), "月光耳坠");
+  assert.strictEqual(EquipmentForging.resolveProgressFamily(catalog, "月光"), "月光耳坠");
+  assert.strictEqual(EquipmentForging.resolveProgressFamily(catalog, "神兵"), null);
 });
 
 test("个人进度目录：四组稀缺装备保留普通和神兵两个选项", () => {

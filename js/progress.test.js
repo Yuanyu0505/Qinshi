@@ -158,3 +158,67 @@ test("个人进度搜索：普通名可命中已保存神兵", () => {
   assert.strictEqual(result.owned.length, 1);
   assert.strictEqual(result.owned[0].progressItem.equipmentName, "神兵墨眉");
 });
+
+test("个人进度搜索：精确装备族同时命中直接持有和待用素材并排除无关名称", () => {
+  const catalog = [
+    { forgeName: "月光耳坠", equipmentName: "月光耳坠", aliases: ["月光耳坠", "月光"], preferred: false },
+    { forgeName: "月光耳坠", equipmentName: "神兵月光", aliases: ["月光耳坠", "神兵月光", "月光"], preferred: true },
+    { forgeName: "月光战袍", equipmentName: "神兵月光战袍", aliases: ["月光战袍", "神兵月光战袍"], preferred: true },
+    { forgeName: "主装备", equipmentName: "神兵主装备", aliases: ["主装备", "神兵主装备"], preferred: true }
+  ];
+  const fixture = { items: [
+    { name: "月光耳坠", stages: [] },
+    { name: "月光战袍", stages: [] },
+    { name: "主装备", stages: [{ stage: "0→1锻", tokens: [
+      { n: "月光耳坠", q: "橙" }, { n: "月光战袍", q: "橙" }
+    ] }] }
+  ] };
+  const disciples = [{ id: "d1", name: "弟子", items: [
+    { id: "i1", forgeName: "月光耳坠", equipmentName: "神兵月光", quality: "red", progress: 0 },
+    { id: "i2", forgeName: "月光战袍", equipmentName: "神兵月光战袍", quality: "red", progress: 0 },
+    { id: "i3", forgeName: "主装备", equipmentName: "神兵主装备", quality: "red", progress: 0 }
+  ] }];
+
+  const result = P.searchEquipment(fixture, disciples, "月光耳坠", catalog, "月光耳坠");
+  assert.deepStrictEqual(result.owned.map((entry) => entry.progressItem.equipmentName), ["神兵月光"]);
+  assert.deepStrictEqual(result.required.map((entry) => entry.progressItem.equipmentName), ["神兵主装备"]);
+  assert.deepStrictEqual(result.required[0].hits[0].tokens.map((entry) => entry.token.n), ["月光耳坠"]);
+});
+
+test("个人进度搜索：鬼谷子和神兵鬼谷子精确装备族互不命中", () => {
+  const catalog = [
+    { forgeName: "鬼谷子", equipmentName: "鬼谷子", aliases: ["鬼谷子"], preferred: true },
+    { forgeName: "神兵鬼谷子", equipmentName: "神兵鬼谷子", aliases: ["神兵鬼谷子"], preferred: true }
+  ];
+  const fixture = { items: [{ name: "鬼谷子", stages: [] }, { name: "神兵鬼谷子", stages: [] }] };
+  const disciples = [{ name: "弟子", items: [
+    { forgeName: "鬼谷子", equipmentName: "鬼谷子", quality: "red", progress: 0 },
+    { forgeName: "神兵鬼谷子", equipmentName: "神兵鬼谷子", quality: "red", progress: 0 }
+  ] }];
+
+  assert.deepStrictEqual(
+    P.searchEquipment(fixture, disciples, "鬼谷子", catalog, "鬼谷子").owned.map((entry) => entry.progressItem.equipmentName),
+    ["鬼谷子"]
+  );
+  assert.deepStrictEqual(
+    P.searchEquipment(fixture, disciples, "神兵鬼谷子", catalog, "神兵鬼谷子").owned.map((entry) => entry.progressItem.equipmentName),
+    ["神兵鬼谷子"]
+  );
+});
+
+test("个人进度搜索：宽泛关键词继续使用原有模糊匹配", () => {
+  const catalog = [
+    { forgeName: "月光耳坠", equipmentName: "神兵月光", aliases: ["月光耳坠", "神兵月光"], preferred: true },
+    { forgeName: "月光战袍", equipmentName: "神兵月光战袍", aliases: ["月光战袍", "神兵月光战袍"], preferred: true }
+  ];
+  const fixture = { items: [{ name: "月光耳坠", stages: [] }, { name: "月光战袍", stages: [] }] };
+  const disciples = [{ name: "弟子", items: [
+    { forgeName: "月光耳坠", equipmentName: "神兵月光", quality: "red", progress: 0 },
+    { forgeName: "月光战袍", equipmentName: "神兵月光战袍", quality: "red", progress: 0 }
+  ] }];
+
+  assert.deepStrictEqual(
+    P.searchEquipment(fixture, disciples, "月光", catalog).owned.map((entry) => entry.progressItem.equipmentName),
+    ["神兵月光", "神兵月光战袍"]
+  );
+});

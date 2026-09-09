@@ -85,7 +85,7 @@
     var targetName = String(forgeName == null ? "" : forgeName).trim();
     if (!targetName || !Array.isArray(equipmentItems) || !Array.isArray(forgingItems)) return null;
     if (targetName === "鬼谷子" || targetName === "神兵鬼谷子") {
-      return equipmentItems.find(function (item) { return item.name === "神兵鬼谷子"; }) || null;
+      return equipmentItems.find(function (item) { return item.name === targetName; }) || null;
     }
     var candidates = equipmentItems.filter(function (item) {
       return resolveForgeTarget(item.name, forgingItems) === targetName;
@@ -125,7 +125,7 @@
 
   function progressAliases(forgeName, equipmentName) {
     var values = [forgeName, equipmentName];
-    if (equipmentName.indexOf("神兵") === 0) values.push(equipmentName.slice(2));
+    if (equipmentName.indexOf("神兵") === 0 && equipmentName !== "神兵鬼谷子") values.push(equipmentName.slice(2));
     if (forgeName === "地煞魔铠") values.push("魔铠");
     if (forgeName === "月光耳坠") values.push("月光");
     if (forgeName === "寒霜挂坠") values.push("寒霜");
@@ -147,11 +147,14 @@
 
   function buildProgressEquipmentCatalog(forgingItems, equipmentItems) {
     if (!Array.isArray(forgingItems) || !Array.isArray(equipmentItems)) return [];
-    var hasDivineGhost = forgingItems.some(function (item) { return item.name === "神兵鬼谷子"; });
     var catalog = [];
     forgingItems.forEach(function (forgeItem) {
       if (!forgeItem || !forgeItem.name) return;
-      if (forgeItem.name === "鬼谷子" && hasDivineGhost) return;
+      if (forgeItem.name === "鬼谷子") {
+        var ordinaryGhost = equipmentItems.find(function (item) { return item.name === "鬼谷子"; });
+        catalog.push(progressOption(forgeItem, ordinaryGhost, false));
+        return;
+      }
       var divineException = PROGRESS_VARIANT_EXCEPTIONS[forgeItem.name];
       if (divineException) {
         var ordinary = equipmentItems.find(function (item) { return item.name === forgeItem.name; });
@@ -177,6 +180,18 @@
         return normalizeProgressKeyword(alias).indexOf(query) !== -1;
       });
     });
+  }
+
+  function resolveProgressFamily(catalog, keyword) {
+    var query = normalizeProgressKeyword(keyword);
+    if (!query) return null;
+    var families = [];
+    (Array.isArray(catalog) ? catalog : []).forEach(function (entry) {
+      var names = [entry.forgeName, entry.equipmentName].concat(entry.aliases || []);
+      var exact = names.some(function (name) { return normalizeProgressKeyword(name) === query; });
+      if (exact && families.indexOf(entry.forgeName) === -1) families.push(entry.forgeName);
+    });
+    return families.length === 1 ? families[0] : null;
   }
 
   function preferredProgressEquipment(catalog, savedName) {
@@ -210,6 +225,7 @@
     resolveEquipmentTarget: resolveEquipmentTarget,
     buildProgressEquipmentCatalog: buildProgressEquipmentCatalog,
     searchProgressEquipmentCatalog: searchProgressEquipmentCatalog,
+    resolveProgressFamily: resolveProgressFamily,
     preferredProgressEquipment: preferredProgressEquipment,
     createProgressReturnSession: createProgressReturnSession,
     matchesProgressReturnSession: matchesProgressReturnSession,

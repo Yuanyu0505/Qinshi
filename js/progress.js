@@ -77,6 +77,10 @@
       if (exact) return exact;
     }
     var name = String(item && (item.name || item.equipmentName || item.forgeName) || "");
+    if (legacy && name === "鬼谷子") {
+      var divineGhost = entries.find(function (entry) { return entry.forgeName === "神兵鬼谷子"; });
+      if (divineGhost) return divineGhost;
+    }
     var matches = entries.filter(function (entry) {
       return entry.forgeName === name || entry.equipmentName === name || entry.aliases.indexOf(name) >= 0;
     });
@@ -177,10 +181,29 @@
    * 跨全部弟子搜索个人进度中的装备关系。
    * owned：弟子直接持有的装备；required：未完成阶段中的材料需求。
    */
-  function searchEquipment(data, disciples, keyword, catalog) {
+  function exactCatalogFamily(catalog, value) {
+    var query = normalizeSearch(value);
+    if (!query) return null;
+    var families = [];
+    (Array.isArray(catalog) ? catalog : []).forEach(function (entry) {
+      var names = [entry.forgeName, entry.equipmentName].concat(entry.aliases || []);
+      if (names.some(function (name) { return normalizeSearch(name) === query; }) && families.indexOf(entry.forgeName) === -1) {
+        families.push(entry.forgeName);
+      }
+    });
+    return families.length === 1 ? families[0] : null;
+  }
+
+  function progressItemFamily(catalog, progressItem) {
+    var option = catalogMatch(catalog, progressItem, false);
+    return option ? option.forgeName : String(progressItem && (progressItem.forgeName || progressItem.name) || "");
+  }
+
+  function searchEquipment(data, disciples, keyword, catalog, familyKey) {
     var q = normalizeSearch(keyword);
     var result = { owned: [], required: [] };
     if (!q) return result;
+    var exactFamily = String(familyKey || exactCatalogFamily(catalog, keyword) || "");
 
     (Array.isArray(disciples) ? disciples : []).forEach(function (disciple) {
       if (!disciple || typeof disciple !== "object") return;
@@ -192,7 +215,10 @@
         var item = findItem(data, progressItem.forgeName || progressItem.name);
         var option = catalogMatch(catalog, progressItem, false);
         var searchable = [savedName, progressItem.forgeName || ""].concat(option ? option.aliases : []);
-        if (searchable.some(function (value) { return normalizeSearch(value).indexOf(q) !== -1; })) {
+        var ownedMatches = exactFamily
+          ? progressItemFamily(catalog, progressItem) === exactFamily
+          : searchable.some(function (value) { return normalizeSearch(value).indexOf(q) !== -1; });
+        if (ownedMatches) {
           result.owned.push({
             disciple: disciple,
             progressItem: progressItem,
@@ -208,7 +234,10 @@
           var stage = item.stages[si] || {};
           var tokenHits = [];
           (Array.isArray(stage.tokens) ? stage.tokens : []).forEach(function (token, tokenIdx) {
-            if (token && token.n && normalizeSearch(token.n).indexOf(q) !== -1) {
+            var tokenMatches = token && token.n && (exactFamily
+              ? (exactCatalogFamily(catalog, token.n) || String(token.n)) === exactFamily
+              : normalizeSearch(token.n).indexOf(q) !== -1);
+            if (tokenMatches) {
               tokenHits.push({ tokenIdx: tokenIdx, token: token });
             }
           });

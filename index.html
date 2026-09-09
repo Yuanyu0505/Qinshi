@@ -48,6 +48,10 @@
 
       <main id="app">
     <section id="partition-equipment" hidden>
+      <div class="item-navigation-return" data-item-navigation-return="equipment" hidden>
+        <span data-item-navigation-context></span>
+        <button type="button" class="seg" data-item-navigation-back>返回</button>
+      </div>
       <input id="search" type="search" aria-label="搜索装备" placeholder="输入装备名或分类，如：墨眉 / 武器 / 韩非子 / 神兵典籍" autocomplete="off">
 
       <section class="panel">
@@ -158,6 +162,10 @@
     </section>
 
     <section id="partition-zhulu" hidden>
+      <div class="item-navigation-return" data-item-navigation-return="zhulu" hidden>
+        <span data-item-navigation-context></span>
+        <button type="button" class="seg" data-item-navigation-back>返回</button>
+      </div>
       <div id="zhulu-tabs" class="segs zhulu-tabs" aria-label="逐鹿资料类型">
         <button type="button" class="seg active" data-zhulu-tab="progress">进度奖励</button>
         <button type="button" class="seg" data-zhulu-tab="seasons">赛季典籍</button>
@@ -210,15 +218,6 @@
         <div id="zhulu-season-results"></div>
       </section>
 
-      <div id="zhulu-action-menu" class="zhulu-action-menu" role="dialog" aria-modal="false" aria-labelledby="zhulu-action-title" hidden>
-        <div class="zhulu-action-head">
-          <strong id="zhulu-action-title"></strong>
-          <button id="zhulu-action-close" type="button" class="link-btn">关闭</button>
-        </div>
-        <button type="button" class="seg" data-zhulu-action="seasons">查看出现赛季</button>
-        <button type="button" class="seg" data-zhulu-action="forging-progress">查看锻造进度</button>
-        <button type="button" class="seg" data-zhulu-action="atlas">查看图鉴需求</button>
-      </div>
     </section>
 
     <section id="partition-quiz" hidden>
@@ -233,6 +232,10 @@
     </section>
 
     <section id="partition-forbidden" hidden>
+      <div class="item-navigation-return" data-item-navigation-return="forbidden" hidden>
+        <span data-item-navigation-context></span>
+        <button type="button" class="seg" data-item-navigation-back>返回</button>
+      </div>
       <section class="panel forbidden-toolbar">
         <div class="filter-row">
           <span class="filter-label">关键词</span>
@@ -377,13 +380,9 @@
     </section>
 
     <section id="partition-forging" hidden>
-      <div id="drop-forging-return" class="drop-return-banner" hidden>
-        <span>正在查看关卡掉落道具：<strong></strong></span>
-        <button type="button" class="seg" data-drop-return>返回关卡掉落</button>
-      </div>
-      <div id="zhulu-forging-return" class="zhulu-return-banner" hidden>
-        <div><span>正在查看逐鹿典籍：<strong></strong></span><div class="zhulu-forging-match-options"></div></div>
-        <button type="button" class="seg" data-zhulu-return>返回逐鹿</button>
+      <div class="item-navigation-return" data-item-navigation-return="forging" hidden>
+        <span data-item-navigation-context></span>
+        <button type="button" class="seg" data-item-navigation-back>返回</button>
       </div>
       <section class="panel">
         <div class="filter-row">
@@ -449,6 +448,10 @@
     </section>
 
     <section id="partition-drops" hidden>
+      <div class="item-navigation-return" data-item-navigation-return="drops" hidden>
+        <span data-item-navigation-context></span>
+        <button type="button" class="seg" data-item-navigation-back>返回</button>
+      </div>
       <section class="panel">
         <div class="filter-row">
           <span class="filter-label">道具名</span>
@@ -476,26 +479,12 @@
         </table>
       </section>
       <div id="drop-results"></div>
-      <div id="drop-action-menu" class="drop-action-menu" role="dialog" aria-modal="false" aria-labelledby="drop-action-title" hidden>
-        <div class="drop-action-head">
-          <strong id="drop-action-title"></strong>
-          <button id="drop-action-close" type="button" class="link-btn">关闭</button>
-        </div>
-        <button type="button" class="seg" data-drop-action="atlas">图鉴查询</button>
-        <button type="button" class="seg" data-drop-action="forging-progress">橙装锻造个人进度查询</button>
-        <button type="button" class="seg" data-drop-action="forging-main">作为主锻造装备查询</button>
-        <button type="button" class="seg" data-drop-action="forging-material">作为素材装备查询</button>
-      </div>
     </section>
 
     <section id="partition-atlas">
-      <div id="drop-atlas-return" class="drop-return-banner" hidden>
-        <span>正在查看关卡掉落道具：<strong></strong></span>
-        <button type="button" class="seg" data-drop-return>返回关卡掉落</button>
-      </div>
-      <div id="zhulu-atlas-return" class="zhulu-return-banner" hidden>
-        <span>正在查看逐鹿典籍：<strong></strong></span>
-        <button type="button" class="seg" data-zhulu-return>返回逐鹿</button>
+      <div class="item-navigation-return" data-item-navigation-return="atlas" hidden>
+        <span data-item-navigation-context></span>
+        <button type="button" class="seg" data-item-navigation-back>返回</button>
       </div>
       <section class="panel">
         <div class="filter-row">
@@ -635,6 +624,14 @@
       </section>
     </section>
       </main>
+
+      <div id="item-navigation-menu" class="item-navigation-menu" role="dialog" aria-modal="false" aria-labelledby="item-navigation-title" hidden>
+        <div class="item-navigation-menu-head">
+          <strong id="item-navigation-title"></strong>
+          <button id="item-navigation-close" type="button" class="link-btn">关闭</button>
+        </div>
+        <div id="item-navigation-actions" class="item-navigation-actions"></div>
+      </div>
 
     </div>
   </div>

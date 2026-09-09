@@ -7,8 +7,6 @@
   var refreshQueue = window.UI_PERFORMANCE && window.UI_PERFORMANCE.createRefreshQueue;
   var initialized = false;
   var rendered = false;
-  var activeBook = "";
-  var actionTrigger = null;
   var initialQualityCache = Object.create(null);
   var state = {
     tab: "progress",
@@ -191,33 +189,20 @@
   }
 
   function openActionMenu(button) {
-    activeBook = button.dataset.zhuluBook || "";
-    actionTrigger = button;
-    elements.actionTitle.textContent = activeBook;
-    elements.actionMenu.hidden = false;
-    var rect = button.getBoundingClientRect();
-    var width = Math.min(300, window.innerWidth - 24);
-    var left = Math.min(Math.max(12, rect.left), window.innerWidth - width - 12);
-    var top = rect.bottom + 8;
-    elements.actionMenu.style.width = width + "px";
-    elements.actionMenu.style.left = left + "px";
-    elements.actionMenu.style.top = Math.min(top, window.innerHeight - elements.actionMenu.offsetHeight - 12) + "px";
-    var first = elements.actionMenu.querySelector("[data-zhulu-action]");
-    if (first) first.focus();
+    var bookName = button.dataset.zhuluBook || "";
+    if (!bookName) return;
+    document.dispatchEvent(new CustomEvent("qinshi:item-menu", {
+      detail: { source: "zhulu", itemName: bookName, trigger: button }
+    }));
   }
 
-  function closeActionMenu(restoreFocus) {
-    if (!elements.actionMenu || elements.actionMenu.hidden) return;
-    elements.actionMenu.hidden = true;
-    elements.actionMenu.style.left = "";
-    elements.actionMenu.style.top = "";
-    if (restoreFocus && actionTrigger && typeof actionTrigger.focus === "function") actionTrigger.focus();
-    actionTrigger = null;
-  }
+  function closeActionMenu() {}
 
   function captureView() {
-    if (state.tab === "progress") state.progressScrollY = window.scrollY;
-    else state.seasonScrollY = window.scrollY;
+    if (!elements.partition || !elements.partition.hidden) {
+      if (state.tab === "progress") state.progressScrollY = window.scrollY;
+      else state.seasonScrollY = window.scrollY;
+    }
     return clone(state);
   }
 
@@ -321,33 +306,6 @@
       var book = event.target.closest("[data-zhulu-book]");
       if (book) openActionMenu(book);
     });
-    elements.actionClose.addEventListener("click", function () { closeActionMenu(true); });
-    elements.actionMenu.addEventListener("click", function (event) {
-      var button = event.target.closest("[data-zhulu-action]");
-      if (!button || !activeBook) return;
-      var action = button.dataset.zhuluAction;
-      var bookName = activeBook;
-      closeActionMenu(false);
-      if (action === "seasons") {
-        state.tab = "seasons";
-        state.seasonFilters = { year: null, month: null, query: bookName, quality: null, progress: null };
-        renderCurrent();
-        elements.seasonSearch.focus();
-        return;
-      }
-      document.dispatchEvent(new CustomEvent("qinshi:zhulu-navigate", {
-        detail: { target: action, bookName: bookName, zhuluView: captureView() }
-      }));
-    });
-    document.addEventListener("click", function (event) {
-      if (elements.actionMenu.hidden) return;
-      if (!event.target.closest("#zhulu-action-menu") && !event.target.closest("[data-zhulu-book]")) closeActionMenu(false);
-    });
-    document.addEventListener("keydown", function (event) {
-      if (event.key === "Escape") closeActionMenu(true);
-    });
-    window.addEventListener("resize", function () { closeActionMenu(false); });
-    window.addEventListener("scroll", function () { closeActionMenu(false); }, true);
     document.addEventListener("qinshi:partitionchange", function (event) {
       if (!event.detail || event.detail.name !== "zhulu") return;
       if (!rendered) {
@@ -376,10 +334,7 @@
       quality: document.getElementById("zhulu-quality-filter"),
       tier: document.getElementById("zhulu-tier-filter"),
       seasonClear: document.getElementById("zhulu-season-clear"),
-      seasonResults: document.getElementById("zhulu-season-results"),
-      actionMenu: document.getElementById("zhulu-action-menu"),
-      actionTitle: document.getElementById("zhulu-action-title"),
-      actionClose: document.getElementById("zhulu-action-close")
+      seasonResults: document.getElementById("zhulu-season-results")
     };
     if (!data || !core || !elements.partition) {
       setError("逐鹿资料加载失败，请确认数据和脚本文件存在。");

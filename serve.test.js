@@ -81,8 +81,7 @@ test("首页提供逐鹿分区及数据、核心和界面脚本", async () => {
     assert.strictEqual(page.status, 200);
     assert.match(page.body, /id="partition-zhulu"/);
     assert.match(page.body, /data-partition="zhulu">逐鹿</);
-    assert.match(page.body, /id="zhulu-atlas-return"/);
-    assert.match(page.body, /id="zhulu-forging-return"/);
+    assert.match(page.body, /data-item-navigation-return="zhulu"/);
     assert.match(page.body, /<script src="data\/zhulu\.js"><\/script>/);
     assert.match(page.body, /<script src="js\/zhulu\.js"><\/script>/);
     assert.match(page.body, /<script src="js\/zhulu-ui\.js"><\/script>/);
@@ -602,39 +601,31 @@ test("兵法包含详情与综合计算子分区，并保存计算配置", async
   });
 });
 
-test("装备属性与橙装锻造支持一次性原页返回", async () => {
+test("装备属性与橙装锻造接入统一多级返回界面", async () => {
   await withServer(async (port) => {
-    const app = await get(port, "/js/app.js");
-    assert.strictEqual(app.status, 200);
-    assert.match(app.body, /let forgeReturnSession = null/);
-    assert.match(app.body, /function captureEquipmentView/);
-    assert.match(app.body, /function restoreEquipmentView/);
-    assert.match(app.body, /EQUIP_FORGING\.createReturnSession\([\s\S]*?window\.scrollY/);
-    assert.match(app.body, /switchPartition\("equipment",\s*\{\s*source:\s*"forge-return",\s*preserveEquipment:\s*true\s*\}\)/);
-    assert.match(app.body, /requestAnimationFrame\([\s\S]*?window\.scrollTo\(\{\s*top:\s*session\.scrollY,\s*behavior:\s*"auto"\s*\}\)/);
-    assert.match(app.body, /invalidateForgeReturnSession\("forge-search"\)/);
-    assert.match(app.body, /invalidateForgeReturnSession\("forge-mode"\)/);
-    assert.match(app.body, /invalidateForgeReturnSession\("forge-view"\)/);
-    assert.match(app.body, /invalidateForgeReturnSession\("partition"\)/);
+    const page = await get(port, "/");
+    assert.strictEqual(page.status, 200);
+    assert.match(page.body, /<script src="js\/item-navigation\.js"><\/script>/);
+    assert.match(page.body, /data-item-navigation-return="equipment"/);
+    assert.match(page.body, /data-item-navigation-return="forging"/);
+    const core = await get(port, "/js/item-navigation.js");
+    assert.strictEqual(core.status, 200);
+    assert.match(core.headers["content-type"], /javascript/);
   });
 });
 
-test("橙装锻造结果装备名支持返回与神兵优先反向跳转", async () => {
+test("橙装锻造结果使用统一操作菜单并保留键盘焦点样式", async () => {
   await withServer(async (port) => {
-    const [app, css] = await Promise.all([
-      get(port, "/js/app.js"),
+    const [page, css] = await Promise.all([
+      get(port, "/"),
       get(port, "/css/style.css")
     ]);
-    assert.strictEqual(app.status, 200);
+    assert.strictEqual(page.status, 200);
     assert.strictEqual(css.status, 200);
-    assert.match(app.body, /EQUIP_FORGING\.resolveEquipmentTarget\(item\.name, DATA\.items, FDATA\.items\)/);
-    assert.match(app.body, /data-forging-equipment=/);
-    assert.match(app.body, /返回装备属性筛选结果/);
-    assert.match(app.body, /查看对应装备属性/);
-    assert.match(app.body, /EQUIP_FORGING\.matchesReturnSession\(forgeReturnSession, forgeName\)/);
-    assert.match(app.body, /EQUIP_FORGING\.buildReverseEquipmentView\(captureEquipmentView\(\), target\.name\)/);
+    assert.match(page.body, /id="item-navigation-menu"/);
+    assert.match(page.body, /id="item-navigation-actions"/);
     assert.match(css.body, /\.forging-equipment-link:focus-visible/);
-    assert.match(css.body, /@media \(max-width: 1024px\)[\s\S]*?\.forging-equipment-link\s*\{[\s\S]*?min-height:\s*44px/);
+    assert.match(css.body, /\.item-navigation-actions \.seg\s*\{[^}]*min-height:\s*44px/);
   });
 });
 
@@ -663,15 +654,12 @@ test("橙金与红金装备名使用强金色双描边、高光和角饰", async
   });
 });
 
-test("个人进度装备可进入装备属性并一次性返回原页", async () => {
+test("个人进度装备与装备属性共享统一返回入口", async () => {
   await withServer(async (port) => {
-    const app = await get(port, "/js/app.js");
-    assert.match(app.body, /let progressReturnSession = null/);
-    assert.match(app.body, /function captureProgressView/);
-    assert.match(app.body, /createProgressReturnSession/);
-    assert.match(app.body, /matchesProgressReturnSession/);
-    assert.match(app.body, /source:\s*"progress-return"/);
-    assert.match(app.body, /invalidateProgressReturnSession\("equipment-filter"\)/);
+    const page = await get(port, "/");
+    assert.match(page.body, /id="prog-search-results"/);
+    assert.match(page.body, /data-item-navigation-return="forging"/);
+    assert.match(page.body, /data-item-navigation-return="equipment"/);
   });
 });
 
@@ -1012,5 +1000,18 @@ test("典雅水墨秦风主题统一三端层级并保护既有交互", async ()
     assert.match(theme, /@media \(max-width:\s*767px\),/);
     assert.match(theme, /min-height:\s*44px/);
     assert.match(theme, /@media \(prefers-reduced-motion:\s*reduce\)/);
+  });
+});
+
+test("首页提供统一物品操作菜单和六分区返回入口", async () => {
+  await withServer(async (port) => {
+    const page = await get(port, "/");
+    assert.strictEqual(page.status, 200);
+    assert.match(page.body, /id="item-navigation-menu"/);
+    for (const name of ["equipment", "forging", "drops", "atlas", "forbidden", "zhulu"]) {
+      assert.match(page.body, new RegExp('data-item-navigation-return="' + name + '"'));
+    }
+    assert.doesNotMatch(page.body, /data-drop-action="forging-main"/);
+    assert.doesNotMatch(page.body, /data-drop-action="forging-material"/);
   });
 });

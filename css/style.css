@@ -3642,11 +3642,14 @@ tbody tr:hover { background-color: rgba(217, 173, 60, .06); }
 .zhulu-book-name:focus-visible { filter: brightness(1.15); box-shadow: 0 0 0 2px rgba(255, 211, 105, .35); }
 .zhulu-yuanbao { color: var(--muted); font-size: 12px; line-height: 1.35; text-align: center; }
 .zhulu-action-menu,
-.drop-action-menu {
+.drop-action-menu,
+.item-navigation-menu {
   position: fixed;
   z-index: 90;
   display: grid;
   gap: 8px;
+  max-height: calc(100vh - 24px);
+  overflow-y: auto;
   padding: 12px;
   border: 1px solid var(--gold);
   border-radius: 10px;
@@ -3654,15 +3657,21 @@ tbody tr:hover { background-color: rgba(217, 173, 60, .06); }
   box-shadow: 0 16px 44px rgba(0, 0, 0, .62);
 }
 .zhulu-action-menu[hidden],
-.drop-action-menu[hidden] { display: none; }
+.drop-action-menu[hidden],
+.item-navigation-menu[hidden] { display: none; }
 .zhulu-action-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding-bottom: 6px; border-bottom: 1px solid var(--line); }
 .zhulu-action-head strong { color: var(--gold); }
 .drop-action-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding-bottom: 6px; border-bottom: 1px solid var(--line); }
 .drop-action-head strong { color: var(--gold); }
+.item-navigation-menu-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding-bottom: 6px; border-bottom: 1px solid var(--line); }
+.item-navigation-menu-head strong { color: var(--gold); }
+.item-navigation-actions { display: grid; gap: 8px; }
+.item-navigation-actions .seg { width: 100%; min-height: 44px; text-align: left; }
 .zhulu-action-menu > .seg,
 .drop-action-menu > .seg { width: 100%; text-align: left; }
 .zhulu-return-banner,
-.drop-return-banner {
+.drop-return-banner,
+.item-navigation-return {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -3674,9 +3683,17 @@ tbody tr:hover { background-color: rgba(217, 173, 60, .06); }
   background: rgba(103, 66, 18, .18);
 }
 .zhulu-return-banner[hidden],
-.drop-return-banner[hidden] { display: none; }
+.drop-return-banner[hidden],
+.item-navigation-return[hidden] { display: none; }
 .zhulu-return-banner strong,
 .drop-return-banner strong { color: var(--gold); }
+.item-navigation-return [data-item-navigation-context] { color: var(--gold); font-weight: 700; }
+.forging-material-link {
+  appearance: none;
+  font: inherit;
+  cursor: pointer;
+}
+.forging-material-link:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
 .zhulu-forging-match-options { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; margin-top: 6px; color: var(--muted); font-size: 12px; }
 .zhulu-forging-match-options .link-btn { min-height: 28px; padding: 2px 0; }
 
@@ -3715,9 +3732,11 @@ tbody tr:hover { background-color: rgba(217, 173, 60, .06); }
   .zhulu-progress-table td { padding: 10px 4px; font-size: 12px; }
   .zhulu-progress-book-link { padding: 6px 4px; }
   .zhulu-return-banner,
-  .drop-return-banner { align-items: stretch; flex-direction: column; }
+  .drop-return-banner,
+  .item-navigation-return { align-items: stretch; flex-direction: column; }
   .zhulu-return-banner .seg,
-  .drop-return-banner .seg { width: 100%; min-height: 44px; }
+  .drop-return-banner .seg,
+  .item-navigation-return .seg { width: 100%; min-height: 44px; }
   .drop-item-link,
   .drop-result-item-link { min-height: 44px; }
 }

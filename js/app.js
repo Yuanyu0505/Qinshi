@@ -9,6 +9,7 @@
   const Q = window.QSQuery;
   const EQUIP_COMPARE = window.QSEquipmentCompare;
   const EQUIP_FORGING = window.EquipmentForging;
+  const ITEM_NAV = window.ItemNavigation;
   const FDATA = window.FORGING_DATA;
   const FORG = window.FORGING;
   const DROP_DATA = window.DROP_DATA;
@@ -67,6 +68,8 @@
   let dropJumpSession = null;
   let dropActionItem = "";
   let dropActionTrigger = null;
+  const itemNavigationStack = ITEM_NAV ? ITEM_NAV.createStack() : null;
+  let itemMenuContext = null;
   let switchPartition = function () {};
 
   const el = {
@@ -106,9 +109,10 @@
     dropDefaultOrange: document.getElementById("drop-default-orange"),
     dropResults: document.getElementById("drop-results"),
     dropPartition: document.getElementById("partition-drops"),
-    dropActionMenu: document.getElementById("drop-action-menu"),
-    dropActionTitle: document.getElementById("drop-action-title"),
-    dropActionClose: document.getElementById("drop-action-close"),
+    itemNavigationMenu: document.getElementById("item-navigation-menu"),
+    itemNavigationTitle: document.getElementById("item-navigation-title"),
+    itemNavigationActions: document.getElementById("item-navigation-actions"),
+    itemNavigationClose: document.getElementById("item-navigation-close"),
     forgeView: document.getElementById("forge-view"),
     forgeQuery: document.getElementById("forge-query"),
     forgeProgress: document.getElementById("forge-progress"),
@@ -144,15 +148,13 @@
     quizSearch: document.getElementById("quiz-search"),
     quizResults: document.getElementById("quiz-results")
   };
-  el.zhuluAtlasReturn = document.getElementById("zhulu-atlas-return");
-  el.zhuluForgingReturn = document.getElementById("zhulu-forging-return");
-  el.dropAtlasReturn = document.getElementById("drop-atlas-return");
-  el.dropForgingReturn = document.getElementById("drop-forging-return");
+  el.itemNavigationReturns = Array.from(document.querySelectorAll("[data-item-navigation-return]"));
 
   const progState = {
     view: "query",
     page: 0,
     query: "",
+    familyKey: null,
     disciples: loadProgress()
   };
   const PROG_CAT_ORDER = ["武器", "盔甲", "首饰", "典籍"];
@@ -204,9 +206,8 @@
     initProgress();
     initAtlas();
     initQuiz();
-    initZhuluNavigation();
-    initDropNavigation();
     if (window.FORBIDDEN_UI) window.FORBIDDEN_UI.init();
+    initItemNavigation();
     if (window.FORMATIONS_UI) window.FORMATIONS_UI.init();
     if (!DATA || !Q || !EQUIP_COMPARE) {
       el.error.hidden = false;
@@ -281,6 +282,7 @@
       view: progState.view,
       page: progState.page,
       query: progState.query,
+      familyKey: progState.familyKey,
       searchValue: el.progSearch.value
     };
   }
@@ -290,6 +292,7 @@
     progState.view = saved.view || "progress";
     progState.page = Number.isInteger(saved.page) ? saved.page : 0;
     progState.query = saved.query || "";
+    progState.familyKey = saved.familyKey || null;
     el.progSearch.value = saved.searchValue === undefined ? progState.query : saved.searchValue;
   }
 
@@ -350,6 +353,281 @@
     applyForgeView();
     if (progState.view === "progress") applyProgressSearch();
     else applyForging();
+  }
+
+  function cloneNavigationValue(value) {
+    return JSON.parse(JSON.stringify(value == null ? {} : value));
+  }
+
+  function navigationFingerprintView(value) {
+    function stripScroll(entry) {
+      if (Array.isArray(entry)) return entry.map(stripScroll);
+      if (!entry || typeof entry !== "object") return entry;
+      return Object.keys(entry).reduce((result, key) => {
+        if (!/scroll/i.test(key)) result[key] = stripScroll(entry[key]);
+        return result;
+      }, {});
+    }
+    return stripScroll(cloneNavigationValue(value));
+  }
+
+  function captureDropView() {
+    return { query: el.dropSearch ? el.dropSearch.value : "" };
+  }
+
+  function restoreDropView(view) {
+    if (el.dropSearch) el.dropSearch.value = view && view.query || "";
+    applyDrops();
+  }
+
+  function applyEquipmentNavigation(item) {
+    restoreEquipmentView(EQUIP_FORGING.buildReverseEquipmentView(captureEquipmentView(), item.equipmentName));
+    apply();
+    return captureEquipmentView();
+  }
+
+  function applyForgingNavigation(item, options) {
+    const target = options || {};
+    if (target.view === "progress") {
+      progState.view = "progress";
+      progState.page = 0;
+      progState.query = item.forgeKey;
+      progState.familyKey = item.familyKey;
+      el.progSearch.value = item.forgeKey;
+      applyForgeView();
+      applyProgressSearch();
+    } else {
+      progState.view = "query";
+      forgeState.mode = target.mode || "main";
+      forgeState.query = item.forgeKey;
+      el.forgeSearch.value = item.forgeKey;
+      applyForgeView();
+      applyForging();
+    }
+    return captureForgingView();
+  }
+
+  function applyAtlasNavigation(item) {
+    atlasState.activated = true;
+    atlasState.tab = "全部";
+    atlasState.query = item.forgeKey;
+    atlasState.searchField = "all";
+    atlasState.levelMin = 0;
+    atlasState.levelMax = 20;
+    atlasState.favoriteType = "all";
+    atlasState.soulFilter = "all";
+    atlasState.equipmentFilter = "all";
+    atlasState.noteSources = [];
+    atlasState.sortField = "default";
+    atlasState.sortDirection = "asc";
+    el.atlasSearch.value = item.forgeKey;
+    applyAtlas();
+    return captureAtlasQueryView();
+  }
+
+  function applyDropQueryNavigation(item) {
+    el.dropSearch.value = item.forgeKey;
+    applyDrops();
+    return captureDropView();
+  }
+
+  function capturePartitionView(partition) {
+    if (partition === "equipment") return captureEquipmentView();
+    if (partition === "forging") return captureForgingView();
+    if (partition === "atlas") return captureAtlasQueryView();
+    if (partition === "drops") return captureDropView();
+    if (partition === "forbidden" && window.FORBIDDEN_UI) return window.FORBIDDEN_UI.captureView();
+    if (partition === "zhulu" && ZHULU_UI) return ZHULU_UI.captureView();
+    return {};
+  }
+
+  function restorePartitionView(partition, view) {
+    if (partition === "equipment") {
+      restoreEquipmentView(view);
+      apply();
+    } else if (partition === "forging") {
+      restoreForgingView(view);
+    } else if (partition === "atlas") {
+      restoreAtlasQueryView(view);
+      applyAtlas();
+    } else if (partition === "drops") {
+      restoreDropView(view);
+    } else if (partition === "forbidden" && window.FORBIDDEN_UI) {
+      window.FORBIDDEN_UI.restoreView(view);
+    } else if (partition === "zhulu" && ZHULU_UI) {
+      ZHULU_UI.restoreView(view);
+    }
+  }
+
+  function applyPartitionNavigation(partition, item, options) {
+    if (partition === "equipment") return applyEquipmentNavigation(item);
+    if (partition === "forging") return applyForgingNavigation(item, options);
+    if (partition === "atlas") return applyAtlasNavigation(item);
+    if (partition === "drops") return applyDropQueryNavigation(item);
+    if (partition === "forbidden" && window.FORBIDDEN_UI) return window.FORBIDDEN_UI.applyNavigationQuery(item.forgeKey);
+    if (partition === "zhulu" && ZHULU_UI) return ZHULU_UI.applyNavigationQuery(item.forgeKey);
+    return capturePartitionView(partition);
+  }
+
+  function navigationTarget(source, action) {
+    if (action === "forging-progress") return { partition: "forging", view: "progress" };
+    if (action === "forging") {
+      return source === "equipment"
+        ? { partition: "forging", view: "query", mode: "main" }
+        : { partition: "forging", view: "progress" };
+    }
+    return { partition: action };
+  }
+
+  function closeItemNavigationMenu(restoreFocus) {
+    if (!el.itemNavigationMenu || el.itemNavigationMenu.hidden) return;
+    el.itemNavigationMenu.hidden = true;
+    el.itemNavigationMenu.style.left = "";
+    el.itemNavigationMenu.style.top = "";
+    if (restoreFocus && itemMenuContext && itemMenuContext.trigger && typeof itemMenuContext.trigger.focus === "function") {
+      itemMenuContext.trigger.focus();
+    }
+    itemMenuContext = null;
+  }
+
+  function openItemNavigationMenu(source, itemName, trigger) {
+    if (!ITEM_NAV || !el.itemNavigationMenu || !trigger) return;
+    const actions = ITEM_NAV.actionsForSource(source);
+    if (!actions.length) return;
+    itemMenuContext = { source: source, itemName: itemName, trigger: trigger };
+    el.itemNavigationTitle.textContent = itemName;
+    el.itemNavigationActions.innerHTML = actions.map((action) =>
+      `<button type="button" class="seg" data-item-navigation-action="${escapeHtml(action.id)}">${escapeHtml(action.label)}</button>`
+    ).join("");
+    el.itemNavigationMenu.hidden = false;
+    const rect = trigger.getBoundingClientRect();
+    const width = Math.min(340, window.innerWidth - 24);
+    const left = Math.min(Math.max(12, rect.left), window.innerWidth - width - 12);
+    el.itemNavigationMenu.style.width = width + "px";
+    el.itemNavigationMenu.style.left = left + "px";
+    const top = Math.min(rect.bottom + 8, window.innerHeight - el.itemNavigationMenu.offsetHeight - 12);
+    el.itemNavigationMenu.style.top = Math.max(12, top) + "px";
+    const first = el.itemNavigationActions.querySelector("button");
+    if (first) first.focus();
+  }
+
+  function updateItemNavigationReturn() {
+    if (!el.itemNavigationReturns) return;
+    el.itemNavigationReturns.forEach((banner) => { banner.hidden = true; });
+    if (!itemNavigationStack) return;
+    const frame = itemNavigationStack.peek();
+    if (!frame) return;
+    const banner = el.itemNavigationReturns.find((entry) => entry.dataset.itemNavigationReturn === frame.destinationPartition);
+    if (!banner) return;
+    const sourceTitle = PARTITION_TITLES[frame.sourcePartition] || "上一页";
+    const context = banner.querySelector("[data-item-navigation-context]");
+    const button = banner.querySelector("[data-item-navigation-back]");
+    if (context) context.textContent = `由${sourceTitle}查询：${frame.item.clickedName}`;
+    if (button) button.textContent = `返回${sourceTitle}`;
+    banner.hidden = false;
+  }
+
+  function clearItemNavigation() {
+    if (itemNavigationStack) itemNavigationStack.clear();
+    updateItemNavigationReturn();
+    closeItemNavigationMenu(false);
+  }
+
+  function navigateItem(source, action, clickedName) {
+    if (!ITEM_NAV || !itemNavigationStack) return;
+    const item = ITEM_NAV.resolveItem(clickedName, DATA.items, FDATA.items);
+    const target = navigationTarget(source, action);
+    if (!item || !target.partition) return;
+    const sourcePartition = source === "drops" ? "drops" : source;
+    const sourceView = capturePartitionView(sourcePartition);
+    const destinationViewBeforeJump = capturePartitionView(target.partition);
+    const sourceScrollY = window.scrollY;
+    switchPartition(target.partition, { source: "item-navigation", preserveEquipment: true });
+    const destinationAppliedView = applyPartitionNavigation(target.partition, item, target);
+    itemNavigationStack.push({
+      sourcePartition: sourcePartition,
+      sourceView: sourceView,
+      sourceScrollY: sourceScrollY,
+      destinationPartition: target.partition,
+      destinationViewBeforeJump: destinationViewBeforeJump,
+      destinationAppliedFingerprint: ITEM_NAV.captureFingerprint(navigationFingerprintView(destinationAppliedView)),
+      item: item
+    });
+    updateItemNavigationReturn();
+    requestAnimationFrame(function () {
+      const banner = el.itemNavigationReturns.find((entry) => entry.dataset.itemNavigationReturn === target.partition);
+      if (banner) banner.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  }
+
+  function returnFromItemNavigation() {
+    if (!ITEM_NAV || !itemNavigationStack) return;
+    const frame = itemNavigationStack.pop();
+    if (!frame) return;
+    const currentDestinationView = capturePartitionView(frame.destinationPartition);
+    const unchanged = frame.destinationAppliedFingerprint === ITEM_NAV.captureFingerprint(navigationFingerprintView(currentDestinationView));
+    if (unchanged && frame.destinationPartition !== frame.sourcePartition) {
+      restorePartitionView(frame.destinationPartition, frame.destinationViewBeforeJump);
+    }
+    let sourceView = frame.sourceView;
+    if (!unchanged && frame.destinationPartition === "forging" && frame.sourcePartition === "forging") {
+      sourceView = cloneNavigationValue(frame.sourceView);
+      sourceView.progress = cloneNavigationValue(currentDestinationView.progress);
+    }
+    switchPartition(frame.sourcePartition, { source: "item-navigation-return", preserveEquipment: true });
+    restorePartitionView(frame.sourcePartition, sourceView);
+    updateItemNavigationReturn();
+    requestAnimationFrame(function () {
+      window.scrollTo({ top: Number(frame.sourceScrollY) || 0, behavior: "auto" });
+    });
+  }
+
+  function initItemNavigation() {
+    if (!ITEM_NAV || !el.itemNavigationMenu) return;
+    document.addEventListener("qinshi:item-menu", function (event) {
+      const detail = event.detail || {};
+      openItemNavigationMenu(detail.source, detail.itemName, detail.trigger);
+    });
+    document.addEventListener("click", function (event) {
+      const back = event.target.closest("[data-item-navigation-back]");
+      if (back) {
+        returnFromItemNavigation();
+        return;
+      }
+      const action = event.target.closest("[data-item-navigation-action]");
+      if (action && itemMenuContext) {
+        const context = itemMenuContext;
+        const actionName = action.dataset.itemNavigationAction;
+        closeItemNavigationMenu(false);
+        if (actionName === "seasons" && context.source === "zhulu" && ZHULU_UI) {
+          ZHULU_UI.applyNavigationQuery(context.itemName);
+          return;
+        }
+        navigateItem(context.source, actionName, context.itemName);
+        return;
+      }
+      if (event.target.closest("#item-navigation-close")) {
+        closeItemNavigationMenu(true);
+        return;
+      }
+      const trigger = event.target.closest("[data-item-menu-source]");
+      if (trigger) {
+        openItemNavigationMenu(trigger.dataset.itemMenuSource, trigger.dataset.itemName, trigger);
+        return;
+      }
+      const dropItem = event.target.closest("#partition-drops [data-drop-item]");
+      if (dropItem) {
+        openItemNavigationMenu("drops", dropItem.dataset.dropItem, dropItem);
+        return;
+      }
+      if (event.target.closest("[data-zhulu-book]")) return;
+      if (!event.target.closest("#item-navigation-menu")) closeItemNavigationMenu(false);
+    });
+    document.addEventListener("keydown", function (event) {
+      if (event.key === "Escape") closeItemNavigationMenu(true);
+    });
+    window.addEventListener("resize", function () { closeItemNavigationMenu(false); });
+    window.addEventListener("scroll", function () { closeItemNavigationMenu(false); }, true);
   }
 
   function captureDropTargetView(target) {
@@ -675,20 +953,7 @@
   function openEquipmentFromProgress(button) {
     const equipmentName = button.dataset.progressEquipment;
     if (!equipmentName) return;
-    progressReturnSession = EQUIP_FORGING.createProgressReturnSession(
-      captureProgressView(),
-      equipmentName,
-      button.dataset.progressRecord,
-      window.scrollY
-    );
-    invalidateForgeReturnSession("progress-equipment-link");
-    const nextView = EQUIP_FORGING.buildReverseEquipmentView(captureEquipmentView(), equipmentName);
-    restoreEquipmentView(nextView);
-    switchPartition("equipment", { source: "progress-link", preserveEquipment: true });
-    apply();
-    requestAnimationFrame(function () {
-      el.results.scrollIntoView({ behavior: "smooth", block: "start" });
-    });
+    navigateItem("forging", "equipment", equipmentName);
   }
 
   function returnToProgressFromEquipment(session) {
@@ -787,6 +1052,7 @@
       }
       if (activePartition && activePartition !== name) partitionScrollPositions[activePartition] = window.scrollY;
       if (source === "user") {
+        clearItemNavigation();
         if (zhuluJumpSession) clearZhuluJumpSession();
         if (dropJumpSession) clearDropJumpSession();
         if (name !== "forging") invalidateForgeReturnSession("partition");
@@ -1549,6 +1815,7 @@
     });
     UI_PERFORMANCE.bindInput(el.progSearch, () => {
       progState.query = el.progSearch.value;
+      progState.familyKey = EQUIP_FORGING.resolveProgressFamily(progressEquipmentCatalog, progState.query);
     }, progressRefresh);
     el.progSearchResults.addEventListener("click", (e) => {
       const stageButton = e.target.closest('button[data-act="set-stage"]');
@@ -1802,6 +2069,7 @@
   function openProgressDisciple(index) {
     if (!Number.isInteger(index) || index < 0 || index >= progState.disciples.length) return;
     progState.query = "";
+    progState.familyKey = null;
     el.progSearch.value = "";
     progState.page = index + 1;
     renderProgress();
@@ -1809,7 +2077,7 @@
 
   function renderProgressSearch() {
     const disciples = PROG.searchDisciples(progState.disciples, progState.query);
-    const result = PROG.searchEquipment(FDATA, progState.disciples, progState.query, progressEquipmentCatalog);
+    const result = PROG.searchEquipment(FDATA, progState.disciples, progState.query, progressEquipmentCatalog, progState.familyKey);
     if (!disciples.length && !result.owned.length && !result.required.length) {
       el.progSearchResults.innerHTML = '<div class="empty"><p>未找到匹配的弟子或装备</p></div>';
       return;
@@ -1846,7 +2114,7 @@
   }
 
   function applyProgressSearch() {
-    const exact = PROG.searchDisciples(progState.disciples, progState.query).find((entry) => entry.exact);
+    const exact = progState.familyKey ? null : PROG.searchDisciples(progState.disciples, progState.query).find((entry) => entry.exact);
     if (exact) openProgressDisciple(exact.index);
     else renderProgress();
   }
@@ -1944,32 +2212,15 @@
       invalidateForgeReturnSession("forge-search");
       forgeState.query = el.forgeSearch.value;
     }, forgingRefresh);
-    el.forgeResults.addEventListener("click", (event) => {
-      const button = event.target.closest("button[data-forging-equipment]");
-      if (!button) return;
-      const forgeName = button.dataset.forgingEquipment;
-      if (EQUIP_FORGING.matchesReturnSession(forgeReturnSession, forgeName)) {
-        const session = forgeReturnSession;
-        returnToEquipmentFromForge(session);
-        return;
-      }
-      invalidateForgeReturnSession("different-forging-equipment");
-      const target = EQUIP_FORGING.resolveEquipmentTarget(forgeName, DATA.items, FDATA.items);
-      if (!target) return;
-      const nextView = EQUIP_FORGING.buildReverseEquipmentView(captureEquipmentView(), target.name);
-      restoreEquipmentView(nextView);
-      switchPartition("equipment", { source: "forge-link", preserveEquipment: true });
-      apply();
-      requestAnimationFrame(function () {
-        el.results.scrollIntoView({ behavior: "smooth", block: "start" });
-      });
-    });
   }
 
-  function forgingTokenHtml(tk, hit, materialMode) {
+  function forgingTokenHtml(tk, hit, materialMode, navigable) {
     if (tk.dash) return '<span class="mat-dash">—</span>';
     const q = tk.q === "紫" ? "mat-purple" : "mat-orange";
-    return `<span class="mat ${q}${materialMode ? " material-token" : ""}${hit ? " hit" : ""}">${tk.n}</span>`;
+    const classes = `mat ${q}${materialMode ? " material-token" : ""}${hit ? " hit" : ""}`;
+    return navigable
+      ? `<button type="button" class="${classes} forging-material-link" data-item-menu-source="forging" data-item-name="${escapeHtml(tk.n)}" title="打开${escapeHtml(tk.n)}查询选项">${escapeHtml(tk.n)}</button>`
+      : `<span class="${classes}">${escapeHtml(tk.n)}</span>`;
   }
 
   function forgingRowHtml(item, hits) {
@@ -1977,12 +2228,8 @@
     const materialMode = Array.isArray(hits);
     const stageHit = hits ? new Set(hits.map((h) => h.stageIdx)) : null;
     const tokenHit = hits ? new Map(hits.map((h) => [`${h.stageIdx}:${h.tokenIdx}`, true])) : null;
-    const equipmentTarget = EQUIP_FORGING.resolveEquipmentTarget(item.name, DATA.items, FDATA.items);
-    const isReturnTarget = EQUIP_FORGING.matchesReturnSession(forgeReturnSession, item.name);
     const equipmentName = `${escapeHtml(item.cat)}-${escapeHtml(item.name)}`;
-    const equipmentNameHtml = equipmentTarget
-      ? `<button type="button" class="eq-block ${eqClass} forging-equipment-link" data-forging-equipment="${escapeHtml(item.name)}" title="${isReturnTarget ? "返回装备属性筛选结果" : "查看对应装备属性"}">${equipmentName}</button>`
-      : `<span class="eq-block ${eqClass}">${equipmentName}</span>`;
+    const equipmentNameHtml = `<button type="button" class="eq-block ${eqClass} forging-equipment-link" data-item-menu-source="forging" data-item-name="${escapeHtml(item.name)}" title="打开${escapeHtml(item.name)}查询选项">${equipmentName}</button>`;
     return `<tr${stageHit ? ' class="hit-row"' : ""}>
       <td class="forge-eq">
         ${equipmentNameHtml}
@@ -1991,7 +2238,7 @@
         const cellHit = stageHit ? stageHit.has(si) : false;
         return `<td data-label="${escapeHtml(FDATA.meta.stageNames[si])}"${cellHit ? ' class="hit-cell"' : ""}><div class="forge-stage-materials">${st.tokens.map((tk, ti) => {
           const hit = tokenHit ? tokenHit.has(`${si}:${ti}`) : false;
-          return `<div class="mat-line">${forgingTokenHtml(tk, hit, materialMode)}</div>`;
+          return `<div class="mat-line">${forgingTokenHtml(tk, hit, materialMode, true)}</div>`;
         }).join("")}</div></td>`;
       }).join("")}
     </tr>`;
@@ -2115,33 +2362,6 @@
       const favoriteButton = event.target.closest("[data-equipment-favorite]");
       if (favoriteButton) {
         toggleEquipmentFavorite(favoriteButton.dataset.equipmentFavorite);
-        return;
-      }
-      const forgeButton = event.target.closest("[data-equipment-forge]");
-      if (forgeButton) {
-        const item = DATA.items.find((entry) => entry.id === forgeButton.dataset.equipmentForge);
-        if (item && EQUIP_FORGING.matchesProgressReturnSession(progressReturnSession, item.name)) {
-          const session = progressReturnSession;
-          returnToProgressFromEquipment(session);
-          return;
-        }
-        invalidateProgressReturnSession("different-equipment");
-        const navigation = item ? EQUIP_FORGING.buildForgeNavigation(item.name, FDATA.items) : null;
-        if (!navigation) return;
-        forgeReturnSession = EQUIP_FORGING.createReturnSession(
-          item.id,
-          navigation.query,
-          captureEquipmentView(),
-          window.scrollY
-        );
-        switchPartition(navigation.partition, { source: "equipment-link", preserveEquipment: true });
-        progState.view = navigation.view;
-        applyForgeView();
-        forgeState.mode = navigation.mode;
-        forgeState.query = navigation.query;
-        el.forgeSearch.value = navigation.query;
-        applyForging();
-        el.forgeQuery.scrollIntoView({ behavior: "smooth", block: "start" });
         return;
       }
       const compareButton = event.target.closest("[data-compare-add]");
@@ -2549,10 +2769,7 @@
 
   function equipmentResultNameHtml(item) {
     const favorite = state.favorites.includes(item.id);
-    const forgeTarget = EQUIP_FORGING.resolveForgeTarget(item.name, FDATA.items);
-    const name = forgeTarget
-      ? `<button type="button" class="equipment-forge-link" data-equipment-forge="${escapeHtml(item.id)}" title="查看${escapeHtml(forgeTarget)}锻造材料" aria-label="查看${escapeHtml(item.name)}锻造材料">${equipmentNameHtml(item)}</button>`
-      : equipmentNameHtml(item);
+    const name = `<button type="button" class="equipment-forge-link" data-item-menu-source="equipment" data-item-name="${escapeHtml(item.name)}" title="打开${escapeHtml(item.name)}查询选项" aria-label="打开${escapeHtml(item.name)}查询选项">${equipmentNameHtml(item)}</button>`;
     return `<span class="equipment-result-name">${name}<button type="button" class="equipment-favorite-toggle${favorite ? " is-favorite" : ""}" data-equipment-favorite="${escapeHtml(item.id)}" aria-pressed="${favorite}" title="${favorite ? "取消收藏" : "收藏装备"}" aria-label="${favorite ? "取消收藏" : "收藏装备"}">${favorite ? "★" : "☆"}</button></span>`;
   }
 

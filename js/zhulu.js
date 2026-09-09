@@ -154,6 +154,10 @@
     return items.sort(function (a, b) { return serialMonth(b.year, b.month) - serialMonth(a.year, a.month); });
   }
 
+  function sortSeasonsAscending(items) {
+    return items.sort(function (a, b) { return serialMonth(a.year, a.month) - serialMonth(b.year, b.month); });
+  }
+
   function querySeasons(data, filters, now) {
     filters = filters || {};
     var explicit = (data.seasons || []).map(function (season) {
@@ -166,6 +170,42 @@
       explicit: sortSeasonsDescending(explicit),
       predicted: sortSeasonsDescending(predicted)
     };
+  }
+
+  function groupFilteredSeasons(data, filters, now) {
+    var date = now instanceof Date ? now : new Date();
+    var currentSerial = serialMonth(date.getFullYear(), date.getMonth() + 1);
+    var result = querySeasons(data, filters, date);
+    var items = result.explicit.concat(result.predicted);
+    var predictedCurrent = predictSeason(data, date.getFullYear(), date.getMonth() + 1);
+    var matchedCurrent = predictedCurrent && matchesSeason(data, predictedCurrent, filters || {});
+    if (matchedCurrent) items.push(matchedCurrent);
+
+    var unique = [];
+    var seen = Object.create(null);
+    items.forEach(function (season) {
+      var key = seasonKey(season);
+      if (seen[key]) return;
+      seen[key] = true;
+      unique.push(season);
+    });
+
+    return {
+      current: unique.filter(function (season) { return serialMonth(season.year, season.month) === currentSerial; }),
+      future: sortSeasonsAscending(unique.filter(function (season) { return serialMonth(season.year, season.month) > currentSerial; })),
+      history: sortSeasonsDescending(unique.filter(function (season) { return serialMonth(season.year, season.month) < currentSerial; }))
+    };
+  }
+
+  function resolveInitialBookQuality(equipmentItems, bookName) {
+    var needle = normalizeText(bookName);
+    var item = (equipmentItems || []).find(function (candidate) {
+      return candidate && candidate.cat === "典籍" && normalizeText(candidate.name) === needle;
+    });
+    if (!item) return null;
+    if (item.bookGroup === "初始紫色典籍") return "紫";
+    if (item.bookGroup === "初始橙色典籍") return "橙";
+    return null;
   }
 
   function groupDefaultSeasons(data, now) {
@@ -229,7 +269,9 @@
     predictSeason: predictSeason,
     defaultPredictionMonths: defaultPredictionMonths,
     querySeasons: querySeasons,
+    groupFilteredSeasons: groupFilteredSeasons,
     groupDefaultSeasons: groupDefaultSeasons,
+    resolveInitialBookQuality: resolveInitialBookQuality,
     createJumpSession: createJumpSession,
     shouldRestoreJumpTarget: shouldRestoreJumpTarget
   };

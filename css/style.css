@@ -3507,6 +3507,18 @@ tbody tr:hover { background-color: rgba(217, 173, 60, .06); }
 .zhulu-toolbar { display: grid; gap: 14px; }
 .zhulu-toolbar .filter-row { margin: 0; }
 .zhulu-toolbar .filter-row > input { flex: 1 1 320px; }
+.zhulu-progress-query-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+}
+#zhulu-progress-search {
+  width: 100%;
+  min-height: 44px;
+  padding-block: 9px;
+  font-size: 15px;
+}
 .zhulu-season-primary-filters {
   display: grid;
   grid-template-columns: 150px 150px minmax(260px, 1fr);
@@ -3515,7 +3527,12 @@ tbody tr:hover { background-color: rgba(217, 173, 60, .06); }
 }
 .zhulu-season-primary-filters label { display: grid; gap: 6px; color: var(--muted); }
 .zhulu-season-primary-filters select,
-.zhulu-season-primary-filters input { width: 100%; }
+.zhulu-season-primary-filters input {
+  width: 100%;
+  min-height: 44px;
+  padding-block: 9px;
+  font-size: 15px;
+}
 .zhulu-filter-row { align-items: center; }
 .zhulu-filter-row .segs { min-width: 0; }
 .zhulu-progress-panel { padding: 0; overflow: hidden; }
@@ -3524,6 +3541,12 @@ tbody tr:hover { background-color: rgba(217, 173, 60, .06); }
 .zhulu-progress-table th,
 .zhulu-progress-table td { padding: 13px 18px; border-bottom: 1px solid var(--line); text-align: center; }
 .zhulu-progress-table th { color: var(--gold); background: rgba(113, 72, 19, .17); }
+.zhulu-progress-table th:nth-child(2),
+.zhulu-progress-table td:nth-child(2) {
+  background: linear-gradient(90deg, rgba(160, 105, 28, .11), rgba(205, 160, 61, .18), rgba(160, 105, 28, .11));
+  box-shadow: inset 1px 0 rgba(205, 160, 61, .2), inset -1px 0 rgba(205, 160, 61, .2);
+}
+.zhulu-progress-table th:nth-child(2) { color: #f5cf63; }
 .zhulu-progress-table th:first-child { width: 26%; }
 .zhulu-progress-table th:last-child { width: 20%; }
 .zhulu-progress-table tbody tr:last-child td { border-bottom: 0; }
@@ -3576,6 +3599,10 @@ tbody tr:hover { background-color: rgba(217, 173, 60, .06); }
 .zhulu-reward.zhulu-quality-red { border-color: rgba(201, 86, 71, .78); }
 .zhulu-reward-head { display: flex; align-items: center; justify-content: space-between; gap: 5px; color: var(--muted); font-size: 12px; }
 .zhulu-reward-head strong { color: var(--gold); white-space: nowrap; }
+.zhulu-initial-quality { font-weight: 800; white-space: nowrap; }
+.zhulu-initial-quality.zhulu-quality-purple { color: #dda8ff; }
+.zhulu-initial-quality.zhulu-quality-orange { color: #ffad52; }
+.zhulu-initial-quality.zhulu-quality-unknown { color: var(--muted); }
 .zhulu-book-name {
   appearance: none;
   width: 100%;
@@ -3593,6 +3620,10 @@ tbody tr:hover { background-color: rgba(217, 173, 60, .06); }
 .zhulu-book-name.zhulu-quality-purple { border-color: #9b4fce; background: #66308f; }
 .zhulu-book-name.zhulu-quality-orange { border-color: #ff982f; background: #c96a18; color: #fff8e8; }
 .zhulu-book-name.zhulu-quality-red { border-color: #df6958; background: #a92e24; }
+.zhulu-acquired-quality { margin-left: 2px; font-weight: 900; }
+.zhulu-acquired-quality.zhulu-quality-purple { color: #f0d3ff; }
+.zhulu-acquired-quality.zhulu-quality-orange { color: #fff0c2; }
+.zhulu-acquired-quality.zhulu-quality-red { color: #ffd0ca; }
 .zhulu-book-name:hover,
 .zhulu-book-name:focus-visible { filter: brightness(1.15); box-shadow: 0 0 0 2px rgba(255, 211, 105, .35); }
 .zhulu-yuanbao { color: var(--muted); font-size: 12px; line-height: 1.35; text-align: center; }
@@ -3645,6 +3676,7 @@ tbody tr:hover { background-color: rgba(217, 173, 60, .06); }
   .zhulu-tabs .seg { width: 100%; }
   .zhulu-toolbar { gap: 12px; }
   .zhulu-toolbar .filter-row { align-items: stretch; }
+  .zhulu-progress-query-row { grid-template-columns: auto minmax(0, 1fr) auto; gap: 8px; align-items: center; }
   .zhulu-toolbar .filter-row > input { flex-basis: 100%; width: 100%; }
   .zhulu-season-primary-filters { grid-template-columns: 1fr 1fr; gap: 9px; }
   .zhulu-filter-row { display: grid; grid-template-columns: 1fr; gap: 7px; }

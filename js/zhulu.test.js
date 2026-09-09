@@ -71,6 +71,27 @@ test("组合筛选同时约束年月、典籍、品质和进度", () => {
   assert.ok(result.explicit.every((season) => season.matches.every((item) => item.progress === 2200 && item.quality === "红")));
 });
 
+test("筛选结果依次展示本月、未来月份和过去月份", () => {
+  const groups = CORE.groupFilteredSeasons(DATA, { progress: 1000 }, new Date(2026, 8, 9));
+
+  assert.deepStrictEqual(groups.current.map(CORE.seasonKey), ["2026-09"]);
+  assert.deepStrictEqual(groups.future.slice(0, 3).map(CORE.seasonKey), ["2026-10", "2026-11", "2026-12"]);
+  assert.ok(groups.future.some((season) => season.predicted && CORE.seasonKey(season) === "2027-01"));
+  assert.deepStrictEqual(groups.history.slice(0, 3).map(CORE.seasonKey), ["2026-08", "2026-07", "2026-06"]);
+});
+
+test("典籍初始品质以装备属性中的典籍分组为准", () => {
+  const equipment = [
+    { cat: "典籍", name: "六韬", bookGroup: "初始紫色典籍" },
+    { cat: "典籍", name: "黄石天书", bookGroup: "初始橙色典籍" },
+    { cat: "武器", name: "六韬", bookGroup: "初始橙色典籍" }
+  ];
+
+  assert.strictEqual(CORE.resolveInitialBookQuality(equipment, "六韬"), "紫");
+  assert.strictEqual(CORE.resolveInitialBookQuality(equipment, "黄石天书"), "橙");
+  assert.strictEqual(CORE.resolveInitialBookQuality(equipment, "不存在的典籍"), null);
+});
+
 test("目标页未改动时恢复旧状态，改动后不恢复", () => {
   const session = CORE.createJumpSession(
     "atlas",

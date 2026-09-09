@@ -3,11 +3,13 @@
 
   var data = window.ZHULU_DATA;
   var core = window.ZHULU;
+  var equipmentItems = window.SPECIAL_EQUIPMENT_DATA && window.SPECIAL_EQUIPMENT_DATA.items || [];
   var refreshQueue = window.UI_PERFORMANCE && window.UI_PERFORMANCE.createRefreshQueue;
   var initialized = false;
   var rendered = false;
   var activeBook = "";
   var actionTrigger = null;
+  var initialQualityCache = Object.create(null);
   var state = {
     tab: "progress",
     progressQuery: "",
@@ -42,6 +44,14 @@
 
   function formatMonth(season) {
     return season.year + "年" + season.month + "月";
+  }
+
+  function initialBookQuality(bookName) {
+    var key = core.normalizeText(bookName);
+    if (!Object.prototype.hasOwnProperty.call(initialQualityCache, key)) {
+      initialQualityCache[key] = core.resolveInitialBookQuality(equipmentItems, bookName);
+    }
+    return initialQualityCache[key];
   }
 
   function setError(message) {
@@ -84,9 +94,12 @@
   }
 
   function rewardHtml(entry) {
+    var initialQuality = initialBookQuality(entry.book);
+    var initialLabel = initialQuality ? "初始" + initialQuality + "色" : "初始品质待确认";
+    var initialClass = initialQuality ? qualityClass(initialQuality) : "zhulu-quality-unknown";
     return '<article class="zhulu-reward ' + qualityClass(entry.quality) + '">' +
-      '<div class="zhulu-reward-head"><strong>' + number(entry.progress) + '进度</strong><span>' + escapeHtml(entry.quality) + "色</span></div>" +
-      '<button type="button" class="zhulu-book-name ' + qualityClass(entry.quality) + '" data-zhulu-book="' + escapeHtml(entry.book) + '">' + escapeHtml(entry.book) + "</button>" +
+      '<div class="zhulu-reward-head"><strong>' + number(entry.progress) + '进度</strong><span class="zhulu-initial-quality ' + initialClass + '">' + escapeHtml(initialLabel) + "</span></div>" +
+      '<button type="button" class="zhulu-book-name ' + qualityClass(entry.quality) + '" data-zhulu-book="' + escapeHtml(entry.book) + '"><span>' + escapeHtml(entry.book) + '</span><span class="zhulu-acquired-quality ' + qualityClass(entry.quality) + '">（' + escapeHtml(entry.quality) + "）</span></button>" +
       '<div class="zhulu-yuanbao">' + (entry.yuanbao ? "消耗 " + number(entry.yuanbao) + " 元宝" : "无需元宝") + "</div>" +
       "</article>";
   }
@@ -114,9 +127,10 @@
   function renderSeasons() {
     var html = "";
     if (hasSeasonFilters()) {
-      var result = core.querySeasons(data, state.seasonFilters, new Date());
-      html += groupHtml("明确资料", result.explicit, "明确资料");
-      html += groupHtml("预测资料", result.predicted, "预测");
+      var groups = core.groupFilteredSeasons(data, state.seasonFilters, new Date());
+      html += groupHtml("本月", groups.current, groups.current.some(function (item) { return item.predicted; }) ? "预测" : "本月");
+      html += groupHtml("未来月份", groups.future, "");
+      html += groupHtml("过去月份", groups.history, "");
       if (!html) html = '<div class="empty"><p>未找到符合条件的赛季典籍</p><button type="button" class="link-btn" data-zhulu-clear-season>清除全部条件</button></div>';
     } else {
       var groups = core.groupDefaultSeasons(data, new Date());

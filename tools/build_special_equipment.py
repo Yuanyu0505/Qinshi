@@ -69,6 +69,9 @@ BOOK_TIERS = {
 BOOK_STAGE_OVERRIDES = {
     ("神兵礼经", "红色", 15): "25%攻防血\n22%减伤\n25%暴击",
 }
+BOOK_GROUP_OVERRIDES = {
+    "孙子兵法": "初始紫色典籍",
+}
 SPEED_PAT = re.compile(r"^(\d+(?:\.\d+)?)\s*速$")
 ENEMY_PAT = re.compile(r"^敌方-\s*(\d+(?:\.\d+)?)%\s*(攻|防|血)$")
 
@@ -175,14 +178,19 @@ def parse_book_sheet(wb):
         main_key = main.split("、", 1)[0].strip()
         if row_number <= 19:
             book_group = "初始紫色典籍"
-            category = "典籍"
-            tiers_to_read = BOOK_TIERS
         elif row_number <= 40:
             book_group = "初始橙色典籍"
+        else:
+            book_group = "神兵典籍"
+
+        book_group = BOOK_GROUP_OVERRIDES.get(name, book_group)
+        if book_group == "初始紫色典籍":
+            category = "典籍"
+            tiers_to_read = BOOK_TIERS
+        elif book_group == "初始橙色典籍":
             category = "典籍"
             tiers_to_read = {tier: columns for tier, columns in BOOK_TIERS.items() if tier != "紫色"}
         else:
-            book_group = "神兵典籍"
             category = "神兵典籍"
             tiers_to_read = {tier: columns for tier, columns in BOOK_TIERS.items() if tier != "紫色"}
 

@@ -68,14 +68,21 @@
     elements.seasonView.hidden = state.tab !== "seasons";
   }
 
-  function progressItemHtml(item, highlighted) {
+  function progressRewardHtml(item) {
     var reward = item.seasonTier
       ? '<button type="button" class="zhulu-progress-book-link" data-zhulu-tier-link="' + item.seasonTier + '">' + escapeHtml(item.item) + "</button>"
       : '<span class="zhulu-progress-item-name">' + escapeHtml(item.item) + "</span>";
-    return '<tr class="' + (highlighted ? "is-located" : "") + '">' +
-      '<td data-label="进度"><strong>' + number(item.progress) + "</strong></td>" +
-      '<td data-label="奖励">' + reward + "</td>" +
-      '<td data-label="数量">×' + number(item.quantity) + "</td>" +
+    return reward + '<span class="zhulu-progress-quantity">×' + number(item.quantity) + "</span>";
+  }
+
+  function progressRowHtml(row, highlighted) {
+    var cells = row.items.map(function (item) {
+      return '<td data-label="进度"><strong>' + number(item.progress) + "</strong></td>" +
+        '<td data-label="奖励">' + progressRewardHtml(item) + "</td>";
+    }).join("");
+    if (row.items.length < 2) cells += '<td class="is-empty" aria-hidden="true"></td><td class="is-empty" aria-hidden="true"></td>';
+    return '<tr class="' + (highlighted ? "is-located " : "") + (row.hasBookReward ? "has-book-reward" : "") + '">' +
+      cells +
       "</tr>";
   }
 
@@ -87,9 +94,10 @@
       return;
     }
     var highlighted = result.mode !== "all";
+    var rows = core.pairProgressRewards(result.items);
     elements.progressResults.innerHTML = '<section class="panel zhulu-progress-panel"><div class="zhulu-progress-table-wrap"><table class="zhulu-progress-table">' +
-      "<thead><tr><th>进度要求</th><th>奖励道具</th><th>数量</th></tr></thead><tbody>" +
-      result.items.map(function (item) { return progressItemHtml(item, highlighted); }).join("") +
+      "<thead><tr><th>进度</th><th>奖励道具</th><th>进度</th><th>奖励道具</th></tr></thead><tbody>" +
+      rows.map(function (row) { return progressRowHtml(row, highlighted); }).join("") +
       "</tbody></table></div></section>";
   }
 

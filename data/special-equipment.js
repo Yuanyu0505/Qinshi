@@ -15652,9 +15652,10 @@ window.SPECIAL_EQUIPMENT_DATA = {
       "name": "孙子兵法",
       "main": "攻、内力",
       "mainKey": "攻",
-      "bookGroup": "初始橙色典籍",
+      "bookGroup": "初始紫色典籍",
       "sourceOrder": 26,
       "tiers": {
+        "紫色": [],
         "橙色": [
           {
             "t": "暴击",
@@ -15795,6 +15796,20 @@ window.SPECIAL_EQUIPMENT_DATA = {
         ]
       },
       "stages": {
+        "紫色": [
+          {
+            "stage": 0,
+            "tokens": []
+          },
+          {
+            "stage": 5,
+            "tokens": []
+          },
+          {
+            "stage": 10,
+            "tokens": []
+          }
+        ],
         "橙色": [
           {
             "stage": 0,

@@ -3541,18 +3541,17 @@ tbody tr:hover { background-color: rgba(217, 173, 60, .06); }
 .zhulu-progress-table th,
 .zhulu-progress-table td { padding: 13px 18px; border-bottom: 1px solid var(--line); text-align: center; }
 .zhulu-progress-table th { color: var(--gold); background: rgba(113, 72, 19, .17); }
-.zhulu-progress-table th:nth-child(2),
-.zhulu-progress-table td:nth-child(2) {
+.zhulu-progress-table th:nth-child(odd) { width: 16%; }
+.zhulu-progress-table th:nth-child(even) { width: 34%; }
+.zhulu-progress-table tr.has-book-reward td {
   background: linear-gradient(90deg, rgba(160, 105, 28, .11), rgba(205, 160, 61, .18), rgba(160, 105, 28, .11));
-  box-shadow: inset 1px 0 rgba(205, 160, 61, .2), inset -1px 0 rgba(205, 160, 61, .2);
 }
-.zhulu-progress-table th:nth-child(2) { color: #f5cf63; }
-.zhulu-progress-table th:first-child { width: 26%; }
-.zhulu-progress-table th:last-child { width: 20%; }
+.zhulu-progress-table tr.has-book-reward td:first-child { box-shadow: inset 4px 0 #d8aa3d; }
 .zhulu-progress-table tbody tr:last-child td { border-bottom: 0; }
 .zhulu-progress-table tr.is-located { background: rgba(184, 59, 52, .13); box-shadow: inset 4px 0 var(--red); }
 .zhulu-progress-book-link,
 .zhulu-progress-item-name { color: var(--text); font-weight: 700; }
+.zhulu-progress-quantity { margin-left: 3px; color: var(--text); font-weight: 700; white-space: nowrap; }
 .zhulu-progress-book-link {
   appearance: none;
   padding: 5px 9px;
@@ -3665,10 +3664,12 @@ tbody tr:hover { background-color: rgba(217, 173, 60, .06); }
   .zhulu-progress-table,
   .zhulu-progress-table tbody { display: block; width: 100%; }
   .zhulu-progress-table thead { display: none; }
-  .zhulu-progress-table tr { display: grid; grid-template-columns: 100px minmax(0, 1fr) 84px; align-items: center; margin: 10px; border: 1px solid var(--line); border-radius: 8px; background: rgba(10, 8, 6, .46); }
+  .zhulu-progress-table tr { display: grid; grid-template-columns: 86px minmax(0, 1fr) 86px minmax(0, 1fr); align-items: stretch; margin: 10px; border: 1px solid var(--line); border-radius: 8px; background: rgba(10, 8, 6, .46); overflow: hidden; }
   .zhulu-progress-table tr.is-located { border-color: rgba(201, 86, 71, .72); }
-  .zhulu-progress-table td { display: grid; gap: 3px; width: auto; padding: 12px 10px; border-bottom: 0; text-align: center; }
+  .zhulu-progress-table tr.has-book-reward { border-color: rgba(216, 170, 61, .76); }
+  .zhulu-progress-table td { display: grid; align-content: center; gap: 3px; width: auto; padding: 12px 8px; border-bottom: 0; text-align: center; }
   .zhulu-progress-table td::before { content: attr(data-label); color: var(--muted); font-size: 12px; }
+  .zhulu-progress-table td.is-empty::before { content: ""; }
 }
 
 @media (max-width: 640px) {
@@ -3687,8 +3688,8 @@ tbody tr:hover { background-color: rgba(217, 173, 60, .06); }
   .zhulu-season-card-head h3 { font-size: 17px; }
   .zhulu-reward-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; }
   .zhulu-reward { padding: 8px; }
-  .zhulu-progress-table tr { grid-template-columns: 78px minmax(0, 1fr) 64px; margin: 8px; }
-  .zhulu-progress-table td { padding: 10px 5px; }
+  .zhulu-progress-table tr { grid-template-columns: 52px minmax(0, 1fr) 52px minmax(0, 1fr); margin: 8px; }
+  .zhulu-progress-table td { padding: 10px 4px; font-size: 12px; }
   .zhulu-progress-book-link { padding: 6px 4px; }
   .zhulu-return-banner { align-items: stretch; flex-direction: column; }
   .zhulu-return-banner .seg { width: 100%; }

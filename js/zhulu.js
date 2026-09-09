@@ -51,6 +51,19 @@
     return { mode: "item", items: matches, message: matches.length ? "找到 " + matches.length + " 个奖励节点" : "未找到匹配的奖励" };
   }
 
+  function pairProgressRewards(rewards) {
+    var items = rewards || [];
+    var rows = [];
+    for (var index = 0; index < items.length; index += 2) {
+      var pair = items.slice(index, index + 2);
+      rows.push({
+        items: pair,
+        hasBookReward: pair.some(function (item) { return Boolean(item.seasonTier); })
+      });
+    }
+    return rows;
+  }
+
   function serialMonth(year, month) {
     return Number(year) * 12 + Number(month) - 1;
   }
@@ -264,6 +277,7 @@
   return {
     normalizeText: normalizeText,
     locateProgressRewards: locateProgressRewards,
+    pairProgressRewards: pairProgressRewards,
     serialMonth: serialMonth,
     seasonKey: seasonKey,
     predictSeason: predictSeason,

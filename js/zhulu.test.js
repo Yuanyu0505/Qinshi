@@ -51,6 +51,17 @@ test("道具查询返回全部匹配节点", () => {
   assert.deepStrictEqual(result.items.map((item) => item.progress), [10, 100, 450, 900]);
 });
 
+test("进度奖励每行组合两个节点并标记包含典籍的行", () => {
+  const rows = CORE.pairProgressRewards([
+    { progress: 900, item: "元宝", quantity: 1000, seasonTier: null },
+    { progress: 1000, item: "紫色典籍1", quantity: 1, seasonTier: 1000 },
+    { progress: 1100, item: "武器进化石", quantity: 120, seasonTier: null }
+  ]);
+
+  assert.deepStrictEqual(rows.map((row) => row.items.map((item) => item.progress)), [[900, 1000], [1100]]);
+  assert.deepStrictEqual(rows.map((row) => row.hasBookReward), [true, false]);
+});
+
 test("2027 年预测延续 2024 年 3 月开始的十个月循环", () => {
   const predicted = CORE.predictSeason(DATA, 2027, 1);
   assert.strictEqual(predicted.predicted, true);

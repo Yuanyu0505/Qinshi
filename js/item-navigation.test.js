@@ -82,6 +82,11 @@ test("操作菜单：四类来源返回确认后的动作和统一文案", () =>
     { id: "atlas", label: "前往图鉴分区查询" },
     { id: "equipment", label: "前往装备属性分区查询" }
   ]);
+  assert.deepStrictEqual(ItemNavigation.actionsForSource("forbidden"), [
+    { id: "atlas", label: "前往图鉴分区查询" },
+    { id: "forging", label: "前往橙装锻造分区查询" },
+    { id: "equipment", label: "前往装备属性分区查询" }
+  ]);
 });
 
 test("导航栈：连续跳转后按后进先出逐级返回", () => {

@@ -256,6 +256,16 @@
           </label>
           <button id="forbidden-schedule-toggle" type="button" class="seg" aria-pressed="false">查看完整预测表</button>
         </div>
+        <div class="filter-row forbidden-purpose-row">
+          <span class="filter-label">道具用途</span>
+          <div id="forbidden-purpose-filter" class="segs" aria-label="筛选禁地道具用途">
+            <button type="button" class="seg active" data-forbidden-purpose="">全部用途</button>
+            <button type="button" class="seg" data-forbidden-purpose="unclassified">未分类</button>
+            <button type="button" class="seg" data-forbidden-purpose="atlas">图鉴</button>
+            <button type="button" class="seg" data-forbidden-purpose="forging">锻造</button>
+            <button type="button" class="seg" data-forbidden-purpose="machine-beasts">机关兽</button>
+          </div>
+        </div>
       </section>
       <div id="forbidden-error" class="error" role="alert" hidden></div>
       <div id="forbidden-content"></div>
@@ -299,6 +309,10 @@
     </section>
 
     <section id="partition-machine-beasts" hidden>
+      <div class="item-navigation-return" data-item-navigation-return="machine-beasts" hidden>
+        <span data-item-navigation-context></span>
+        <button type="button" class="seg" data-item-navigation-back>返回</button>
+      </div>
       <div id="machine-beast-modes" class="segs machine-beast-modes">
         <button type="button" class="seg active" data-machine-beast-mode="progress">个人进度</button>
         <button type="button" class="seg" data-machine-beast-mode="calculator">方案计算</button>
@@ -643,6 +657,28 @@
           <button id="item-navigation-close" type="button" class="link-btn">关闭</button>
         </div>
         <div id="item-navigation-actions" class="item-navigation-actions"></div>
+      </div>
+
+      <div id="forbidden-purpose-editor" class="forbidden-purpose-editor" hidden>
+        <button type="button" class="forbidden-purpose-backdrop" data-forbidden-purpose-close aria-label="关闭用途设置"></button>
+        <section class="forbidden-purpose-dialog" role="dialog" aria-modal="true" aria-labelledby="forbidden-purpose-title">
+          <header>
+            <div><span>道具用途</span><strong id="forbidden-purpose-title"></strong></div>
+            <button type="button" class="link-btn" data-forbidden-purpose-close>关闭</button>
+          </header>
+          <div id="forbidden-purpose-options" class="forbidden-purpose-options"></div>
+          <fieldset class="forbidden-purpose-scope">
+            <legend>应用范围</legend>
+            <label><input type="radio" name="forbidden-purpose-scope" value="event" checked>仅本期</label>
+            <label><input type="radio" name="forbidden-purpose-scope" value="family">全部同装备族</label>
+          </fieldset>
+          <p class="muted-tip">“全部同装备族”是一次性同步，之后仍可逐期单独修改。</p>
+          <div class="forbidden-purpose-actions">
+            <button type="button" class="seg forbidden-purpose-remove" data-forbidden-purpose-remove>取消勾选</button>
+            <button type="button" class="seg" data-forbidden-purpose-close>取消</button>
+            <button type="button" class="seg active" data-forbidden-purpose-save>保存</button>
+          </div>
+        </section>
       </div>
 
     </div>

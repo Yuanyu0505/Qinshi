@@ -535,6 +535,7 @@
 
   function setMode(mode) {
     state.mode = mode;
+    applySearchContext(mode);
     el.modes.querySelectorAll("[data-machine-beast-mode]").forEach(function (button) { button.classList.toggle("active", button.dataset.machineBeastMode === mode); });
     el.progress.hidden = mode !== "progress";
     el.calculator.hidden = mode !== "calculator";
@@ -542,6 +543,58 @@
     if (mode === "progress" && !rendered.progress) renderProgress();
     if (mode === "calculator" && !rendered.calculator) renderCalculatorControls();
     if (mode === "reference" && !rendered.reference) renderReference();
+  }
+
+  function captureView() {
+    return {
+      mode: state.mode,
+      searches: clone(state.searches),
+      progressSchoolId: state.progressSchoolId,
+      referenceBeastSchoolId: state.referenceBeastSchoolId,
+      referenceStageSchoolId: state.referenceStageSchoolId,
+      calculatorMode: state.calculatorMode,
+      calcBeastId: state.calcBeastId,
+      calcDraft: clone(state.calcDraft),
+      calcTargetLevel: state.calcTargetLevel,
+      calcResult: clone(state.calcResult),
+      singleInventoryPolicy: clone(state.singleInventoryPolicy),
+      singleNewRankMode: state.singleNewRankMode,
+      schoolDraft: clone(state.schoolDraft),
+      schoolResult: clone(state.schoolResult)
+    };
+  }
+
+  function restoreView(view) {
+    var saved = view || {};
+    Object.keys(searchRefresh).forEach(function (scope) { searchRefresh[scope].cancel(); });
+    state.searches = Object.assign({ progress: "", calculator: "", reference: "" }, saved.searches || {});
+    Object.keys(state.searches).forEach(function (scope) { pendingSearches[scope] = state.searches[scope]; });
+    state.progressSchoolId = saved.progressSchoolId || state.progressSchoolId;
+    state.referenceBeastSchoolId = saved.referenceBeastSchoolId || state.referenceBeastSchoolId;
+    state.referenceStageSchoolId = saved.referenceStageSchoolId || state.referenceStageSchoolId;
+    state.calculatorMode = saved.calculatorMode || state.calculatorMode;
+    if (saved.calcBeastId && beastById(saved.calcBeastId)) state.calcBeastId = saved.calcBeastId;
+    if (saved.calcDraft) state.calcDraft = clone(saved.calcDraft);
+    if (saved.calcTargetLevel != null) state.calcTargetLevel = saved.calcTargetLevel;
+    state.calcResult = saved.calcResult == null ? null : clone(saved.calcResult);
+    if (saved.singleInventoryPolicy) state.singleInventoryPolicy = clone(saved.singleInventoryPolicy);
+    state.singleNewRankMode = saved.singleNewRankMode || state.singleNewRankMode;
+    if (saved.schoolDraft) state.schoolDraft = clone(saved.schoolDraft);
+    state.schoolResult = saved.schoolResult == null ? null : clone(saved.schoolResult);
+    rendered = { progress: false, calculator: false, reference: false };
+    setMode(saved.mode || "progress");
+  }
+
+  function applyNavigationQuery(name) {
+    var query = String(name == null ? "" : name).trim();
+    Object.keys(searchRefresh).forEach(function (scope) { searchRefresh[scope].cancel(); });
+    ["progress", "calculator", "reference"].forEach(function (scope) {
+      state.searches[scope] = query;
+      pendingSearches[scope] = query;
+    });
+    rendered = { progress: false, calculator: false, reference: false };
+    setMode("progress");
+    return captureView();
   }
 
   function updateInventory(draft, target) {
@@ -878,6 +931,11 @@
     if (!partition.hidden) activatePartition();
   }
 
-  window.MACHINE_BEAST_UI = { init: init };
+  window.MACHINE_BEAST_UI = {
+    init: init,
+    captureView: captureView,
+    restoreView: restoreView,
+    applyNavigationQuery: applyNavigationQuery
+  };
   document.addEventListener("DOMContentLoaded", init);
 })();

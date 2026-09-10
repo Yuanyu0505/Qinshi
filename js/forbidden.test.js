@@ -43,4 +43,23 @@ const needs = F.normalizeNeeds({
 assert.deepStrictEqual(needs[wind.id], { disciples: ["隐虎季布"], items: ["影虎"] });
 assert.strictEqual(F.filterOccurrences(DATA, { selectedOnly: true, needs }).length, 1);
 
+const migrated = F.normalizeNeedsV2(null, {
+  [wind.id]: { disciples: ["兵家王翦"], items: ["影虎碎片"] }
+}, DATA);
+assert.deepStrictEqual(migrated.events[wind.id].disciples, ["兵家王翦"]);
+assert.deepStrictEqual(migrated.events[wind.id].rewards["equipment:影虎碎片"].purposes, []);
+
+const bodyIdentity = F.rewardIdentity("orangeDrops", "影虎", "影虎");
+const fragmentIdentity = F.rewardIdentity("equipmentFragments", "影虎", "影虎");
+assert.strictEqual(bodyIdentity.familyKey, fragmentIdentity.familyKey);
+assert.strictEqual(fragmentIdentity.name, "影虎碎片");
+assert.deepStrictEqual(F.discipleAtlasTargets(DATA, "兵家王翦"), ["兵家王翦", "神·王翦"]);
+assert.deepStrictEqual(F.discipleAtlasTargets(DATA, "隐虎季布"), []);
+assert.strictEqual(F.machineBeastTarget("王蛇"), "赤练王蛇");
+
+F.setRewardSelection(migrated, wind.id, fragmentIdentity, true, ["atlas", "forging", "machine-beasts"]);
+assert.deepStrictEqual(migrated.events[wind.id].rewards[fragmentIdentity.key].purposes, ["atlas", "forging"]);
+assert.strictEqual(F.matchesPurpose(migrated, wind.id, "atlas"), true);
+assert.strictEqual(F.matchesPurpose(migrated, wind.id, "machine-beasts"), false);
+
 console.log("forbidden core tests passed");

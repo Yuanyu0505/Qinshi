@@ -7,6 +7,7 @@
 
   var ATTRIBUTE_QUERIES = { "攻": true, "血": true, "内": true, "内力": true, "防": true };
   var SECTION_ORDER = ["contribution5", "contribution10", "rank1", "rank2", "rank3to10", "equipmentFragments", "machineBeasts", "nuclei", "orangeDrops"];
+  var PURPOSES = ["atlas", "forging", "machine-beasts"];
   var BEAST_NAMES = {
     "王蛇": "赤练王蛇",
     "玄武": "机关玄武",
@@ -152,6 +153,71 @@
     return parts.join(" ");
   }
 
+  function rewardCategory(sectionKey) {
+    if (sectionKey === "machineBeasts") return "machine-beast";
+    if (sectionKey === "nuclei") return "nucleus";
+    return "equipment";
+  }
+
+  function allowedPurposes(category) {
+    return category === "machine-beast" || category === "nucleus"
+      ? ["machine-beasts"]
+      : ["atlas", "forging"];
+  }
+
+  function cleanPurposes(values, category) {
+    var allowed = allowedPurposes(category);
+    return unique(Array.isArray(values) ? values : []).filter(function (purpose) {
+      return PURPOSES.indexOf(purpose) !== -1 && allowed.indexOf(purpose) !== -1;
+    });
+  }
+
+  function machineBeastTarget(name) {
+    var value = String(name == null ? "" : name).trim();
+    return BEAST_NAMES[value] || value;
+  }
+
+  function rewardIdentity(sectionKey, rawName, resolvedFamilyKey) {
+    var raw = String(rawName == null ? "" : rawName).trim();
+    var category = rewardCategory(sectionKey);
+    var displayName = sectionKey === "equipmentFragments" && !/碎片$/.test(raw) ? raw + "碎片" : raw;
+    var baseName = category === "equipment" ? displayName.replace(/碎片$/, "") : machineBeastTarget(raw);
+    var familyKey = category === "equipment"
+      ? String(resolvedFamilyKey || baseName).trim()
+      : category + ":" + machineBeastTarget(raw);
+    return {
+      key: category + ":" + normalize(displayName),
+      name: displayName,
+      rawName: raw,
+      baseName: baseName,
+      sectionKey: sectionKey,
+      category: category,
+      familyKey: familyKey
+    };
+  }
+
+  function occurrenceRewardIdentities(data, occurrence) {
+    var resolved = resolveTemplate(data, occurrence);
+    if (!resolved) return [];
+    var identities = [];
+    SECTION_ORDER.forEach(function (sectionKey) {
+      (resolved[sectionKey] || []).forEach(function (name) {
+        identities.push(rewardIdentity(sectionKey, name));
+      });
+    });
+    var seen = {};
+    return identities.filter(function (identity) {
+      if (seen[identity.key]) return false;
+      seen[identity.key] = true;
+      return true;
+    });
+  }
+
+  function discipleAtlasTargets(data, name) {
+    var mappings = data && data.discipleAtlasTargets || {};
+    return unique(Array.isArray(mappings[name]) ? mappings[name] : []);
+  }
+
   function findMatches(data, occurrence, query) {
     var q = normalize(query);
     if (!q) return [];
@@ -198,11 +264,136 @@
     return cleaned;
   }
 
+  function emptyNeedsV2() {
+    return { version: 2, events: {} };
+  }
+
+  function normalizeRewardRecord(key, record) {
+    if (!record || typeof record !== "object" || Array.isArray(record)) return null;
+    var category = ["equipment", "machine-beast", "nucleus"].indexOf(record.category) !== -1
+      ? record.category
+      : "equipment";
+    var name = String(record.name == null ? "" : record.name).trim();
+    if (!name) return null;
+    return {
+      name: name,
+      rawName: String(record.rawName == null ? name.replace(/碎片$/, "") : record.rawName).trim(),
+      baseName: String(record.baseName == null ? name.replace(/碎片$/, "") : record.baseName).trim(),
+      sectionKey: String(record.sectionKey || ""),
+      category: category,
+      familyKey: String(record.familyKey || name.replace(/碎片$/, "")).trim(),
+      purposes: cleanPurposes(record.purposes, category),
+      key: String(key || record.key || category + ":" + normalize(name))
+    };
+  }
+
+  function normalizeNeedsV2(rawV2, rawV1, data) {
+    var source = rawV2 && typeof rawV2 === "object" && !Array.isArray(rawV2) ? rawV2 : null;
+    var sourceEvents = source && source.events && typeof source.events === "object" && !Array.isArray(source.events)
+      ? source.events
+      : null;
+    var result = emptyNeedsV2();
+    if (sourceEvents) {
+      Object.keys(sourceEvents).forEach(function (eventId) {
+        var event = sourceEvents[eventId];
+        if (!event || typeof event !== "object" || Array.isArray(event)) return;
+        var disciples = unique(Array.isArray(event.disciples) ? event.disciples : []);
+        var rewards = {};
+        var sourceRewards = event.rewards && typeof event.rewards === "object" && !Array.isArray(event.rewards)
+          ? event.rewards
+          : {};
+        Object.keys(sourceRewards).forEach(function (key) {
+          var normalized = normalizeRewardRecord(key, sourceRewards[key]);
+          if (normalized) rewards[normalized.key] = normalized;
+        });
+        if (disciples.length || Object.keys(rewards).length) {
+          result.events[eventId] = { disciples: disciples, rewards: rewards };
+        }
+      });
+      return result;
+    }
+
+    var legacy = normalizeNeeds(rawV1, data);
+    Object.keys(legacy).forEach(function (eventId) {
+      var occurrence = (data && data.occurrences || []).find(function (item) { return item.id === eventId; });
+      var available = occurrence ? occurrenceRewardIdentities(data, occurrence) : [];
+      var rewards = {};
+      legacy[eventId].items.forEach(function (legacyName) {
+        var matched = available.filter(function (identity) {
+          return normalize(identity.name) === normalize(legacyName) || normalize(identity.rawName) === normalize(legacyName);
+        });
+        if (!matched.length) matched = [rewardIdentity("legacy", legacyName)];
+        matched.forEach(function (identity) {
+          rewards[identity.key] = Object.assign({}, identity, { purposes: [] });
+        });
+      });
+      if (legacy[eventId].disciples.length || Object.keys(rewards).length) {
+        result.events[eventId] = { disciples: legacy[eventId].disciples.slice(), rewards: rewards };
+      }
+    });
+    return result;
+  }
+
+  function ensureEvent(needs, eventId) {
+    if (!needs.events) needs.events = {};
+    if (!needs.events[eventId]) needs.events[eventId] = { disciples: [], rewards: {} };
+    if (!Array.isArray(needs.events[eventId].disciples)) needs.events[eventId].disciples = [];
+    if (!needs.events[eventId].rewards || typeof needs.events[eventId].rewards !== "object") needs.events[eventId].rewards = {};
+    return needs.events[eventId];
+  }
+
+  function cleanupEvent(needs, eventId) {
+    var event = needs.events && needs.events[eventId];
+    if (event && !event.disciples.length && !Object.keys(event.rewards).length) delete needs.events[eventId];
+  }
+
+  function setDiscipleSelection(needs, eventId, name, selected) {
+    var event = ensureEvent(needs, eventId);
+    var next = event.disciples.filter(function (item) { return normalize(item) !== normalize(name); });
+    if (selected) next.push(name);
+    event.disciples = unique(next);
+    cleanupEvent(needs, eventId);
+    return needs;
+  }
+
+  function setRewardSelection(needs, eventId, identity, selected, purposes) {
+    var event = ensureEvent(needs, eventId);
+    if (!selected) {
+      delete event.rewards[identity.key];
+      cleanupEvent(needs, eventId);
+      return needs;
+    }
+    event.rewards[identity.key] = Object.assign({}, identity, {
+      purposes: cleanPurposes(purposes, identity.category)
+    });
+    return needs;
+  }
+
+  function applyFamilyChange(needs, data, identity, change) {
+    (data && data.occurrences || []).forEach(function (occurrence) {
+      occurrenceRewardIdentities(data, occurrence).forEach(function (candidate) {
+        if (candidate.familyKey !== identity.familyKey) return;
+        setRewardSelection(needs, occurrence.id, candidate, change.selected !== false, change.purposes || []);
+      });
+    });
+    return needs;
+  }
+
   function eventNeeds(needs, id) {
+    if (needs && needs.version === 2) {
+      var current = needs.events && needs.events[id];
+      var rewards = current && current.rewards && typeof current.rewards === "object" ? current.rewards : {};
+      return {
+        disciples: unique(current && current.disciples),
+        rewards: rewards,
+        items: Object.keys(rewards).map(function (key) { return rewards[key].name; })
+      };
+    }
     var entry = needs && needs[id];
     return {
       disciples: unique(entry && entry.disciples),
-      items: unique(entry && entry.items)
+      items: unique(entry && entry.items),
+      rewards: {}
     };
   }
 
@@ -211,12 +402,22 @@
     return Boolean(entry.disciples.length || entry.items.length);
   }
 
+  function matchesPurpose(needs, id, purpose) {
+    if (!purpose) return true;
+    var rewards = eventNeeds(needs, id).rewards;
+    return Object.keys(rewards).some(function (key) {
+      var purposes = cleanPurposes(rewards[key].purposes, rewards[key].category);
+      return purpose === "unclassified" ? purposes.length === 0 : purposes.indexOf(purpose) !== -1;
+    });
+  }
+
   function filterOccurrences(data, options) {
     var opts = options || {};
     var query = normalize(opts.query);
     return (data && data.occurrences || []).filter(function (occurrence) {
       if (opts.size && occurrence.size !== opts.size) return false;
       if (opts.selectedOnly && !hasNeeds(opts.needs, occurrence.id)) return false;
+      if (opts.purpose && !matchesPurpose(opts.needs, occurrence.id, opts.purpose)) return false;
       return !query || findMatches(data, occurrence, query).length > 0;
     }).map(function (occurrence) {
       return { occurrence: occurrence, matches: query ? findMatches(data, occurrence, query) : [] };
@@ -225,6 +426,7 @@
 
   return {
     SECTION_ORDER: SECTION_ORDER,
+    PURPOSES: PURPOSES,
     normalize: normalize,
     unique: unique,
     resolveTemplate: resolveTemplate,
@@ -234,10 +436,21 @@
     getDefaultView: getDefaultView,
     dateAliases: dateAliases,
     discipleText: discipleText,
+    discipleAtlasTargets: discipleAtlasTargets,
+    machineBeastTarget: machineBeastTarget,
+    rewardIdentity: rewardIdentity,
+    occurrenceRewardIdentities: occurrenceRewardIdentities,
+    allowedPurposes: allowedPurposes,
+    cleanPurposes: cleanPurposes,
     findMatches: findMatches,
     normalizeNeeds: normalizeNeeds,
+    normalizeNeedsV2: normalizeNeedsV2,
+    setDiscipleSelection: setDiscipleSelection,
+    setRewardSelection: setRewardSelection,
+    applyFamilyChange: applyFamilyChange,
     eventNeeds: eventNeeds,
     hasNeeds: hasNeeds,
+    matchesPurpose: matchesPurpose,
     filterOccurrences: filterOccurrences
   };
 });

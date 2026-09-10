@@ -33,6 +33,11 @@
       { id: "forging", label: "前往橙装锻造分区查询" },
       { id: "atlas", label: "前往图鉴分区查询" },
       { id: "equipment", label: "前往装备属性分区查询" }
+    ],
+    forbidden: [
+      { id: "atlas", label: "前往图鉴分区查询" },
+      { id: "forging", label: "前往橙装锻造分区查询" },
+      { id: "equipment", label: "前往装备属性分区查询" }
     ]
   };
 

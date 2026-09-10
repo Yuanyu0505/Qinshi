@@ -25,6 +25,7 @@
   const UI_PERFORMANCE = window.UI_PERFORMANCE;
   const ZHULU = window.ZHULU;
   const ZHULU_UI = window.ZHULU_UI;
+  const MACHINE_BEAST_UI = window.MACHINE_BEAST_UI;
   const ATLAS_LEVELS_KEY = "qinshi_atlas_levels_v1";
   const ATLAS_TARGET_LEVEL_KEY = "qinshi_atlas_target_level_v1";
   const ATLAS_FAVORITES_KEY = "qinshi_atlas_favorites_v1";
@@ -184,6 +185,7 @@
     noteSources: [],
     sortField: "default",
     sortDirection: "asc",
+    exactQuery: null,
     inventoryEditingId: "",
     inventoryDraft: null,
     inventoryError: ""
@@ -317,7 +319,8 @@
       equipmentFilter: atlasState.equipmentFilter,
       noteSources: atlasState.noteSources.slice(),
       sortField: atlasState.sortField,
-      sortDirection: atlasState.sortDirection
+      sortDirection: atlasState.sortDirection,
+      exactQuery: atlasState.exactQuery ? cloneNavigationValue(atlasState.exactQuery) : null
     };
   }
 
@@ -335,6 +338,7 @@
     atlasState.noteSources = Array.isArray(saved.noteSources) ? saved.noteSources.slice() : [];
     atlasState.sortField = saved.sortField || "default";
     atlasState.sortDirection = saved.sortDirection || "asc";
+    atlasState.exactQuery = saved.exactQuery ? cloneNavigationValue(saved.exactQuery) : null;
     el.atlasSearch.value = atlasState.query;
   }
 
@@ -439,7 +443,10 @@
   function applyAtlasNavigation(item) {
     atlasState.activated = true;
     atlasState.tab = "全部";
-    atlasState.query = item.forgeKey;
+    atlasState.exactQuery = item.atlasExact ? cloneNavigationValue(item.atlasExact) : null;
+    atlasState.query = atlasState.exactQuery
+      ? (atlasState.exactQuery.names.length ? atlasState.exactQuery.names.join("＋") : atlasState.exactQuery.label)
+      : item.forgeKey;
     atlasState.searchField = "all";
     atlasState.levelMin = 0;
     atlasState.levelMax = 20;
@@ -449,9 +456,34 @@
     atlasState.noteSources = [];
     atlasState.sortField = "default";
     atlasState.sortDirection = "asc";
-    el.atlasSearch.value = item.forgeKey;
+    el.atlasSearch.value = atlasState.query;
     applyAtlas();
     return captureAtlasQueryView();
+  }
+
+  function normalizeAtlasExactName(name) {
+    return String(name == null ? "" : name).trim().toLowerCase().replace(/[\s·•・]/g, "");
+  }
+
+  function filterAtlasExactItems(items) {
+    if (!atlasState.exactQuery) return items;
+    const targets = Array.isArray(atlasState.exactQuery.names) ? atlasState.exactQuery.names : [];
+    const names = new Set(targets.map(normalizeAtlasExactName).filter(Boolean));
+    if (!names.size) return [];
+    return items.filter((item) => names.has(normalizeAtlasExactName(item && item.name)));
+  }
+
+  function atlasExactQueryStatusHtml(items) {
+    if (!atlasState.exactQuery) return "";
+    const targets = Array.isArray(atlasState.exactQuery.names) ? atlasState.exactQuery.names : [];
+    const found = new Set((ATLAS_DATA.items || []).map((item) => normalizeAtlasExactName(item && item.name)));
+    const namesHtml = targets.length
+      ? targets.map((name) => {
+        const missing = !found.has(normalizeAtlasExactName(name));
+        return `<strong${missing ? ' class="is-missing"' : ""}>${escapeHtml(name)}</strong>`;
+      }).join("、")
+      : `<strong class="is-missing">${escapeHtml(atlasState.exactQuery.label || atlasState.query)}</strong>`;
+    return `<div class="atlas-exact-query-status">精确查询：${namesHtml}${items.length ? "" : "（未找到图鉴）"}</div>`;
   }
 
   function applyDropQueryNavigation(item) {
@@ -466,6 +498,7 @@
     if (partition === "atlas") return captureAtlasQueryView();
     if (partition === "drops") return captureDropView();
     if (partition === "forbidden" && window.FORBIDDEN_UI) return window.FORBIDDEN_UI.captureView();
+    if (partition === "machine-beasts" && MACHINE_BEAST_UI) return MACHINE_BEAST_UI.captureView();
     if (partition === "zhulu" && ZHULU_UI) return ZHULU_UI.captureView();
     return {};
   }
@@ -483,6 +516,8 @@
       restoreDropView(view);
     } else if (partition === "forbidden" && window.FORBIDDEN_UI) {
       window.FORBIDDEN_UI.restoreView(view);
+    } else if (partition === "machine-beasts" && MACHINE_BEAST_UI) {
+      MACHINE_BEAST_UI.restoreView(view);
     } else if (partition === "zhulu" && ZHULU_UI) {
       ZHULU_UI.restoreView(view);
     }
@@ -494,6 +529,7 @@
     if (partition === "atlas") return applyAtlasNavigation(item);
     if (partition === "drops") return applyDropQueryNavigation(item);
     if (partition === "forbidden" && window.FORBIDDEN_UI) return window.FORBIDDEN_UI.applyNavigationQuery(item.forgeKey);
+    if (partition === "machine-beasts" && MACHINE_BEAST_UI) return MACHINE_BEAST_UI.applyNavigationQuery(item.machineBeastName || item.forgeKey);
     if (partition === "zhulu" && ZHULU_UI) return ZHULU_UI.applyNavigationQuery(item.forgeKey);
     return capturePartitionView(partition);
   }
@@ -519,11 +555,11 @@
     itemMenuContext = null;
   }
 
-  function openItemNavigationMenu(source, itemName, trigger) {
+  function openItemNavigationMenu(source, itemName, trigger, navigationName) {
     if (!ITEM_NAV || !el.itemNavigationMenu || !trigger) return;
     const actions = ITEM_NAV.actionsForSource(source);
     if (!actions.length) return;
-    itemMenuContext = { source: source, itemName: itemName, trigger: trigger };
+    itemMenuContext = { source: source, itemName: navigationName || itemName, displayName: itemName, trigger: trigger };
     el.itemNavigationTitle.textContent = itemName;
     el.itemNavigationActions.innerHTML = actions.map((action) =>
       `<button type="button" class="seg" data-item-navigation-action="${escapeHtml(action.id)}">${escapeHtml(action.label)}</button>`
@@ -563,12 +599,9 @@
     closeItemNavigationMenu(false);
   }
 
-  function navigateItem(source, action, clickedName) {
+  function navigateResolvedItem(sourcePartition, target, item) {
     if (!ITEM_NAV || !itemNavigationStack) return;
-    const item = ITEM_NAV.resolveItem(clickedName, DATA.items, FDATA.items);
-    const target = navigationTarget(source, action);
     if (!item || !target.partition) return;
-    const sourcePartition = source === "drops" ? "drops" : source;
     const sourceView = capturePartitionView(sourcePartition);
     const destinationViewBeforeJump = capturePartitionView(target.partition);
     const sourceScrollY = window.scrollY;
@@ -588,6 +621,14 @@
       const banner = el.itemNavigationReturns.find((entry) => entry.dataset.itemNavigationReturn === target.partition);
       if (banner) banner.scrollIntoView({ behavior: "smooth", block: "start" });
     });
+  }
+
+  function navigateItem(source, action, clickedName, displayName) {
+    if (!ITEM_NAV || !itemNavigationStack) return;
+    const item = ITEM_NAV.resolveItem(clickedName, DATA.items, FDATA.items);
+    const target = navigationTarget(source, action);
+    if (item && displayName) item.clickedName = displayName;
+    navigateResolvedItem(source === "drops" ? "drops" : source, target, item);
   }
 
   function returnFromItemNavigation() {
@@ -633,7 +674,7 @@
           ZHULU_UI.applyNavigationQuery(context.itemName);
           return;
         }
-        navigateItem(context.source, actionName, context.itemName);
+        navigateItem(context.source, actionName, context.itemName, context.displayName);
         return;
       }
       if (event.target.closest("#item-navigation-close")) {
@@ -652,6 +693,36 @@
       }
       if (event.target.closest("[data-zhulu-book]")) return;
       if (!event.target.closest("#item-navigation-menu")) closeItemNavigationMenu(false);
+    });
+    document.addEventListener("qinshi:forbidden-navigate", function (event) {
+      const detail = event.detail || {};
+      if (!detail.trigger || !detail.kind) return;
+      if (detail.kind === "equipment") {
+        openItemNavigationMenu("forbidden", detail.label || detail.name, detail.trigger, detail.name);
+        return;
+      }
+      if (detail.kind === "disciple") {
+        navigateResolvedItem("forbidden", { partition: "atlas" }, {
+          clickedName: detail.label || detail.name,
+          forgeKey: detail.name,
+          equipmentName: detail.name,
+          familyKey: detail.name,
+          atlasExact: {
+            label: detail.label || detail.name,
+            names: Array.isArray(detail.targets) ? detail.targets.slice() : []
+          }
+        });
+        return;
+      }
+      if (detail.kind === "machine-beast") {
+        navigateResolvedItem("forbidden", { partition: "machine-beasts" }, {
+          clickedName: detail.label || detail.name,
+          forgeKey: detail.name,
+          equipmentName: detail.name,
+          familyKey: detail.name,
+          machineBeastName: detail.name
+        });
+      }
     });
     document.addEventListener("keydown", function (event) {
       if (event.key === "Escape") closeItemNavigationMenu(true);
@@ -701,6 +772,7 @@
     if (navigation.target === "atlas") {
       atlasState.activated = true;
       atlasState.tab = "全部";
+      atlasState.exactQuery = null;
       atlasState.query = navigation.item;
       atlasState.searchField = "all";
       atlasState.levelMin = 0;
@@ -892,6 +964,7 @@
     if (target === "atlas") {
       atlasState.activated = true;
       atlasState.tab = "全部";
+      atlasState.exactQuery = null;
       atlasState.query = detail.bookName;
       atlasState.searchField = "all";
       atlasState.levelMin = 0;
@@ -1364,6 +1437,7 @@
       applyAtlas();
     });
     UI_PERFORMANCE.bindInput(el.atlasSearch, () => {
+      atlasState.exactQuery = null;
       atlasState.query = el.atlasSearch.value;
       if (atlasState.query.trim()) atlasState.activated = true;
     }, atlasRefresh);
@@ -1756,11 +1830,11 @@
     }
     el.atlasUpgradeSummary.hidden = false;
     el.atlasResults.hidden = false;
-    const items = ATLAS.filterAtlas(ATLAS_DATA.items, {
+    const items = filterAtlasExactItems(ATLAS.filterAtlas(ATLAS_DATA.items, {
       category: atlasState.tab,
       minLevel: atlasState.levelMin,
       maxLevel: atlasState.levelMax,
-      query: atlasState.query,
+      query: atlasState.exactQuery ? "" : atlasState.query,
       field: atlasState.searchField,
       targetLevel: atlasState.targetLevel,
       favorites: atlasState.favorites,
@@ -1774,8 +1848,8 @@
       noteSources: atlasState.noteSources,
       sortField: atlasState.sortField,
       sortDirection: atlasState.sortDirection
-    });
-    el.atlasUpgradeSummary.innerHTML = atlasUpgradeSummaryHtml(
+    }));
+    el.atlasUpgradeSummary.innerHTML = atlasExactQueryStatusHtml(items) + atlasUpgradeSummaryHtml(
       ATLAS.summarizeUpgrade(items, atlasState.levels, atlasState.targetLevel, ATLAS_DATA.meta.upgradeStages)
     );
     el.atlasResults.innerHTML = items.length

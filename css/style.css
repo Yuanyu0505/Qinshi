@@ -2493,7 +2493,8 @@ figcaption { color: var(--muted); font-size: 13px; margin-top: 8px; }
 }
 #partition-forbidden .forbidden-purpose-badge.is-atlas { color: #f1dcff; background: #7736a6; border-color: #c677ff; }
 #partition-forbidden .forbidden-purpose-badge.is-forging { color: #fff7dc; background: #a95d08; border-color: #ffb74c; }
-#partition-forbidden .forbidden-purpose-badge.is-machine-beasts { color: #e9fbff; background: #176d92; border-color: #65d5ff; }
+#partition-forbidden .forbidden-purpose-badge.is-machine-lineup { color: #e9fbff; background: #176d92; border-color: #65d5ff; }
+#partition-forbidden .forbidden-purpose-badge.is-machine-modification { color: #eef0ff; background: #484d9d; border-color: #929cff; }
 #partition-forbidden .forbidden-purpose-badge.is-unclassified { color: #ece7dc; background: #5c574d; border-color: #aaa295; }
 #partition-forbidden .forbidden-need-line { display: grid; grid-template-columns: 112px minmax(0, 1fr); align-items: start; gap: 8px; }
 #partition-forbidden .forbidden-need-line + .forbidden-need-line { margin-top: 7px; }
@@ -2596,7 +2597,8 @@ figcaption { color: var(--muted); font-size: 13px; margin-top: 8px; }
 .forbidden-purpose-option input { width: auto; min-height: 0; margin: 0; }
 .forbidden-purpose-option.is-atlas { background: rgba(119, 54, 166, .28); border-color: #9b55c9; }
 .forbidden-purpose-option.is-forging { background: rgba(169, 93, 8, .3); border-color: #c5781b; }
-.forbidden-purpose-option.is-machine-beasts { background: rgba(23, 109, 146, .3); border-color: #278eb9; }
+.forbidden-purpose-option.is-machine-lineup { background: rgba(23, 109, 146, .3); border-color: #278eb9; }
+.forbidden-purpose-option.is-machine-modification { background: rgba(72, 77, 157, .32); border-color: #737dde; }
 .forbidden-purpose-option:has(input:checked) { color: #fff; filter: brightness(1.24); box-shadow: inset 0 0 0 1px currentColor, 0 0 12px rgba(255, 255, 255, .08); }
 .forbidden-purpose-scope { display: flex; flex-wrap: wrap; gap: 8px 16px; margin: 14px 0 8px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; }
 .forbidden-purpose-scope legend { padding: 0 5px; color: var(--gold-dim); font-weight: 800; }

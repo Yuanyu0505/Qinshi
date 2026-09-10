@@ -81,6 +81,8 @@ test("首页提供禁地用途编辑与机关兽统一返回入口", async () =>
     assert.match(page.body, /id="forbidden-purpose-filter"/);
     assert.match(page.body, /id="forbidden-purpose-editor"/);
     assert.match(page.body, /id="forbidden-purpose-family-label">全部同装备系列</);
+    assert.match(page.body, /data-forbidden-purpose="machine-lineup">上阵\/流派</);
+    assert.match(page.body, /data-forbidden-purpose="machine-modification">改造</);
     assert.match(page.body, /data-item-navigation-return="machine-beasts"/);
   });
 });

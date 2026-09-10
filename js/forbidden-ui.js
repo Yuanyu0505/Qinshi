@@ -32,15 +32,16 @@
     { key: "rank2", rowsKey: "rank2Rows", title: "排名奖励 · 第2名（每行任选一项）" },
     { key: "rank3to10", rowsKey: "rank3to10Rows", title: "排名奖励 · 第3—10名（每行任选一项）" },
     { key: "equipmentFragments", rowsKey: "equipmentFragmentRows", rowLabels: ["武器", "防具", "首饰"], title: "装备碎片" },
-    { key: "machineBeasts", title: "机关兽" },
-    { key: "nuclei", title: "神核" },
+    { key: "machineBeasts", title: "机关兽碎片" },
+    { key: "nuclei", title: "机关兽神核" },
     { key: "orangeDrops", title: "刷出橙装" }
   ];
 
   var PURPOSE_LABELS = {
     atlas: "图鉴",
     forging: "锻造",
-    "machine-beasts": "机关兽"
+    "machine-lineup": "上阵/流派",
+    "machine-modification": "改造"
   };
 
   function clone(value) {
@@ -123,7 +124,7 @@
   }
 
   function itemDisplayName(sectionKey, name) {
-    return sectionKey === "equipmentFragments" ? name + "碎片" : name;
+    return core.rewardDisplayName(sectionKey, name);
   }
 
   function resolvedIdentity(sectionKey, name) {
@@ -491,7 +492,7 @@
       var selectedReward = rewardRecord(occurrence, identity);
       var isMachineSeries = identity.category === "machine-beast" || identity.category === "nucleus";
       if (!selectedReward && isMachineSeries) {
-        changedEventIds = applyFamilySelection(identity, true, ["machine-beasts"]);
+        changedEventIds = applyFamilySelection(identity, true, core.defaultPurposes(identity.category));
       } else {
         core.setRewardSelection(state.needs, occurrence.id, identity, !selectedReward, []);
       }
@@ -541,7 +542,7 @@
       elements.purposeFamilyLabel.textContent = record.category === "machine-beast"
         ? "全部同机关兽系列"
         : record.category === "nucleus"
-          ? "全部同神核系列"
+          ? "全部同机关兽神核系列"
           : "全部同装备系列";
     }
     if (isMachineSeries && familyScope) familyScope.checked = true;

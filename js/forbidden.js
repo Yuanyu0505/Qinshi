@@ -7,7 +7,7 @@
 
   var ATTRIBUTE_QUERIES = { "攻": true, "血": true, "内": true, "内力": true, "防": true };
   var SECTION_ORDER = ["contribution5", "contribution10", "rank1", "rank2", "rank3to10", "equipmentFragments", "machineBeasts", "nuclei", "orangeDrops"];
-  var PURPOSES = ["atlas", "forging", "machine-beasts"];
+  var PURPOSES = ["atlas", "forging", "machine-lineup", "machine-modification"];
   var BEAST_NAMES = {
     "王蛇": "赤练王蛇",
     "玄武": "机关玄武",
@@ -170,27 +170,47 @@
   }
 
   function allowedPurposes(category) {
-    return category === "machine-beast" || category === "nucleus"
-      ? ["machine-beasts"]
-      : ["atlas", "forging"];
+    if (category === "machine-beast") return ["machine-lineup"];
+    if (category === "nucleus") return ["machine-modification"];
+    return ["atlas", "forging"];
   }
 
   function cleanPurposes(values, category) {
     var allowed = allowedPurposes(category);
-    return unique(Array.isArray(values) ? values : []).filter(function (purpose) {
+    var migrated = (Array.isArray(values) ? values : []).map(function (purpose) {
+      if (purpose !== "machine-beasts") return purpose;
+      if (category === "machine-beast") return "machine-lineup";
+      if (category === "nucleus") return "machine-modification";
+      return "";
+    });
+    return unique(migrated).filter(function (purpose) {
       return PURPOSES.indexOf(purpose) !== -1 && allowed.indexOf(purpose) !== -1;
     });
   }
 
   function machineBeastTarget(name) {
-    var value = String(name == null ? "" : name).trim();
+    var value = String(name == null ? "" : name).trim().replace(/(?:碎片|神核)$/, "");
     return BEAST_NAMES[value] || value;
+  }
+
+  function rewardDisplayName(sectionKey, name) {
+    var raw = String(name == null ? "" : name).trim();
+    if (sectionKey === "equipmentFragments") return /碎片$/.test(raw) ? raw : raw + "碎片";
+    if (sectionKey === "machineBeasts") return machineBeastTarget(raw) + "碎片";
+    if (sectionKey === "nuclei") return machineBeastTarget(raw) + "神核";
+    return raw;
+  }
+
+  function defaultPurposes(category) {
+    if (category === "machine-beast") return ["machine-lineup"];
+    if (category === "nucleus") return ["machine-modification"];
+    return [];
   }
 
   function rewardIdentity(sectionKey, rawName, resolvedFamilyKey) {
     var raw = String(rawName == null ? "" : rawName).trim();
     var category = rewardCategory(sectionKey);
-    var displayName = sectionKey === "equipmentFragments" && !/碎片$/.test(raw) ? raw + "碎片" : raw;
+    var displayName = rewardDisplayName(sectionKey, raw);
     var baseName = category === "equipment" ? displayName.replace(/碎片$/, "") : machineBeastTarget(raw);
     var familyKey = category === "equipment"
       ? String(resolvedFamilyKey || baseName).trim()
@@ -198,7 +218,7 @@
     return {
       key: category + ":" + normalize(displayName),
       name: displayName,
-      rawName: raw,
+      rawName: category === "equipment" ? raw : baseName,
       baseName: baseName,
       sectionKey: sectionKey,
       category: category,
@@ -251,7 +271,7 @@
     if (!resolved) return matches;
     SECTION_ORDER.forEach(function (key) {
       var matched = resolved[key].some(function (item) {
-        var text = key === "equipmentFragments" ? item + "碎片" : item;
+        var text = rewardDisplayName(key, item);
         return normalize(text).indexOf(q) !== -1 || normalize(item).indexOf(q) !== -1;
       });
       if (matched) matches.push(key);
@@ -283,17 +303,37 @@
     var category = ["equipment", "machine-beast", "nucleus"].indexOf(record.category) !== -1
       ? record.category
       : "equipment";
-    var name = String(record.name == null ? "" : record.name).trim();
-    if (!name) return null;
+    var storedName = String(record.name == null ? "" : record.name).trim();
+    if (!storedName) return null;
+    var sectionKey = category === "machine-beast"
+      ? "machineBeasts"
+      : category === "nucleus"
+        ? "nuclei"
+        : String(record.sectionKey || "");
+    var rawName = String(record.rawName == null ? storedName : record.rawName).trim();
+    if (category === "machine-beast" || category === "nucleus") {
+      rawName = machineBeastTarget(rawName);
+      var machineName = rewardDisplayName(sectionKey, rawName);
+      return {
+        name: machineName,
+        rawName: rawName,
+        baseName: rawName,
+        sectionKey: sectionKey,
+        category: category,
+        familyKey: category + ":" + rawName,
+        purposes: cleanPurposes(record.purposes, category),
+        key: category + ":" + normalize(machineName)
+      };
+    }
     return {
-      name: name,
-      rawName: String(record.rawName == null ? name.replace(/碎片$/, "") : record.rawName).trim(),
-      baseName: String(record.baseName == null ? name.replace(/碎片$/, "") : record.baseName).trim(),
-      sectionKey: String(record.sectionKey || ""),
+      name: storedName,
+      rawName: String(record.rawName == null ? storedName.replace(/碎片$/, "") : record.rawName).trim(),
+      baseName: String(record.baseName == null ? storedName.replace(/碎片$/, "") : record.baseName).trim(),
+      sectionKey: sectionKey,
       category: category,
-      familyKey: String(record.familyKey || name.replace(/碎片$/, "")).trim(),
+      familyKey: String(record.familyKey || storedName.replace(/碎片$/, "")).trim(),
       purposes: cleanPurposes(record.purposes, category),
-      key: String(key || record.key || category + ":" + normalize(name))
+      key: category + ":" + normalize(storedName)
     };
   }
 
@@ -449,6 +489,8 @@
     discipleText: discipleText,
     discipleAtlasTargets: discipleAtlasTargets,
     machineBeastTarget: machineBeastTarget,
+    rewardDisplayName: rewardDisplayName,
+    defaultPurposes: defaultPurposes,
     rewardIdentity: rewardIdentity,
     occurrenceRewardIdentities: occurrenceRewardIdentities,
     allowedPurposes: allowedPurposes,

@@ -56,6 +56,20 @@ assert.strictEqual(fragmentIdentity.name, "影虎碎片");
 assert.deepStrictEqual(F.discipleAtlasTargets(DATA, "兵家王翦"), ["兵家王翦", "神·王翦"]);
 assert.deepStrictEqual(F.discipleAtlasTargets(DATA, "隐虎季布"), []);
 assert.strictEqual(F.machineBeastTarget("王蛇"), "赤练王蛇");
+assert.deepStrictEqual(F.rewardIdentity("machineBeasts", "零号"), {
+  key: "machine-beast:零号白虎碎片",
+  name: "零号白虎碎片",
+  rawName: "零号白虎",
+  baseName: "零号白虎",
+  sectionKey: "machineBeasts",
+  category: "machine-beast",
+  familyKey: "machine-beast:零号白虎"
+});
+assert.strictEqual(F.rewardIdentity("nuclei", "零号").name, "零号白虎神核");
+assert.deepStrictEqual(F.defaultPurposes("machine-beast"), ["machine-lineup"]);
+assert.deepStrictEqual(F.defaultPurposes("nucleus"), ["machine-modification"]);
+assert.deepStrictEqual(F.cleanPurposes(["machine-beasts"], "machine-beast"), ["machine-lineup"]);
+assert.deepStrictEqual(F.cleanPurposes(["machine-beasts"], "nucleus"), ["machine-modification"]);
 
 F.setRewardSelection(migrated, wind.id, fragmentIdentity, true, ["atlas", "forging", "machine-beasts"]);
 assert.deepStrictEqual(migrated.events[wind.id].rewards[fragmentIdentity.key].purposes, ["atlas", "forging"]);

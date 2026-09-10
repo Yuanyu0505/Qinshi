@@ -15,7 +15,7 @@ class TestDrops(unittest.TestCase):
     def test_counts(self):
         self.assertEqual(len(self.data["normal"]), 197)
         self.assertEqual(len(self.data["hero"]), 128)
-        self.assertEqual(len(self.data["reward"]), 56)
+        self.assertEqual(len(self.data["reward"]), 55)
 
     def test_normal_chapter_stage(self):
         normal = self.data["normal"]

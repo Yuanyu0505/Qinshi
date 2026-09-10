@@ -107,16 +107,16 @@ test("首页提供逐鹿分区及数据、核心和界面脚本", async () => {
   });
 });
 
-test("PWA 1.0.36 离线缓存包含逐鹿和统一导航资源", () => {
+test("PWA 1.0.37 离线缓存包含逐鹿、统一导航和禁地资源", () => {
   const worker = fs.readFileSync(path.join(__dirname, "service-worker.js"), "utf8");
   const pwa = fs.readFileSync(path.join(__dirname, "js", "pwa.js"), "utf8");
   const manifest = JSON.parse(fs.readFileSync(path.join(__dirname, "manifest.webmanifest"), "utf8"));
-  assert.match(worker, /CACHE_NAME = CACHE_PREFIX \+ "1\.0\.36"/);
+  assert.match(worker, /CACHE_NAME = CACHE_PREFIX \+ "1\.0\.37"/);
   assert.match(worker, /\.\/data\/zhulu\.js/);
   assert.match(worker, /\.\/js\/zhulu\.js/);
   assert.match(worker, /\.\/js\/zhulu-ui\.js/);
   assert.match(worker, /\.\/js\/item-navigation\.js/);
-  assert.match(pwa, /APP_VERSION = "1\.0\.36"/);
+  assert.match(pwa, /APP_VERSION = "1\.0\.37"/);
   assert.match(manifest.description, /逐鹿/);
 });
 
@@ -694,7 +694,7 @@ test("锻造个人进度提供可取消保存的弟子顺序调整界面", async
   });
 });
 
-test("PWA 1.0.36 发布统一导航、逐鹿资料与既有完整资源", async () => {
+test("PWA 1.0.37 发布响应式禁地、统一导航、逐鹿资料与既有完整资源", async () => {
   const pagesWorkflow = fs.readFileSync(path.join(__dirname, ".github", "workflows", "pages.yml"), "utf8");
   assert.match(pagesWorkflow, /js\/tactics\.js/);
   assert.match(pagesWorkflow, /js\/tactics-ui\.js/);
@@ -736,9 +736,9 @@ test("PWA 1.0.36 发布统一导航、逐鹿资料与既有完整资源", async 
     assert.strictEqual(forbiddenData.status, 200);
     assert.strictEqual(forbiddenCore.status, 200);
     assert.strictEqual(forbiddenUi.status, 200);
-    assert.match(index.body, /id="pwa-version">1\.0\.36<\/strong>/);
-    assert.match(worker.body, /CACHE_NAME\s*=\s*CACHE_PREFIX\s*\+\s*"1\.0\.36"/);
-    assert.match(pwa.body, /APP_VERSION\s*=\s*"1\.0\.36"/);
+    assert.match(index.body, /id="pwa-version">1\.0\.37<\/strong>/);
+    assert.match(worker.body, /CACHE_NAME\s*=\s*CACHE_PREFIX\s*\+\s*"1\.0\.37"/);
+    assert.match(pwa.body, /APP_VERSION\s*=\s*"1\.0\.37"/);
     assert.match(worker.body, /"\.\/data\/tactics\.js"/);
     assert.match(worker.body, /"\.\/js\/tactics\.js"/);
     assert.match(worker.body, /"\.\/js\/tactics-ui\.js"/);

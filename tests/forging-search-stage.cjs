@@ -36,15 +36,18 @@ for (const [quality, maximum] of [['red', 11], ['orange', 6]]) {
       }, { storeKey: STORE_KEY, quality });
       await page.reload();
       await openSearch(page);
-      const stages = page.locator('#prog-search-results [data-act="set-stage"][data-disciple="d1"][data-item="i1"]:not([disabled])');
+      const ownedSection = page.locator('#prog-search-results .prog-search-section').filter({ hasText: '弟子直接持有' });
+      const card = ownedSection.locator('.prog-equip').filter({
+        has: page.locator('[data-act="set-stage"][data-disciple="d1"][data-item="i1"]:not([disabled])')
+      });
+      const stages = card.locator('[data-act="set-stage"][data-disciple="d1"][data-item="i1"]:not([disabled])');
       assert.equal(await stages.count(), maximum + 1);
       assert.equal(await page.locator('#prog-search-results [data-act="switch-quality"], #prog-search-results [data-act="remove-item"]').count(), 0);
-      await page.locator('#prog-search-results [data-act="set-stage"][data-item="i1"][data-idx="3"]:not([disabled])').click();
+      await card.locator('[data-act="set-stage"][data-item="i1"][data-idx="3"]:not([disabled])').click();
       assert.equal(await page.locator('#prog-search').inputValue(), '墨眉');
       let stored = await page.evaluate(k => JSON.parse(localStorage.getItem(k)), STORE_KEY);
       assert.equal(stored.disciples[0].items[0].progress, 3);
       assert.equal(stored.disciples[1].items[0].progress, 2);
-      const card = page.locator('#prog-search-results .prog-equip').filter({ has: page.locator('[data-act="set-stage"][data-item="i1"]:not([disabled])') });
       assert.equal(await card.locator('.progress-forge-status').innerText(), '3锻');
       assert.match(await card.locator('.prog-next').innerText(), /3→4锻/);
       assert.equal(await card.locator('.prog-material-table tbody tr').count(), maximum - 3);

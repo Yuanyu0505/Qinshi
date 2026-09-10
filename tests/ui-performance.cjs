@@ -402,9 +402,10 @@ test('待执行的装备搜索不会覆盖即时分类和锻造返回条件', as
       field.dispatchEvent(new Event('input', { bubbles: true }));
       document.querySelector('#category-filter [data-category="神兵武器"]').click();
     });
-    await page.locator('#cards [data-equipment-forge="w-0038"]').click();
+    await page.locator('#cards [data-item-menu-source="equipment"][data-item-name="神兵墨眉"]').click();
+    await page.locator('[data-item-navigation-action="forging"]').click();
     await page.waitForTimeout(250);
-    await page.locator('[data-forging-equipment="墨眉"]').click();
+    await page.locator('[data-item-navigation-return="forging"] [data-item-navigation-back]').click();
     assert.equal(await page.locator('#search').inputValue(), '神兵墨眉');
     assert.equal(await page.locator('#category-filter [data-category="神兵武器"]').getAttribute('class'), 'seg active');
     assert.deepEqual(await page.locator('#cards [data-equipment-favorite]').evaluateAll(es => es.map(e => e.dataset.equipmentFavorite)), ['w-0038']);

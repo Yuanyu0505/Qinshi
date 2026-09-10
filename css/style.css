@@ -2793,10 +2793,27 @@ figcaption { color: var(--muted); font-size: 13px; margin-top: 8px; }
   #partition-forbidden .seg,
   #partition-forbidden button,
   #partition-forbidden input { min-height: 44px; touch-action: manipulation; }
+  #partition-forbidden .forbidden-control-row {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: stretch;
+    gap: 10px;
+  }
+  #partition-forbidden .forbidden-size-row { grid-column: 1 / -1; flex-basis: auto; }
+  #partition-forbidden .forbidden-check-control,
+  #partition-forbidden #forbidden-schedule-toggle,
+  #partition-forbidden #forbidden-expand-all { width: 100%; justify-content: center; }
+  #partition-forbidden .forbidden-purpose-row { display: grid; gap: 6px; }
+  #partition-forbidden .forbidden-purpose-row .segs {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    width: 100%;
+  }
+  #partition-forbidden .forbidden-purpose-row .seg { width: 100%; min-width: 0; }
   #partition-forbidden .forbidden-token { max-width: 100%; min-height: 44px; }
-  #partition-forbidden .forbidden-token-check { flex-basis: 38px; width: 38px; min-height: 38px; }
+  #partition-forbidden .forbidden-token-check { flex-basis: 44px; width: 44px; min-height: 44px; }
   #partition-forbidden .forbidden-token-name,
-  #partition-forbidden .forbidden-purpose-edit { min-height: 38px; }
+  #partition-forbidden .forbidden-purpose-edit { min-height: 44px; }
   #partition-forbidden .forbidden-subtitle { overflow-wrap: anywhere; }
   #partition-forbidden #forbidden-search { width: 100%; min-width: 0; box-sizing: border-box; }
   #partition-equipment .equipment-main-visibility,
@@ -3241,7 +3258,7 @@ figcaption { color: var(--muted); font-size: 13px; margin-top: 8px; }
   #partition-forbidden .forbidden-control-row { display: grid; grid-template-columns: 1fr; gap: 9px; }
   #partition-forbidden .forbidden-size-row { display: grid; flex-basis: auto; gap: 6px; }
   #partition-forbidden .forbidden-purpose-row { display: grid; gap: 6px; }
-  #partition-forbidden .forbidden-purpose-row .segs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); width: 100%; }
+  #partition-forbidden .forbidden-purpose-row .segs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); width: 100%; }
   #partition-forbidden .forbidden-purpose-row .seg { width: 100%; padding-left: 6px; padding-right: 6px; }
   #partition-forbidden .forbidden-check-control,
   #partition-forbidden #forbidden-schedule-toggle,
@@ -3261,6 +3278,15 @@ figcaption { color: var(--muted); font-size: 13px; margin-top: 8px; }
   #partition-forbidden .forbidden-reward-row-label { padding-top: 8px; }
   #partition-forbidden .forbidden-reward-row .forbidden-token-list { width: 100%; }
   #partition-forbidden .forbidden-token { min-height: 44px; padding: 3px; font-size: 14px; }
+  #partition-forbidden .forbidden-token.is-selected {
+    display: grid;
+    grid-template-columns: 44px minmax(0, 1fr);
+    align-items: center;
+  }
+  #partition-forbidden .forbidden-token.is-selected .forbidden-token-check { grid-column: 1; grid-row: 1; }
+  #partition-forbidden .forbidden-token.is-selected .forbidden-token-name { grid-column: 2; grid-row: 1; }
+  #partition-forbidden .forbidden-token.is-selected .forbidden-purpose-badges,
+  #partition-forbidden .forbidden-token.is-selected .forbidden-purpose-edit { grid-column: 2; justify-self: start; }
   .forbidden-purpose-dialog {
     left: 0 !important;
     right: 0;

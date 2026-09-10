@@ -281,6 +281,43 @@
     });
   }
 
+  function buildRequiredSearchPresentation(entry) {
+    var source = entry && typeof entry === "object" ? entry : {};
+    var disciple = source.disciple || {};
+    var progressItem = source.progressItem || {};
+    var item = source.item || {};
+    var hitStageIndexes = [];
+    var segments = (Array.isArray(source.hits) ? source.hits : []).map(function (hit) {
+      var stageIdx = hit && Number.isInteger(hit.stageIdx) ? hit.stageIdx : -1;
+      if (stageIdx >= 0 && hitStageIndexes.indexOf(stageIdx) === -1) hitStageIndexes.push(stageIdx);
+      return {
+        stageIdx: stageIdx,
+        stage: String(hit && hit.stage || ""),
+        tokens: (Array.isArray(hit && hit.tokens) ? hit.tokens : []).map(function (tokenHit) {
+          var token = tokenHit && tokenHit.token || {};
+          return { name: String(token.n || ""), quality: String(token.q || "") };
+        }).filter(function (token) { return token.name !== ""; })
+      };
+    });
+    return {
+      ownerLabel: String(disciple.name || "未命名弟子") + " · " + String(progressItem.equipmentName || item.name || "未知装备"),
+      hitStageIndexes: hitStageIndexes,
+      segments: segments
+    };
+  }
+
+  function swapDisciples(disciples, firstId, secondId) {
+    var result = Array.isArray(disciples) ? disciples.slice() : [];
+    if (!firstId || !secondId || firstId === secondId) return result;
+    var firstIndex = result.findIndex(function (disciple) { return disciple && disciple.id === firstId; });
+    var secondIndex = result.findIndex(function (disciple) { return disciple && disciple.id === secondId; });
+    if (firstIndex === -1 || secondIndex === -1) return result;
+    var first = result[firstIndex];
+    result[firstIndex] = result[secondIndex];
+    result[secondIndex] = first;
+    return result;
+  }
+
   return {
     findItem: findItem,
     qualityStageLimit: qualityStageLimit,
@@ -295,6 +332,8 @@
     discipleSummary: discipleSummary,
     overallSummary: overallSummary,
     searchDisciples: searchDisciples,
-    searchEquipment: searchEquipment
+    searchEquipment: searchEquipment,
+    buildRequiredSearchPresentation: buildRequiredSearchPresentation,
+    swapDisciples: swapDisciples
   };
 });

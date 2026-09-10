@@ -94,14 +94,17 @@ test("首页提供逐鹿分区及数据、核心和界面脚本", async () => {
   });
 });
 
-test("PWA 1.0.35 离线缓存包含逐鹿资源", () => {
+test("PWA 1.0.36 离线缓存包含逐鹿和统一导航资源", () => {
   const worker = fs.readFileSync(path.join(__dirname, "service-worker.js"), "utf8");
   const pwa = fs.readFileSync(path.join(__dirname, "js", "pwa.js"), "utf8");
-  assert.match(worker, /CACHE_NAME = CACHE_PREFIX \+ "1\.0\.35"/);
+  const manifest = JSON.parse(fs.readFileSync(path.join(__dirname, "manifest.webmanifest"), "utf8"));
+  assert.match(worker, /CACHE_NAME = CACHE_PREFIX \+ "1\.0\.36"/);
   assert.match(worker, /\.\/data\/zhulu\.js/);
   assert.match(worker, /\.\/js\/zhulu\.js/);
   assert.match(worker, /\.\/js\/zhulu-ui\.js/);
-  assert.match(pwa, /APP_VERSION = "1\.0\.35"/);
+  assert.match(worker, /\.\/js\/item-navigation\.js/);
+  assert.match(pwa, /APP_VERSION = "1\.0\.36"/);
+  assert.match(manifest.description, /逐鹿/);
 });
 
 test("GET /css/style.css 返回 200 且为 CSS", async () => {
@@ -635,7 +638,8 @@ test("锻造个人进度使用神兵名称底色、品质换算和锻数状态",
     assert.match(app.body, /buildProgressEquipmentCatalog/);
     assert.match(app.body, /normalizeProgressStore/);
     assert.match(app.body, /data-act="switch-quality"/);
-    assert.match(app.body, /data-progress-equipment=/);
+    assert.match(app.body, /progress-equipment-link[^\n]*data-item-menu-source="forging"/);
+    assert.doesNotMatch(app.body, /data-progress-equipment=/);
     assert.match(app.body, /progressStatus/);
     assert.match(app.body, /progress-equipment-unavailable[^\n]*暂无装备属性/);
     assert.doesNotMatch(app.body, /\$\{item\.quality\}色/);
@@ -663,7 +667,21 @@ test("个人进度装备与装备属性共享统一返回入口", async () => {
   });
 });
 
-test("PWA 1.0.35 发布逐鹿资料与既有完整资源", async () => {
+test("锻造个人进度提供可取消保存的弟子顺序调整界面", async () => {
+  await withServer(async (port) => {
+    const [page, css] = await Promise.all([get(port, "/"), get(port, "/css/style.css")]);
+    assert.strictEqual(page.status, 200);
+    assert.match(page.body, /id="prog-reorder-toggle"[^>]*aria-controls="prog-reorder-panel"/);
+    assert.match(page.body, /id="prog-reorder-panel"[^>]*hidden/);
+    assert.match(page.body, /id="prog-reorder-list"/);
+    assert.match(page.body, /id="prog-reorder-save"/);
+    assert.match(page.body, /id="prog-reorder-cancel"/);
+    assert.match(css.body, /\.prog-reorder-list\s*\{[^}]*grid-template-columns:\s*repeat\(auto-fit, minmax\(160px, 1fr\)\)/);
+    assert.match(css.body, /@media \(max-width:\s*767px\)[\s\S]*?\.prog-reorder-list\s*\{[^}]*grid-template-columns:\s*1fr/);
+  });
+});
+
+test("PWA 1.0.36 发布统一导航、逐鹿资料与既有完整资源", async () => {
   const pagesWorkflow = fs.readFileSync(path.join(__dirname, ".github", "workflows", "pages.yml"), "utf8");
   assert.match(pagesWorkflow, /js\/tactics\.js/);
   assert.match(pagesWorkflow, /js\/tactics-ui\.js/);
@@ -681,6 +699,7 @@ test("PWA 1.0.35 发布逐鹿资料与既有完整资源", async () => {
   assert.match(pagesWorkflow, /js\/inscription-performance\.js/);
   assert.match(pagesWorkflow, /js\/zhulu\.js/);
   assert.match(pagesWorkflow, /js\/zhulu-ui\.js/);
+  assert.match(pagesWorkflow, /js\/item-navigation\.js/);
   await withServer(async (port) => {
     const [index, worker, pwa, css, schoolPlanner, equipmentCompare, equipmentForging, forbiddenData, forbiddenCore, forbiddenUi] = await Promise.all([
       get(port, "/"),
@@ -704,9 +723,9 @@ test("PWA 1.0.35 发布逐鹿资料与既有完整资源", async () => {
     assert.strictEqual(forbiddenData.status, 200);
     assert.strictEqual(forbiddenCore.status, 200);
     assert.strictEqual(forbiddenUi.status, 200);
-    assert.match(index.body, /id="pwa-version">1\.0\.35<\/strong>/);
-    assert.match(worker.body, /CACHE_NAME\s*=\s*CACHE_PREFIX\s*\+\s*"1\.0\.35"/);
-    assert.match(pwa.body, /APP_VERSION\s*=\s*"1\.0\.35"/);
+    assert.match(index.body, /id="pwa-version">1\.0\.36<\/strong>/);
+    assert.match(worker.body, /CACHE_NAME\s*=\s*CACHE_PREFIX\s*\+\s*"1\.0\.36"/);
+    assert.match(pwa.body, /APP_VERSION\s*=\s*"1\.0\.36"/);
     assert.match(worker.body, /"\.\/data\/tactics\.js"/);
     assert.match(worker.body, /"\.\/js\/tactics\.js"/);
     assert.match(worker.body, /"\.\/js\/tactics-ui\.js"/);
@@ -728,6 +747,7 @@ test("PWA 1.0.35 发布逐鹿资料与既有完整资源", async () => {
     assert.match(worker.body, /"\.\/data\/zhulu\.js"/);
     assert.match(worker.body, /"\.\/js\/zhulu\.js"/);
     assert.match(worker.body, /"\.\/js\/zhulu-ui\.js"/);
+    assert.match(worker.body, /"\.\/js\/item-navigation\.js"/);
     assert.match(css.body, /@media \(max-width: 1024px\)[\s\S]*?\.atlas-favorite-toggle\s*\{[\s\S]*?width:\s*44px;[\s\S]*?height:\s*44px;/);
     assert.match(css.body, /#partition-tactics \.tactics-selector \.seg,[\s\S]*?#partition-equipment \.book-detail-toggle\s*\{[\s\S]*?min-height:\s*44px;/);
     assert.match(css.body, /#partition-tactics \.tactics-form-grid select,[\s\S]*?#partition-tactics \.tactics-form-grid input\s*\{[\s\S]*?font-size:\s*16px;/);

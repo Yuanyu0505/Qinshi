@@ -222,3 +222,51 @@ test("个人进度搜索：宽泛关键词继续使用原有模糊匹配", () =>
     ["神兵月光", "神兵月光战袍"]
   );
 });
+
+test("材料需求展示：使用实际持有装备名并保留命中阶段顺序", () => {
+  const presentation = P.buildRequiredSearchPresentation({
+    disciple: { id: "d1", name: "弄玉" },
+    progressItem: { id: "i1", equipmentName: "神兵左传" },
+    item: { name: "左传" },
+    hits: [
+      { stageIdx: 7, stage: "7→8锻", tokens: [{ tokenIdx: 0, token: { n: "黄石天书", q: "橙" } }] },
+      { stageIdx: 9, stage: "9→10锻", tokens: [{ tokenIdx: 0, token: { n: "列子", q: "橙" } }] },
+      { stageIdx: 7, stage: "7→8锻", tokens: [{ tokenIdx: 1, token: { n: "黄石天书", q: "橙" } }] }
+    ]
+  });
+
+  assert.deepStrictEqual(presentation, {
+    ownerLabel: "弄玉 · 神兵左传",
+    hitStageIndexes: [7, 9],
+    segments: [
+      { stageIdx: 7, stage: "7→8锻", tokens: [{ name: "黄石天书", quality: "橙" }] },
+      { stageIdx: 9, stage: "9→10锻", tokens: [{ name: "列子", quality: "橙" }] },
+      { stageIdx: 7, stage: "7→8锻", tokens: [{ name: "黄石天书", quality: "橙" }] }
+    ]
+  });
+});
+
+test("弟子顺序调整：交换完整记录且不修改原数组", () => {
+  const disciples = [
+    { id: "a", name: "弟子A", items: [{ id: "a-item" }] },
+    { id: "b", name: "弟子B", items: [{ id: "b-item" }] },
+    { id: "c", name: "弟子C", items: [{ id: "c-item" }] }
+  ];
+
+  const swapped = P.swapDisciples(disciples, "a", "c");
+
+  assert.deepStrictEqual(swapped.map((disciple) => disciple.id), ["c", "b", "a"]);
+  assert.strictEqual(swapped[0].items[0].id, "c-item");
+  assert.deepStrictEqual(disciples.map((disciple) => disciple.id), ["a", "b", "c"]);
+  assert.notStrictEqual(swapped, disciples);
+});
+
+test("弟子顺序调整：相同或无效弟子不会改变顺序", () => {
+  const disciples = [{ id: "a" }, { id: "b" }];
+
+  for (const [firstId, secondId] of [["a", "a"], ["a", "missing"], ["missing", "b"]]) {
+    const result = P.swapDisciples(disciples, firstId, secondId);
+    assert.deepStrictEqual(result.map((disciple) => disciple.id), ["a", "b"]);
+    assert.notStrictEqual(result, disciples);
+  }
+});

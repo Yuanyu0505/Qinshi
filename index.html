@@ -441,7 +441,19 @@
           <button id="prog-prev" type="button" class="seg" title="上一页">◀ 上一页</button>
           <span id="prog-page-title" class="prog-page-title">全体弟子剩余材料汇总</span>
           <button id="prog-next" type="button" class="seg" title="下一页">下一页 ▶</button>
+          <button id="prog-reorder-toggle" type="button" class="seg" aria-expanded="false" aria-controls="prog-reorder-panel">调整顺序</button>
         </div>
+        <section id="prog-reorder-panel" class="panel prog-reorder-panel" aria-label="调整弟子顺序" hidden>
+          <div class="prog-reorder-head">
+            <strong>调换弟子顺序</strong>
+            <span id="prog-reorder-tip" class="muted-tip" aria-live="polite">先选择一名弟子，再选择另一名弟子进行调换</span>
+          </div>
+          <div id="prog-reorder-list" class="prog-reorder-list"></div>
+          <div class="prog-reorder-actions">
+            <button id="prog-reorder-save" type="button" class="seg active">保存顺序</button>
+            <button id="prog-reorder-cancel" type="button" class="seg">取消调整</button>
+          </div>
+        </section>
         <div id="prog-overall" class="drop-item" hidden></div>
         <div id="prog-disciples" hidden></div>
       </section>
@@ -600,7 +612,7 @@
         <div class="panel-title">应用与离线状态</div>
         <div class="settings-list">
           <div><span>应用名称</span><strong>Qin</strong></div>
-          <div><span>当前版本</span><strong id="pwa-version">1.0.35</strong></div>
+          <div><span>当前版本</span><strong id="pwa-version">1.0.36</strong></div>
           <div><span>运行状态</span><strong id="pwa-mode-status">正在检查…</strong></div>
         </div>
         <div class="settings-actions">

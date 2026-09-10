@@ -125,6 +125,12 @@
     progPrev: document.getElementById("prog-prev"),
     progNext: document.getElementById("prog-next"),
     progPageTitle: document.getElementById("prog-page-title"),
+    progReorderToggle: document.getElementById("prog-reorder-toggle"),
+    progReorderPanel: document.getElementById("prog-reorder-panel"),
+    progReorderList: document.getElementById("prog-reorder-list"),
+    progReorderTip: document.getElementById("prog-reorder-tip"),
+    progReorderSave: document.getElementById("prog-reorder-save"),
+    progReorderCancel: document.getElementById("prog-reorder-cancel"),
     progOverall: document.getElementById("prog-overall"),
     progDisciples: document.getElementById("prog-disciples"),
     atlasTabs: document.getElementById("atlas-tabs"),
@@ -158,6 +164,7 @@
     familyKey: null,
     disciples: loadProgress()
   };
+  const progReorderState = { active: false, draft: [], selectedId: null };
   const PROG_CAT_ORDER = ["武器", "盔甲", "首饰", "典籍"];
   const atlasState = {
     activated: false,
@@ -971,12 +978,6 @@
     requestAnimationFrame(function () {
       window.scrollTo({ top: session.scrollY, behavior: "auto" });
     });
-  }
-
-  function openEquipmentFromProgress(button) {
-    const equipmentName = button.dataset.progressEquipment;
-    if (!equipmentName) return;
-    navigateItem("forging", "equipment", equipmentName);
   }
 
   function returnToProgressFromEquipment(session) {
@@ -1817,6 +1818,51 @@
     renderProgress();
   }
 
+  function closeProgressReorder() {
+    progReorderState.active = false;
+    progReorderState.draft = [];
+    progReorderState.selectedId = null;
+  }
+
+  function renderProgressReorder() {
+    if (!el.progReorderPanel) return;
+    el.progReorderToggle.setAttribute("aria-expanded", String(progReorderState.active));
+    el.progReorderPanel.hidden = !progReorderState.active;
+    if (!progReorderState.active) {
+      el.progReorderList.innerHTML = "";
+      return;
+    }
+    el.progReorderTip.textContent = progReorderState.selectedId
+      ? "已选择一名弟子，请选择要与其调换的另一名弟子"
+      : "先选择一名弟子，再选择另一名弟子进行调换";
+    el.progReorderList.innerHTML = progReorderState.draft.map((disciple, index) => {
+      const selected = disciple.id === progReorderState.selectedId;
+      return `<button type="button" class="seg prog-reorder-disciple${selected ? " active" : ""}" data-prog-reorder-disciple="${escapeHtml(disciple.id)}" aria-pressed="${selected}"><span>${index + 1}</span><strong>${escapeHtml(disciple.name || "未命名弟子")}</strong></button>`;
+    }).join("");
+  }
+
+  function beginProgressReorder() {
+    if (progState.disciples.length < 2) return;
+    progReorderState.active = true;
+    progReorderState.draft = progState.disciples.slice();
+    progReorderState.selectedId = null;
+    renderProgressReorder();
+  }
+
+  function saveProgressReorder() {
+    if (!progReorderState.active) return;
+    const currentId = progState.page > 0 && progState.disciples[progState.page - 1]
+      ? progState.disciples[progState.page - 1].id
+      : null;
+    progState.disciples = progReorderState.draft.slice();
+    progState.page = currentId
+      ? Math.max(0, progState.disciples.findIndex((disciple) => disciple.id === currentId) + 1)
+      : 0;
+    closeProgressReorder();
+    saveProgress();
+    renderProgress();
+  }
+
   function escapeHtml(s) {
     return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
   }
@@ -1857,11 +1903,6 @@
         setProgressStage(stageButton);
         return;
       }
-      const equipmentLink = e.target.closest("button[data-progress-equipment]");
-      if (equipmentLink) {
-        openEquipmentFromProgress(equipmentLink);
-        return;
-      }
       const btn = e.target.closest("button[data-prog-disciple-index]");
       if (!btn) return;
       openProgressDisciple(Number(btn.dataset.progDiscipleIndex));
@@ -1878,12 +1919,31 @@
         renderProgress();
       }
     });
-    el.progDisciples.addEventListener("click", (e) => {
-      const equipmentLink = e.target.closest("button[data-progress-equipment]");
-      if (equipmentLink) {
-        openEquipmentFromProgress(equipmentLink);
-        return;
+    el.progReorderToggle.addEventListener("click", () => {
+      if (progReorderState.active) closeProgressReorder();
+      else beginProgressReorder();
+      renderProgressReorder();
+    });
+    el.progReorderList.addEventListener("click", (e) => {
+      const button = e.target.closest("[data-prog-reorder-disciple]");
+      if (!button || !progReorderState.active) return;
+      const discipleId = button.dataset.progReorderDisciple;
+      if (!progReorderState.selectedId) {
+        progReorderState.selectedId = discipleId;
+      } else if (progReorderState.selectedId === discipleId) {
+        progReorderState.selectedId = null;
+      } else {
+        progReorderState.draft = PROG.swapDisciples(progReorderState.draft, progReorderState.selectedId, discipleId);
+        progReorderState.selectedId = null;
       }
+      renderProgressReorder();
+    });
+    el.progReorderSave.addEventListener("click", saveProgressReorder);
+    el.progReorderCancel.addEventListener("click", () => {
+      closeProgressReorder();
+      renderProgressReorder();
+    });
+    el.progDisciples.addEventListener("click", (e) => {
       const btn = e.target.closest("button[data-act]");
       if (!btn) return;
       const act = btn.dataset.act;
@@ -2001,7 +2061,7 @@
   }
 
   function stageTokensHtml(tokens) {
-    return PROG.sortMaterialTokens(tokens).map((tk) => forgingTokenHtml(tk, false, true)).join("");
+    return PROG.sortMaterialTokens(tokens).map((tk) => forgingTokenHtml(tk, false, true, true)).join("");
   }
 
   function progressSummaryHtml(materials, overall) {
@@ -2032,12 +2092,13 @@
     const remaining = PROG.remainingStages(item, it.progress, it.quality);
     const status = PROG.progressStatus(it);
     const displayName = it.equipmentName || item.name;
-    const nameHtml = it.equipmentId
-      ? `<button type="button" class="progress-equipment-name progress-equipment-${status.tier} progress-equipment-link" data-progress-equipment="${escapeHtml(displayName)}" data-progress-record="${escapeHtml(it.id)}" title="查看${escapeHtml(displayName)}装备属性">${escapeHtml(displayName)}</button>`
-      : `<span class="progress-equipment-name progress-equipment-${status.tier}" title="暂无装备属性">${escapeHtml(displayName)}</span>`;
+    const nameHtml = `<button type="button" class="progress-equipment-name progress-equipment-${status.tier} progress-equipment-link" data-item-menu-source="forging" data-item-name="${escapeHtml(displayName)}" data-progress-record="${escapeHtml(it.id)}" title="打开${escapeHtml(displayName)}查询选项">${escapeHtml(displayName)}</button>`;
     const unavailableHtml = it.equipmentId ? "" : '<span class="muted progress-equipment-unavailable">暂无装备属性</span>';
     const nextHtml = next ? `${next.stage}：${stageTokensHtml(next.tokens)}` : "全部锻造完成";
-    const remRows = remaining.map((st) => `<tr><td><div class="prog-stage-label">${st.stage}</div></td><td><div class="prog-stage-materials">${stageTokensHtml(st.tokens)}</div></td></tr>`).join("");
+    const remRows = remaining.map((st, remainingIndex) => {
+      const stageIndex = Math.max(0, it.progress | 0) + remainingIndex;
+      return `<tr${hitStageIndexes.has(stageIndex) ? ' class="search-hit-row"' : ""}><td><div class="prog-stage-label">${st.stage}</div></td><td><div class="prog-stage-materials">${stageTokensHtml(st.tokens)}</div></td></tr>`;
+    }).join("");
     return `<div class="prog-equip">
       <div class="prog-equip-head">
         <span class="cat">${item.cat}</span>
@@ -2128,16 +2189,17 @@
     </div>`).join("");
 
     const requiredHtml = result.required.map((entry) => {
-      const hitsHtml = entry.hits.map((hit) => `<span class="prog-search-hit">
-        <b>${escapeHtml(hit.stage)}</b>
-        ${hit.tokens.map((tokenHit) => forgingTokenHtml(tokenHit.token, true)).join("")}
-      </span>`).join("");
+      const presentation = PROG.buildRequiredSearchPresentation(entry);
+      const hitsHtml = presentation.segments.map((segment) => `<span class="prog-search-hit">
+        <b>${escapeHtml(segment.stage)}</b>
+        ${segment.tokens.map((token) => forgingTokenHtml({ n: token.name, q: token.quality }, true, true, true)).join("")}
+      </span>`).join('<span class="prog-search-separator">；</span>');
       return `<div class="prog-search-relation">
-        <div class="prog-search-context">${escapeHtml(entry.disciple.name || "未命名弟子")} · ${escapeHtml(entry.item.name)}需要该材料</div>
-        <div class="prog-search-hits">${hitsHtml}</div>
+        <div class="prog-search-requirement"><strong class="prog-search-owner">${escapeHtml(presentation.ownerLabel)}</strong><span>的锻造需要该装备：</span><span class="prog-search-hits">${hitsHtml}</span></div>
         ${equipmentHtml(entry.disciple, entry.progressItem, {
           readOnly: true,
-          hitStageIndexes: new Set(entry.hits.map((hit) => hit.stageIdx))
+          editStage: true,
+          hitStageIndexes: new Set(presentation.hitStageIndexes)
         })}
       </div>`;
     }).join("");
@@ -2160,7 +2222,10 @@
     if (progState.page < 0) progState.page = 0;
     const page = progState.page;
     const searching = progState.query.trim() !== "";
+    if ((searching || total < 2) && progReorderState.active) closeProgressReorder();
     el.progPager.hidden = searching;
+    el.progReorderToggle.hidden = total < 2;
+    renderProgressReorder();
     el.progSearchResults.hidden = !searching;
     if (searching) {
       el.progOverall.hidden = true;

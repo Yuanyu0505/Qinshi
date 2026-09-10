@@ -503,7 +503,7 @@
     return {};
   }
 
-  function restorePartitionView(partition, view) {
+  function restorePartitionView(partition, view, afterRestore) {
     if (partition === "equipment") {
       restoreEquipmentView(view);
       apply();
@@ -515,12 +515,14 @@
     } else if (partition === "drops") {
       restoreDropView(view);
     } else if (partition === "forbidden" && window.FORBIDDEN_UI) {
-      window.FORBIDDEN_UI.restoreView(view);
+      window.FORBIDDEN_UI.restoreView(view, afterRestore);
+      return;
     } else if (partition === "machine-beasts" && MACHINE_BEAST_UI) {
       MACHINE_BEAST_UI.restoreView(view);
     } else if (partition === "zhulu" && ZHULU_UI) {
       ZHULU_UI.restoreView(view);
     }
+    if (typeof afterRestore === "function") afterRestore();
   }
 
   function applyPartitionNavigation(partition, item, options) {
@@ -646,11 +648,16 @@
       sourceView.progress = cloneNavigationValue(currentDestinationView.progress);
     }
     switchPartition(frame.sourcePartition, { source: "item-navigation-return", preserveEquipment: true });
-    restorePartitionView(frame.sourcePartition, sourceView);
-    updateItemNavigationReturn();
-    requestAnimationFrame(function () {
-      window.scrollTo({ top: Number(frame.sourceScrollY) || 0, behavior: "auto" });
+    restorePartitionView(frame.sourcePartition, sourceView, function () {
+      if (frame.sourcePartition === "forbidden" && window.FORBIDDEN_UI && typeof window.FORBIDDEN_UI.restoreScrollPosition === "function") {
+        window.FORBIDDEN_UI.restoreScrollPosition(sourceView.scrollPosition, frame.sourceScrollY);
+        return;
+      }
+      requestAnimationFrame(function () {
+        window.scrollTo({ top: Number(frame.sourceScrollY) || 0, behavior: "auto" });
+      });
     });
+    updateItemNavigationReturn();
   }
 
   function initItemNavigation() {

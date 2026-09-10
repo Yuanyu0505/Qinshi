@@ -2340,7 +2340,7 @@ figcaption { color: var(--muted); font-size: 13px; margin-top: 8px; }
 }
 #partition-forbidden .forbidden-card.is-search-match {
   border-color: #ff4a43;
-  box-shadow: inset 0 0 0 1px rgba(255, 74, 67, .42), 0 0 16px rgba(217, 39, 34, .12);
+  box-shadow: inset 4px 0 0 rgba(255, 74, 67, .72);
 }
 #partition-forbidden .forbidden-match-reason {
   display: flex;
@@ -2392,9 +2392,9 @@ figcaption { color: var(--muted); font-size: 13px; margin-top: 8px; }
   border-radius: 8px;
 }
 #partition-forbidden .forbidden-disciples.is-match {
-  background: rgba(174, 23, 20, .18);
+  background: rgba(174, 23, 20, .09);
   border-color: #ff4a43;
-  box-shadow: inset 0 0 0 1px rgba(255, 74, 67, .22);
+  box-shadow: inset 3px 0 0 rgba(255, 74, 67, .55);
 }
 #partition-forbidden .forbidden-needs { border-left: 3px solid #2d9b55; }
 #partition-forbidden .forbidden-subtitle { margin-bottom: 7px; color: var(--gold-dim); font-size: 13px; font-weight: 800; }
@@ -2407,9 +2407,9 @@ figcaption { color: var(--muted); font-size: 13px; margin-top: 8px; }
   min-width: 0;
   min-height: 34px;
   padding: 3px;
-  color: #fff;
-  background: #c76518;
-  border: 2px solid #ff963d;
+  color: var(--text);
+  background: rgba(31, 26, 20, .92);
+  border: 2px solid #75501d;
   border-radius: 7px;
   font: inherit;
   font-size: 13px;
@@ -2435,8 +2435,8 @@ figcaption { color: var(--muted); font-size: 13px; margin-top: 8px; }
   flex: 0 0 28px;
   width: 28px;
   padding: 0;
-  color: #fff4d0;
-  background: rgba(0, 0, 0, .2);
+  color: var(--gold-dim);
+  background: rgba(212, 175, 55, .08);
   font-weight: 900;
 }
 #partition-forbidden .forbidden-token-name {
@@ -2459,21 +2459,27 @@ figcaption { color: var(--muted); font-size: 13px; margin-top: 8px; }
   white-space: nowrap;
 }
 #partition-forbidden .forbidden-token.is-selected {
-  color: #fff;
-  background: #237f42;
+  color: #effff4;
+  background: rgba(24, 91, 49, .78);
   border-color: #42d77d;
   font-weight: 800;
-  box-shadow: 0 0 0 1px rgba(66, 215, 125, .18);
+  box-shadow: inset 3px 0 0 #42d77d;
 }
 #partition-forbidden .forbidden-token.is-search-hit {
   border-color: #ff4a43;
   font-weight: 900;
-  box-shadow: 0 0 0 3px rgba(255, 74, 67, .72), 0 0 15px rgba(216, 36, 36, .42);
+  box-shadow: inset 3px 0 0 #ff4a43;
 }
 #partition-forbidden .forbidden-token.is-selected.is-search-hit {
-  background: #237f42;
+  background: rgba(24, 91, 49, .78);
   border-color: #ff4a43;
-  box-shadow: 0 0 0 3px rgba(255, 74, 67, .7), 0 0 14px rgba(255, 74, 67, .35);
+  box-shadow: inset 3px 0 0 #ff4a43;
+}
+#partition-forbidden .forbidden-token.is-history-disabled .forbidden-token-check {
+  color: var(--muted);
+  background: rgba(255, 255, 255, .03);
+  cursor: not-allowed;
+  opacity: .58;
 }
 #partition-forbidden .forbidden-token.is-purpose-muted { opacity: .38; }
 #partition-forbidden .forbidden-token.is-purpose-match { opacity: 1; }
@@ -2491,11 +2497,11 @@ figcaption { color: var(--muted); font-size: 13px; margin-top: 8px; }
   font-weight: 900;
   white-space: nowrap;
 }
-#partition-forbidden .forbidden-purpose-badge.is-atlas { color: #f1dcff; background: #7736a6; border-color: #c677ff; }
-#partition-forbidden .forbidden-purpose-badge.is-forging { color: #fff7dc; background: #a95d08; border-color: #ffb74c; }
-#partition-forbidden .forbidden-purpose-badge.is-machine-lineup { color: #e9fbff; background: #176d92; border-color: #65d5ff; }
-#partition-forbidden .forbidden-purpose-badge.is-machine-modification { color: #eef0ff; background: #484d9d; border-color: #929cff; }
-#partition-forbidden .forbidden-purpose-badge.is-unclassified { color: #ece7dc; background: #5c574d; border-color: #aaa295; }
+#partition-forbidden .forbidden-purpose-badge.is-atlas { color: #e5c8f7; background: rgba(119, 54, 166, .42); border-color: #9b55c9; }
+#partition-forbidden .forbidden-purpose-badge.is-forging { color: #ffe8bd; background: rgba(169, 93, 8, .46); border-color: #c5781b; }
+#partition-forbidden .forbidden-purpose-badge.is-machine-lineup { color: #d4f3ff; background: rgba(23, 109, 146, .46); border-color: #278eb9; }
+#partition-forbidden .forbidden-purpose-badge.is-machine-modification { color: #e1e4ff; background: rgba(72, 77, 157, .48); border-color: #737dde; }
+#partition-forbidden .forbidden-purpose-badge.is-unclassified { color: #d8d2c8; background: rgba(92, 87, 77, .5); border-color: #81796d; }
 #partition-forbidden .forbidden-need-line { display: grid; grid-template-columns: 112px minmax(0, 1fr); align-items: start; gap: 8px; }
 #partition-forbidden .forbidden-need-line + .forbidden-need-line { margin-top: 7px; }
 #partition-forbidden .forbidden-need-line > span { padding-top: 6px; color: var(--muted); font-size: 12px; }
@@ -2508,14 +2514,14 @@ figcaption { color: var(--muted); font-size: 13px; margin-top: 8px; }
 #partition-forbidden .forbidden-reward-section {
   min-width: 0;
   padding: 9px;
-  background: var(--bg2);
-  border: 1px solid var(--line);
+  background: rgba(20, 17, 13, .74);
+  border: 1px solid rgba(139, 99, 34, .72);
   border-radius: 8px;
 }
 #partition-forbidden .forbidden-reward-section.is-match {
-  background: rgba(174, 23, 20, .16);
+  background: rgba(174, 23, 20, .08);
   border-color: #ff4a43;
-  box-shadow: inset 0 0 0 1px rgba(255, 74, 67, .28), 0 0 13px rgba(216, 36, 36, .14);
+  box-shadow: inset 3px 0 0 rgba(255, 74, 67, .62);
 }
 #partition-forbidden .forbidden-reward-rows { display: grid; gap: 0; }
 #partition-forbidden .forbidden-reward-row {
@@ -2527,7 +2533,17 @@ figcaption { color: var(--muted); font-size: 13px; margin-top: 8px; }
 }
 #partition-forbidden .forbidden-reward-row:first-child { padding-top: 0; }
 #partition-forbidden .forbidden-reward-row:last-child { padding-bottom: 0; }
-#partition-forbidden .forbidden-reward-row + .forbidden-reward-row { border-top: 1px dashed rgba(212, 175, 55, .16); }
+#partition-forbidden .forbidden-reward-row + .forbidden-reward-row { border-top: 2px solid rgba(178, 126, 42, .62); }
+#partition-forbidden .forbidden-reward-row.is-choice-group {
+  padding: 8px;
+  background: rgba(212, 175, 55, .035);
+  border: 1px solid rgba(139, 99, 34, .46);
+  border-radius: 6px;
+}
+#partition-forbidden .forbidden-reward-row.is-choice-group + .forbidden-reward-row.is-choice-group {
+  margin-top: 8px;
+  border-top: 2px solid rgba(212, 175, 55, .82);
+}
 #partition-forbidden .forbidden-reward-row-label {
   flex: 0 0 32px;
   padding-top: 7px;

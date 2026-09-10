@@ -71,6 +71,23 @@ assert.deepStrictEqual(F.defaultPurposes("nucleus"), ["machine-modification"]);
 assert.deepStrictEqual(F.cleanPurposes(["machine-beasts"], "machine-beast"), ["machine-lineup"]);
 assert.deepStrictEqual(F.cleanPurposes(["machine-beasts"], "nucleus"), ["machine-modification"]);
 
+const datedNeeds = F.normalizeNeedsV2({
+  version: 2,
+  events: {
+    [current.id]: { disciples: ["龙骧章邯"], rewards: {} },
+    [wind.id]: { disciples: ["隐虎季布"], rewards: {} }
+  }
+}, null, DATA);
+assert.deepStrictEqual(F.clearHistoricalNeeds(datedNeeds, DATA.occurrences, "2026-09-17"), [current.id]);
+assert.strictEqual(Object.prototype.hasOwnProperty.call(datedNeeds.events, current.id), false);
+assert.strictEqual(Object.prototype.hasOwnProperty.call(datedNeeds.events, wind.id), true);
+
+const forbiddenText = JSON.stringify(DATA.templates);
+assert.strictEqual(forbiddenText.includes("共工戟"), false);
+assert.strictEqual(forbiddenText.includes("共工戒"), true);
+assert.strictEqual(F.rewardIdentity("contribution10", "共工戟").name, "共工戒");
+assert.strictEqual(F.rewardIdentity("equipmentFragments", "共工戟").name, "共工戒碎片");
+
 F.setRewardSelection(migrated, wind.id, fragmentIdentity, true, ["atlas", "forging", "machine-beasts"]);
 assert.deepStrictEqual(migrated.events[wind.id].rewards[fragmentIdentity.key].purposes, ["atlas", "forging"]);
 assert.strictEqual(F.matchesPurpose(migrated, wind.id, "atlas"), true);

@@ -13,6 +13,7 @@
   var occurrenceIdentityCache = {};
   var needsCache = {};
   var deferredRenderTimer = null;
+  var historyCleanupTimer = null;
   var renderVersion = 0;
   var searchRefresh = window.UI_PERFORMANCE.createRefreshQueue(render);
   var state = {
@@ -28,9 +29,9 @@
   var SECTION_CONFIG = [
     { key: "contribution5", title: "贡献奖励 · 5W" },
     { key: "contribution10", title: "贡献奖励 · 10W" },
-    { key: "rank1", rowsKey: "rank1Rows", title: "排名奖励 · 第1名（每行任选一项）" },
-    { key: "rank2", rowsKey: "rank2Rows", title: "排名奖励 · 第2名（每行任选一项）" },
-    { key: "rank3to10", rowsKey: "rank3to10Rows", title: "排名奖励 · 第3—10名（每行任选一项）" },
+    { key: "rank1", rowsKey: "rank1Rows", choiceGroups: true, title: "排名奖励 · 第1名（每个分区任选1项）" },
+    { key: "rank2", rowsKey: "rank2Rows", choiceGroups: true, title: "排名奖励 · 第2名（每个分区任选1项）" },
+    { key: "rank3to10", rowsKey: "rank3to10Rows", choiceGroups: true, title: "排名奖励 · 第3—10名（每个分区任选1项）" },
     { key: "equipmentFragments", rowsKey: "equipmentFragmentRows", rowLabels: ["武器", "防具", "首饰"], title: "装备碎片" },
     { key: "machineBeasts", title: "机关兽碎片" },
     { key: "nuclei", title: "机关兽神核" },
@@ -96,6 +97,63 @@
     } catch (error) {
       showError("禁地需求未能保存到本机浏览器，本次页面内操作仍可继续。", true);
     }
+  }
+
+  function clearHistoricalSelections(today) {
+    var removed = core.clearHistoricalNeeds(state.needs, data.occurrences, today || new Date());
+    if (!removed.length) return false;
+    invalidateNeeds(removed);
+    saveNeeds();
+    return true;
+  }
+
+  function scheduleHistoryCleanup() {
+    if (historyCleanupTimer !== null) clearTimeout(historyCleanupTimer);
+    var now = new Date();
+    var tomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 1);
+    historyCleanupTimer = setTimeout(function () {
+      clearHistoricalSelections(new Date());
+      if (elements.partition && !elements.partition.hidden) render();
+      else partitionRendered = false;
+      scheduleHistoryCleanup();
+    }, Math.max(1000, tomorrow.getTime() - now.getTime()));
+  }
+
+  function captureScrollPosition() {
+    var cards = elements.content
+      ? Array.prototype.slice.call(elements.content.querySelectorAll("[data-forbidden-card]"))
+      : [];
+    var anchor = cards.reduce(function (closest, card) {
+      var rect = card.getBoundingClientRect();
+      var distance = Math.abs(rect.top);
+      return !closest || distance < closest.distance
+        ? { eventId: card.dataset.forbiddenCard, offset: rect.top, distance: distance }
+        : closest;
+    }, null);
+    return {
+      y: window.scrollY,
+      eventId: anchor ? anchor.eventId : "",
+      offset: anchor ? anchor.offset : 0
+    };
+  }
+
+  function restoreScrollPosition(position, fallbackY) {
+    var saved = position || {};
+    function applyPosition() {
+      var top = Number(saved.y);
+      if (!Number.isFinite(top)) top = Number(fallbackY) || 0;
+      if (saved.eventId && elements.content) {
+        var anchor = Array.prototype.slice.call(elements.content.querySelectorAll("[data-forbidden-card]")).find(function (card) {
+          return card.dataset.forbiddenCard === saved.eventId;
+        });
+        if (anchor) top = window.scrollY + anchor.getBoundingClientRect().top - (Number(saved.offset) || 0);
+      }
+      window.scrollTo({ top: Math.max(0, top), behavior: "auto" });
+    }
+    requestAnimationFrame(function () {
+      applyPosition();
+      requestAnimationFrame(applyPosition);
+    });
   }
 
   function showError(message, visible) {
@@ -208,16 +266,18 @@
 
   function tokenHtml(occurrence, type, name, displayName, sectionKey, savedIdentity) {
     var shownName = displayName == null ? name : displayName;
+    var selectable = core.statusFor(occurrence, new Date()) !== "history";
     var identity = type === "reward" ? (savedIdentity || resolvedIdentity(sectionKey, name)) : null;
     var record = identity ? rewardRecord(occurrence, identity) : null;
     var isSelected = type === "disciple" ? discipleSelected(occurrence, name) : Boolean(record);
     var isSearchHit = tokenMatches(name, shownName);
-    var className = "forbidden-token" + (isSelected ? " is-selected" : "") + (isSearchHit ? " is-search-hit" : "");
+    var className = "forbidden-token" + (isSelected ? " is-selected" : "") + (isSearchHit ? " is-search-hit" : "") + (!selectable ? " is-history-disabled" : "");
     if (state.purpose) className += purposeMatches(record) ? " is-purpose-match" : " is-purpose-muted";
     var dataAttributes = tokenData(occurrence, type, name, sectionKey);
     return '<span class="' + className + '" data-forbidden-token>' +
       '<button type="button" class="forbidden-token-check" data-forbidden-select' + dataAttributes +
-      ' aria-pressed="' + String(isSelected) + '" aria-label="' + escapeHtml((isSelected ? "取消勾选" : "勾选") + shownName) + '">' +
+      ' aria-pressed="' + String(isSelected) + '" aria-label="' + escapeHtml(selectable ? (isSelected ? "取消勾选" : "勾选") + shownName : "历史禁地不可勾选" + shownName) + '"' +
+      (selectable ? "" : ' disabled title="历史禁地已自动清除需求，不可重新勾选"') + '>' +
       (isSelected ? '<span aria-hidden="true">✓</span>' : '<span aria-hidden="true">＋</span>') + "</button>" +
       '<button type="button" class="forbidden-token-name" data-forbidden-name-action' + dataAttributes + ">" + highlight(shownName) + "</button>" +
       (record ? '<span class="forbidden-purpose-badges">' + purposeBadgesHtml(record) + "</span>" +
@@ -259,7 +319,7 @@
         var label = config.rowLabels && config.rowLabels[index]
           ? '<span class="forbidden-reward-row-label">' + escapeHtml(config.rowLabels[index]) + "</span>"
           : "";
-        return '<div class="forbidden-reward-row' + (label ? " has-label" : "") + '">' + label + '<div class="forbidden-token-list">' + (renderTokens(row) || '<span class="muted-tip">—</span>') + "</div></div>";
+        return '<div class="forbidden-reward-row' + (label ? " has-label" : "") + (config.choiceGroups ? " is-choice-group" : "") + '">' + label + '<div class="forbidden-token-list">' + (renderTokens(row) || '<span class="muted-tip">—</span>') + "</div></div>";
       }).join("") + "</div>";
     }
     return '<section class="forbidden-reward-section' + (isMatch ? " is-match" : "") + '">' +
@@ -358,9 +418,10 @@
     deferredRenderTimer = null;
   }
 
-  function renderListIncrementally(results) {
+  function renderListIncrementally(results, onComplete) {
     if (!results.length) {
       elements.content.innerHTML = '<div class="forbidden-empty">未找到相关禁地信息</div>';
+      if (typeof onComplete === "function") onComplete();
       return;
     }
     elements.content.innerHTML = listHeaderHtml(results) + '<div class="forbidden-list" data-forbidden-progressive-list></div>';
@@ -378,7 +439,10 @@
       }
       list.insertAdjacentHTML("beforeend", html);
       if (index < results.length) deferredRenderTimer = setTimeout(appendBatch, 0);
-      else deferredRenderTimer = null;
+      else {
+        deferredRenderTimer = null;
+        if (typeof onComplete === "function") onComplete();
+      }
     }
     appendBatch();
   }
@@ -396,15 +460,18 @@
     elements.scheduleToggle.textContent = state.showSchedule ? "收起完整预测表" : "查看完整预测表";
   }
 
-  function render() {
+  function render(onComplete) {
     searchRefresh.cancel();
     if (!elements.content) return;
     cancelDeferredRender();
     needsCache = {};
     updateControls();
     var listMode = Boolean(state.query || state.size || state.purpose || state.selectedOnly || state.showSchedule);
-    if (listMode) renderListIncrementally(listResults());
-    else elements.content.innerHTML = defaultHtml();
+    if (listMode) renderListIncrementally(listResults(), onComplete);
+    else {
+      elements.content.innerHTML = defaultHtml();
+      if (typeof onComplete === "function") onComplete();
+    }
     partitionRendered = true;
   }
 
@@ -443,11 +510,12 @@
       purpose: state.purpose,
       selectedOnly: state.selectedOnly,
       showSchedule: state.showSchedule,
-      expanded: clone(state.expanded)
+      expanded: clone(state.expanded),
+      scrollPosition: captureScrollPosition()
     };
   }
 
-  function restoreView(view) {
+  function restoreView(view, onComplete) {
     var saved = view || {};
     state.query = String(saved.query || "");
     state.size = String(saved.size || "");
@@ -456,7 +524,7 @@
     state.showSchedule = Boolean(saved.showSchedule);
     state.expanded = clone(saved.expanded);
     if (elements.search) elements.search.value = state.query;
-    render();
+    render(onComplete);
   }
 
   function applyNavigationQuery(name) {
@@ -482,6 +550,7 @@
   function toggleSelection(control) {
     var occurrence = occurrenceById(control.dataset.forbiddenEvent);
     if (!occurrence) return;
+    if (core.statusFor(occurrence, new Date()) === "history") return;
     var type = control.dataset.forbiddenType;
     var changedEventIds = [occurrence.id];
     if (type === "disciple") {
@@ -720,7 +789,9 @@
       return;
     }
     state.needs = loadNeeds();
+    clearHistoricalSelections(new Date());
     saveNeeds();
+    scheduleHistoryCleanup();
     bindEvents();
     function activatePartition(event) {
       if (event && (!event.detail || event.detail.name !== "forbidden")) {
@@ -730,6 +801,7 @@
         if (!elements.purposeEditor.hidden) closePurposeEditor(false);
         return;
       }
+      clearHistoricalSelections(new Date());
       if (!partitionRendered) render();
     }
     document.addEventListener("qinshi:partitionchange", activatePartition);
@@ -740,6 +812,7 @@
     init: init,
     captureView: captureView,
     restoreView: restoreView,
+    restoreScrollPosition: restoreScrollPosition,
     applyNavigationQuery: applyNavigationQuery
   };
 })();

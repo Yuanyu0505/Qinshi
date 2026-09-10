@@ -52,6 +52,11 @@
     return unique((items || []).map(function (item) { return BEAST_NAMES[item] || item; }));
   }
 
+  function correctedRewardName(value) {
+    var name = String(value == null ? "" : value).trim();
+    return name.replace(/^共工戟(?=碎片$|$)/, "共工戒");
+  }
+
   function resolveTemplate(data, occurrence) {
     if (templateCacheData !== data) {
       templateCacheData = data;
@@ -135,6 +140,23 @@
     };
   }
 
+  function clearHistoricalNeeds(needs, occurrences, today) {
+    if (!needs || needs.version !== 2 || !needs.events || typeof needs.events !== "object") return [];
+    var occurrenceById = {};
+    (occurrences || []).forEach(function (occurrence) {
+      if (occurrence && occurrence.id) occurrenceById[occurrence.id] = occurrence;
+    });
+    var removed = [];
+    Object.keys(needs.events).forEach(function (eventId) {
+      var occurrence = occurrenceById[eventId];
+      if (occurrence && statusFor(occurrence, today) === "history") {
+        delete needs.events[eventId];
+        removed.push(eventId);
+      }
+    });
+    return removed;
+  }
+
   function dateAliases(occurrence) {
     var start = parseLocalDate(occurrence.start);
     var end = parseLocalDate(occurrence.end);
@@ -194,7 +216,7 @@
   }
 
   function rewardDisplayName(sectionKey, name) {
-    var raw = String(name == null ? "" : name).trim();
+    var raw = correctedRewardName(name);
     if (sectionKey === "equipmentFragments") return /碎片$/.test(raw) ? raw : raw + "碎片";
     if (sectionKey === "machineBeasts") return machineBeastTarget(raw) + "碎片";
     if (sectionKey === "nuclei") return machineBeastTarget(raw) + "神核";
@@ -208,7 +230,7 @@
   }
 
   function rewardIdentity(sectionKey, rawName, resolvedFamilyKey) {
-    var raw = String(rawName == null ? "" : rawName).trim();
+    var raw = correctedRewardName(rawName);
     var category = rewardCategory(sectionKey);
     var displayName = rewardDisplayName(sectionKey, raw);
     var baseName = category === "equipment" ? displayName.replace(/碎片$/, "") : machineBeastTarget(raw);
@@ -303,14 +325,14 @@
     var category = ["equipment", "machine-beast", "nucleus"].indexOf(record.category) !== -1
       ? record.category
       : "equipment";
-    var storedName = String(record.name == null ? "" : record.name).trim();
+    var storedName = correctedRewardName(record.name);
     if (!storedName) return null;
     var sectionKey = category === "machine-beast"
       ? "machineBeasts"
       : category === "nucleus"
         ? "nuclei"
         : String(record.sectionKey || "");
-    var rawName = String(record.rawName == null ? storedName : record.rawName).trim();
+    var rawName = correctedRewardName(record.rawName == null ? storedName : record.rawName);
     if (category === "machine-beast" || category === "nucleus") {
       rawName = machineBeastTarget(rawName);
       var machineName = rewardDisplayName(sectionKey, rawName);
@@ -327,11 +349,11 @@
     }
     return {
       name: storedName,
-      rawName: String(record.rawName == null ? storedName.replace(/碎片$/, "") : record.rawName).trim(),
-      baseName: String(record.baseName == null ? storedName.replace(/碎片$/, "") : record.baseName).trim(),
+      rawName: rawName,
+      baseName: correctedRewardName(record.baseName == null ? storedName.replace(/碎片$/, "") : record.baseName),
       sectionKey: sectionKey,
       category: category,
-      familyKey: String(record.familyKey || storedName.replace(/碎片$/, "")).trim(),
+      familyKey: correctedRewardName(record.familyKey || storedName.replace(/碎片$/, "")),
       purposes: cleanPurposes(record.purposes, category),
       key: category + ":" + normalize(storedName)
     };
@@ -485,6 +507,7 @@
     statusFor: statusFor,
     compareByStatus: compareByStatus,
     getDefaultView: getDefaultView,
+    clearHistoricalNeeds: clearHistoricalNeeds,
     dateAliases: dateAliases,
     discipleText: discipleText,
     discipleAtlasTargets: discipleAtlasTargets,

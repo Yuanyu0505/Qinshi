@@ -2184,7 +2184,7 @@
     </section>` : "";
 
     const ownedHtml = result.owned.map((entry) => `<div class="prog-search-relation">
-      <div class="prog-search-context">${escapeHtml(entry.disciple.name || "未命名弟子")} · 直接持有</div>
+      <div class="prog-search-context">${escapeHtml(PROG.buildOwnedSearchLabel(entry))}</div>
       ${equipmentHtml(entry.disciple, entry.progressItem, { readOnly: true, editStage: true })}
     </div>`).join("");
 

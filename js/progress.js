@@ -300,10 +300,16 @@
       };
     });
     return {
-      ownerLabel: String(disciple.name || "未命名弟子") + " · " + String(progressItem.equipmentName || item.name || "未知装备"),
+      ownerLabel: String(disciple.name || "未命名弟子") + "【" + String(progressItem.equipmentName || item.name || "未知装备") + "】",
       hitStageIndexes: hitStageIndexes,
       segments: segments
     };
+  }
+
+  function buildOwnedSearchLabel(entry) {
+    var source = entry && typeof entry === "object" ? entry : {};
+    var disciple = source.disciple || {};
+    return String(disciple.name || "未命名弟子") + " 已佩戴该装备";
   }
 
   function swapDisciples(disciples, firstId, secondId) {
@@ -333,6 +339,7 @@
     overallSummary: overallSummary,
     searchDisciples: searchDisciples,
     searchEquipment: searchEquipment,
+    buildOwnedSearchLabel: buildOwnedSearchLabel,
     buildRequiredSearchPresentation: buildRequiredSearchPresentation,
     swapDisciples: swapDisciples
   };

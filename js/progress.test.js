@@ -223,7 +223,13 @@ test("个人进度搜索：宽泛关键词继续使用原有模糊匹配", () =>
   );
 });
 
-test("材料需求展示：使用实际持有装备名并保留命中阶段顺序", () => {
+test("直接持有展示：使用弟子名说明已佩戴该装备", () => {
+  assert.strictEqual(P.buildOwnedSearchLabel({
+    disciple: { id: "d1", name: "神·将威龙且" }
+  }), "神·将威龙且 已佩戴该装备");
+});
+
+test("材料需求展示：使用方括号包裹实际持有装备名并保留命中阶段顺序", () => {
   const presentation = P.buildRequiredSearchPresentation({
     disciple: { id: "d1", name: "弄玉" },
     progressItem: { id: "i1", equipmentName: "神兵左传" },
@@ -236,7 +242,7 @@ test("材料需求展示：使用实际持有装备名并保留命中阶段顺�
   });
 
   assert.deepStrictEqual(presentation, {
-    ownerLabel: "弄玉 · 神兵左传",
+    ownerLabel: "弄玉【神兵左传】",
     hitStageIndexes: [7, 9],
     segments: [
       { stageIdx: 7, stage: "7→8锻", tokens: [{ name: "黄石天书", quality: "橙" }] },

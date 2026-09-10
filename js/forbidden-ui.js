@@ -396,7 +396,12 @@
     } else {
       var identity = identityFromControl(control);
       var selectedReward = rewardRecord(occurrence, identity);
-      core.setRewardSelection(state.needs, occurrence.id, identity, !selectedReward, []);
+      var isMachineSeries = identity.category === "machine-beast" || identity.category === "nucleus";
+      if (!selectedReward && isMachineSeries) {
+        applyFamilySelection(identity, true, ["machine-beasts"]);
+      } else {
+        core.setRewardSelection(state.needs, occurrence.id, identity, !selectedReward, []);
+      }
     }
     saveNeeds();
     render();
@@ -437,7 +442,17 @@
         (purposeDraft.purposes.indexOf(purpose) !== -1 ? " checked" : "") + "><span>" + escapeHtml(PURPOSE_LABELS[purpose]) + "</span></label>";
     }).join("");
     var eventScope = elements.purposeEditor.querySelector('input[name="forbidden-purpose-scope"][value="event"]');
-    if (eventScope) eventScope.checked = true;
+    var familyScope = elements.purposeEditor.querySelector('input[name="forbidden-purpose-scope"][value="family"]');
+    var isMachineSeries = record.category === "machine-beast" || record.category === "nucleus";
+    if (elements.purposeFamilyLabel) {
+      elements.purposeFamilyLabel.textContent = record.category === "machine-beast"
+        ? "全部同机关兽系列"
+        : record.category === "nucleus"
+          ? "全部同神核系列"
+          : "全部同装备系列";
+    }
+    if (isMachineSeries && familyScope) familyScope.checked = true;
+    else if (eventScope) eventScope.checked = true;
     elements.purposeEditor.hidden = false;
     positionPurposeDialog(control);
     var first = elements.purposeOptions.querySelector("input");
@@ -600,7 +615,8 @@
       error: document.getElementById("forbidden-error"),
       purposeEditor: document.getElementById("forbidden-purpose-editor"),
       purposeTitle: document.getElementById("forbidden-purpose-title"),
-      purposeOptions: document.getElementById("forbidden-purpose-options")
+      purposeOptions: document.getElementById("forbidden-purpose-options"),
+      purposeFamilyLabel: document.getElementById("forbidden-purpose-family-label")
     };
     if (!data || !core || !elements.partition || !elements.content || !elements.purposeFilter || !elements.purposeEditor) {
       showError("禁地数据加载失败，请确认相关数据和脚本文件存在。", true);

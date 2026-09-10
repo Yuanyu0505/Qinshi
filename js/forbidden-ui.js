@@ -27,8 +27,8 @@
   };
 
   var SECTION_CONFIG = [
-    { key: "contribution5", title: "贡献奖励 · 5W" },
-    { key: "contribution10", title: "贡献奖励 · 10W" },
+    { key: "contribution5", title: "贡献奖励 · 5W（任选1项）" },
+    { key: "contribution10", title: "贡献奖励 · 10W（任选1项）" },
     { key: "rank1", rowsKey: "rank1Rows", choiceGroups: true, title: "排名奖励 · 第1名（每个分区任选1项）" },
     { key: "rank2", rowsKey: "rank2Rows", choiceGroups: true, title: "排名奖励 · 第2名（每个分区任选1项）" },
     { key: "rank3to10", rowsKey: "rank3to10Rows", choiceGroups: true, title: "排名奖励 · 第3—10名（每个分区任选1项）" },

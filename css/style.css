@@ -2398,6 +2398,27 @@ figcaption { color: var(--muted); font-size: 13px; margin-top: 8px; }
 }
 #partition-forbidden .forbidden-needs { border-left: 3px solid #2d9b55; }
 #partition-forbidden .forbidden-subtitle { margin-bottom: 7px; color: var(--gold-dim); font-size: 13px; font-weight: 800; }
+#partition-forbidden .forbidden-reward-section > .forbidden-subtitle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 22px;
+  margin-bottom: 10px;
+  color: #ffda69;
+  font-size: 15px;
+  font-weight: 900;
+  letter-spacing: .025em;
+  text-shadow: 0 0 9px rgba(255, 205, 75, .2);
+}
+#partition-forbidden .forbidden-reward-section > .forbidden-subtitle::before {
+  content: "";
+  flex: 0 0 4px;
+  width: 4px;
+  height: 17px;
+  background: #f0bd3d;
+  border-radius: 2px;
+  box-shadow: 0 0 7px rgba(240, 189, 61, .28);
+}
 #partition-forbidden .forbidden-token-list { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; min-width: 0; }
 #partition-forbidden .forbidden-token {
   display: inline-flex;
@@ -2533,16 +2554,28 @@ figcaption { color: var(--muted); font-size: 13px; margin-top: 8px; }
 }
 #partition-forbidden .forbidden-reward-row:first-child { padding-top: 0; }
 #partition-forbidden .forbidden-reward-row:last-child { padding-bottom: 0; }
-#partition-forbidden .forbidden-reward-row + .forbidden-reward-row { border-top: 2px solid rgba(178, 126, 42, .62); }
+#partition-forbidden .forbidden-reward-row + .forbidden-reward-row { border-top: 2px solid rgba(212, 175, 55, .82); }
 #partition-forbidden .forbidden-reward-row.is-choice-group {
+  position: relative;
   padding: 8px;
-  background: rgba(212, 175, 55, .035);
-  border: 1px solid rgba(139, 99, 34, .46);
+  background: rgba(212, 175, 55, .065);
+  border: 1px solid rgba(178, 126, 42, .72);
   border-radius: 6px;
 }
 #partition-forbidden .forbidden-reward-row.is-choice-group + .forbidden-reward-row.is-choice-group {
-  margin-top: 8px;
-  border-top: 2px solid rgba(212, 175, 55, .82);
+  margin-top: 14px;
+  border-top-color: rgba(178, 126, 42, .72);
+}
+#partition-forbidden .forbidden-reward-row.is-choice-group + .forbidden-reward-row.is-choice-group::before {
+  content: "";
+  position: absolute;
+  left: 2px;
+  right: 2px;
+  top: -9px;
+  height: 3px;
+  background: #d4af37;
+  border-radius: 2px;
+  box-shadow: 0 0 6px rgba(212, 175, 55, .28);
 }
 #partition-forbidden .forbidden-reward-row-label {
   flex: 0 0 32px;

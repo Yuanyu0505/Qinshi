@@ -23,6 +23,8 @@
     "九头": "九头勾玉",
     "南瓜": "南瓜怪人"
   };
+  var templateCacheData = null;
+  var templateCache = {};
 
   function normalize(value) {
     return String(value == null ? "" : value).toLowerCase().replace(/\s+/g, "").replace(/[—–－~～]/g, "-");
@@ -51,6 +53,12 @@
   }
 
   function resolveTemplate(data, occurrence) {
+    if (templateCacheData !== data) {
+      templateCacheData = data;
+      templateCache = {};
+    }
+    var templateId = occurrence && occurrence.templateId;
+    if (Object.prototype.hasOwnProperty.call(templateCache, templateId)) return templateCache[templateId];
     var source = data && data.templates ? data.templates[occurrence.templateId] : null;
     if (!source) return null;
     var rows = source.rankingRows || [[], [], []];
@@ -58,7 +66,7 @@
     var rank2Rows = uniqueRows([rows[1] || [], rows[2] || []]);
     var rank3to10Rows = uniqueRows([rows[2] || []]);
     var equipmentFragmentRows = uniqueRows(source.equipmentFragmentRows || [source.equipmentFragments || []]);
-    return {
+    var resolved = {
       contribution5: unique(source.contribution && source.contribution["5W"]),
       contribution10: unique(source.contribution && source.contribution["10W"]),
       rank1: flattenRows(rank1Rows),
@@ -73,6 +81,8 @@
       nuclei: canonicalBeasts(source.nuclei),
       orangeDrops: unique(source.orangeDrops)
     };
+    templateCache[templateId] = resolved;
+    return resolved;
   }
 
   function shouldToggleToken(start, end, selectionText) {
@@ -414,14 +424,15 @@
   function filterOccurrences(data, options) {
     var opts = options || {};
     var query = normalize(opts.query);
-    return (data && data.occurrences || []).filter(function (occurrence) {
-      if (opts.size && occurrence.size !== opts.size) return false;
-      if (opts.selectedOnly && !hasNeeds(opts.needs, occurrence.id)) return false;
-      if (opts.purpose && !matchesPurpose(opts.needs, occurrence.id, opts.purpose)) return false;
-      return !query || findMatches(data, occurrence, query).length > 0;
-    }).map(function (occurrence) {
-      return { occurrence: occurrence, matches: query ? findMatches(data, occurrence, query) : [] };
-    }).sort(function (a, b) { return compareByStatus(a.occurrence, b.occurrence, opts.today); });
+    return (data && data.occurrences || []).reduce(function (results, occurrence) {
+      if (opts.size && occurrence.size !== opts.size) return results;
+      if (opts.selectedOnly && !hasNeeds(opts.needs, occurrence.id)) return results;
+      if (opts.purpose && !matchesPurpose(opts.needs, occurrence.id, opts.purpose)) return results;
+      var matches = query ? findMatches(data, occurrence, query) : [];
+      if (query && !matches.length) return results;
+      results.push({ occurrence: occurrence, matches: matches });
+      return results;
+    }, []).sort(function (a, b) { return compareByStatus(a.occurrence, b.occurrence, opts.today); });
   }
 
   return {

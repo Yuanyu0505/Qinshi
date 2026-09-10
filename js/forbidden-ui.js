@@ -9,6 +9,11 @@
   var elements = {};
   var partitionRendered = false;
   var purposeDraft = null;
+  var identityCache = {};
+  var occurrenceIdentityCache = {};
+  var needsCache = {};
+  var deferredRenderTimer = null;
+  var renderVersion = 0;
   var searchRefresh = window.UI_PERFORMANCE.createRefreshQueue(render);
   var state = {
     query: "",
@@ -122,18 +127,43 @@
   }
 
   function resolvedIdentity(sectionKey, name) {
+    var cacheKey = sectionKey + "\u0000" + name;
+    if (identityCache[cacheKey]) return identityCache[cacheKey];
     var initial = core.rewardIdentity(sectionKey, name);
-    if (initial.category !== "equipment" || !window.ItemNavigation) return initial;
+    if (initial.category !== "equipment" || !window.ItemNavigation) {
+      identityCache[cacheKey] = initial;
+      return initial;
+    }
     var navigation = window.ItemNavigation.resolveItem(
       initial.baseName,
       window.SPECIAL_EQUIPMENT_DATA && window.SPECIAL_EQUIPMENT_DATA.items,
       window.FORGING_DATA && window.FORGING_DATA.items
     );
-    return core.rewardIdentity(sectionKey, name, navigation && navigation.familyKey);
+    identityCache[cacheKey] = core.rewardIdentity(sectionKey, name, navigation && navigation.familyKey);
+    return identityCache[cacheKey];
   }
 
   function eventNeeds(occurrence) {
-    return core.eventNeeds(state.needs, occurrence.id);
+    if (!Object.prototype.hasOwnProperty.call(needsCache, occurrence.id)) {
+      needsCache[occurrence.id] = core.eventNeeds(state.needs, occurrence.id);
+    }
+    return needsCache[occurrence.id];
+  }
+
+  function invalidateNeeds(eventIds) {
+    (eventIds || []).forEach(function (eventId) { delete needsCache[eventId]; });
+  }
+
+  function resolvedOccurrenceIdentities(occurrence, category) {
+    var cacheKey = occurrence.id + "\u0000" + category;
+    if (!occurrenceIdentityCache[cacheKey]) {
+      occurrenceIdentityCache[cacheKey] = core.occurrenceRewardIdentities(data, occurrence).filter(function (candidate) {
+        return candidate.category === category;
+      }).map(function (candidate) {
+        return resolvedIdentity(candidate.sectionKey, candidate.rawName);
+      });
+    }
+    return occurrenceIdentityCache[cacheKey];
   }
 
   function rewardRecord(occurrence, identity) {
@@ -272,19 +302,19 @@
     var discipleTokens = (occurrence.disciples || []).map(function (disciple) {
       return tokenHtml(occurrence, "disciple", disciple.name, formatDisciple(disciple));
     }).join("");
-    var rewardSections = SECTION_CONFIG.map(function (config) {
+    var rewardSections = expanded ? SECTION_CONFIG.map(function (config) {
       return rewardSectionHtml(occurrence, resolved, config, matches);
-    }).join("");
+    }).join("") : "";
     var hasMetaMatch = matches.indexOf("meta") !== -1;
     var hasDiscipleMatch = matches.indexOf("disciples") !== -1;
-    return '<article class="forbidden-card' + (hasMetaMatch || hasDiscipleMatch ? " is-search-match" : "") + '" data-forbidden-card="' + escapeHtml(occurrence.id) + '">' +
+    return '<article class="forbidden-card' + (hasMetaMatch || hasDiscipleMatch ? " is-search-match" : "") + '" data-forbidden-card="' + escapeHtml(occurrence.id) + '" data-forbidden-role="' + escapeHtml(role) + '">' +
       '<header class="forbidden-card-head"><div><span class="forbidden-status">' + escapeHtml(statusLabel(occurrence, role)) + "</span>" +
       '<strong class="forbidden-date">' + highlight(formatRange(occurrence)) + '</strong><span class="forbidden-size forbidden-size-' + escapeHtml(occurrence.size) + '">' + escapeHtml(occurrence.size + "禁地") + "</span></div>" +
       '<button type="button" class="seg forbidden-expand" data-forbidden-expand="' + escapeHtml(occurrence.id) + '" aria-expanded="' + String(expanded) + '">' + (expanded ? "收起奖励" : "展开奖励") + "</button></header>" +
       matchReasonHtml(matches) +
       '<section class="forbidden-disciples' + (hasDiscipleMatch ? " is-match" : "") + '"><div class="forbidden-subtitle">禁地弟子</div><div class="forbidden-token-list">' + discipleTokens + "</div></section>" +
       requirementSummaryHtml(occurrence) +
-      '<div class="forbidden-rewards"' + (expanded ? "" : " hidden") + '><div class="forbidden-reward-grid">' + rewardSections + "</div></div></article>";
+      (expanded ? '<div class="forbidden-rewards"><div class="forbidden-reward-grid">' + rewardSections + "</div></div>" : "") + "</article>";
   }
 
   function noticeHtml(text) {
@@ -304,7 +334,7 @@
     return notice + '<div class="forbidden-featured-grid">' + cards.join("") + "</div>";
   }
 
-  function listHtml() {
+  function listResults() {
     var results = core.filterOccurrences(data, {
       query: state.query,
       size: state.size,
@@ -313,12 +343,43 @@
       needs: state.needs,
       today: new Date()
     });
-    if (!results.length) return '<div class="forbidden-empty">未找到相关禁地信息</div>';
+    return results;
+  }
+
+  function listHeaderHtml(results) {
     var title = state.query ? "搜索结果" : state.purpose ? "用途筛选结果" : state.selectedOnly ? "已勾选禁地" : state.size ? state.size + "禁地" : "完整预测表";
-    return '<div class="forbidden-list-head"><strong>' + escapeHtml(title) + '</strong><span>共 ' + results.length + " 期</span></div>" +
-      '<div class="forbidden-list">' + results.map(function (result) {
-        return cardHtml(result.occurrence, result.matches, "list");
-      }).join("") + "</div>";
+    return '<div class="forbidden-list-head"><strong>' + escapeHtml(title) + '</strong><span>共 ' + results.length + " 期</span></div>";
+  }
+
+  function cancelDeferredRender() {
+    renderVersion += 1;
+    if (deferredRenderTimer !== null) clearTimeout(deferredRenderTimer);
+    deferredRenderTimer = null;
+  }
+
+  function renderListIncrementally(results) {
+    if (!results.length) {
+      elements.content.innerHTML = '<div class="forbidden-empty">未找到相关禁地信息</div>';
+      return;
+    }
+    elements.content.innerHTML = listHeaderHtml(results) + '<div class="forbidden-list" data-forbidden-progressive-list></div>';
+    var list = elements.content.querySelector("[data-forbidden-progressive-list]");
+    var version = renderVersion;
+    var index = 0;
+    var batchSize = 2;
+    function appendBatch() {
+      if (version !== renderVersion || !list || !document.contains(list)) return;
+      var end = Math.min(index + batchSize, results.length);
+      var html = "";
+      while (index < end) {
+        html += cardHtml(results[index].occurrence, results[index].matches, "list");
+        index += 1;
+      }
+      list.insertAdjacentHTML("beforeend", html);
+      if (index < results.length) deferredRenderTimer = setTimeout(appendBatch, 0);
+      else deferredRenderTimer = null;
+    }
+    appendBatch();
   }
 
   function updateControls() {
@@ -337,10 +398,41 @@
   function render() {
     searchRefresh.cancel();
     if (!elements.content) return;
+    cancelDeferredRender();
+    needsCache = {};
     updateControls();
     var listMode = Boolean(state.query || state.size || state.purpose || state.selectedOnly || state.showSchedule);
-    elements.content.innerHTML = listMode ? listHtml() : defaultHtml();
+    if (listMode) renderListIncrementally(listResults());
+    else elements.content.innerHTML = defaultHtml();
     partitionRendered = true;
+  }
+
+  function cardNode(html) {
+    var template = document.createElement("template");
+    template.innerHTML = html.trim();
+    return template.content.firstElementChild;
+  }
+
+  function refreshOccurrenceCards(eventIds) {
+    var ids = core.unique(eventIds || []);
+    if (!ids.length) return;
+    invalidateNeeds(ids);
+    Array.prototype.slice.call(elements.content.querySelectorAll("[data-forbidden-card]")).forEach(function (card) {
+      if (ids.indexOf(card.dataset.forbiddenCard) === -1) return;
+      var occurrence = occurrenceById(card.dataset.forbiddenCard);
+      if (!occurrence) return;
+      var matches = state.query ? core.findMatches(data, occurrence, state.query) : [];
+      var replacement = cardNode(cardHtml(occurrence, matches, card.dataset.forbiddenRole || "list"));
+      if (replacement) card.replaceWith(replacement);
+    });
+  }
+
+  function refreshAfterNeedsChange(eventIds) {
+    if (state.purpose || state.selectedOnly) {
+      render();
+      return;
+    }
+    refreshOccurrenceCards(eventIds);
   }
 
   function captureView() {
@@ -390,6 +482,7 @@
     var occurrence = occurrenceById(control.dataset.forbiddenEvent);
     if (!occurrence) return;
     var type = control.dataset.forbiddenType;
+    var changedEventIds = [occurrence.id];
     if (type === "disciple") {
       var selectedDisciple = discipleSelected(occurrence, control.dataset.forbiddenName);
       core.setDiscipleSelection(state.needs, occurrence.id, control.dataset.forbiddenName, !selectedDisciple);
@@ -398,13 +491,13 @@
       var selectedReward = rewardRecord(occurrence, identity);
       var isMachineSeries = identity.category === "machine-beast" || identity.category === "nucleus";
       if (!selectedReward && isMachineSeries) {
-        applyFamilySelection(identity, true, ["machine-beasts"]);
+        changedEventIds = applyFamilySelection(identity, true, ["machine-beasts"]);
       } else {
         core.setRewardSelection(state.needs, occurrence.id, identity, !selectedReward, []);
       }
     }
     saveNeeds();
-    render();
+    refreshAfterNeedsChange(changedEventIds);
   }
 
   function positionPurposeDialog(trigger) {
@@ -479,24 +572,27 @@
   }
 
   function applyFamilySelection(identity, selected, purposes) {
+    var changedEventIds = [];
     (data.occurrences || []).forEach(function (occurrence) {
-      core.occurrenceRewardIdentities(data, occurrence).forEach(function (candidate) {
-        var resolved = resolvedIdentity(candidate.sectionKey, candidate.rawName);
-        if (resolved.familyKey === identity.familyKey) {
+      resolvedOccurrenceIdentities(occurrence, identity.category).forEach(function (resolved) {
+        if (resolved.category === identity.category && resolved.familyKey === identity.familyKey) {
           core.setRewardSelection(state.needs, occurrence.id, resolved, selected, purposes);
+          changedEventIds.push(occurrence.id);
         }
       });
     });
+    return core.unique(changedEventIds);
   }
 
   function savePurposeEditor(selected) {
     if (!purposeDraft) return;
     var purposes = selected ? selectedPurposes() : [];
-    if (purposeScope() === "family") applyFamilySelection(purposeDraft.identity, selected, purposes);
+    var changedEventIds = [purposeDraft.eventId];
+    if (purposeScope() === "family") changedEventIds = applyFamilySelection(purposeDraft.identity, selected, purposes);
     else core.setRewardSelection(state.needs, purposeDraft.eventId, purposeDraft.identity, selected, purposes);
     saveNeeds();
     closePurposeEditor(false);
-    render();
+    refreshAfterNeedsChange(changedEventIds);
   }
 
   function dispatchNavigation(control) {
@@ -577,7 +673,7 @@
       if (expandButton) {
         var id = expandButton.dataset.forbiddenExpand;
         state.expanded[id] = expandButton.getAttribute("aria-expanded") !== "true";
-        render();
+        refreshOccurrenceCards([id]);
       }
     });
     elements.purposeEditor.addEventListener("click", function (event) {
@@ -628,6 +724,8 @@
     function activatePartition(event) {
       if (event && (!event.detail || event.detail.name !== "forbidden")) {
         searchRefresh.cancel();
+        cancelDeferredRender();
+        partitionRendered = false;
         if (!elements.purposeEditor.hidden) closePurposeEditor(false);
         return;
       }

@@ -1356,6 +1356,10 @@
       const btn = e.target.closest("button[data-atlas]");
       if (!btn) return;
       atlasState.activated = true;
+      if (btn.dataset.atlas === "已收藏" && atlasState.tab !== "已收藏") {
+        atlasState.sortField = "knots";
+        atlasState.sortDirection = "asc";
+      }
       atlasState.tab = btn.dataset.atlas;
       applyAtlas();
     });
@@ -1639,9 +1643,9 @@
       : `<div class="atlas-upgrade">
           <div class="atlas-upgrade-title">升至 ${plan.targetLevel} 级</div>
           <div class="atlas-upgrade-cost">
-            <span>明鬼绳结 <b>${plan.knots}</b></span>
+            <span class="atlas-cost-knots">明鬼绳结 <b>${plan.knots}</b></span>
             <span>${atlasSoulHtml(itemId, plan.souls, favorite)}</span>
-            <span>成长值 <b>+${plan.growth}</b></span>
+            <span class="atlas-cost-growth">成长值 <b>+${plan.growth}</b></span>
           </div>
           <div class="muted-tip">14级后不再获得成长值</div>
           <div class="atlas-upgrade-equipment"><div class="atlas-equipment-title">所需装备</div>${equipmentHtml}</div>
@@ -1720,9 +1724,9 @@
     return `<div class="atlas-upgrade-summary">
       <div class="drop-item-title">当前结果升至 ${summary.targetLevel} 级汇总<span class="drop-count">${summary.pending}/${summary.total} 名未达标</span></div>
       <div class="atlas-upgrade-cost">
-        <span>明鬼绳结 <b>${summary.knots}</b></span>
+        <span class="atlas-cost-knots">明鬼绳结 <b>${summary.knots}</b></span>
         <span>魂魄 <b>${summary.souls}</b></span>
-        <span>成长值 <b>+${summary.growth}</b></span>
+        <span class="atlas-cost-growth">成长值 <b>+${summary.growth}</b></span>
       </div>
       ${hasEquipment ? '<button type="button" class="seg atlas-summary-equipment-toggle" aria-expanded="false">展开所需装备</button>' : ""}
       <div class="atlas-summary-equipment"><div class="atlas-equipment-title">所需装备</div><div class="atlas-summary-equipment-list">${equipment}</div></div>

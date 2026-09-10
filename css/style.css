@@ -906,6 +906,8 @@ tr.hit-row td { background: rgba(212, 175, 55, .06); }
 .atlas-upgrade-title { color: var(--gold); font-weight: 700; margin-bottom: 7px; }
 .atlas-upgrade-cost { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 7px; }
 .atlas-upgrade-cost b { color: var(--gold); }
+.atlas-upgrade-cost .atlas-cost-knots b { color: #ff4b4b; }
+.atlas-upgrade-cost .atlas-cost-growth b { color: inherit; }
 .atlas-upgrade-equipment, .atlas-summary-equipment { margin-top: 9px; }
 .atlas-summary-equipment-toggle { display: inline-flex; margin: 2px 0 4px; }
 .atlas-summary-equipment { display: none; }

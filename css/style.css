@@ -3244,7 +3244,8 @@ figcaption { color: var(--muted); font-size: 13px; margin-top: 8px; }
   #partition-forbidden .forbidden-purpose-row .segs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); width: 100%; }
   #partition-forbidden .forbidden-purpose-row .seg { width: 100%; padding-left: 6px; padding-right: 6px; }
   #partition-forbidden .forbidden-check-control,
-  #partition-forbidden #forbidden-schedule-toggle { width: 100%; justify-content: center; }
+  #partition-forbidden #forbidden-schedule-toggle,
+  #partition-forbidden #forbidden-expand-all { width: 100%; justify-content: center; }
   #partition-forbidden .forbidden-card { padding: 10px; }
   #partition-forbidden .forbidden-card-head { align-items: flex-start; flex-direction: column; }
   #partition-forbidden .forbidden-expand { width: 100%; }

@@ -79,6 +79,7 @@ test("首页提供禁地用途编辑与机关兽统一返回入口", async () =>
   await withServer(async (port) => {
     const page = await get(port, "/");
     assert.match(page.body, /id="forbidden-purpose-filter"/);
+    assert.match(page.body, /id="forbidden-expand-all"/);
     assert.match(page.body, /id="forbidden-purpose-editor"/);
     assert.match(page.body, /id="forbidden-purpose-family-label">全部同装备系列</);
     assert.match(page.body, /data-forbidden-purpose="machine-lineup">上阵\/流派</);

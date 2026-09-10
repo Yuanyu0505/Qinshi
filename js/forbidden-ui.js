@@ -15,6 +15,7 @@
   var deferredRenderTimer = null;
   var historyCleanupTimer = null;
   var renderVersion = 0;
+  var visibleCards = [];
   var searchRefresh = window.UI_PERFORMANCE.createRefreshQueue(render);
   var state = {
     query: "",
@@ -382,17 +383,24 @@
     return '<div class="forbidden-notice">' + escapeHtml(text) + "</div>";
   }
 
-  function defaultHtml() {
+  function defaultViewModel() {
     var view = core.getDefaultView(data.occurrences, new Date());
     var cards = [];
+    var entries = [];
     var notice = "";
-    if (view.current) cards.push(cardHtml(view.current, [], "current"));
+    if (view.current) entries.push({ occurrence: view.current, matches: [], role: "current" });
     else if (view.beforeSchedule) notice = noticeHtml("当前暂无开放禁地，以下为首期预测。");
     else if (view.afterSchedule) notice = noticeHtml("暂无后续预测数据，以下为最近一期历史禁地。");
     else notice = noticeHtml("当前暂无开放禁地。");
-    if (view.next) cards.push(cardHtml(view.next, [], "next"));
-    if (!view.current && !view.next && view.latestHistory) cards.push(cardHtml(view.latestHistory, [], "latest"));
-    return notice + '<div class="forbidden-featured-grid">' + cards.join("") + "</div>";
+    if (view.next) entries.push({ occurrence: view.next, matches: [], role: "next" });
+    if (!view.current && !view.next && view.latestHistory) entries.push({ occurrence: view.latestHistory, matches: [], role: "latest" });
+    entries.forEach(function (entry) {
+      cards.push(cardHtml(entry.occurrence, entry.matches, entry.role));
+    });
+    return {
+      entries: entries,
+      html: notice + '<div class="forbidden-featured-grid">' + cards.join("") + "</div>"
+    };
   }
 
   function listResults() {
@@ -460,6 +468,28 @@
     elements.scheduleToggle.textContent = state.showSchedule ? "收起完整预测表" : "查看完整预测表";
   }
 
+  function updateExpandAllControl() {
+    if (!elements.expandAll) return;
+    var hasCards = visibleCards.length > 0;
+    var allExpanded = hasCards && visibleCards.every(function (entry) {
+      return expandedFor(entry.occurrence, entry.matches, entry.role);
+    });
+    elements.expandAll.disabled = !hasCards;
+    elements.expandAll.classList.toggle("active", allExpanded);
+    elements.expandAll.setAttribute("aria-pressed", String(allExpanded));
+    elements.expandAll.textContent = allExpanded ? "收起全部奖励" : "展开全部奖励";
+  }
+
+  function toggleAllVisibleRewards() {
+    var expand = !visibleCards.every(function (entry) {
+      return expandedFor(entry.occurrence, entry.matches, entry.role);
+    });
+    visibleCards.forEach(function (entry) {
+      state.expanded[entry.occurrence.id] = expand;
+    });
+    render();
+  }
+
   function render(onComplete) {
     searchRefresh.cancel();
     if (!elements.content) return;
@@ -467,9 +497,18 @@
     needsCache = {};
     updateControls();
     var listMode = Boolean(state.query || state.size || state.purpose || state.selectedOnly || state.showSchedule);
-    if (listMode) renderListIncrementally(listResults(), onComplete);
-    else {
-      elements.content.innerHTML = defaultHtml();
+    if (listMode) {
+      var results = listResults();
+      visibleCards = results.map(function (result) {
+        return { occurrence: result.occurrence, matches: result.matches, role: "list" };
+      });
+      updateExpandAllControl();
+      renderListIncrementally(results, onComplete);
+    } else {
+      var model = defaultViewModel();
+      visibleCards = model.entries;
+      updateExpandAllControl();
+      elements.content.innerHTML = model.html;
       if (typeof onComplete === "function") onComplete();
     }
     partitionRendered = true;
@@ -723,6 +762,7 @@
       state.showSchedule = !state.showSchedule;
       render();
     });
+    elements.expandAll.addEventListener("click", toggleAllVisibleRewards);
     elements.content.addEventListener("click", function (event) {
       var selectButton = event.target.closest("[data-forbidden-select]");
       if (selectButton) {
@@ -744,6 +784,7 @@
         var id = expandButton.dataset.forbiddenExpand;
         state.expanded[id] = expandButton.getAttribute("aria-expanded") !== "true";
         refreshOccurrenceCards([id]);
+        updateExpandAllControl();
       }
     });
     elements.purposeEditor.addEventListener("click", function (event) {
@@ -777,6 +818,7 @@
       purposeFilter: document.getElementById("forbidden-purpose-filter"),
       selectedOnly: document.getElementById("forbidden-selected-only"),
       scheduleToggle: document.getElementById("forbidden-schedule-toggle"),
+      expandAll: document.getElementById("forbidden-expand-all"),
       content: document.getElementById("forbidden-content"),
       error: document.getElementById("forbidden-error"),
       purposeEditor: document.getElementById("forbidden-purpose-editor"),
@@ -784,7 +826,7 @@
       purposeOptions: document.getElementById("forbidden-purpose-options"),
       purposeFamilyLabel: document.getElementById("forbidden-purpose-family-label")
     };
-    if (!data || !core || !elements.partition || !elements.content || !elements.purposeFilter || !elements.purposeEditor) {
+    if (!data || !core || !elements.partition || !elements.content || !elements.purposeFilter || !elements.expandAll || !elements.purposeEditor) {
       showError("禁地数据加载失败，请确认相关数据和脚本文件存在。", true);
       return;
     }

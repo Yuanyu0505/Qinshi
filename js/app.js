@@ -691,6 +691,7 @@
         openItemNavigationMenu("drops", dropItem.dataset.dropItem, dropItem);
         return;
       }
+      if (event.target.closest("[data-forbidden-name-action]")) return;
       if (event.target.closest("[data-zhulu-book]")) return;
       if (!event.target.closest("#item-navigation-menu")) closeItemNavigationMenu(false);
     });

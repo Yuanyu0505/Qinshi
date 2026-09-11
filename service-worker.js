@@ -1,7 +1,7 @@
 "use strict";
 
 const CACHE_PREFIX = "qinshi-site-";
-const CACHE_NAME = CACHE_PREFIX + "1.0.37";
+const CACHE_NAME = CACHE_PREFIX + "1.0.38";
 const PRECACHE_URLS = [
   "./",
   "./index.html",
@@ -72,7 +72,9 @@ const PRECACHE_URLS = [
 
 self.addEventListener("install", function (event) {
   event.waitUntil(caches.open(CACHE_NAME).then(function (cache) {
-    return cache.addAll(PRECACHE_URLS);
+    return cache.addAll(PRECACHE_URLS.map(function (url) {
+      return new Request(url, { cache: "reload" });
+    }));
   }));
 });
 

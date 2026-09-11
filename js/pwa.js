@@ -1,7 +1,7 @@
 (function () {
   "use strict";
 
-  var APP_VERSION = "1.0.37";
+  var APP_VERSION = "1.0.38";
   var registration = null;
   var waitingWorker = null;
   var deferredInstallPrompt = null;
@@ -32,15 +32,23 @@
     setStatus("发现新版本，点击“立即更新”后生效。", false);
   }
 
+  function watchInstalling(worker) {
+    if (!worker) return;
+    function handleStateChange() {
+      if (worker.state === "installed" && navigator.serviceWorker.controller) {
+        showUpdate(registration.waiting || worker);
+      }
+    }
+    worker.addEventListener("statechange", handleStateChange);
+    handleStateChange();
+  }
+
   function watchRegistration(nextRegistration) {
     registration = nextRegistration;
     if (registration.waiting && navigator.serviceWorker.controller) showUpdate(registration.waiting);
+    watchInstalling(registration.installing);
     registration.addEventListener("updatefound", function () {
-      var installing = registration.installing;
-      if (!installing) return;
-      installing.addEventListener("statechange", function () {
-        if (installing.state === "installed" && navigator.serviceWorker.controller) showUpdate(installing);
-      });
+      watchInstalling(registration.installing);
     });
   }
 
@@ -55,7 +63,7 @@
       setStatus("当前浏览器不支持 Service Worker，请改用较新的 Safari、Chrome 或 Edge。", true);
       return;
     }
-    navigator.serviceWorker.register("./service-worker.js").then(function (nextRegistration) {
+    navigator.serviceWorker.register("./service-worker.js", { updateViaCache: "none" }).then(function (nextRegistration) {
       watchRegistration(nextRegistration);
       return navigator.serviceWorker.ready;
     }).then(function () {
@@ -74,6 +82,8 @@
     }
     setStatus("正在检查新版本…", false);
     return registration.update().then(function () {
+      if (registration.waiting && navigator.serviceWorker.controller) showUpdate(registration.waiting);
+      watchInstalling(registration.installing);
       if (!waitingWorker) setStatus("已完成检查；如有新版本会显示更新提示。", false);
       return Boolean(waitingWorker);
     }).catch(function (error) {

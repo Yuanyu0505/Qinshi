@@ -3,3 +3,8 @@ __pycache__/
 *.pyc
 .worktrees/
 .codex-tmp/
+cloud-sync/worker/.wrangler/
+cloud-sync/worker/.dev.vars
+cloud-sync/worker/wrangler.local.jsonc
+cloud-sync/worker/test-results/
+cloud-sync/worker/node_modules/

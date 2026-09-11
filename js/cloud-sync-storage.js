@@ -23,12 +23,19 @@
     return source && source.error ? source.error : new Error(fallback);
   }
 
+  function closeDatabase(database) {
+    if (database && typeof database.close === "function") database.close();
+  }
+
   function isPlainObject(value) {
     return Boolean(value) && typeof value === "object" && !Array.isArray(value);
   }
 
   function sanitizePairing(pairing) {
     if (!isPlainObject(pairing)) throw new Error("配对凭据不正确。");
+    if (!Object.keys(pairing).every(function (field) { return PAIRING_FIELDS.indexOf(field) !== -1; })) {
+      throw new Error("配对凭据不正确。");
+    }
     var saved = {};
     PAIRING_FIELDS.forEach(function (field) {
       if (Object.prototype.hasOwnProperty.call(pairing, field)) saved[field] = pairing[field];
@@ -37,6 +44,10 @@
       typeof saved.deviceId !== "string" || !saved.deviceId ||
       typeof saved.deviceToken !== "string" || !saved.deviceToken ||
       typeof saved.masterKey !== "string" || !saved.masterKey) {
+      throw new Error("配对凭据不正确。");
+    }
+    if ((Object.prototype.hasOwnProperty.call(saved, "deviceName") && typeof saved.deviceName !== "string") ||
+      (Object.prototype.hasOwnProperty.call(saved, "pairedAt") && typeof saved.pairedAt !== "string")) {
       throw new Error("配对凭据不正确。");
     }
     return saved;
@@ -52,6 +63,71 @@
       throw new Error("同步续传操作不正确。");
     }
     return { type: operation.type, snapshotId: operation.snapshotId };
+  }
+
+  function assertSafeRollbackValue(value, ancestors) {
+    if (value === null || typeof value === "string" || typeof value === "boolean") return;
+    if (typeof value === "number") {
+      if (Number.isFinite(value) && !Object.is(value, -0)) return;
+      throw new Error("回滚副本不正确。");
+    }
+    if (!value || typeof value !== "object" || ancestors.indexOf(value) !== -1) {
+      throw new Error("回滚副本不正确。");
+    }
+    var prototype = Object.getPrototypeOf(value);
+    if (Array.isArray(value)) {
+      if (Object.keys(value).length !== value.length ||
+        Object.getOwnPropertyNames(value).length !== value.length + 1 ||
+        Object.getOwnPropertySymbols(value).length !== 0) {
+        throw new Error("回滚副本不正确。");
+      }
+      ancestors.push(value);
+      for (var index = 0; index < value.length; index += 1) {
+        var arrayDescriptor = Object.getOwnPropertyDescriptor(value, index);
+        if (!arrayDescriptor || !Object.prototype.hasOwnProperty.call(arrayDescriptor, "value")) {
+          throw new Error("回滚副本不正确。");
+        }
+        assertSafeRollbackValue(arrayDescriptor.value, ancestors);
+      }
+      ancestors.pop();
+      return;
+    }
+    var keys = Object.keys(value);
+    if ((prototype !== Object.prototype && prototype !== null) ||
+      Object.getOwnPropertySymbols(value).length !== 0 || Object.getOwnPropertyNames(value).length !== keys.length) {
+      throw new Error("回滚副本不正确。");
+    }
+    ancestors.push(value);
+    keys.forEach(function (key) {
+      var descriptor = Object.getOwnPropertyDescriptor(value, key);
+      if (!descriptor || !Object.prototype.hasOwnProperty.call(descriptor, "value")) {
+        throw new Error("回滚副本不正确。");
+      }
+      assertSafeRollbackValue(descriptor.value, ancestors);
+    });
+    ancestors.pop();
+  }
+
+  function copyStrictJson(value) {
+    if (value === null || typeof value !== "object") return value;
+    if (Array.isArray(value)) return value.map(copyStrictJson);
+    var copy = {};
+    Object.keys(value).forEach(function (key) {
+      Object.defineProperty(copy, key, {
+        value: copyStrictJson(value[key]), enumerable: true, configurable: true, writable: true
+      });
+    });
+    return copy;
+  }
+
+  function cloneRollbackCopy(copy) {
+    try {
+      assertSafeRollbackValue(copy, []);
+      if (typeof root.structuredClone === "function") return root.structuredClone(copy);
+      return copyStrictJson(copy);
+    } catch (error) {
+      throw new Error("回滚副本不正确。");
+    }
   }
 
   function createStorage(dependencies) {
@@ -78,7 +154,11 @@
         };
         request.onerror = function () { reject(errorFrom(request, "无法打开云同步本地存储。")); };
         request.onblocked = function () { reject(new Error("云同步本地存储被占用。")); };
-        request.onsuccess = function () { resolve(request.result); };
+        request.onsuccess = function () {
+          var database = request.result;
+          database.onversionchange = function () { closeDatabase(database); };
+          resolve(database);
+        };
       });
     }
 
@@ -90,12 +170,13 @@
           function settle(handler, value) {
             if (settled) return;
             settled = true;
+            closeDatabase(database);
             handler(value);
           }
           try {
             tx = database.transaction(STORE_NAME, mode);
           } catch (error) {
-            reject(error);
+            settle(reject, error);
             return;
           }
           tx.onabort = function () { settle(reject, errorFrom(tx, "IndexedDB transaction aborted.")); };
@@ -121,6 +202,7 @@
           function settle(handler, result) {
             if (settled) return;
             settled = true;
+            closeDatabase(database);
             handler(result);
           }
           var tx;
@@ -158,7 +240,15 @@
 
     return {
       openStore: openStore,
-      savePairing: function (pairing) { return writeRecord(PAIRING_KEY, sanitizePairing(pairing)); },
+      savePairing: function (pairing) {
+        var saved;
+        try {
+          saved = sanitizePairing(pairing);
+        } catch (error) {
+          return Promise.reject(error);
+        }
+        return writeRecord(PAIRING_KEY, saved);
+      },
       loadPairing: function () { return readRecord(PAIRING_KEY); },
       forgetPairing: function () {
         return deleteRecord(PAIRING_KEY).then(function () {
@@ -190,7 +280,15 @@
       clearPendingOperation: function () {
         return Promise.resolve().then(function () { getSessionStorage().removeItem(PENDING_OPERATION_KEY); });
       },
-      saveRollbackCopy: function (copy) { return writeRecord(ROLLBACK_COPY_KEY, copy); },
+      saveRollbackCopy: function (copy) {
+        var saved;
+        try {
+          saved = cloneRollbackCopy(copy);
+        } catch (error) {
+          return Promise.reject(error);
+        }
+        return writeRecord(ROLLBACK_COPY_KEY, saved);
+      },
       loadRollbackCopy: function () { return readRecord(ROLLBACK_COPY_KEY); },
       clearRollbackCopy: function () { return deleteRecord(ROLLBACK_COPY_KEY); }
     };

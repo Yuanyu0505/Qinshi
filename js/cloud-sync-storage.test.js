@@ -18,8 +18,10 @@ function createSessionStorage() {
 
 function createFakeIndexedDb() {
   const databases = new Map();
+  const connections = [];
   let abortNextTransaction = false;
   let failNextRead = false;
+  let failNextTransactionCreation = false;
 
   function later(callback) { queueMicrotask(callback); }
 
@@ -93,9 +95,11 @@ function createFakeIndexedDb() {
 
   function FakeDatabase(database) {
     this.database = database;
+    this.closed = false;
     this.objectStoreNames = {
       contains: function (name) { return database.stores.has(name); }
     };
+    connections.push(this);
   }
 
   FakeDatabase.prototype.createObjectStore = function (name) {
@@ -105,8 +109,16 @@ function createFakeIndexedDb() {
   };
 
   FakeDatabase.prototype.transaction = function (name) {
+    if (failNextTransactionCreation) {
+      failNextTransactionCreation = false;
+      throw new Error("transaction creation failed");
+    }
     if (!this.database.stores.has(name)) throw new Error("unknown store");
     return new FakeTransaction(this.database, name);
+  };
+
+  FakeDatabase.prototype.close = function () {
+    this.closed = true;
   };
 
   return {
@@ -131,6 +143,7 @@ function createFakeIndexedDb() {
     },
     abortNextTransaction: function () { abortNextTransaction = true; },
     failNextRead: function () { failNextRead = true; },
+    failNextTransactionCreation: function () { failNextTransactionCreation = true; },
     dump: function () {
       const database = databases.get("qinshi-cloud-sync");
       if (!database) return {};
@@ -145,6 +158,13 @@ function createFakeIndexedDb() {
     version: function () {
       const database = databases.get("qinshi-cloud-sync");
       return database ? database.version : 0;
+    },
+    openCount: function () { return connections.length; },
+    closeCount: function () { return connections.filter(function (connection) { return connection.closed; }).length; },
+    triggerVersionChange: function () {
+      connections.forEach(function (connection) {
+        if (connection.onversionchange) connection.onversionchange({ target: connection });
+      });
     }
   };
 }
@@ -163,20 +183,24 @@ test("creates the version-one state store during an IndexedDB upgrade", async ()
   assert.equal(adapter.hasStore("state"), true);
 });
 
-test("stores paired credentials but strips passwords and recovery keys", async () => {
+test("rejects non-primitive and extra pairing fields before they can be persisted", async () => {
   const adapter = createFakeIndexedDb();
   const store = createStore(adapter, createSessionStorage());
 
-  await store.savePairing({
-    spaceId: "s", deviceId: "d", deviceToken: "t", masterKey: "m",
-    password: "never-store", recoveryKey: "never-store"
-  });
-
-  assert.deepEqual(await store.loadPairing(), {
-    spaceId: "s", deviceId: "d", deviceToken: "t", masterKey: "m"
-  });
-  assert.equal(JSON.stringify(adapter.dump()).includes("password"), false);
-  assert.equal(JSON.stringify(adapter.dump()).includes("recoveryKey"), false);
+  await assert.rejects(
+    store.savePairing({
+      spaceId: "s", deviceId: "d", deviceToken: "t", masterKey: "m",
+      deviceName: { password: "nested-secret" }
+    }),
+    /配对/
+  );
+  await assert.rejects(
+    store.savePairing({
+      spaceId: "s", deviceId: "d", deviceToken: "t", masterKey: "m", password: "secret"
+    }),
+    /配对/
+  );
+  assert.deepEqual(adapter.dump(), {});
 });
 
 test("persists paired credentials and rollback copies across a fresh storage instance", async () => {
@@ -228,6 +252,32 @@ test("rejects a write when its IndexedDB transaction aborts", async () => {
   assert.equal(await store.loadRollbackCopy(), null);
 });
 
+test("snapshots a rollback copy before asynchronous IndexedDB opening", async () => {
+  const store = createStore(createFakeIndexedDb(), createSessionStorage());
+  const copy = { qinshi_progress: { stage: "before-pull" } };
+
+  const saving = store.saveRollbackCopy(copy);
+  copy.qinshi_progress.stage = "changed-after-save";
+  await saving;
+
+  assert.deepEqual(await store.loadRollbackCopy(), { qinshi_progress: { stage: "before-pull" } });
+});
+
+test("rejects rollback copies that cannot be safely structured-cloned", async () => {
+  const store = createStore(createFakeIndexedDb(), createSessionStorage());
+
+  await assert.rejects(store.saveRollbackCopy({ qinshi_progress: function () {} }), /回滚/);
+  const circular = {};
+  circular.self = circular;
+  await assert.rejects(store.saveRollbackCopy(circular), /回滚/);
+  const arrayWithSymbol = ["kept"];
+  arrayWithSymbol[Symbol("hidden")] = "would-be-lost";
+  await assert.rejects(store.saveRollbackCopy(arrayWithSymbol), /回滚/);
+  const objectWithHiddenValue = { qinshi_progress: "kept" };
+  Object.defineProperty(objectWithHiddenValue, "hidden", { value: "would-be-lost" });
+  await assert.rejects(store.saveRollbackCopy(objectWithHiddenValue), /回滚/);
+});
+
 test("rejects a read when IndexedDB reports a request error", async () => {
   const adapter = createFakeIndexedDb();
   const store = createStore(adapter, createSessionStorage());
@@ -265,4 +315,31 @@ test("removes a rollback copy only when explicitly cleared", async () => {
   await store.clearRollbackCopy();
 
   assert.equal(await store.loadRollbackCopy(), null);
+});
+
+test("internal operations close their own IndexedDB connections on every settlement path", async () => {
+  const adapter = createFakeIndexedDb();
+  const store = createStore(adapter, createSessionStorage());
+
+  await store.savePairing({ spaceId: "s", deviceId: "d", deviceToken: "t", masterKey: "m" });
+  adapter.abortNextTransaction();
+  await assert.rejects(store.saveRollbackCopy({ qinshi_progress: "abort" }), /aborted/);
+  adapter.failNextRead();
+  await assert.rejects(store.loadPairing(), /read failed/);
+  adapter.failNextTransactionCreation();
+  await assert.rejects(store.loadRollbackCopy(), /transaction creation failed/);
+
+  assert.equal(adapter.closeCount(), adapter.openCount());
+});
+
+test("a version change closes an openStore connection without closing it eagerly", async () => {
+  const adapter = createFakeIndexedDb();
+  const store = createStore(adapter, createSessionStorage());
+  const database = await store.openStore();
+
+  assert.equal(adapter.closeCount(), 0);
+  adapter.triggerVersionChange();
+
+  assert.equal(database.closed, true);
+  assert.equal(adapter.closeCount(), 1);
 });

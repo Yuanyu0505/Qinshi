@@ -5,28 +5,31 @@
   var BACKUP_FORMAT_VERSION = 1;
   var STORAGE_PREFIX = "qinshi_";
 
-  function collectData() {
+  function collectManagedData() {
     var data = {};
     for (var index = 0; index < localStorage.length; index += 1) {
       var key = localStorage.key(index);
-      if (key && key.indexOf(STORAGE_PREFIX) === 0) data[key] = localStorage.getItem(key);
+      var value = key && key.indexOf(STORAGE_PREFIX) === 0 ? localStorage.getItem(key) : null;
+      if (typeof value === "string") data[key] = value;
     }
     return data;
   }
 
-  function makePayload(reason) {
-    return {
+  function makePayload(reason, metadata) {
+    var payload = {
       formatVersion: BACKUP_FORMAT_VERSION,
       appName: APP_NAME,
       reason: reason || "manual",
       exportedAt: new Date().toISOString(),
-      data: collectData()
+      data: collectManagedData()
     };
+    if (metadata !== undefined) payload.metadata = metadata;
+    return payload;
   }
 
   function backupFileName(reason) {
     var stamp = new Date().toISOString().replace(/[:.]/g, "-");
-    var suffix = reason === "before-import" ? "before-import" : "manual";
+    var suffix = reason === "before-import" || reason === "before-cloud-sync" ? reason : "manual";
     return "Qin-backup-" + suffix + "-" + stamp + ".json";
   }
 
@@ -53,15 +56,19 @@
     if (payload.formatVersion !== BACKUP_FORMAT_VERSION) {
       throw new Error("备份版本不受支持。");
     }
-    if (!payload.data || typeof payload.data !== "object" || Array.isArray(payload.data)) {
+    return validateManagedData(payload.data);
+  }
+
+  function validateManagedData(data) {
+    if (!data || typeof data !== "object" || Array.isArray(data)) {
       throw new Error("备份文件缺少本机进度数据。");
     }
-    Object.keys(payload.data).forEach(function (key) {
-      if (key.indexOf(STORAGE_PREFIX) !== 0 || typeof payload.data[key] !== "string") {
+    Object.keys(data).forEach(function (key) {
+      if (key.indexOf(STORAGE_PREFIX) !== 0 || typeof data[key] !== "string") {
         throw new Error("备份文件包含不允许的数据项。");
       }
     });
-    return payload.data;
+    return data;
   }
 
   function clearManagedData() {
@@ -74,15 +81,22 @@
   }
 
   function replaceManagedData(data) {
-    var previous = collectData();
+    validateManagedData(data);
+    var previous = collectManagedData();
     try {
       clearManagedData();
       Object.keys(data).forEach(function (key) { localStorage.setItem(key, data[key]); });
     } catch (error) {
-      clearManagedData();
-      Object.keys(previous).forEach(function (key) { localStorage.setItem(key, previous[key]); });
+      restoreManagedData(previous);
       throw error;
     }
+    return { previous: previous };
+  }
+
+  function restoreManagedData(previous) {
+    validateManagedData(previous);
+    clearManagedData();
+    Object.keys(previous).forEach(function (key) { localStorage.setItem(key, previous[key]); });
   }
 
   function setStatus(message, isError) {
@@ -136,6 +150,12 @@
   }
 
   window.QinshiSettings = {
+    collectManagedData: collectManagedData,
+    validateManagedData: validateManagedData,
+    makePayload: makePayload,
+    downloadPayload: downloadPayload,
+    replaceManagedData: replaceManagedData,
+    restoreManagedData: restoreManagedData,
     exportBackup: function () { downloadBackup("manual"); },
     importBackup: importBackup,
     downloadBackup: downloadBackup

@@ -1,4 +1,6 @@
 import { errorResponse, logRequest, normalizeError, SyncError } from './errors.js';
+import { authenticateDevice, hashLocator, verifyPasswordAuth, verifyRecoveryAuth } from './auth.js';
+import { readJson, requireVersion } from './validation.js';
 
 const ALLOWED_LOCAL = /^http:\/\/localhost:(800[0-9]|8010)$/;
 
@@ -18,6 +20,9 @@ export default {
     try {
       const pathname = new URL(request.url).pathname;
       if (pathname === '/v1/health') route = '/v1/health';
+      const spaceAuth = /^\/v1\/spaces\/([^/]+)\/(pair|recover)$/.exec(pathname);
+      if (spaceAuth) route = `/v1/spaces/:code/${spaceAuth[2]}`;
+      if (pathname === '/v1/uploads' || pathname === '/v1/devices') route = pathname;
       const requestedOrigin = request.headers.get('Origin');
       if (requestedOrigin !== null) {
         if (!allowedOrigin(requestedOrigin, env.ALLOWED_ORIGINS)) {
@@ -37,6 +42,24 @@ export default {
           minimumWriteVersion: env.MINIMUM_WRITE_VERSION
         });
       } else {
+        // These are security gates only. Later lifecycle/upload tasks supply the business handlers.
+        if (spaceAuth && request.method === 'POST') {
+          const recovery = spaceAuth[2] === 'recover';
+          const fields = recovery
+            ? ['recoveryAuth', 'newAuthKey', 'newPasswordWrappedMaster', 'newRecoveryAuth', 'newRecoveryWrappedMaster', 'newDeviceId', 'newDeviceToken', 'encryptedDeviceName']
+            : ['authKey', 'deviceId', 'deviceToken', 'encryptedDeviceName'];
+          const body = await readJson(request, fields);
+          requireVersion(request, env, 'write');
+          const locatorHash = await hashLocator(spaceAuth[1]);
+          await (recovery ? verifyRecoveryAuth(locatorHash, body.recoveryAuth, env) : verifyPasswordAuth(locatorHash, body.authKey, env));
+        } else if (pathname === '/v1/uploads' && request.method === 'POST') {
+          await readJson(request, ['operation', 'snapshotId', 'sourceSnapshotId', 'envelope']);
+          requireVersion(request, env, 'write');
+          await authenticateDevice(request, env);
+        } else if (pathname === '/v1/devices' && request.method === 'GET') {
+          requireVersion(request, env, 'read');
+          await authenticateDevice(request, env);
+        }
         throw new SyncError('NOT_FOUND');
       }
     } catch (error) {

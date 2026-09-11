@@ -1,4 +1,10 @@
 const ERRORS = {
+  INVALID_REQUEST: { status: 400, message: 'Request is invalid.', retryable: false },
+  AUTH_FAILED: { status: 401, message: 'Authentication failed.', retryable: false },
+  AUTH_COOLDOWN: { status: 429, message: 'Authentication is temporarily paused. Try again later.', retryable: true },
+  PAYLOAD_TOO_LARGE: { status: 413, message: 'Request body is too large.', retryable: false },
+  UNSUPPORTED_MEDIA_TYPE: { status: 415, message: 'Content-Type must be application/json.', retryable: false },
+  UPGRADE_REQUIRED: { status: 426, message: 'Upgrade the app before continuing cloud sync.', retryable: false },
   ORIGIN_NOT_ALLOWED: { status: 403, message: 'Origin is not allowed.', retryable: false },
   NOT_FOUND: { status: 404, message: 'Route not found.', retryable: false },
   METHOD_NOT_ALLOWED: { status: 405, message: 'Method is not allowed.', retryable: false },

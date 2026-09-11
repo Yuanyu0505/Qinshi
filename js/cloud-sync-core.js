@@ -35,13 +35,16 @@
   function parseVersion(value) {
     var text = String(value);
     if (!/^\d+\.\d+\.\d+$/.test(text)) throw new Error("版本格式不正确。");
-    return text.split(".").map(function (part) { return Number(part); });
+    return text.split(".").map(function (part) {
+      return part.replace(/^0+(?=\d)/, "");
+    });
   }
 
   function compareVersions(left, right) {
     var a = parseVersion(left);
     var b = parseVersion(right);
     for (var index = 0; index < 3; index += 1) {
+      if (a[index].length !== b[index].length) return a[index].length < b[index].length ? -1 : 1;
       if (a[index] !== b[index]) return a[index] < b[index] ? -1 : 1;
     }
     return 0;

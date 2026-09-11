@@ -118,6 +118,17 @@ test("compares three-part semantic versions numerically", () => {
   assert.equal(core.compareVersions("1.0.39", "1.0.39"), 0);
 });
 
+test("rejects an older version when a semantic segment exceeds Number precision", () => {
+  const core = createCore();
+  const limits = {
+    minimumReadVersion: "1.0.9007199254740993",
+    minimumWriteVersion: "1.0.9007199254740993"
+  };
+
+  assert.equal(core.compareVersions("1.0.9007199254740992", "1.0.9007199254740993"), -1);
+  assert.throws(() => core.assertVersionAllowed("1.0.9007199254740992", limits, "read"), /更新/);
+});
+
 test("uses separate server read and write minimum versions", () => {
   const core = createCore();
   const limits = { minimumReadVersion: "1.0.38", minimumWriteVersion: "1.0.40" };

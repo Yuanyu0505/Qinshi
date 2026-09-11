@@ -78,11 +78,15 @@ async function verifySpaceAuth(locatorHash, submitted, digestField, env) {
   const matches = constantTimeEqual(await digestBytes(validInput ? submitted : ''), expected || EMPTY_DIGEST);
   const now = Date.now();
   if (throttleResult.results[0]?.cooldown_until > now) throw new SyncError('AUTH_COOLDOWN');
-  if (!validInput || !space || !expected || !matches) {
+  const parametersOnly = digestField === null;
+  if (!space || (!parametersOnly && (!validInput || !expected || !matches))) {
     const recorded = await writeAuthFailure(locatorHash, now, env, true);
     if (!recorded) throw new SyncError('AUTH_COOLDOWN');
     throw new SyncError('AUTH_FAILED');
   }
+  // Public lookup shares failure work and cooldown admission, but is not authentication
+  // and must never clear an existing failure counter.
+  if (parametersOnly) return space;
   // A competing request may have started cooldown after the initial read. Only clear
   // an eligible row, then inspect any remaining row within the same D1 transaction.
   const [, remainingThrottle] = await env.DB.batch([
@@ -95,6 +99,10 @@ async function verifySpaceAuth(locatorHash, submitted, digestField, env) {
 
 export function verifyPasswordAuth(locatorHash, submittedAuthKey, env) {
   return verifySpaceAuth(locatorHash, submittedAuthKey, 'auth_digest', env);
+}
+
+export function lookupSpace(locatorHash, env) {
+  return verifySpaceAuth(locatorHash, '', null, env);
 }
 
 export function verifyRecoveryAuth(locatorHash, submittedRecoveryAuth, env) {

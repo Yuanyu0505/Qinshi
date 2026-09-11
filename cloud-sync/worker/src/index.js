@@ -1,6 +1,7 @@
 import { errorResponse, logRequest, normalizeError, SyncError } from './errors.js';
-import { authenticateDevice, hashLocator, verifyPasswordAuth, verifyRecoveryAuth } from './auth.js';
+import { authenticateDevice } from './auth.js';
 import { readJson, requireVersion } from './validation.js';
+import { handleSpaceRoute } from './spaces.js';
 
 const ALLOWED_LOCAL = /^http:\/\/localhost:(800[0-9]|8010)$/;
 
@@ -16,12 +17,24 @@ export default {
     let route = 'unmatched';
     let origin = null;
     let code = 'OK';
+    let allowedMethods = 'GET, OPTIONS';
     let response;
     try {
       const pathname = new URL(request.url).pathname;
       if (pathname === '/v1/health') route = '/v1/health';
-      const spaceAuth = /^\/v1\/spaces\/([^/]+)\/(pair|recover)$/.exec(pathname);
-      if (spaceAuth) route = `/v1/spaces/:code/${spaceAuth[2]}`;
+      const spaceRoute = /^\/v1\/spaces\/([^/]+)\/(parameters|pair|recover)$/.exec(pathname);
+      let spaceOperation;
+      if (spaceRoute) {
+        route = `/v1/spaces/:code/${spaceRoute[2]}`;
+        spaceOperation = spaceRoute[2];
+      } else if (pathname === '/v1/spaces') {
+        route = pathname; spaceOperation = 'create';
+      } else if (pathname === '/v1/spaces/current') {
+        route = pathname; spaceOperation = 'delete';
+      } else if (pathname === '/v1/security/password' || pathname === '/v1/security/recovery-key') {
+        route = pathname; spaceOperation = pathname.split('/').at(-1);
+      }
+      if (spaceOperation) allowedMethods = `${spaceOperation === 'parameters' ? 'GET' : spaceOperation === 'delete' ? 'DELETE' : 'POST'}, OPTIONS`;
       if (pathname === '/v1/uploads' || pathname === '/v1/devices') route = pathname;
       const requestedOrigin = request.headers.get('Origin');
       if (requestedOrigin !== null) {
@@ -41,21 +54,11 @@ export default {
           minimumReadVersion: env.MINIMUM_READ_VERSION,
           minimumWriteVersion: env.MINIMUM_WRITE_VERSION
         });
+      } else if (spaceOperation) {
+        response = await handleSpaceRoute(request, env, spaceOperation, spaceRoute?.[1]);
       } else {
-        // These are security gates only. Later lifecycle/upload tasks supply the business handlers.
-        if (spaceAuth && request.method === 'POST') {
-          const recovery = spaceAuth[2] === 'recover';
-          const fields = recovery
-            ? ['recoveryAuthKey', 'newAuthKey', 'newPasswordWrappedMaster', 'newRecoveryAuthKey', 'newRecoveryWrappedMaster', 'device', 'appVersion']
-            : ['authKey', 'device', 'appVersion'];
-          const body = await readJson(request, fields);
-          requireVersion(request, env, 'write');
-          let syncCode;
-          try { syncCode = decodeURIComponent(spaceAuth[1]); }
-          catch { throw new SyncError('INVALID_REQUEST'); }
-          const locatorHash = await hashLocator(syncCode);
-          await (recovery ? verifyRecoveryAuth(locatorHash, body.recoveryAuthKey, env) : verifyPasswordAuth(locatorHash, body.authKey, env));
-        } else if (pathname === '/v1/uploads' && request.method === 'POST') {
+        // Upload/device business handlers belong to later tasks; keep their security gates.
+        if (pathname === '/v1/uploads' && request.method === 'POST') {
           await readJson(request, ['operation', 'snapshotId', 'sourceSnapshotId', 'appVersion', 'formatVersion', 'schemaVersion', 'encoding', 'clientCreatedAt', 'dataHash', 'iv', 'ciphertextBytes', 'chunkCount', 'ciphertextDigest', 'encryptedSummary']);
           requireVersion(request, env, 'write');
           await authenticateDevice(request, env);
@@ -72,7 +75,7 @@ export default {
     response.headers.set('Cache-Control', 'no-store');
     response.headers.set('Vary', 'Origin');
     if (origin !== null) response.headers.set('Access-Control-Allow-Origin', origin);
-    if (response.status === 405) response.headers.set('Allow', 'GET, OPTIONS');
+    if (response.status === 405) response.headers.set('Allow', allowedMethods);
     logRequest({ requestId, route, status: response.status, code });
     return response;
   }

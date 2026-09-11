@@ -4,12 +4,13 @@ import worker from '../src/index.js';
 
 const origin = 'https://yuanyu0505.github.io';
 const code = 'JBSWY3DPEHPK3PXPJBSWY3DPEE';
-const password = 'test-password-authenticator';
-const recovery = 'test-recovery-authenticator';
+const random = size => btoa(String.fromCharCode(...crypto.getRandomValues(new Uint8Array(size)))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+const password = random(32);
+const recovery = random(32);
 const token = 'test-device-token';
 const deviceId = 'test-device-id';
-const encryptedBlob = { version: 1, algorithm: 'AES-256-GCM', iv: 'test-iv', ciphertext: 'test-ciphertext' };
-const device = { deviceId, deviceToken: token, encryptedName: encryptedBlob };
+const encryptedBlob = { version: 1, algorithm: 'AES-256-GCM', iv: random(12), ciphertext: random(48) };
+const device = { deviceId: crypto.randomUUID(), deviceToken: random(32), encryptedName: encryptedBlob };
 const upload = {
   operation: 'upload', snapshotId: 'snapshot-test', sourceSnapshotId: null, appVersion: '1.0.39',
   formatVersion: 1, schemaVersion: 1, encoding: 'identity', clientCreatedAt: '2026-09-11T00:00:00Z',
@@ -17,8 +18,8 @@ const upload = {
   ciphertextDigest: 'test-ciphertext-digest', encryptedSummary: encryptedBlob
 };
 const recoveryBody = {
-  recoveryAuthKey: recovery, newAuthKey: 'test-new-auth', newPasswordWrappedMaster: encryptedBlob,
-  newRecoveryAuthKey: 'test-new-recovery-auth', newRecoveryWrappedMaster: encryptedBlob,
+  recoveryAuthKey: recovery, newAuthKey: random(32), newPasswordWrappedMaster: encryptedBlob,
+  newRecoveryAuthKey: random(32), newRecoveryWrappedMaster: encryptedBlob,
   device, appVersion: '1.0.39'
 };
 let locator;
@@ -86,10 +87,10 @@ it('accepts a valid digest-backed token and denies it immediately after revocati
   expect((await send('/v1/devices', undefined, { method: 'GET' })).status).toBe(401);
 });
 
-it('does not implement pair or upload business operations ahead of later tasks', async () => {
-  expect((await pair(code, password)).status).toBe(404);
+it('implements pairing while leaving upload business operations to later tasks', async () => {
+  expect((await pair(code, password)).status).toBe(200);
   expect((await send('/v1/uploads', upload)).status).toBe(404);
-  expect((await env.DB.prepare('SELECT COUNT(*) AS count FROM devices').first()).count).toBe(1);
+  expect((await env.DB.prepare('SELECT COUNT(*) AS count FROM devices').first()).count).toBe(2);
   expect((await env.DB.prepare('SELECT COUNT(*) AS count FROM upload_sessions').first()).count).toBe(0);
 });
 
@@ -171,7 +172,7 @@ it.each(['', ' - ', 'ABC_234', 'ABC123', 'ABC890', 'ABC=', 'AB/C', 'ABC+DEF', 'A
 
 it('normalizes a URL-encoded grouped path code to the existing space without leaking it', async () => {
   const input = encodeURIComponent(' jbsw y3dp-ehpk3pxpjbswy3dpee ');
-  expect((await pair(input, password)).status).toBe(404);
+  expect((await pair(input, password)).status).toBe(200);
   expect(JSON.stringify(log.mock.calls)).not.toContain(input);
   expect(JSON.stringify(log.mock.calls)).not.toContain(code);
 });
@@ -353,7 +354,7 @@ it('applies content type and byte limits at the public upload boundary', async (
 
 it('guards recovery using its own authenticator and logs only the route template', async () => {
   expect((await send(`/v1/spaces/${code}/recover`, { ...recoveryBody, recoveryAuthKey: password })).status).toBe(401);
-  expect((await send(`/v1/spaces/${code}/recover`, recoveryBody)).status).toBe(404);
+  expect((await send(`/v1/spaces/${code}/recover`, recoveryBody)).status).toBe(200);
   expect(JSON.parse(log.mock.calls[0][0]).route).toBe('/v1/spaces/:code/recover');
 });
 
@@ -373,9 +374,9 @@ it.each([
   ['pair', { authKey: password, device, appVersion: '1.0.39' }],
   ['recover', recoveryBody],
   ['uploads', upload]
-])('accepts the exact %s shared top-level contract without implementing business logic', async (route, body) => {
+])('accepts the exact %s shared top-level contract', async (route, body) => {
   const path = route === 'uploads' ? '/v1/uploads' : `/v1/spaces/${code}/${route}`;
-  expect((await send(path, body)).status).toBe(404);
+  expect((await send(path, body)).status).toBe(route === 'uploads' ? 404 : 200);
 });
 
 it.each([

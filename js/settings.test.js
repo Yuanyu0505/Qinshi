@@ -100,6 +100,13 @@ test("replace rolls back every managed key when one write fails", () => {
   assert.deepStrictEqual(harness.dump(), { qinshi_old: "safe" });
 });
 
+test("replace preserves an existing failed key when its write fails", () => {
+  const harness = createStorage({ qinshi_bad: "safe", qinshi_old: "keep" }, { failOnKey: "qinshi_bad" });
+  const api = loadSettingsWithStorage(harness.storage).api;
+  assert.throws(() => api.replaceManagedData({ qinshi_old: "changed", qinshi_new: "new", qinshi_bad: "next" }));
+  assert.deepStrictEqual(harness.dump(), { qinshi_bad: "safe", qinshi_old: "keep" });
+});
+
 test("restore restores a captured managed map without changing unrelated data", () => {
   const harness = createStorage({ qinshi_new: "next", theme: "dark" });
   const api = loadSettingsWithStorage(harness.storage).api;

@@ -83,11 +83,21 @@
   function replaceManagedData(data) {
     validateManagedData(data);
     var previous = collectManagedData();
+    var added = [];
+    var replaced = [];
     try {
-      clearManagedData();
-      Object.keys(data).forEach(function (key) { localStorage.setItem(key, data[key]); });
+      Object.keys(data).forEach(function (key) {
+        var existed = Object.prototype.hasOwnProperty.call(previous, key);
+        localStorage.setItem(key, data[key]);
+        if (existed) replaced.push(key);
+        else added.push(key);
+      });
+      Object.keys(previous).forEach(function (key) {
+        if (!Object.prototype.hasOwnProperty.call(data, key)) localStorage.removeItem(key);
+      });
     } catch (error) {
-      restoreManagedData(previous);
+      added.forEach(function (key) { localStorage.removeItem(key); });
+      replaced.forEach(function (key) { localStorage.setItem(key, previous[key]); });
       throw error;
     }
     return { previous: previous };

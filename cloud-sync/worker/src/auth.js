@@ -23,9 +23,13 @@ export async function hashAuthValue(value) {
 }
 
 export async function hashLocator(syncCode) {
-  // Codes use the client's case-sensitive base64url alphabet; only surrounding whitespace is normalized.
-  if (typeof syncCode !== 'string' || !/^[A-Za-z0-9_-]{1,128}$/.test(syncCode.trim())) throw new SyncError('INVALID_REQUEST');
-  return hashAuthValue(syncCode.trim());
+  if (typeof syncCode !== 'string') throw new SyncError('INVALID_REQUEST');
+  const trimmed = syncCode.trim();
+  // Only ASCII spaces/hyphens are grouping characters; reject non-ASCII case-folding aliases.
+  if (!/^[A-Za-z2-7 -]+$/.test(trimmed)) throw new SyncError('INVALID_REQUEST');
+  const normalized = trimmed.replace(/[ -]/g, '').toUpperCase();
+  if (!/^[A-Z2-7]{1,128}$/.test(normalized)) throw new SyncError('INVALID_REQUEST');
+  return hashAuthValue(normalized);
 }
 
 function storedDigest(value) {
@@ -38,15 +42,22 @@ function requireLocator(locatorHash) {
 }
 
 export async function recordAuthFailure(locatorHash, now, env) {
+  return writeAuthFailure(locatorHash, now, env, false);
+}
+
+async function writeAuthFailure(locatorHash, now, env, enforceCooldown) {
   requireLocator(locatorHash);
   if (!Number.isSafeInteger(now) || now < 0) throw new SyncError('INTERNAL_ERROR');
-  // One UPSERT prevents read-modify-write lost increments from concurrent failed attempts.
+  // The guarded UPSERT is the failure-admission point, shared across Worker isolates.
+  // Direct failure recording remains available to callers that already own admission.
   const cases = COOLDOWN_SECONDS.slice(1).map((seconds, index) => `WHEN ${index + 1} THEN ${seconds * 1000}`).join(' ');
   return env.DB.prepare(`INSERT INTO auth_throttles (locator_hash, failure_count, cooldown_until, updated_at)
     VALUES (?, 1, ?, ?) ON CONFLICT(locator_hash) DO UPDATE SET
     failure_count = auth_throttles.failure_count + 1,
     cooldown_until = excluded.updated_at + CASE auth_throttles.failure_count ${cases} ELSE 900000 END,
-    updated_at = excluded.updated_at RETURNING *`).bind(locatorHash, now, now).first();
+    updated_at = excluded.updated_at
+    ${enforceCooldown ? 'WHERE auth_throttles.cooldown_until <= excluded.updated_at' : ''}
+    RETURNING *`).bind(locatorHash, now, now).first();
 }
 
 export async function clearAuthFailures(locatorHash, env) {
@@ -68,10 +79,17 @@ async function verifySpaceAuth(locatorHash, submitted, digestField, env) {
   const now = Date.now();
   if (throttleResult.results[0]?.cooldown_until > now) throw new SyncError('AUTH_COOLDOWN');
   if (!validInput || !space || !expected || !matches) {
-    await recordAuthFailure(locatorHash, now, env);
+    const recorded = await writeAuthFailure(locatorHash, now, env, true);
+    if (!recorded) throw new SyncError('AUTH_COOLDOWN');
     throw new SyncError('AUTH_FAILED');
   }
-  await clearAuthFailures(locatorHash, env);
+  // A competing request may have started cooldown after the initial read. Only clear
+  // an eligible row, then inspect any remaining row within the same D1 transaction.
+  const [, remainingThrottle] = await env.DB.batch([
+    env.DB.prepare('DELETE FROM auth_throttles WHERE locator_hash = ? AND cooldown_until <= ?').bind(locatorHash, now),
+    env.DB.prepare('SELECT cooldown_until FROM auth_throttles WHERE locator_hash = ?').bind(locatorHash)
+  ]);
+  if (remainingThrottle.results.length) throw new SyncError('AUTH_COOLDOWN');
   return space;
 }
 

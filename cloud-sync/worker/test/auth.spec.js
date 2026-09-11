@@ -3,12 +3,24 @@ import { beforeEach, afterEach, expect, it, vi } from 'vitest';
 import worker from '../src/index.js';
 
 const origin = 'https://yuanyu0505.github.io';
-const code = 'Example_Sync-Code_123456';
+const code = 'JBSWY3DPEHPK3PXPJBSWY3DPEE';
 const password = 'test-password-authenticator';
 const recovery = 'test-recovery-authenticator';
 const token = 'test-device-token';
 const deviceId = 'test-device-id';
-const upload = { operation: 'upload', snapshotId: 'snapshot-test', envelope: {} };
+const encryptedBlob = { version: 1, algorithm: 'AES-256-GCM', iv: 'test-iv', ciphertext: 'test-ciphertext' };
+const device = { deviceId, deviceToken: token, encryptedName: encryptedBlob };
+const upload = {
+  operation: 'upload', snapshotId: 'snapshot-test', sourceSnapshotId: null, appVersion: '1.0.39',
+  formatVersion: 1, schemaVersion: 1, encoding: 'identity', clientCreatedAt: '2026-09-11T00:00:00Z',
+  dataHash: 'test-data-hash', iv: 'test-iv', ciphertextBytes: 32, chunkCount: 1,
+  ciphertextDigest: 'test-ciphertext-digest', encryptedSummary: encryptedBlob
+};
+const recoveryBody = {
+  recoveryAuthKey: recovery, newAuthKey: 'test-new-auth', newPasswordWrappedMaster: encryptedBlob,
+  newRecoveryAuthKey: 'test-new-recovery-auth', newRecoveryWrappedMaster: encryptedBlob,
+  device, appVersion: '1.0.39'
+};
 let locator;
 let log;
 
@@ -26,7 +38,7 @@ function request(path, body, options = {}) {
 }
 
 const send = (path, body, options) => worker.fetch(request(path, body, options), env, {});
-const pair = (syncCode, authKey) => send(`/v1/spaces/${syncCode}/pair`, { authKey, deviceId, deviceToken: token, encryptedDeviceName: {} });
+const pair = (syncCode, authKey) => send(`/v1/spaces/${syncCode}/pair`, { authKey, device, appVersion: '1.0.39' });
 
 beforeEach(async () => {
   log = vi.spyOn(console, 'info').mockImplementation(() => {});
@@ -139,14 +151,33 @@ it('compares full SHA-256 digests and rejects malformed or partial digests', asy
   expect(constantTimeEqual(new Uint8Array(0), new Uint8Array(0))).toBe(false);
 });
 
-it('normalizes only outer whitespace of case-sensitive sync codes and persists only locator hashes', async () => {
+it('normalizes grouped lowercase Base32 sync codes and persists only the canonical locator hash', async () => {
   const { hashLocator } = await import('../src/auth.js');
   expect(await hashLocator(` ${code}\n`)).toBe(locator);
-  expect(await hashLocator(code.toLowerCase())).not.toBe(locator);
+  expect(await hashLocator(code.toLowerCase())).toBe(locator);
+  expect(await hashLocator('  jbsw y3dp-ehpk3pxpjbswy3dpee  ')).toBe(locator);
   await pair(code, 'bad-auth');
   const rows = await env.DB.prepare('SELECT * FROM auth_throttles').all();
   expect(rows.results[0].locator_hash).toBe(locator);
   expect(JSON.stringify(rows.results)).not.toContain(code);
+});
+
+it.each(['', ' - ', 'ABC_234', 'ABC123', 'ABC890', 'ABC=', 'AB/C', 'ABC+DEF', 'AB\tCD', 'AB\nCD', 'AB\u00a0CD', 'ABſCD', 'A'.repeat(129)])(
+  'rejects characters or length outside the sync-code Base32 normalization contract: %s', async value => {
+    const { hashLocator } = await import('../src/auth.js');
+    await expect(hashLocator(value)).rejects.toMatchObject({ code: 'INVALID_REQUEST' });
+  }
+);
+
+it('normalizes a URL-encoded grouped path code to the existing space without leaking it', async () => {
+  const input = encodeURIComponent(' jbsw y3dp-ehpk3pxpjbswy3dpee ');
+  expect((await pair(input, password)).status).toBe(404);
+  expect(JSON.stringify(log.mock.calls)).not.toContain(input);
+  expect(JSON.stringify(log.mock.calls)).not.toContain(code);
+});
+
+it.each(['ABC_234', 'ABC123', '%', '%2541', 'AB%09CD'])('rejects malformed or non-Base32 path codes %s', async input => {
+  expect((await pair(input, password)).status).toBe(400);
 });
 
 it('records the exact progressive cooldowns and caps further failures at 900 seconds', async () => {
@@ -165,6 +196,48 @@ it('increments failures atomically under concurrent requests', async () => {
   const row = await env.DB.prepare('SELECT * FROM auth_throttles WHERE locator_hash = ?').bind(locator).first();
   expect(row.failure_count).toBe(8);
   expect(row.cooldown_until).toBe(1700000900000);
+});
+
+it.each([code, 'UNKNOWNCODE'])('admits only the first two concurrent wrong password/recovery attempts for %s', async syncCode => {
+  vi.spyOn(Date, 'now').mockReturnValue(1700000000000);
+  const responses = await Promise.all(Array.from({ length: 8 }, (_, index) => index % 2
+    ? pair(syncCode, 'bad-auth')
+    : send(`/v1/spaces/${syncCode}/recover`, { ...recoveryBody, recoveryAuthKey: 'bad-auth' })));
+  expect(responses.map(response => response.status).sort()).toEqual([401, 401, 429, 429, 429, 429, 429, 429]);
+  const row = await env.DB.prepare('SELECT * FROM auth_throttles WHERE locator_hash = ?').bind(await digest(syncCode)).first();
+  expect(row).toMatchObject({ failure_count: 2, cooldown_until: 1700000002000 });
+});
+
+it('admits only one concurrent failure after an existing cooldown expires', async () => {
+  const { recordAuthFailure } = await import('../src/auth.js');
+  await recordAuthFailure(locator, 1700000000000, env);
+  await recordAuthFailure(locator, 1700000000000, env);
+  vi.spyOn(Date, 'now').mockReturnValue(1700000002000);
+  const responses = await Promise.all(Array.from({ length: 8 }, () => pair(code, 'bad-auth')));
+  expect(responses.map(response => response.status).sort()).toEqual([401, 429, 429, 429, 429, 429, 429, 429]);
+  const row = await env.DB.prepare('SELECT * FROM auth_throttles WHERE locator_hash = ?').bind(locator).first();
+  expect(row).toMatchObject({ failure_count: 3, cooldown_until: 1700000007000 });
+});
+
+it('does not clear a cooldown created by competing failures after a successful credential pre-check', async () => {
+  const { recordAuthFailure, verifyPasswordAuth } = await import('../src/auth.js');
+  vi.spyOn(Date, 'now').mockReturnValue(1700000000000);
+  let firstBatch = true;
+  const racingEnv = { ...env, DB: {
+    prepare: query => env.DB.prepare(query),
+    async batch(statements) {
+      const result = await env.DB.batch(statements);
+      if (firstBatch) {
+        firstBatch = false;
+        // Real D1 failures interleave just after the original request's stale read.
+        await recordAuthFailure(locator, 1700000000000, env);
+        await recordAuthFailure(locator, 1700000000000, env);
+      }
+      return result;
+    }
+  } };
+  await expect(verifyPasswordAuth(locator, password, racingEnv)).rejects.toMatchObject({ code: 'AUTH_COOLDOWN' });
+  expect((await env.DB.prepare('SELECT * FROM auth_throttles WHERE locator_hash = ?').bind(locator).first()).failure_count).toBe(2);
 });
 
 it('enforces the exact cooldown boundary without extending it for blocked requests', async () => {
@@ -221,6 +294,21 @@ it('preserves fail-closed quota errors in the authentication path', async () => 
   expect(JSON.stringify(log.mock.calls)).not.toContain('private-auth-test');
 });
 
+it('fails closed when D1 rejects the atomic failure-admission write', async () => {
+  const failingEnv = { ...env, DB: {
+    batch: statements => env.DB.batch(statements),
+    prepare(query) {
+      if (query.startsWith('INSERT INTO auth_throttles')) throw new Error('SQLITE_FULL private-auth-test');
+      return env.DB.prepare(query);
+    }
+  } };
+  const response = await worker.fetch(request(`/v1/spaces/${code}/pair`, { authKey: 'bad-auth', device, appVersion: '1.0.39' }), failingEnv, {});
+  expect(response.status).toBe(503);
+  expect((await response.json()).error.code).toBe('FREE_QUOTA_EXHAUSTED');
+  expect(await env.DB.prepare('SELECT * FROM auth_throttles').first()).toBeNull();
+  expect(JSON.stringify(log.mock.calls)).not.toContain('private-auth-test');
+});
+
 it('hashes authenticator text using the standard SHA-256 vector', async () => {
   const { hashAuthValue } = await import('../src/auth.js');
   expect(await hashAuthValue('abc')).toBe('ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad');
@@ -264,8 +352,8 @@ it('applies content type and byte limits at the public upload boundary', async (
 });
 
 it('guards recovery using its own authenticator and logs only the route template', async () => {
-  expect((await send(`/v1/spaces/${code}/recover`, { recoveryAuth: password })).status).toBe(401);
-  expect((await send(`/v1/spaces/${code}/recover`, { recoveryAuth: recovery })).status).toBe(404);
+  expect((await send(`/v1/spaces/${code}/recover`, { ...recoveryBody, recoveryAuthKey: password })).status).toBe(401);
+  expect((await send(`/v1/spaces/${code}/recover`, recoveryBody)).status).toBe(404);
   expect(JSON.parse(log.mock.calls[0][0]).route).toBe('/v1/spaces/:code/recover');
 });
 
@@ -279,4 +367,23 @@ it('rejects malformed UTF-8 rather than replacing it inside JSON values', async 
   const body = new Uint8Array([123, 34, 110, 97, 109, 101, 34, 58, 34, 255, 34, 125]);
   await expect(readJson(new Request('https://worker.test', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body }), ['name'], 64))
     .rejects.toMatchObject({ code: 'INVALID_REQUEST' });
+});
+
+it.each([
+  ['pair', { authKey: password, device, appVersion: '1.0.39' }],
+  ['recover', recoveryBody],
+  ['uploads', upload]
+])('accepts the exact %s shared top-level contract without implementing business logic', async (route, body) => {
+  const path = route === 'uploads' ? '/v1/uploads' : `/v1/spaces/${code}/${route}`;
+  expect((await send(path, body)).status).toBe(404);
+});
+
+it.each([
+  ['pair', 'deviceId'], ['pair', 'deviceToken'], ['pair', 'encryptedDeviceName'], ['pair', 'unexpected'],
+  ['recover', 'recoveryAuth'], ['recover', 'newRecoveryAuth'], ['recover', 'newDeviceId'], ['recover', 'newDeviceToken'], ['recover', 'encryptedDeviceName'], ['recover', 'unexpected'],
+  ['uploads', 'envelope'], ['uploads', 'unexpected']
+])('rejects legacy or unknown %s top-level field %s', async (route, field) => {
+  const body = route === 'pair' ? { authKey: password, device, appVersion: '1.0.39' } : route === 'recover' ? recoveryBody : upload;
+  const path = route === 'uploads' ? '/v1/uploads' : `/v1/spaces/${code}/${route}`;
+  expect((await send(path, { ...body, [field]: 'legacy' })).status).toBe(400);
 });

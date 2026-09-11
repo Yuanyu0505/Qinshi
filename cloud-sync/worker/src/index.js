@@ -46,14 +46,17 @@ export default {
         if (spaceAuth && request.method === 'POST') {
           const recovery = spaceAuth[2] === 'recover';
           const fields = recovery
-            ? ['recoveryAuth', 'newAuthKey', 'newPasswordWrappedMaster', 'newRecoveryAuth', 'newRecoveryWrappedMaster', 'newDeviceId', 'newDeviceToken', 'encryptedDeviceName']
-            : ['authKey', 'deviceId', 'deviceToken', 'encryptedDeviceName'];
+            ? ['recoveryAuthKey', 'newAuthKey', 'newPasswordWrappedMaster', 'newRecoveryAuthKey', 'newRecoveryWrappedMaster', 'device', 'appVersion']
+            : ['authKey', 'device', 'appVersion'];
           const body = await readJson(request, fields);
           requireVersion(request, env, 'write');
-          const locatorHash = await hashLocator(spaceAuth[1]);
-          await (recovery ? verifyRecoveryAuth(locatorHash, body.recoveryAuth, env) : verifyPasswordAuth(locatorHash, body.authKey, env));
+          let syncCode;
+          try { syncCode = decodeURIComponent(spaceAuth[1]); }
+          catch { throw new SyncError('INVALID_REQUEST'); }
+          const locatorHash = await hashLocator(syncCode);
+          await (recovery ? verifyRecoveryAuth(locatorHash, body.recoveryAuthKey, env) : verifyPasswordAuth(locatorHash, body.authKey, env));
         } else if (pathname === '/v1/uploads' && request.method === 'POST') {
-          await readJson(request, ['operation', 'snapshotId', 'sourceSnapshotId', 'envelope']);
+          await readJson(request, ['operation', 'snapshotId', 'sourceSnapshotId', 'appVersion', 'formatVersion', 'schemaVersion', 'encoding', 'clientCreatedAt', 'dataHash', 'iv', 'ciphertextBytes', 'chunkCount', 'ciphertextDigest', 'encryptedSummary']);
           requireVersion(request, env, 'write');
           await authenticateDevice(request, env);
         } else if (pathname === '/v1/devices' && request.method === 'GET') {

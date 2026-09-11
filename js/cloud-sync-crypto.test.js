@@ -175,6 +175,34 @@ test("structured master-key AAD is stable across key order and remains purpose-b
   await assert.rejects(() => cryptoApi.wrapMasterKey(b64(new Uint8Array(31)), key, "test-aad"));
 });
 
+test("sparse and empty arrays cannot substitute for each other in structured AAD", async () => {
+  const key = b64(new Uint8Array(32).fill(8));
+  const sparseAad = { spaceId: "test-space", context: new Array(1) };
+  const emptyAad = { spaceId: "test-space", context: [] };
+  const sparseRecord = await cryptoApi.wrapMasterKey(masterKey, key, sparseAad);
+  await assert.rejects(() => cryptoApi.unwrapMasterKey(sparseRecord, key, emptyAad), /校验失败/);
+  const emptyRecord = await cryptoApi.wrapMasterKey(masterKey, key, emptyAad);
+  await assert.rejects(() => cryptoApi.unwrapMasterKey(emptyRecord, key, sparseAad), /校验失败/);
+});
+
+test("nested sparse AAD arrays preserve positions using JSON null semantics", async () => {
+  const key = b64(new Uint8Array(32).fill(8));
+  const sparse = new Array(3);
+  sparse[1] = { nested: new Array(1) };
+  const record = await cryptoApi.wrapMasterKey(masterKey, key, { context: sparse });
+  assert.equal(await cryptoApi.unwrapMasterKey(record, key, { context: [null, { nested: [null] }, null] }), masterKey);
+  await assert.rejects(() => cryptoApi.unwrapMasterKey(record, key, { context: [null, { nested: [null] }] }), /校验失败/);
+});
+
+test("unsupported explicit AAD array values remain rejected instead of becoming null", async () => {
+  const key = b64(new Uint8Array(32).fill(8));
+  const record = await cryptoApi.wrapMasterKey(masterKey, key, { context: [null] });
+  for (const unsupported of [undefined, function () {}, Symbol("test-only")]) {
+    await assert.rejects(() => cryptoApi.wrapMasterKey(masterKey, key, { context: [unsupported] }), /AAD/);
+    await assert.rejects(() => cryptoApi.unwrapMasterKey(record, key, { context: [unsupported] }), /校验失败/);
+  }
+});
+
 test("browser export initializes without CommonJS and uses the provided Web Crypto", async () => {
   const vm = require("node:vm");
   const fs = require("node:fs");

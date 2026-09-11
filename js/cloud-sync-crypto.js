@@ -37,7 +37,14 @@
   function canonical(value) {
     if (value === null || typeof value === "string" || typeof value === "boolean" ||
       (typeof value === "number" && Number.isFinite(value))) return JSON.stringify(value);
-    if (Array.isArray(value)) return "[" + value.map(canonical).join(",") + "]";
+    if (Array.isArray(value)) {
+      var parts = [];
+      for (var index = 0; index < value.length; index += 1) {
+        // Preserve holes as JSON null; explicit unsupported values still fail closed.
+        parts.push(index in value ? canonical(value[index]) : "null");
+      }
+      return "[" + parts.join(",") + "]";
+    }
     if (value && Object.getPrototypeOf(value) === Object.prototype) {
       return "{" + Object.keys(value).sort().map(function (key) {
         return JSON.stringify(key) + ":" + canonical(value[key]);

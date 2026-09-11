@@ -8,9 +8,9 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Qin">
-<link rel="manifest" href="manifest.webmanifest">
-<link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png">
-<link rel="stylesheet" href="css/style.css">
+<link rel="manifest" href="manifest.webmanifest?v=1.0.39">
+<link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png?v=1.0.39">
+<link rel="stylesheet" href="css/style.css?v=1.0.39">
 </head>
 <body>
 <div class="wrap">
@@ -628,13 +628,15 @@
         <div class="panel-title">应用与离线状态</div>
         <div class="settings-list">
           <div><span>应用名称</span><strong>Qin</strong></div>
-          <div><span>当前版本</span><strong id="pwa-version">1.0.38</strong></div>
+          <div><span>当前版本</span><strong id="pwa-version">1.0.39</strong></div>
           <div><span>运行状态</span><strong id="pwa-mode-status">正在检查…</strong></div>
         </div>
         <div class="settings-actions">
           <button id="pwa-install" type="button" class="seg" hidden>安装到设备</button>
           <button id="pwa-check-update" type="button" class="seg">检查更新</button>
+          <button id="pwa-repair-update" type="button" class="seg">强制修复更新</button>
         </div>
+        <p class="muted-tip">“强制修复更新”仅清理本站旧离线缓存，不会删除个人进度。</p>
         <p id="pwa-install-help" class="muted-tip">Android 请使用浏览器菜单中的“安装应用”；iPhone/iPad 请在 Safari 中点击“分享”→“添加到主屏幕”。</p>
         <p id="pwa-status" class="settings-status" aria-live="polite"></p>
       </section>
@@ -708,45 +710,45 @@
   </div>
 </div>
 
-<script src="data/tactics.js"></script>
-<script src="data/formations.js"></script>
-<script src="data/machine-beasts.js"></script>
-<script src="data/battle-box-pill-pouch.js"></script>
-<script src="data/special-equipment.js"></script>
-<script src="data/forging.js"></script>
-<script src="data/drops.js"></script>
-<script src="data/atlas.js"></script>
-<script src="data/forbidden.js"></script>
-<script src="data/quiz.js"></script>
-<script src="data/inscription.js"></script>
-<script src="data/zhulu.js"></script>
-<script src="js/tactics.js"></script>
-<script src="js/formations.js"></script>
-<script src="js/machine-beasts.js"></script>
-<script src="js/machine-beast-school-planner.js"></script>
-<script src="js/battle-box-pill-pouch.js"></script>
-<script src="js/query.js"></script>
-<script src="js/equipment-compare.js"></script>
-<script src="js/equipment-forging.js"></script>
-<script src="js/item-navigation.js"></script>
-<script src="js/forging.js"></script>
-<script src="js/drops.js"></script>
-<script src="js/progress.js"></script>
-<script src="js/atlas.js"></script>
-<script src="js/forbidden.js"></script>
-<script src="js/quiz.js"></script>
-<script src="js/ui-performance.js"></script>
-<script src="js/inscription-performance.js"></script>
-<script src="js/inscription.js"></script>
-<script src="js/zhulu.js"></script>
-<script src="js/settings.js"></script>
-<script src="js/pwa.js"></script>
-<script src="js/tactics-ui.js"></script>
-<script src="js/formations-ui.js"></script>
-<script src="js/machine-beasts-ui.js"></script>
-<script src="js/battle-box-pill-pouch-ui.js"></script>
-<script src="js/forbidden-ui.js"></script>
-<script src="js/zhulu-ui.js"></script>
-<script src="js/app.js"></script>
+<script src="data/tactics.js?v=1.0.39"></script>
+<script src="data/formations.js?v=1.0.39"></script>
+<script src="data/machine-beasts.js?v=1.0.39"></script>
+<script src="data/battle-box-pill-pouch.js?v=1.0.39"></script>
+<script src="data/special-equipment.js?v=1.0.39"></script>
+<script src="data/forging.js?v=1.0.39"></script>
+<script src="data/drops.js?v=1.0.39"></script>
+<script src="data/atlas.js?v=1.0.39"></script>
+<script src="data/forbidden.js?v=1.0.39"></script>
+<script src="data/quiz.js?v=1.0.39"></script>
+<script src="data/inscription.js?v=1.0.39"></script>
+<script src="data/zhulu.js?v=1.0.39"></script>
+<script src="js/tactics.js?v=1.0.39"></script>
+<script src="js/formations.js?v=1.0.39"></script>
+<script src="js/machine-beasts.js?v=1.0.39"></script>
+<script src="js/machine-beast-school-planner.js?v=1.0.39"></script>
+<script src="js/battle-box-pill-pouch.js?v=1.0.39"></script>
+<script src="js/query.js?v=1.0.39"></script>
+<script src="js/equipment-compare.js?v=1.0.39"></script>
+<script src="js/equipment-forging.js?v=1.0.39"></script>
+<script src="js/item-navigation.js?v=1.0.39"></script>
+<script src="js/forging.js?v=1.0.39"></script>
+<script src="js/drops.js?v=1.0.39"></script>
+<script src="js/progress.js?v=1.0.39"></script>
+<script src="js/atlas.js?v=1.0.39"></script>
+<script src="js/forbidden.js?v=1.0.39"></script>
+<script src="js/quiz.js?v=1.0.39"></script>
+<script src="js/ui-performance.js?v=1.0.39"></script>
+<script src="js/inscription-performance.js?v=1.0.39"></script>
+<script src="js/inscription.js?v=1.0.39"></script>
+<script src="js/zhulu.js?v=1.0.39"></script>
+<script src="js/settings.js?v=1.0.39"></script>
+<script src="js/pwa.js?v=1.0.39"></script>
+<script src="js/tactics-ui.js?v=1.0.39"></script>
+<script src="js/formations-ui.js?v=1.0.39"></script>
+<script src="js/machine-beasts-ui.js?v=1.0.39"></script>
+<script src="js/battle-box-pill-pouch-ui.js?v=1.0.39"></script>
+<script src="js/forbidden-ui.js?v=1.0.39"></script>
+<script src="js/zhulu-ui.js?v=1.0.39"></script>
+<script src="js/app.js?v=1.0.39"></script>
 </body>
 </html>

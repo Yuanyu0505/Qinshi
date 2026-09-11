@@ -1,7 +1,7 @@
 "use strict";
 
 const CACHE_PREFIX = "qinshi-site-";
-const CACHE_NAME = CACHE_PREFIX + "1.0.38";
+const CACHE_NAME = CACHE_PREFIX + "1.0.39";
 const PRECACHE_URLS = [
   "./",
   "./index.html",
@@ -99,16 +99,21 @@ self.addEventListener("fetch", function (event) {
   var requestUrl = new URL(request.url);
   if (requestUrl.origin !== self.location.origin) return;
 
+  if (requestUrl.pathname.endsWith("/version.json")) {
+    event.respondWith(fetch(request, { cache: "no-store" }));
+    return;
+  }
+
   if (request.mode === "navigate") {
-    event.respondWith(caches.match("./index.html").then(function (cachedPage) {
-      return cachedPage || fetch(request);
+    event.respondWith(caches.match("./index.html", { ignoreSearch: true }).then(function (cachedPage) {
+      return cachedPage || fetch(request, { cache: "reload" });
     }));
     return;
   }
 
-  event.respondWith(caches.match(request).then(function (cachedResponse) {
+  event.respondWith(caches.match(request, { ignoreSearch: true }).then(function (cachedResponse) {
     if (cachedResponse) return cachedResponse;
-    return fetch(request).then(function (networkResponse) {
+    return fetch(request, { cache: "reload" }).then(function (networkResponse) {
       if (!networkResponse || !networkResponse.ok) return networkResponse;
       var copy = networkResponse.clone();
       caches.open(CACHE_NAME).then(function (cache) { cache.put(request, copy); });

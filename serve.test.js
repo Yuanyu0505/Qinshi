@@ -70,8 +70,8 @@ test("lanIPv4s 返回数组", () => {
 test("index.html 引用数据与样式", async () => {
   await withServer(async (port) => {
     const r = await get(port, "/");
-    assert.match(r.body, /<script src="data\/special-equipment\.js"><\/script>/);
-    assert.match(r.body, /<link rel="stylesheet" href="css\/style\.css">/);
+    assert.match(r.body, /<script src="data\/special-equipment\.js\?v=1\.0\.39"><\/script>/);
+    assert.match(r.body, /<link rel="stylesheet" href="css\/style\.css\?v=1\.0\.39">/);
   });
 });
 
@@ -95,9 +95,9 @@ test("首页提供逐鹿分区及数据、核心和界面脚本", async () => {
     assert.match(page.body, /id="partition-zhulu"/);
     assert.match(page.body, /data-partition="zhulu">逐鹿</);
     assert.match(page.body, /data-item-navigation-return="zhulu"/);
-    assert.match(page.body, /<script src="data\/zhulu\.js"><\/script>/);
-    assert.match(page.body, /<script src="js\/zhulu\.js"><\/script>/);
-    assert.match(page.body, /<script src="js\/zhulu-ui\.js"><\/script>/);
+    assert.match(page.body, /<script src="data\/zhulu\.js\?v=1\.0\.39"><\/script>/);
+    assert.match(page.body, /<script src="js\/zhulu\.js\?v=1\.0\.39"><\/script>/);
+    assert.match(page.body, /<script src="js\/zhulu-ui\.js\?v=1\.0\.39"><\/script>/);
 
     for (const resource of ["/data/zhulu.js", "/js/zhulu.js", "/js/zhulu-ui.js"]) {
       const response = await get(port, resource);
@@ -107,16 +107,19 @@ test("首页提供逐鹿分区及数据、核心和界面脚本", async () => {
   });
 });
 
-test("PWA 1.0.38 离线缓存包含逐鹿、统一导航和禁地资源", () => {
+test("PWA 1.0.39 离线缓存包含逐鹿、统一导航和禁地资源", () => {
   const worker = fs.readFileSync(path.join(__dirname, "service-worker.js"), "utf8");
   const pwa = fs.readFileSync(path.join(__dirname, "js", "pwa.js"), "utf8");
   const manifest = JSON.parse(fs.readFileSync(path.join(__dirname, "manifest.webmanifest"), "utf8"));
-  assert.match(worker, /CACHE_NAME = CACHE_PREFIX \+ "1\.0\.38"/);
+  assert.match(worker, /CACHE_NAME = CACHE_PREFIX \+ "1\.0\.39"/);
   assert.match(worker, /\.\/data\/zhulu\.js/);
   assert.match(worker, /\.\/js\/zhulu\.js/);
   assert.match(worker, /\.\/js\/zhulu-ui\.js/);
   assert.match(worker, /\.\/js\/item-navigation\.js/);
-  assert.match(pwa, /APP_VERSION = "1\.0\.38"/);
+  assert.match(pwa, /APP_VERSION = "1\.0\.39"/);
+  assert.match(worker, /pathname\.endsWith\("\/version\.json"\)[\s\S]*?cache:\s*"no-store"/);
+  assert.match(worker, /cachedPage \|\| fetch\(request, \{ cache: "reload" \}\)/);
+  assert.doesNotMatch(worker.match(/const PRECACHE_URLS = \[[\s\S]*?\n\];/)[0], /version\.json/);
   assert.match(manifest.description, /逐鹿/);
 });
 
@@ -135,9 +138,9 @@ test("首页提供合阵工作台及其数据、核心和界面脚本", async ()
     assert.match(page.body, /id="partition-formations"/);
     assert.match(page.body, /id="formation-selector"/);
     assert.match(page.body, /id="formation-workspace"/);
-    assert.match(page.body, /<script src="data\/formations\.js"><\/script>/);
-    assert.match(page.body, /<script src="js\/formations\.js"><\/script>/);
-    assert.match(page.body, /<script src="js\/formations-ui\.js"><\/script>/);
+    assert.match(page.body, /<script src="data\/formations\.js\?v=1\.0\.39"><\/script>/);
+    assert.match(page.body, /<script src="js\/formations\.js\?v=1\.0\.39"><\/script>/);
+    assert.match(page.body, /<script src="js\/formations-ui\.js\?v=1\.0\.39"><\/script>/);
 
     for (const resource of ["/data/formations.js", "/js/formations.js", "/js/formations-ui.js"]) {
       const response = await get(port, resource);
@@ -155,9 +158,9 @@ test("首页提供机关兽个人进度、方案计算、资料图表及其三�
     assert.match(page.body, /data-machine-beast-mode="progress">个人进度/);
     assert.match(page.body, /data-machine-beast-mode="calculator">方案计算/);
     assert.match(page.body, /data-machine-beast-mode="reference">资料图表/);
-    assert.match(page.body, /<script src="data\/machine-beasts\.js"><\/script>/);
-    assert.match(page.body, /<script src="js\/machine-beasts\.js"><\/script>/);
-    assert.match(page.body, /<script src="js\/machine-beasts-ui\.js"><\/script>/);
+    assert.match(page.body, /<script src="data\/machine-beasts\.js\?v=1\.0\.39"><\/script>/);
+    assert.match(page.body, /<script src="js\/machine-beasts\.js\?v=1\.0\.39"><\/script>/);
+    assert.match(page.body, /<script src="js\/machine-beasts-ui\.js\?v=1\.0\.39"><\/script>/);
     for (const resource of ["/data/machine-beasts.js", "/js/machine-beasts.js", "/js/machine-beast-school-planner.js", "/js/machine-beasts-ui.js"]) {
       const response = await get(port, resource);
       assert.strictEqual(response.status, 200, resource);
@@ -172,7 +175,7 @@ test("机关兽方案计算提供单只与目标流派阶数子页面", () => {
   const css = fs.readFileSync(path.join(__dirname, "css", "style.css"), "utf8");
   assert.match(html, /data-machine-calculator-mode="single"[^>]*>单只机关兽/);
   assert.match(html, /data-machine-calculator-mode="school"[^>]*>目标流派阶数/);
-  assert.match(html, /<script src="js\/machine-beast-school-planner\.js"><\/script>/);
+  assert.match(html, /<script src="js\/machine-beast-school-planner\.js\?v=1\.0\.39"><\/script>/);
   assert.ok(html.indexOf("js/machine-beasts.js") < html.indexOf("js/machine-beast-school-planner.js"));
   assert.ok(html.indexOf("js/machine-beast-school-planner.js") < html.indexOf("js/machine-beasts-ui.js"));
   assert.match(ui, /使用已有库存/);
@@ -303,7 +306,7 @@ test("装备属性提供同大类多装备对比工作台与响应式结果", ()
   assert.match(html, /id="equipment-compare-toggle"/);
   assert.match(html, /id="equipment-compare-body"/);
   assert.match(html, /id="equipment-compare-result"/);
-  assert.match(html, /<script src="js\/equipment-compare\.js"><\/script>/);
+  assert.match(html, /<script src="js\/equipment-compare\.js\?v=1\.0\.39"><\/script>/);
   assert.ok(html.indexOf("js/query.js") < html.indexOf("js/equipment-compare.js"));
   assert.ok(html.indexOf("js/equipment-compare.js") < html.indexOf("js/app.js"));
   assert.match(app, /data-compare-add/);
@@ -417,8 +420,8 @@ test("首页包含橙装锻造分区与数据引用", async () => {
   await withServer(async (port) => {
     const r = await get(port, "/");
     assert.match(r.body, /橙装锻造/);
-    assert.match(r.body, /<script src="data\/forging\.js"><\/script>/);
-    assert.match(r.body, /<script src="js\/forging\.js"><\/script>/);
+    assert.match(r.body, /<script src="data\/forging\.js\?v=1\.0\.39"><\/script>/);
+    assert.match(r.body, /<script src="js\/forging\.js\?v=1\.0\.39"><\/script>/);
   });
 });
 
@@ -434,8 +437,8 @@ test("首页包含关卡掉落分区与数据引用", async () => {
   await withServer(async (port) => {
     const r = await get(port, "/");
     assert.match(r.body, /关卡掉落/);
-    assert.match(r.body, /<script src="data\/drops\.js"><\/script>/);
-    assert.match(r.body, /<script src="js\/drops\.js"><\/script>/);
+    assert.match(r.body, /<script src="data\/drops\.js\?v=1\.0\.39"><\/script>/);
+    assert.match(r.body, /<script src="js\/drops\.js\?v=1\.0\.39"><\/script>/);
   });
 });
 
@@ -450,7 +453,7 @@ test("GET /data/drops.js 返回 200 且为 JS", async () => {
 test("首页包含个人进度脚本引用", async () => {
   await withServer(async (port) => {
     const r = await get(port, "/");
-    assert.match(r.body, /<script src="js\/progress\.js"><\/script>/);
+    assert.match(r.body, /<script src="js\/progress\.js\?v=1\.0\.39"><\/script>/);
     assert.match(r.body, /个人进度/);
   });
 });
@@ -467,8 +470,8 @@ test("首页包含图鉴分区与数据引用", async () => {
   await withServer(async (port) => {
     const r = await get(port, "/");
     assert.match(r.body, /图鉴/);
-    assert.match(r.body, /<script src="data\/atlas\.js"><\/script>/);
-    assert.match(r.body, /<script src="js\/atlas\.js"><\/script>/);
+    assert.match(r.body, /<script src="data\/atlas\.js\?v=1\.0\.39"><\/script>/);
+    assert.match(r.body, /<script src="js\/atlas\.js\?v=1\.0\.39"><\/script>/);
   });
 });
 
@@ -621,7 +624,7 @@ test("装备属性与橙装锻造接入统一多级返回界面", async () => {
   await withServer(async (port) => {
     const page = await get(port, "/");
     assert.strictEqual(page.status, 200);
-    assert.match(page.body, /<script src="js\/item-navigation\.js"><\/script>/);
+    assert.match(page.body, /<script src="js\/item-navigation\.js\?v=1\.0\.39"><\/script>/);
     assert.match(page.body, /data-item-navigation-return="equipment"/);
     assert.match(page.body, /data-item-navigation-return="forging"/);
     const core = await get(port, "/js/item-navigation.js");
@@ -694,7 +697,7 @@ test("锻造个人进度提供可取消保存的弟子顺序调整界面", async
   });
 });
 
-test("PWA 1.0.38 发布响应式禁地、统一导航、逐鹿资料与既有完整资源", async () => {
+test("PWA 1.0.39 发布响应式禁地、统一导航、逐鹿资料与既有完整资源", async () => {
   const pagesWorkflow = fs.readFileSync(path.join(__dirname, ".github", "workflows", "pages.yml"), "utf8");
   assert.match(pagesWorkflow, /js\/tactics\.js/);
   assert.match(pagesWorkflow, /js\/tactics-ui\.js/);
@@ -713,11 +716,13 @@ test("PWA 1.0.38 发布响应式禁地、统一导航、逐鹿资料与既有完
   assert.match(pagesWorkflow, /js\/zhulu\.js/);
   assert.match(pagesWorkflow, /js\/zhulu-ui\.js/);
   assert.match(pagesWorkflow, /js\/item-navigation\.js/);
+  assert.match(pagesWorkflow, /version\.json/);
   await withServer(async (port) => {
-    const [index, worker, pwa, css, schoolPlanner, equipmentCompare, equipmentForging, forbiddenData, forbiddenCore, forbiddenUi] = await Promise.all([
+    const [index, worker, pwa, version, css, schoolPlanner, equipmentCompare, equipmentForging, forbiddenData, forbiddenCore, forbiddenUi] = await Promise.all([
       get(port, "/"),
       get(port, "/service-worker.js"),
       get(port, "/js/pwa.js"),
+      get(port, "/version.json"),
       get(port, "/css/style.css"),
       get(port, "/js/machine-beast-school-planner.js"),
       get(port, "/js/equipment-compare.js"),
@@ -729,6 +734,8 @@ test("PWA 1.0.38 发布响应式禁地、统一导航、逐鹿资料与既有完
     assert.strictEqual(index.status, 200);
     assert.strictEqual(worker.status, 200);
     assert.strictEqual(pwa.status, 200);
+    assert.strictEqual(version.status, 200);
+    assert.match(version.headers["content-type"], /application\/json/);
     assert.strictEqual(css.status, 200);
     assert.strictEqual(schoolPlanner.status, 200);
     assert.strictEqual(equipmentCompare.status, 200);
@@ -736,9 +743,12 @@ test("PWA 1.0.38 发布响应式禁地、统一导航、逐鹿资料与既有完
     assert.strictEqual(forbiddenData.status, 200);
     assert.strictEqual(forbiddenCore.status, 200);
     assert.strictEqual(forbiddenUi.status, 200);
-    assert.match(index.body, /id="pwa-version">1\.0\.38<\/strong>/);
-    assert.match(worker.body, /CACHE_NAME\s*=\s*CACHE_PREFIX\s*\+\s*"1\.0\.38"/);
-    assert.match(pwa.body, /APP_VERSION\s*=\s*"1\.0\.38"/);
+    assert.match(index.body, /id="pwa-version">1\.0\.39<\/strong>/);
+    assert.match(worker.body, /CACHE_NAME\s*=\s*CACHE_PREFIX\s*\+\s*"1\.0\.39"/);
+    assert.match(pwa.body, /APP_VERSION\s*=\s*"1\.0\.39"/);
+    assert.match(index.body, /id="pwa-repair-update"/);
+    assert.match(pwa.body, /addEventListener\("online", checkForUpdateSilently\)/);
+    assert.equal(JSON.parse(version.body).version, "1.0.39");
     assert.match(worker.body, /"\.\/data\/tactics\.js"/);
     assert.match(worker.body, /"\.\/js\/tactics\.js"/);
     assert.match(worker.body, /"\.\/js\/tactics-ui\.js"/);
@@ -856,8 +866,8 @@ test("铭文性能协调器先于页面逻辑加载并加入离线资源", async
   await withServer(async (port) => {
     const page = await get(port, "/");
     const helper = await get(port, "/js/inscription-performance.js");
-    const helperScript = '<script src="js/inscription-performance.js"></script>';
-    const pageScript = '<script src="js/inscription.js"></script>';
+    const helperScript = '<script src="js/inscription-performance.js?v=1.0.39"></script>';
+    const pageScript = '<script src="js/inscription.js?v=1.0.39"></script>';
     assert.strictEqual(helper.status, 200);
     assert.match(helper.headers["content-type"], /javascript/);
     assert.ok(page.body.indexOf(helperScript) >= 0, "首页应加载铭文性能协调器");
@@ -910,9 +920,9 @@ test("首页提供战匣丹囊三子分区及三层脚本", async () => {
     assert.match(page.body, /data-battle-pouch-mode="progress">个人进度/);
     assert.match(page.body, /data-battle-pouch-mode="calculator">目标计算/);
     assert.match(page.body, /data-battle-pouch-mode="reference">资料图表/);
-    assert.match(page.body, /<script src="data\/battle-box-pill-pouch\.js"><\/script>/);
-    assert.match(page.body, /<script src="js\/battle-box-pill-pouch\.js"><\/script>/);
-    assert.match(page.body, /<script src="js\/battle-box-pill-pouch-ui\.js"><\/script>/);
+    assert.match(page.body, /<script src="data\/battle-box-pill-pouch\.js\?v=1\.0\.39"><\/script>/);
+    assert.match(page.body, /<script src="js\/battle-box-pill-pouch\.js\?v=1\.0\.39"><\/script>/);
+    assert.match(page.body, /<script src="js\/battle-box-pill-pouch-ui\.js\?v=1\.0\.39"><\/script>/);
     for (const resource of [
       "/data/battle-box-pill-pouch.js",
       "/js/battle-box-pill-pouch.js",

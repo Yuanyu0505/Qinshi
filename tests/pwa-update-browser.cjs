@@ -12,6 +12,7 @@ function contentType(filePath) {
   if (filePath.endsWith('.js')) return 'text/javascript; charset=utf-8';
   if (filePath.endsWith('.css')) return 'text/css; charset=utf-8';
   if (filePath.endsWith('.webmanifest')) return 'application/manifest+json; charset=utf-8';
+  if (filePath.endsWith('.json')) return 'application/json; charset=utf-8';
   if (filePath.endsWith('.png')) return 'image/png';
   if (filePath.endsWith('.webp')) return 'image/webp';
   return 'application/octet-stream';
@@ -34,10 +35,10 @@ if (!playwrightPath) {
         return;
       }
       let body = fs.readFileSync(filePath);
-      if (['index.html', 'js/pwa.js', 'service-worker.js'].includes(relative)) {
-        body = Buffer.from(body.toString('utf8').replaceAll('1.0.38', servedVersion));
+      if (['index.html', 'js/pwa.js', 'service-worker.js', 'version.json'].includes(relative)) {
+        body = Buffer.from(body.toString('utf8').replaceAll('1.0.39', servedVersion));
       }
-      if (['index.html', 'js/pwa.js', 'service-worker.js'].includes(relative)) {
+      if (['index.html', 'js/pwa.js', 'service-worker.js', 'version.json'].includes(relative)) {
         serverRequests.push({ relative, servedVersion });
       }
       response.writeHead(200, {
@@ -71,7 +72,7 @@ if (!playwrightPath) {
       await page.waitForFunction(() => Boolean(navigator.serviceWorker.controller));
       assert.equal(await page.locator('#pwa-version').innerText(), '1.0.37');
 
-      servedVersion = '1.0.38';
+      servedVersion = '1.0.39';
       await page.evaluate(() => window.QinshiPWA.checkForUpdate());
       await page.locator('#pwa-update-notice').waitFor({ state: 'visible' });
       await page.locator('#pwa-apply-update').click();
@@ -91,7 +92,26 @@ if (!playwrightPath) {
           navigation: performance.getEntriesByType('navigation').map(entry => ({ name: entry.name, type: entry.type }))
         };
       });
-      assert.equal(updateState.version, '1.0.38', JSON.stringify({ updateState, serverRequests, browserResponses }));
+      assert.equal(updateState.version, '1.0.39', JSON.stringify({ updateState, serverRequests, browserResponses }));
+      assert.ok(serverRequests.some(item => item.relative === 'version.json' && item.servedVersion === '1.0.39'));
+
+      await page.evaluate(async () => {
+        localStorage.setItem('pwa-browser-progress', 'keep-me');
+        await caches.open('unrelated-browser-cache');
+      });
+      await Promise.all([
+        page.waitForURL(url => url.searchParams.has('pwa-repair')),
+        page.evaluate(() => window.QinshiPWA.repairUpdate())
+      ]);
+      await page.waitForLoadState('networkidle');
+      const repairState = await page.evaluate(async () => ({
+        version: document.querySelector('#pwa-version')?.textContent,
+        progress: localStorage.getItem('pwa-browser-progress'),
+        caches: await caches.keys()
+      }));
+      assert.equal(repairState.version, '1.0.39');
+      assert.equal(repairState.progress, 'keep-me');
+      assert.ok(repairState.caches.includes('unrelated-browser-cache'));
     } finally {
       await context.close();
       await browser.close();

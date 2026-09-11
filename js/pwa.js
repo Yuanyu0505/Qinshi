@@ -1,11 +1,17 @@
 (function () {
   "use strict";
 
-  var APP_VERSION = "1.0.38";
+  var APP_VERSION = "1.0.39";
+  var VERSION_URL = "./version.json";
+  var UPDATE_CHECK_INTERVAL = 30 * 60 * 1000;
+  var RETRY_DELAYS = [0, 500, 1500];
+  var CACHE_PREFIX = "qinshi-site-";
   var registration = null;
   var waitingWorker = null;
   var deferredInstallPrompt = null;
   var reloadAfterUpdate = false;
+  var updateCheckPromise = null;
+  var watchedInstallingWorker = null;
 
   function byId(id) { return document.getElementById(id); }
 
@@ -39,17 +45,118 @@
         showUpdate(registration.waiting || worker);
       }
     }
+    if (worker === watchedInstallingWorker) {
+      handleStateChange();
+      return;
+    }
+    watchedInstallingWorker = worker;
     worker.addEventListener("statechange", handleStateChange);
     handleStateChange();
   }
 
-  function watchRegistration(nextRegistration) {
-    registration = nextRegistration;
+  function syncRegistrationState() {
+    if (!registration) return false;
     if (registration.waiting && navigator.serviceWorker.controller) showUpdate(registration.waiting);
     watchInstalling(registration.installing);
+    return Boolean(waitingWorker);
+  }
+
+  function watchRegistration(nextRegistration) {
+    registration = nextRegistration;
+    syncRegistrationState();
     registration.addEventListener("updatefound", function () {
       watchInstalling(registration.installing);
     });
+  }
+
+  function wait(delay) {
+    return new Promise(function (resolve) { setTimeout(resolve, delay); });
+  }
+
+  function withRetry(operation) {
+    var attempt = 0;
+    function run() {
+      return Promise.resolve().then(operation).catch(function (error) {
+        attempt += 1;
+        if (attempt >= RETRY_DELAYS.length) throw error;
+        return wait(RETRY_DELAYS[attempt]).then(run);
+      });
+    }
+    return run();
+  }
+
+  function fetchRemoteVersion() {
+    var url = VERSION_URL + "?t=" + Date.now();
+    return fetch(url, {
+      cache: "no-store",
+      headers: { "Cache-Control": "no-cache" }
+    }).then(function (response) {
+      if (!response.ok) throw new Error("版本信息请求失败（HTTP " + response.status + "）");
+      return response.json();
+    }).then(function (payload) {
+      if (!payload || typeof payload.version !== "string" || !payload.version.trim()) {
+        throw new Error("版本信息格式无效");
+      }
+      return payload.version.trim();
+    });
+  }
+
+  function updateRegistration() {
+    return withRetry(function () { return registration.update(); }).then(function () {
+      return syncRegistrationState();
+    });
+  }
+
+  function performUpdateCheck(manual) {
+    if (!registration) {
+      if (manual) {
+        setStatus(window.location.protocol === "file:" ? "本地文件模式不支持自动更新。" : "离线服务尚未准备完成。", false);
+      }
+      return Promise.resolve(false);
+    }
+    if (syncRegistrationState()) return Promise.resolve(true);
+    if (manual) setStatus("正在检查新版本…", false);
+
+    return withRetry(fetchRemoteVersion).then(function (remoteVersion) {
+      if (remoteVersion !== APP_VERSION) {
+        setStatus("检测到新版本 " + remoteVersion + "，正在准备更新…", false);
+        return updateRegistration().then(function (hasWaitingWorker) {
+          if (!hasWaitingWorker && registration.installing) {
+            setStatus("新版本正在下载，完成后会显示更新提示。", false);
+          } else if (!hasWaitingWorker) {
+            setStatus("已检测到新版本，浏览器正在同步资源，请稍后再试。", false);
+          }
+          return hasWaitingWorker;
+        });
+      }
+      if (!manual) return false;
+      return updateRegistration().then(function (hasWaitingWorker) {
+        if (!hasWaitingWorker) setStatus("当前已是最新版本 " + APP_VERSION + "。", false);
+        return hasWaitingWorker;
+      });
+    }).catch(function (error) {
+      if (manual) setStatus("检查更新失败，已自动重试：" + error.message, true);
+      return false;
+    });
+  }
+
+  function requestUpdateCheck(manual) {
+    if (updateCheckPromise) {
+      if (!manual) return updateCheckPromise;
+      return updateCheckPromise.then(function () { return requestUpdateCheck(true); });
+    }
+    updateCheckPromise = performUpdateCheck(Boolean(manual)).finally(function () {
+      updateCheckPromise = null;
+    });
+    return updateCheckPromise;
+  }
+
+  function checkForUpdate() {
+    return requestUpdateCheck(true);
+  }
+
+  function checkForUpdateSilently() {
+    return requestUpdateCheck(false);
   }
 
   function registerServiceWorker() {
@@ -69,26 +176,10 @@
     }).then(function () {
       setModeStatus(isStandalone() ? "已安装 · 可离线使用" : "网页模式 · 可离线使用");
       if (!waitingWorker) setStatus("全部工具资源已准备离线使用。", false);
+      return checkForUpdateSilently();
     }).catch(function (error) {
       setModeStatus("离线缓存未启用");
       setStatus("离线功能初始化失败：" + error.message, true);
-    });
-  }
-
-  function checkForUpdate() {
-    if (!registration) {
-      setStatus(window.location.protocol === "file:" ? "本地文件模式不支持自动更新。" : "离线服务尚未准备完成。", false);
-      return Promise.resolve(false);
-    }
-    setStatus("正在检查新版本…", false);
-    return registration.update().then(function () {
-      if (registration.waiting && navigator.serviceWorker.controller) showUpdate(registration.waiting);
-      watchInstalling(registration.installing);
-      if (!waitingWorker) setStatus("已完成检查；如有新版本会显示更新提示。", false);
-      return Boolean(waitingWorker);
-    }).catch(function (error) {
-      setStatus("检查更新失败：" + error.message, true);
-      return false;
     });
   }
 
@@ -97,6 +188,34 @@
     reloadAfterUpdate = true;
     setStatus("正在切换到新版本…", false);
     waitingWorker.postMessage({ type: "SKIP_WAITING" });
+  }
+
+  function repairUpdate() {
+    if (!("serviceWorker" in navigator) || typeof caches === "undefined") {
+      setStatus("当前浏览器不支持自动修复，请清除该网站缓存后重新打开。", true);
+      return Promise.resolve(false);
+    }
+    setStatus("正在修复更新；个人进度不会被删除…", false);
+    var appScope = new URL("./", window.location.href).href;
+    return navigator.serviceWorker.getRegistrations().then(function (registrations) {
+      return Promise.all(registrations.filter(function (item) {
+        return item.scope === appScope;
+      }).map(function (item) { return item.unregister(); }));
+    }).then(function () {
+      return caches.keys();
+    }).then(function (keys) {
+      return Promise.all(keys.filter(function (key) {
+        return key.indexOf(CACHE_PREFIX) === 0;
+      }).map(function (key) { return caches.delete(key); }));
+    }).then(function () {
+      var target = new URL(window.location.href);
+      target.searchParams.set("pwa-repair", String(Date.now()));
+      window.location.replace(target.href);
+      return true;
+    }).catch(function (error) {
+      setStatus("修复更新失败：" + error.message, true);
+      return false;
+    });
   }
 
   function bindInstall() {
@@ -136,9 +255,11 @@
     var version = byId("pwa-version");
     var applyButton = byId("pwa-apply-update");
     var checkButton = byId("pwa-check-update");
+    var repairButton = byId("pwa-repair-update");
     if (version) version.textContent = APP_VERSION;
     if (applyButton) applyButton.addEventListener("click", applyUpdate);
     if (checkButton) checkButton.addEventListener("click", checkForUpdate);
+    if (repairButton) repairButton.addEventListener("click", repairUpdate);
     bindInstall();
     if ("serviceWorker" in navigator) {
       navigator.serviceWorker.addEventListener("controllerchange", function () {
@@ -146,10 +267,19 @@
         reloadAfterUpdate = false;
         window.location.reload();
       });
+      window.addEventListener("online", checkForUpdateSilently);
+      document.addEventListener("visibilitychange", function () {
+        if (!document.hidden) checkForUpdateSilently();
+      });
+      setInterval(checkForUpdateSilently, UPDATE_CHECK_INTERVAL);
     }
     window.addEventListener("load", registerServiceWorker, { once: true });
   }
 
-  window.QinshiPWA = { checkForUpdate: checkForUpdate, version: APP_VERSION };
+  window.QinshiPWA = {
+    checkForUpdate: checkForUpdate,
+    repairUpdate: repairUpdate,
+    version: APP_VERSION
+  };
   document.addEventListener("DOMContentLoaded", init);
 })();

@@ -95,16 +95,30 @@ function validateUpload(body, request) {
 }
 
 async function sessionFor(db, context, id) {
-  const session = await db.prepare('SELECT * FROM upload_sessions WHERE id = ? AND space_id = ? AND device_id = ?')
-    .bind(id, context.spaceId, context.deviceId).first();
+  const [, receipt] = await snapshotBatch(db, [deviceGuard(db, context),
+    db.prepare('SELECT * FROM upload_sessions WHERE id = ? AND space_id = ? AND device_id = ?')
+      .bind(id, context.spaceId, context.deviceId)
+  ]);
+  const session = receipt.results[0];
   if (!session || (session.status !== 'committed' && session.expires_at <= Date.now())) throw new SyncError('NOT_FOUND');
   return session;
 }
 
-async function sessionResponse(db, session) {
-  const { results } = await db.prepare('SELECT chunk_index FROM snapshot_chunks WHERE snapshot_id = ? ORDER BY chunk_index').bind(session.snapshot_id).all();
+async function sessionResponse(db, context, sessionId, requestJson) {
+  // A prior receipt lookup only selects the candidate. Authorization, its final
+  // receipt and resume indices must share one D1 snapshot before any replay.
+  const [, receipt, chunks] = await snapshotBatch(db, [deviceGuard(db, context),
+    db.prepare('SELECT * FROM upload_sessions WHERE id = ? AND space_id = ? AND device_id = ?')
+      .bind(sessionId, context.spaceId, context.deviceId),
+    db.prepare(`SELECT c.chunk_index FROM snapshot_chunks c JOIN upload_sessions u ON u.snapshot_id = c.snapshot_id
+      WHERE u.id = ? AND u.space_id = ? AND u.device_id = ? ORDER BY c.chunk_index`)
+      .bind(sessionId, context.spaceId, context.deviceId)
+  ]);
+  const session = receipt.results[0];
+  if (!session || (session.status !== 'committed' && session.expires_at <= Date.now())) throw new SyncError('NOT_FOUND');
+  if (session.request_json !== requestJson) throw new SyncError('IDEMPOTENCY_CONFLICT');
   return Response.json({ uploadId: session.id, snapshotId: session.snapshot_id, expiresAt: session.expires_at,
-    uploadedChunks: results.map(row => row.chunk_index) }, { status: 201 });
+    uploadedChunks: chunks.results.map(row => row.chunk_index) }, { status: 201 });
 }
 
 async function createUpload(request, env) {
@@ -117,10 +131,7 @@ async function createUpload(request, env) {
   const requestJson = canonical({ requestDigest: await digest(new TextEncoder().encode(canonical(body))), sourceSnapshotId: body.sourceSnapshotId });
   const findReplay = () => env.DB.prepare('SELECT * FROM upload_sessions WHERE space_id = ? AND device_id = ? AND idempotency_key = ?')
     .bind(context.spaceId, context.deviceId, key).first();
-  const replay = async saved => {
-    if (saved.request_json !== requestJson) throw new SyncError('IDEMPOTENCY_CONFLICT');
-    return sessionResponse(env.DB, saved);
-  };
+  const replay = saved => sessionResponse(env.DB, context, saved.id, requestJson);
   let saved = await findReplay();
   if (saved && saved.status !== 'committed' && saved.expires_at <= Date.now()) {
     // The requested expired row may lie beyond this request's generic 100-row
@@ -155,11 +166,14 @@ async function createUpload(request, env) {
           body.chunkCount, body.ciphertextBytes, body.ciphertextDigest, session.expires_at, now)
     ]);
   } catch (error) {
+    // Only the classified claim/uniqueness race may find a winner. In particular,
+    // never turn a failed authorization guard (or quota/internal fault) into 201.
+    if (!(error instanceof SyncError) || error.code !== 'IDEMPOTENCY_CONFLICT') throw error;
     const winner = await findReplay();
     if (winner) return replay(winner);
     throw error;
   }
-  return sessionResponse(env.DB, session);
+  return sessionResponse(env.DB, context, session.id, requestJson);
 }
 
 function chunkIndex(value) {
@@ -301,6 +315,7 @@ async function commitUpload(request, env, uploadId) {
     ]);
     return Response.json(JSON.parse(result.at(-1).results[0].result_json));
   } catch (error) {
+    if (!(error instanceof SyncError) || error.code !== 'IDEMPOTENCY_CONFLICT') throw error;
     const winner = await sessionFor(env.DB, context, uploadId);
     if (winner.status === 'committed') return replay(winner);
     throw error;

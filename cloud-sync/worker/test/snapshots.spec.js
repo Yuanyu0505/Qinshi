@@ -292,7 +292,9 @@ function interleaveBatch(queryMatch, action) {
       statement.bind = (...values) => {
         const bound = bind(...values);
         const first = bound.first.bind(bound);
+        const all = bound.all.bind(bound);
         bound.first = async (...args) => { await fire(); return first(...args); };
+        bound.all = async (...args) => { await fire(); return all(...args); };
         return bound;
       };
       return statement;
@@ -493,4 +495,79 @@ it('never accepts direct before-session commits even after a valid after commit 
   const body = { beforeUploadId: before.session.uploadId, sourceSnapshotId: source.body.snapshotId };
   expect((await commit(after, body)).status).toBe(200);
   expect((await commit(before, body)).status).toBe(400);
+});
+
+it('denies create direct replay when revoked between receipt and chunk-index reads', async () => {
+  const other = await pair();
+  const key = crypto.randomUUID();
+  const item = await complete({}, { key });
+  const racingEnv = interleaveBatch(query => query.includes('FROM snapshot_chunks') && query.includes('chunk_index'), async () => {
+    expect((await send(`/v1/devices/${space.device.deviceId}`, { deleteSnapshots: false }, { method: 'DELETE', device: other })).status).toBe(204);
+  });
+  const response = await send('/v1/uploads', item.body, { key }, racingEnv);
+  expect(response.status).toBe(401);
+  expect((await response.json()).error.code).toBe('AUTH_FAILED');
+});
+
+it('denies commit direct replay when revocation wins its receipt read', async () => {
+  const other = await pair();
+  const item = await complete();
+  const racingEnv = interleaveBatch(query => query.startsWith('SELECT * FROM upload_sessions WHERE id = ?'), async () => {
+    expect((await send(`/v1/devices/${space.device.deviceId}`, { deleteSnapshots: false }, { method: 'DELETE', device: other })).status).toBe(204);
+  });
+  const response = await commit(item, {}, racingEnv);
+  expect(response.status).toBe(401);
+  expect((await response.json()).error.code).toBe('AUTH_FAILED');
+});
+
+it.each(['create', 'commit'])('does not turn an %s mutation AUTH_FAILED into successful winner replay', async operation => {
+  const other = await pair();
+  const key = crypto.randomUUID();
+  const item = operation === 'commit' ? await staged({}, { key }) : await input();
+  if (operation === 'commit') await put(item);
+  const racingEnv = interleaveBatch(query => operation === 'create' ? query.startsWith('INSERT INTO snapshots')
+    : query.startsWith("UPDATE upload_sessions SET status = 'committed'"), async () => {
+    const winner = operation === 'create' ? await send('/v1/uploads', item.body, { key }) : await commit(item);
+    expect(winner.status).toBe(operation === 'create' ? 201 : 200);
+    if (operation === 'create') {
+      const uploaded = { ...item, session: await winner.json(), options: { key } };
+      expect((await put(uploaded)).status).toBe(200);
+      expect((await commit(uploaded)).status).toBe(200);
+    }
+    expect((await send(`/v1/devices/${space.device.deviceId}`, { deleteSnapshots: false }, { method: 'DELETE', device: other })).status).toBe(204);
+  });
+  const response = operation === 'create' ? await send('/v1/uploads', item.body, { key }, racingEnv) : await commit(item, {}, racingEnv);
+  expect(response.status).toBe(401);
+  expect((await response.json()).error.code).toBe('AUTH_FAILED');
+});
+
+it.each(['create', 'commit'])('preserves an authorized %s winner replay after a deterministic duplicate mutation race', async operation => {
+  const key = crypto.randomUUID();
+  const item = operation === 'commit' ? await staged({}, { key }) : await input();
+  if (operation === 'commit') await put(item);
+  let winner;
+  const racingEnv = interleaveBatch(query => operation === 'create' ? query.startsWith('INSERT INTO snapshots')
+    : query.startsWith("UPDATE upload_sessions SET status = 'committed'"), async () => {
+    const response = operation === 'create' ? await send('/v1/uploads', item.body, { key }) : await commit(item);
+    expect(response.status).toBe(operation === 'create' ? 201 : 200);
+    winner = await response.json();
+  });
+  const response = operation === 'create' ? await send('/v1/uploads', item.body, { key }, racingEnv) : await commit(item, {}, racingEnv);
+  expect(response.status).toBe(operation === 'create' ? 201 : 200);
+  expect(await response.json()).toEqual(winner);
+  expect((await snapshots()).length).toBe(1);
+});
+
+it('denies old create receipt replay after identical space/device ids are recreated with a new token', async () => {
+  const key = crypto.randomUUID();
+  const item = await complete({}, { key });
+  const racingEnv = interleaveBatch(query => query.includes('FROM snapshot_chunks') && query.includes('chunk_index'), async () => {
+    expect((await send('/v1/spaces/current', { authKey: space.authKey, confirmation: '永久删除同步空间', appVersion }, { method: 'DELETE' })).status).toBe(204);
+    const replacement = { ...space, device: { ...space.device, deviceToken: random(32) } };
+    expect((await send('/v1/spaces', replacement, { device: replacement.device })).status).toBe(201);
+  });
+  const response = await send('/v1/uploads', item.body, { key }, racingEnv);
+  expect(response.status).toBe(401);
+  expect((await response.json()).error.code).toBe('AUTH_FAILED');
+  expect(await snapshots()).toEqual([]);
 });

@@ -151,6 +151,14 @@ async function createUpload(request, env) {
   const session = { id: crypto.randomUUID(), snapshot_id: body.snapshotId, expires_at: now + UPLOAD_TTL_MS };
   try {
     await snapshotBatch(env.DB, [deviceGuard(env.DB, context, now),
+      // Claim the scoped key before quota evaluation. A concurrent identical
+      // winner must produce an idempotency conflict even if it filled the space.
+      // Migration 0003 decoupled this receipt from the snapshot FK; a later quota
+      // or snapshot failure still rolls the claim back in this same D1 batch.
+      env.DB.prepare(`INSERT INTO upload_sessions (id, space_id, device_id, snapshot_id, operation, idempotency_key, request_json,
+        expected_chunks, expected_bytes, expected_digest, status, expires_at, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'staged', ?, ?)`)
+        .bind(session.id, context.spaceId, context.deviceId, body.snapshotId, body.operation, key, requestJson,
+          body.chunkCount, body.ciphertextBytes, body.ciphertextDigest, session.expires_at, now),
       env.DB.prepare(`INSERT INTO snapshots (id, space_id, device_id, source_snapshot_id, role, app_version, format_version,
         schema_version, encoding, client_created_at, data_hash, iv, ciphertext_bytes, chunk_count, ciphertext_digest,
         encrypted_summary_json, server_created_at) VALUES (?, ?, ?, ?, 'staged', ?, ?, ?, ?, ?,
@@ -159,11 +167,7 @@ async function createUpload(request, env) {
         .bind(body.snapshotId, context.spaceId, context.deviceId, body.sourceSnapshotId, body.appVersion, body.formatVersion,
           body.schemaVersion, body.encoding, body.clientCreatedAt, body.sourceSnapshotId, body.sourceSnapshotId, context.spaceId,
           body.dataHash, body.iv, context.spaceId, body.ciphertextBytes, MAX_SPACE_BYTES, body.ciphertextBytes,
-          body.chunkCount, body.ciphertextDigest, JSON.stringify(body.encryptedSummary), now),
-      env.DB.prepare(`INSERT INTO upload_sessions (id, space_id, device_id, snapshot_id, operation, idempotency_key, request_json,
-        expected_chunks, expected_bytes, expected_digest, status, expires_at, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'staged', ?, ?)`)
-        .bind(session.id, context.spaceId, context.deviceId, body.snapshotId, body.operation, key, requestJson,
-          body.chunkCount, body.ciphertextBytes, body.ciphertextDigest, session.expires_at, now)
+          body.chunkCount, body.ciphertextDigest, JSON.stringify(body.encryptedSummary), now)
     ]);
   } catch (error) {
     // Only the classified claim/uniqueness race may find a winner. In particular,

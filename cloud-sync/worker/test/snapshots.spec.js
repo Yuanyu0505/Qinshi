@@ -571,3 +571,36 @@ it('denies old create receipt replay after identical space/device ids are recrea
   expect((await response.json()).error.code).toBe('AUTH_FAILED');
   expect(await snapshots()).toEqual([]);
 });
+
+it.each([
+  ['same key and body', true, true, 201],
+  ['different key', false, false, 503],
+  ['same key with different body', true, false, 409]
+])('arbitrates the final 10 MiB quota slot for %s before allocating any extra snapshot', async (_name, sameKey, sameBody, status) => {
+  const item = await input({ ciphertextBytes: 10485760, chunkCount: 20 });
+  for (let index = 0; index < 9; index += 1) {
+    expect((await send('/v1/uploads', { ...item.body, snapshotId: crypto.randomUUID() })).status).toBe(201);
+  }
+  const key = crypto.randomUUID();
+  const winnerBody = sameBody ? item.body : { ...item.body, snapshotId: crypto.randomUUID() };
+  const winnerKey = sameKey ? key : crypto.randomUUID();
+  let winner;
+  // A has already found no receipt. B occupies the final slot immediately before
+  // A's mutation batch; all SQL and both create requests execute against real D1.
+  const racingEnv = interleaveBatch(query => query.startsWith('INSERT INTO snapshots'), async () => {
+    const response = await send('/v1/uploads', winnerBody, { key: winnerKey });
+    expect(response.status).toBe(201);
+    winner = await response.json();
+  });
+  const response = await send('/v1/uploads', item.body, { key }, racingEnv);
+  expect(response.status).toBe(status);
+  if (status === 201) expect(await response.json()).toEqual(winner);
+  else expect((await response.json()).error.code).toBe(status === 503 ? 'FREE_QUOTA_EXHAUSTED' : 'IDEMPOTENCY_CONFLICT');
+  expect(await env.DB.prepare('SELECT COUNT(*) AS count, SUM(ciphertext_bytes) AS bytes FROM snapshots').first())
+    .toEqual({ count: 10, bytes: 104857600 });
+  expect((await env.DB.prepare('SELECT COUNT(*) AS count FROM upload_sessions').first()).count).toBe(10);
+  expect((await env.DB.prepare(`SELECT COUNT(*) AS count FROM snapshots s LEFT JOIN upload_sessions u ON u.snapshot_id = s.id
+    WHERE u.id IS NULL`).first()).count).toBe(0);
+  expect((await env.DB.prepare(`SELECT COUNT(*) AS count FROM upload_sessions u LEFT JOIN snapshots s ON s.id = u.snapshot_id
+    WHERE u.status = 'staged' AND s.id IS NULL`).first()).count).toBe(0);
+});

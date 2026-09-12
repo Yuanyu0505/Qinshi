@@ -33,6 +33,7 @@ function request(path, body, options = {}) {
   return new Request(`https://worker.test${path}`, {
     method: options.method || 'POST', headers: {
       Origin: origin, 'Content-Type': 'application/json', 'X-Qin-App-Version': '1.0.39',
+      'Idempotency-Key': crypto.randomUUID(),
       Authorization: `Device ${deviceId}.${token}`, ...options.headers
     }, ...(body === undefined ? {} : { body: JSON.stringify(body) })
   });

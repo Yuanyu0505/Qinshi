@@ -26,6 +26,7 @@ let logs;
 function request(path, body, { method = 'POST', device, headers = {} } = {}) {
   return new Request(`https://worker.test${path}`, { method, headers: {
     Origin: origin, 'Content-Type': 'application/json', 'X-Qin-App-Version': appVersion,
+    'Idempotency-Key': crypto.randomUUID(),
     ...(device ? { Authorization: `Device ${device.deviceId}.${device.deviceToken}` } : {}), ...headers
   }, ...(body === undefined ? {} : { body: JSON.stringify(body) }) });
 }
@@ -42,13 +43,13 @@ async function digest(value) {
   return Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(value))), byte => byte.toString(16).padStart(2, '0')).join('');
 }
 async function dump() {
-  const tables = ['sync_spaces', 'devices', 'auth_throttles', 'snapshots', 'snapshot_chunks', 'upload_sessions'];
+  const tables = ['sync_spaces', 'devices', 'auth_throttles', 'snapshots', 'snapshot_chunks', 'upload_sessions', 'lifecycle_idempotency'];
   return JSON.stringify(await Promise.all(tables.map(table => env.DB.prepare(`SELECT * FROM ${table}`).all())));
 }
 
 beforeEach(async () => {
   logs = vi.spyOn(console, 'info').mockImplementation(() => {});
-  await env.DB.batch([env.DB.prepare('DELETE FROM sync_spaces'), env.DB.prepare('DELETE FROM auth_throttles')]);
+  await env.DB.batch([env.DB.prepare('DELETE FROM sync_spaces'), env.DB.prepare('DELETE FROM auth_throttles'), env.DB.prepare('DELETE FROM lifecycle_idempotency')]);
   space = newSpace();
 });
 afterEach(() => vi.restoreAllMocks());
@@ -405,4 +406,235 @@ it.each(['recovery-key', 'recover'])('refuses %s that would leave the old recove
   expect(response.status).toBe(400);
   expect(await row()).toEqual(original);
   await expect(bound(space.device)).resolves.toBeDefined();
+});
+
+const writes = ['create', 'pair', 'recover', 'password', 'recovery-key', 'delete'];
+async function operationRequest(operation) {
+  if (operation !== 'create') expect((await create()).status).toBe(201);
+  const body = operation === 'create' ? space : operation === 'pair' ? { authKey: space.authKey, device: registration(), appVersion }
+    : operation === 'recover' ? recoveryFor(space) : operation === 'password' ? passwordBody() : operation === 'recovery-key' ? rotationBody() : eraseBody();
+  const path = operation === 'create' ? '/v1/spaces' : ['pair', 'recover'].includes(operation) ? `/v1/spaces/${space.syncCode}/${operation}`
+    : operation === 'delete' ? '/v1/spaces/current' : `/v1/security/${operation}`;
+  const options = { device: space.device, method: operation === 'delete' ? 'DELETE' : 'POST', headers: { 'Idempotency-Key': crypto.randomUUID() } };
+  return { body, path, options, status: operation === 'create' ? 201 : operation === 'delete' ? 204 : 200 };
+}
+async function businessState() {
+  return JSON.stringify(await Promise.all(['sync_spaces', 'devices', 'snapshots', 'snapshot_chunks', 'upload_sessions']
+    .map(async table => (await env.DB.prepare(`SELECT * FROM ${table} ORDER BY rowid`).all()).results)));
+}
+const reverseKeys = value => Array.isArray(value) ? value.map(reverseKeys) : value && typeof value === 'object'
+  ? Object.fromEntries(Object.entries(value).reverse().map(([key, child]) => [key, reverseKeys(child)])) : value;
+
+it.each(writes)('rejects missing and malformed idempotency keys for %s before mutation', async operation => {
+  const input = await operationRequest(operation);
+  const before = await businessState();
+  for (const key of [null, '', 'contains spaces', 'a'.repeat(129), 'invalid,key']) {
+    const req = request(input.path, input.body, input.options);
+    if (key === null) req.headers.delete('Idempotency-Key'); else req.headers.set('Idempotency-Key', key);
+    const response = await worker.fetch(req, env, {});
+    expect(response.status).toBe(400);
+    expect((await response.json()).error.code).toBe('INVALID_REQUEST');
+    expect(await businessState()).toBe(before);
+  }
+});
+
+it.each(writes)('replays committed %s after response loss with the original credential proof and no new mutation', async operation => {
+  const input = await operationRequest(operation);
+  const first = await send(input.path, input.body, input.options);
+  expect(first.status).toBe(input.status);
+  const expected = await first.text();
+  const committed = await businessState();
+  const retry = await send(input.path, reverseKeys(input.body), input.options);
+  expect(retry.status).toBe(first.status);
+  expect(await retry.text()).toBe(expected);
+  expect(retry.headers.get('cache-control')).toBe('no-store');
+  expect(retry.headers.get('access-control-allow-origin')).toBe(origin);
+  expect(await businessState()).toBe(committed);
+});
+
+it.each(writes)('returns idempotency conflict for changed %s body or authorization without changing business state', async operation => {
+  const input = await operationRequest(operation);
+  expect((await send(input.path, input.body, input.options)).status).toBe(input.status);
+  const before = await businessState();
+  const changedBody = { ...input.body, [operation === 'recover' ? 'newAuthKey' : 'authKey']: random(32) };
+  const changedAuth = { ...input.options, headers: { ...input.options.headers, Authorization: `Device ${space.device.deviceId}.${random(32)}` } };
+  for (const response of [await send(input.path, changedBody, input.options), await send(input.path, input.body, changedAuth)]) {
+    expect(response.status).toBe(409);
+    expect((await response.json()).error.code).toBe('IDEMPOTENCY_CONFLICT');
+  }
+  expect(await businessState()).toBe(before);
+});
+
+it.each(writes)('commits concurrent identical %s requests once and replays the same result to every caller', async operation => {
+  const input = await operationRequest(operation);
+  const responses = await Promise.all(Array.from({ length: 6 }, () => send(input.path, input.body, input.options)));
+  expect(responses.map(response => response.status)).toEqual(Array(6).fill(input.status));
+  const bodies = await Promise.all(responses.map(response => response.text()));
+  expect(new Set(bodies).size).toBe(1);
+  const committed = await businessState();
+  expect((await send(input.path, input.body, input.options)).status).toBe(input.status);
+  expect(await businessState()).toBe(committed);
+  const keyDigest = await digest(input.options.headers['Idempotency-Key']);
+  expect((await env.DB.prepare('SELECT COUNT(*) AS count FROM lifecycle_idempotency WHERE key_hash = ?').bind(keyDigest).first()).count).toBe(1);
+});
+
+it('normalizes locator spelling before fingerprinting create and pair replays', async () => {
+  const input = await operationRequest('create');
+  expect((await send(input.path, input.body, input.options)).status).toBe(201);
+  expect((await send(input.path, { ...space, syncCode: ` ${space.syncCode.toLowerCase()} ` }, input.options)).status).toBe(201);
+  const body = { authKey: space.authKey, device: registration(), appVersion };
+  const options = { headers: { 'Idempotency-Key': crypto.randomUUID() } };
+  expect((await send(`/v1/spaces/${space.syncCode}/pair`, body, options)).status).toBe(200);
+  expect((await send(`/v1/spaces/${encodeURIComponent(` ${space.syncCode.toLowerCase()} `)}/pair`, body, options)).status).toBe(200);
+});
+
+it('keeps the same key independent across operation scopes', async () => {
+  const input = await operationRequest('create');
+  expect((await send(input.path, input.body, input.options)).status).toBe(201);
+  expect((await send(`/v1/spaces/${space.syncCode}/pair`, { authKey: space.authKey, device: registration(), appVersion }, input.options)).status).toBe(200);
+  const changed = passwordBody();
+  expect((await send('/v1/security/password', changed, input.options)).status).toBe(200);
+  expect((await send('/v1/security/recovery-key', { ...rotationBody(), authKey: changed.newAuthKey }, input.options)).status).toBe(200);
+});
+
+it.each(writes)('rolls back the %s idempotency claim and business mutation if the transaction result write fails', async operation => {
+  const input = await operationRequest(operation);
+  const before = await businessState();
+  let hasClaim = false;
+  const failureEnv = { ...env, DB: {
+    prepare(query) {
+      if (query.startsWith('INSERT INTO lifecycle_idempotency')) hasClaim = true;
+      return env.DB.prepare(query);
+    },
+    batch(statements) {
+      // Auth batches are SELECT/DELETE only; fail the transaction by appending a
+      // genuine constraint violation whenever the mutation prepares its claim.
+      return env.DB.batch(hasClaim ? [...statements, env.DB.prepare("INSERT INTO lifecycle_idempotency (scope_hash, key_hash, request_digest, status, response_json, space_id, minimum_read_version, minimum_write_version, created_at, expires_at) VALUES ('failure-scope', 'failure-key', NULL, 204, NULL, NULL, '1.0.39', '1.0.39', 0, 1)")] : statements);
+    }
+  } };
+  const failed = await worker.fetch(request(input.path, input.body, input.options), failureEnv, {});
+  expect(failed.status).toBe(500);
+  expect(await businessState()).toBe(before);
+  const keyDigest = await digest(input.options.headers['Idempotency-Key']);
+  expect((await env.DB.prepare('SELECT COUNT(*) AS count FROM lifecycle_idempotency WHERE key_hash = ?').bind(keyDigest).first()).count).toBe(0);
+  expect((await send(input.path, input.body, input.options)).status).toBe(input.status);
+});
+
+it('bounds replay retention to 24 hours and cleans expired claims during a successful lifecycle transaction', async () => {
+  const clock = vi.spyOn(Date, 'now').mockReturnValue(1700000000000);
+  const input = await operationRequest('delete');
+  expect((await send(input.path, input.body, input.options)).status).toBe(204);
+  const keyDigest = await digest(input.options.headers['Idempotency-Key']);
+  const saved = await env.DB.prepare('SELECT * FROM lifecycle_idempotency WHERE key_hash = ?').bind(keyDigest).first();
+  expect(saved.expires_at).toBe(1700086400000);
+  clock.mockReturnValue(1700086399999);
+  expect((await send(input.path, input.body, input.options)).status).toBe(204);
+  clock.mockReturnValue(1700086400000);
+  expect((await send(input.path, input.body, input.options)).status).toBe(401);
+  expect((await create(newSpace())).status).toBe(201);
+  expect(await env.DB.prepare('SELECT * FROM lifecycle_idempotency WHERE key_hash = ?').bind(keyDigest).first()).toBeNull();
+});
+
+it('never persists request bodies, crypto payloads, auth headers or raw keys in the idempotency ledger', async () => {
+  const input = await operationRequest('create');
+  expect((await send(input.path, input.body, input.options)).status).toBe(201);
+  const text = JSON.stringify((await env.DB.prepare('SELECT * FROM lifecycle_idempotency').all()).results);
+  for (const value of [space.syncCode, space.authKey, space.recoveryAuthKey, space.device.deviceToken, space.device.encryptedName.ciphertext,
+    space.passwordWrappedMaster.ciphertext, space.recoveryWrappedMaster.ciphertext, input.options.headers['Idempotency-Key'],
+    `Device ${space.device.deviceId}.${space.device.deviceToken}`]) {
+    expect(text).not.toContain(value);
+    expect(JSON.stringify(logs.mock.calls)).not.toContain(value);
+  }
+});
+
+it('keeps version and origin gates active when replaying a previously committed write', async () => {
+  const input = await operationRequest('create');
+  expect((await send(input.path, input.body, input.options)).status).toBe(201);
+  expect((await worker.fetch(request(input.path, input.body, input.options), { ...env, MINIMUM_WRITE_VERSION: '1.0.40' }, {})).status).toBe(426);
+  expect((await send(input.path, input.body, { ...input.options, headers: { ...input.options.headers, Origin: 'https://evil.test' } })).status).toBe(403);
+  await env.DB.prepare('UPDATE sync_spaces SET minimum_write_version = ? WHERE id = ?').bind('1.0.40', space.spaceId).run();
+  expect((await send(input.path, input.body, input.options)).status).toBe(426);
+});
+
+it.each(['pair', 'recover', 'password', 'recovery-key', 'delete'])('does not commit a %s replay claim if the space disappeared before its transaction', async operation => {
+  const input = await operationRequest(operation);
+  const racingEnv = interleaveMutation(async () => {
+    expect((await send('/v1/spaces/current', eraseBody(), { method: 'DELETE', device: space.device })).status).toBe(204);
+  });
+  const response = await worker.fetch(request(input.path, input.body, input.options), racingEnv, {});
+  expect(response.status).toBe(401);
+  expect(await row()).toBeNull();
+  const keyDigest = await digest(input.options.headers['Idempotency-Key']);
+  expect(await env.DB.prepare('SELECT * FROM lifecycle_idempotency WHERE key_hash = ?').bind(keyDigest).first()).toBeNull();
+});
+
+it.each(['recover', 'password', 'delete'])('does not record false authentication failures if identical %s already committed before credential reads', async operation => {
+  const input = await operationRequest(operation);
+  let firstBatch = true;
+  const racingEnv = { ...env, DB: {
+    prepare: query => env.DB.prepare(query),
+    async batch(statements) {
+      if (firstBatch) {
+        firstBatch = false;
+        expect((await send(input.path, input.body, input.options)).status).toBe(input.status);
+      }
+      return env.DB.batch(statements);
+    }
+  } };
+  const response = await worker.fetch(request(input.path, input.body, input.options), racingEnv, {});
+  expect(response.status).toBe(input.status);
+  expect(await env.DB.prepare('SELECT * FROM auth_throttles').first()).toBeNull();
+});
+
+it('rolls expired-record cleanup back along with a failed lifecycle mutation', async () => {
+  const clock = vi.spyOn(Date, 'now').mockReturnValue(1700000000000);
+  const old = await operationRequest('create');
+  expect((await send(old.path, old.body, old.options)).status).toBe(201);
+  const oldKey = await digest(old.options.headers['Idempotency-Key']);
+  clock.mockReturnValue(1700086400000);
+  const fresh = newSpace();
+  const options = { headers: { 'Idempotency-Key': crypto.randomUUID() } };
+  const failingEnv = { ...env, DB: {
+    prepare: query => env.DB.prepare(query),
+    batch: statements => env.DB.batch([...statements, env.DB.prepare('UPDATE sync_spaces SET kdf_json = NULL WHERE id = ?').bind(fresh.spaceId)])
+  } };
+  expect((await worker.fetch(request('/v1/spaces', fresh, options), failingEnv, {})).status).toBe(500);
+  expect(await env.DB.prepare('SELECT * FROM lifecycle_idempotency WHERE key_hash = ?').bind(oldKey).first()).not.toBeNull();
+  expect(await env.DB.prepare('SELECT * FROM sync_spaces WHERE id = ?').bind(fresh.spaceId).first()).toBeNull();
+  expect((await send('/v1/spaces', fresh, options)).status).toBe(201);
+  expect(await env.DB.prepare('SELECT * FROM lifecycle_idempotency WHERE key_hash = ?').bind(oldKey).first()).toBeNull();
+});
+
+it('bounds opportunistic cleanup work and permits a fresh authenticated operation under an expired key', async () => {
+  const clock = vi.spyOn(Date, 'now').mockReturnValue(1700000000000);
+  const input = await operationRequest('recovery-key');
+  expect((await send(input.path, input.body, input.options)).status).toBe(200);
+  clock.mockReturnValue(1700086400000);
+  const expiredSpace = crypto.randomUUID();
+  await env.DB.batch(await Promise.all(Array.from({ length: 150 }, async (_, index) => env.DB.prepare(`INSERT INTO lifecycle_idempotency
+    (scope_hash, key_hash, request_digest, status, response_json, space_id, minimum_read_version, minimum_write_version, created_at, expires_at)
+    VALUES (?, ?, ?, 204, NULL, ?, '1.0.39', '1.0.39', 0, 1)`)
+    .bind(await digest(`scope-${index}`), await digest(`key-${index}`), await digest('request'), expiredSpace))));
+  const renewed = rotationBody();
+  expect((await send(input.path, renewed, input.options)).status).toBe(200);
+  expect((await env.DB.prepare('SELECT COUNT(*) AS count FROM lifecycle_idempotency WHERE space_id = ?').bind(expiredSpace).first()).count).toBe(51);
+  expect((await row()).recovery_auth_digest).toBe(await digest(renewed.newRecoveryAuthKey));
+  expect((await send(input.path, renewed, input.options)).status).toBe(200);
+});
+
+it.each(writes)('allows only one winner when different %s requests race for the same key', async operation => {
+  const input = await operationRequest(operation);
+  const changed = operation === 'create' || operation === 'pair' ? { ...input.body, device: registration() }
+    : operation === 'recover' || operation === 'password' ? { ...input.body, newAuthKey: random(32) }
+      : operation === 'recovery-key' ? { ...input.body, newRecoveryAuthKey: random(32) }
+        : { recoveryAuthKey: space.recoveryAuthKey, confirmation: '永久删除同步空间', appVersion };
+  const bodies = [input.body, changed];
+  const responses = await Promise.all(bodies.map(body => send(input.path, body, input.options)));
+  expect(responses.map(response => response.status).sort((a, b) => a - b)).toEqual([input.status, 409]);
+  const winner = bodies[responses.findIndex(response => response.status === input.status)];
+  const rejected = responses.find(response => response.status === 409);
+  expect((await rejected.json()).error.code).toBe('IDEMPOTENCY_CONFLICT');
+  if (operation === 'password' || operation === 'recover') expect((await row()).auth_digest).toBe(await digest(winner.newAuthKey));
+  if (operation === 'recovery-key') expect((await row()).recovery_auth_digest).toBe(await digest(winner.newRecoveryAuthKey));
+  expect((await send(input.path, winner, input.options)).status).toBe(input.status);
 });

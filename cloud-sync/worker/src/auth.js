@@ -65,14 +65,20 @@ export async function clearAuthFailures(locatorHash, env) {
   await env.DB.prepare('DELETE FROM auth_throttles WHERE locator_hash = ?').bind(locatorHash).run();
 }
 
-async function verifySpaceAuth(locatorHash, submitted, digestField, env) {
+async function verifySpaceAuth(locatorHash, submitted, digestField, env, lifecycleProof) {
   requireLocator(locatorHash);
   const validInput = typeof submitted === 'string' && submitted.length > 0 && submitted.length <= 256;
   // Missing spaces perform the same reads, SHA-256 and 32-byte comparison as wrong authenticators.
-  const [spaceResult, throttleResult] = await env.DB.batch([
+  const [spaceResult, throttleResult, committedReplay] = await env.DB.batch([
     env.DB.prepare('SELECT * FROM sync_spaces WHERE locator_hash = ?').bind(locatorHash),
-    env.DB.prepare('SELECT cooldown_until FROM auth_throttles WHERE locator_hash = ?').bind(locatorHash)
+    env.DB.prepare('SELECT cooldown_until FROM auth_throttles WHERE locator_hash = ?').bind(locatorHash),
+    ...(lifecycleProof ? [env.DB.prepare('SELECT 1 FROM lifecycle_idempotency WHERE scope_hash = ? AND key_hash = ? AND expires_at > ?')
+      .bind(lifecycleProof.scopeHash, lifecycleProof.keyHash, Date.now())] : [])
   ]);
+  // A concurrent identical mutation may have invalidated this credential. Read its
+  // claim in the same snapshot as the credentials, before admitting a false failure.
+  // The lifecycle boundary still verifies the complete proof before replay/conflict.
+  if (committedReplay?.results.length) throw new SyncError('AUTH_FAILED');
   const space = spaceResult.results[0];
   const expected = storedDigest(space?.[digestField]);
   const matches = constantTimeEqual(await digestBytes(validInput ? submitted : ''), expected || EMPTY_DIGEST);
@@ -97,16 +103,16 @@ async function verifySpaceAuth(locatorHash, submitted, digestField, env) {
   return space;
 }
 
-export function verifyPasswordAuth(locatorHash, submittedAuthKey, env) {
-  return verifySpaceAuth(locatorHash, submittedAuthKey, 'auth_digest', env);
+export function verifyPasswordAuth(locatorHash, submittedAuthKey, env, lifecycleProof) {
+  return verifySpaceAuth(locatorHash, submittedAuthKey, 'auth_digest', env, lifecycleProof);
 }
 
 export function lookupSpace(locatorHash, env) {
   return verifySpaceAuth(locatorHash, '', null, env);
 }
 
-export function verifyRecoveryAuth(locatorHash, submittedRecoveryAuth, env) {
-  return verifySpaceAuth(locatorHash, submittedRecoveryAuth, 'recovery_auth_digest', env);
+export function verifyRecoveryAuth(locatorHash, submittedRecoveryAuth, env, lifecycleProof) {
+  return verifySpaceAuth(locatorHash, submittedRecoveryAuth, 'recovery_auth_digest', env, lifecycleProof);
 }
 
 export async function authenticateDevice(request, env) {

@@ -1,5 +1,6 @@
 const ERRORS = {
   INVALID_REQUEST: { status: 400, message: 'Request is invalid.', retryable: false },
+  IDEMPOTENCY_CONFLICT: { status: 409, message: 'Idempotency key was already used for a different request.', retryable: false },
   AUTH_FAILED: { status: 401, message: 'Authentication failed.', retryable: false },
   AUTH_COOLDOWN: { status: 429, message: 'Authentication is temporarily paused. Try again later.', retryable: true },
   PAYLOAD_TOO_LARGE: { status: 413, message: 'Request body is too large.', retryable: false },

@@ -1,6 +1,7 @@
 import { authenticateDevice, hashAuthValue, hashLocator, lookupSpace, verifyPasswordAuth, verifyRecoveryAuth } from './auth.js';
 import { SyncError } from './errors.js';
 import { readJson, requireVersion } from './validation.js';
+import { lifecycleCommitPrefix, lifecycleProof, lifecycleResponse, replayLifecycle, requireIdempotencyKey } from './idempotency.js';
 
 // Shared protocol names are centralized here; raw credentials are hashed before storage.
 const FIELDS = {
@@ -96,6 +97,13 @@ async function runBatch(db, statements) {
   }
 }
 
+async function commitLifecycle(env, proof, space, status, responseBody, statements, now) {
+  const responseJson = responseBody === null ? null : JSON.stringify(responseBody);
+  const prefix = lifecycleCommitPrefix(env.DB, proof, space, status, responseJson, now);
+  const results = await runBatch(env.DB, [...prefix, ...statements]);
+  return { results: results.slice(prefix.length), response: lifecycleResponse(status, responseJson) };
+}
+
 function insertDevice(db, spaceId, device, tokenDigest, now) {
   return db.prepare(`INSERT INTO devices (id, space_id, token_digest, encrypted_name_json, revoked_at, last_used_at, last_uploaded_at, created_at)
     VALUES (?, ?, ?, ?, NULL, ?, NULL, ?)`).bind(device.deviceId, spaceId, tokenDigest, JSON.stringify(device.encryptedName), now, now);
@@ -104,17 +112,27 @@ function insertDevice(db, spaceId, device, tokenDigest, now) {
 // The guard runs in the same transaction as every mutation. A credential change or
 // revocation after the asynchronous pre-check must abort the entire batch.
 function mutationGuard(db, space, deviceId = null) {
-  return db.prepare(`UPDATE sync_spaces SET auth_digest = CASE WHEN
-    auth_digest = ? AND recovery_auth_digest = ? AND password_wrapped_master_json = ? AND recovery_wrapped_master_json = ?
-    AND (? IS NULL OR EXISTS (SELECT 1 FROM devices WHERE id = ? AND space_id = sync_spaces.id AND revoked_at IS NULL))
-    THEN auth_digest ELSE NULL END WHERE id = ?`)
-    .bind(space.auth_digest, space.recovery_auth_digest, space.password_wrapped_master_json, space.recovery_wrapped_master_json, deviceId, deviceId, space.id);
+  // A guarded UPSERT (rather than UPDATE alone) also fails when the row vanished:
+  // the NULL auth_digest violates NOT NULL, rolling back the idempotency claim too.
+  // No missing space can be recreated by this guard.
+  return db.prepare(`INSERT INTO sync_spaces (id, locator_hash, kdf_json, auth_digest, password_wrapped_master_json,
+    recovery_auth_digest, recovery_wrapped_master_json, minimum_read_version, minimum_write_version, created_at, updated_at)
+    VALUES (?, ?, ?, CASE WHEN EXISTS (SELECT 1 FROM sync_spaces WHERE id = ?
+      AND auth_digest = ? AND recovery_auth_digest = ? AND password_wrapped_master_json = ? AND recovery_wrapped_master_json = ?
+      AND (? IS NULL OR EXISTS (SELECT 1 FROM devices WHERE id = ? AND space_id = sync_spaces.id AND revoked_at IS NULL)))
+      THEN ? ELSE NULL END, ?, ?, ?, ?, ?, ?, ?)
+    ON CONFLICT(id) DO UPDATE SET auth_digest = excluded.auth_digest`)
+    .bind(space.id, space.locator_hash, space.kdf_json, space.id, space.auth_digest, space.recovery_auth_digest,
+      space.password_wrapped_master_json, space.recovery_wrapped_master_json, deviceId, deviceId, space.auth_digest,
+      space.password_wrapped_master_json, space.recovery_auth_digest, space.recovery_wrapped_master_json,
+      space.minimum_read_version, space.minimum_write_version, space.created_at, space.updated_at);
 }
 
 export async function handleSpaceRoute(request, env, operation, encodedCode) {
   const method = operation === 'parameters' ? 'GET' : operation === 'delete' ? 'DELETE' : 'POST';
   if (request.method !== method) throw new SyncError('METHOD_NOT_ALLOWED');
   const body = operation === 'parameters' ? null : await readJson(request, FIELDS[operation]);
+  const key = operation === 'parameters' ? null : requireIdempotencyKey(request);
   requireVersion(request, env, operation === 'parameters' ? 'read' : 'write');
   let locatorHash;
   if (encodedCode !== undefined) {
@@ -124,29 +142,44 @@ export async function handleSpaceRoute(request, env, operation, encodedCode) {
     locatorHash = await hashLocator(syncCode);
   }
 
+  if (operation === 'parameters') {
+    const space = await lookupSpace(locatorHash, env);
+    requireSpaceVersion(request, space, 'read');
+    return Response.json({ spaceId: space.id, kdf: JSON.parse(space.kdf_json), passwordWrappedMaster: JSON.parse(space.password_wrapped_master_json),
+      recoveryWrappedMaster: JSON.parse(space.recovery_wrapped_master_json), minimumReadVersion: space.minimum_read_version, minimumWriteVersion: space.minimum_write_version });
+  }
+  if (operation === 'create') locatorHash = await hashLocator(body.syncCode);
+  const proof = await lifecycleProof(request, operation, body, locatorHash, key);
+  const replay = await replayLifecycle(request, env, proof);
+  if (replay) return replay;
+  try {
+    return await executeLifecycle(request, env, operation, body, locatorHash, proof);
+  } catch (error) {
+    // A winner may have committed after our lookup, invalidating the old credential
+    // before authentication or winning the atomic claim before our mutation batch.
+    const replay = await replayLifecycle(request, env, proof);
+    if (replay) return replay;
+    throw error;
+  }
+}
+
+async function executeLifecycle(request, env, operation, body, locatorHash, proof) {
   if (operation === 'create') {
     validateBody(body, operation, request);
-    locatorHash = await hashLocator(body.syncCode);
     const [authDigest, recoveryDigest, tokenDigest] = await Promise.all([
       hashAuthValue(body.authKey), hashAuthValue(body.recoveryAuthKey), hashAuthValue(body.device.deviceToken)
     ]);
     const now = Date.now();
-    await runBatch(env.DB, [
+    const space = { id: body.spaceId, minimum_read_version: env.MINIMUM_READ_VERSION, minimum_write_version: env.MINIMUM_WRITE_VERSION };
+    const committed = await commitLifecycle(env, proof, space, 201, binding(space, body.device.deviceId), [
       env.DB.prepare(`INSERT INTO sync_spaces (id, locator_hash, kdf_json, auth_digest, password_wrapped_master_json,
         recovery_auth_digest, recovery_wrapped_master_json, minimum_read_version, minimum_write_version, created_at, updated_at)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).bind(body.spaceId, locatorHash, JSON.stringify(body.kdf), authDigest,
         JSON.stringify(body.passwordWrappedMaster), recoveryDigest, JSON.stringify(body.recoveryWrappedMaster),
         env.MINIMUM_READ_VERSION, env.MINIMUM_WRITE_VERSION, now, now),
       insertDevice(env.DB, body.spaceId, body.device, tokenDigest, now)
-    ]);
-    return Response.json(binding({ id: body.spaceId, minimum_read_version: env.MINIMUM_READ_VERSION, minimum_write_version: env.MINIMUM_WRITE_VERSION }, body.device.deviceId), { status: 201 });
-  }
-
-  if (operation === 'parameters') {
-    const space = await lookupSpace(locatorHash, env);
-    requireSpaceVersion(request, space, 'read');
-    return Response.json({ spaceId: space.id, kdf: JSON.parse(space.kdf_json), passwordWrappedMaster: JSON.parse(space.password_wrapped_master_json),
-      recoveryWrappedMaster: JSON.parse(space.recovery_wrapped_master_json), minimumReadVersion: space.minimum_read_version, minimumWriteVersion: space.minimum_write_version });
+    ], now);
+    return committed.response;
   }
 
   let deviceContext;
@@ -158,7 +191,7 @@ export async function handleSpaceRoute(request, env, operation, encodedCode) {
   }
   // Preserve Task 6's generic auth failure/cooldown before deeper business validation.
   const recovery = operation === 'recover' || (operation === 'delete' && Object.hasOwn(body, 'recoveryAuthKey'));
-  const space = await (recovery ? verifyRecoveryAuth(locatorHash, body.recoveryAuthKey, env) : verifyPasswordAuth(locatorHash, body.authKey, env));
+  const space = await (recovery ? verifyRecoveryAuth(locatorHash, body.recoveryAuthKey, env, proof) : verifyPasswordAuth(locatorHash, body.authKey, env, proof));
   requireSpaceVersion(request, space, 'write');
   validateBody(body, operation, request);
   const newRecoveryDigest = body.newRecoveryAuthKey === undefined ? null : await hashAuthValue(body.newRecoveryAuthKey);
@@ -184,7 +217,8 @@ export async function handleSpaceRoute(request, env, operation, encodedCode) {
     statements.push(env.DB.prepare('DELETE FROM sync_spaces WHERE id = ?').bind(space.id),
       env.DB.prepare('DELETE FROM auth_throttles WHERE locator_hash = ?').bind(locatorHash));
   }
-  const result = await runBatch(env.DB, statements);
-  if (result[0].meta.changes !== 1) throw new SyncError('AUTH_FAILED');
-  return operation === 'delete' ? new Response(null, { status: 204 }) : Response.json(binding(space, body.device?.deviceId || deviceContext.deviceId));
+  const committed = await commitLifecycle(env, proof, space, operation === 'delete' ? 204 : 200,
+    operation === 'delete' ? null : binding(space, body.device?.deviceId || deviceContext.deviceId), statements, now);
+  if (committed.results[0].meta.changes !== 1) throw new SyncError('AUTH_FAILED');
+  return committed.response;
 }

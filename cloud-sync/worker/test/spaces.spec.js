@@ -203,7 +203,9 @@ it.each(['authKey', 'recoveryAuthKey'])('permanently deletes only the authentica
   await env.DB.prepare('INSERT INTO snapshots VALUES (?, ?, ?, NULL, ?, ?, 1, 1, ?, ?, ?, ?, 16, 1, ?, ?, 1, NULL)')
     .bind(snapshotId, space.spaceId, space.device.deviceId, 'staged', appVersion, 'identity', '2026-09-11T00:00:00Z', random(32), random(12), random(32), JSON.stringify(blob())).run();
   await env.DB.prepare('INSERT INTO snapshot_chunks VALUES (?, 0, ?, ?)').bind(snapshotId, new Uint8Array(16), random(32)).run();
-  await env.DB.prepare('INSERT INTO upload_sessions VALUES (?, ?, ?, ?, ?, ?, ?, 1, 16, ?, ?, NULL, 2, 1)')
+  await env.DB.prepare(`INSERT INTO upload_sessions (id, space_id, device_id, snapshot_id, operation, idempotency_key,
+    request_json, expected_chunks, expected_bytes, expected_digest, status, result_json, expires_at, created_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, 1, 16, ?, ?, NULL, 2, 1)`)
     .bind(crypto.randomUUID(), space.spaceId, space.device.deviceId, snapshotId, 'upload', crypto.randomUUID(), '{}', random(32), 'pending').run();
   const response = await send('/v1/spaces/current', { [key]: space[key], confirmation: '永久删除同步空间', appVersion }, { method: 'DELETE', device: space.device });
   expect(response.status).toBe(204);

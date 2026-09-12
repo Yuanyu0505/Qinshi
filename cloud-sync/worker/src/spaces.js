@@ -13,14 +13,14 @@ const FIELDS = {
   delete: ['authKey', 'recoveryAuthKey', 'confirmation', 'appVersion']
 };
 
-function requireObject(value, fields) {
+export function requireObject(value, fields) {
   if (!value || Array.isArray(value) || typeof value !== 'object'
     || Object.keys(value).length !== fields.length || fields.some(key => !Object.hasOwn(value, key))) {
     throw new SyncError('INVALID_REQUEST');
   }
 }
 
-function base64url(value, minimumBytes, maximumBytes = minimumBytes) {
+export function base64url(value, minimumBytes, maximumBytes = minimumBytes) {
   if (typeof value !== 'string' || !/^[A-Za-z0-9_-]+$/.test(value)
     || value.length > Math.ceil(maximumBytes * 4 / 3)) throw new SyncError('INVALID_REQUEST');
   let bytes;
@@ -30,11 +30,11 @@ function base64url(value, minimumBytes, maximumBytes = minimumBytes) {
   if (bytes.length < minimumBytes || bytes.length > maximumBytes || canonical !== value) throw new SyncError('INVALID_REQUEST');
 }
 
-function requireId(value) {
+export function requireId(value) {
   if (typeof value !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(value)) throw new SyncError('INVALID_REQUEST');
 }
 
-function requireBlob(value, wrapped = true) {
+export function requireBlob(value, wrapped = true) {
   requireObject(value, ['version', 'algorithm', 'iv', 'ciphertext']);
   if (value.version !== 1 || value.algorithm !== 'AES-256-GCM') throw new SyncError('INVALID_REQUEST');
   base64url(value.iv, 12);

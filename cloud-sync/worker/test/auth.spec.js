@@ -12,10 +12,10 @@ const deviceId = 'test-device-id';
 const encryptedBlob = { version: 1, algorithm: 'AES-256-GCM', iv: random(12), ciphertext: random(48) };
 const device = { deviceId: crypto.randomUUID(), deviceToken: random(32), encryptedName: encryptedBlob };
 const upload = {
-  operation: 'upload', snapshotId: 'snapshot-test', sourceSnapshotId: null, appVersion: '1.0.39',
+  operation: 'upload', snapshotId: crypto.randomUUID(), sourceSnapshotId: null, appVersion: '1.0.39',
   formatVersion: 1, schemaVersion: 1, encoding: 'identity', clientCreatedAt: '2026-09-11T00:00:00Z',
-  dataHash: 'test-data-hash', iv: 'test-iv', ciphertextBytes: 32, chunkCount: 1,
-  ciphertextDigest: 'test-ciphertext-digest', encryptedSummary: encryptedBlob
+  dataHash: random(32), iv: random(12), ciphertextBytes: 32, chunkCount: 1,
+  ciphertextDigest: random(32), encryptedSummary: encryptedBlob
 };
 const recoveryBody = {
   recoveryAuthKey: recovery, newAuthKey: random(32), newPasswordWrappedMaster: encryptedBlob,
@@ -88,11 +88,11 @@ it('accepts a valid digest-backed token and denies it immediately after revocati
   expect((await send('/v1/devices', undefined, { method: 'GET' })).status).toBe(401);
 });
 
-it('implements pairing while leaving upload business operations to later tasks', async () => {
+it('authenticates pairing and creates a staged upload without registering another device', async () => {
   expect((await pair(code, password)).status).toBe(200);
-  expect((await send('/v1/uploads', upload)).status).toBe(404);
+  expect((await send('/v1/uploads', upload)).status).toBe(201);
   expect((await env.DB.prepare('SELECT COUNT(*) AS count FROM devices').first()).count).toBe(2);
-  expect((await env.DB.prepare('SELECT COUNT(*) AS count FROM upload_sessions').first()).count).toBe(0);
+  expect((await env.DB.prepare('SELECT COUNT(*) AS count FROM upload_sessions').first()).count).toBe(1);
 });
 
 it.each([undefined, '', '1.0.38', '1.0', '1.0.39-beta', '01.0.39', '1.0.39.0'])('rejects missing, malformed or old write versions %s', async version => {
@@ -377,7 +377,7 @@ it.each([
   ['uploads', upload]
 ])('accepts the exact %s shared top-level contract', async (route, body) => {
   const path = route === 'uploads' ? '/v1/uploads' : `/v1/spaces/${code}/${route}`;
-  expect((await send(path, body)).status).toBe(route === 'uploads' ? 404 : 200);
+  expect((await send(path, body)).status).toBe(route === 'uploads' ? 201 : 200);
 });
 
 it.each([

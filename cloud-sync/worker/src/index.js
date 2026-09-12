@@ -1,7 +1,7 @@
 import { errorResponse, logRequest, normalizeError, SyncError } from './errors.js';
-import { authenticateDevice } from './auth.js';
-import { readJson, requireVersion } from './validation.js';
 import { handleSpaceRoute } from './spaces.js';
+import { handleDeviceRoute } from './devices.js';
+import { handleSnapshotRoute } from './snapshots.js';
 
 const ALLOWED_LOCAL = /^http:\/\/localhost:(800[0-9]|8010)$/;
 
@@ -35,7 +35,18 @@ export default {
         route = pathname; spaceOperation = pathname.split('/').at(-1);
       }
       if (spaceOperation) allowedMethods = `${spaceOperation === 'parameters' ? 'GET' : spaceOperation === 'delete' ? 'DELETE' : 'POST'}, OPTIONS`;
-      if (pathname === '/v1/uploads' || pathname === '/v1/devices') route = pathname;
+      const deviceRoute = /^\/v1\/devices(?:\/([^/]+))?$/.exec(pathname);
+      const uploadRoute = /^\/v1\/uploads(?:\/([^/]+)\/(commit|chunks\/([^/]+)))?$/.exec(pathname);
+      const snapshotRoute = /^\/v1\/snapshots\/([^/]+)(?:\/chunks\/([^/]+))?$/.exec(pathname);
+      if (deviceRoute) {
+        route = deviceRoute[1] ? '/v1/devices/:deviceId' : '/v1/devices';
+        allowedMethods = deviceRoute[1] ? 'PATCH, DELETE, OPTIONS' : 'GET, OPTIONS';
+      }
+      if (uploadRoute) {
+        route = !uploadRoute[1] ? '/v1/uploads' : uploadRoute[3] !== undefined ? '/v1/uploads/:uploadId/chunks/:index' : '/v1/uploads/:uploadId/commit';
+        allowedMethods = uploadRoute[3] !== undefined ? 'PUT, OPTIONS' : 'POST, OPTIONS';
+      }
+      if (snapshotRoute) route = snapshotRoute[2] === undefined ? '/v1/snapshots/:snapshotId' : '/v1/snapshots/:snapshotId/chunks/:index';
       const requestedOrigin = request.headers.get('Origin');
       if (requestedOrigin !== null) {
         if (!allowedOrigin(requestedOrigin, env.ALLOWED_ORIGINS)) {
@@ -45,7 +56,7 @@ export default {
       }
       if (request.method === 'OPTIONS') {
         response = new Response(null, { status: 204, headers: {
-          'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+          'Access-Control-Allow-Methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS',
           'Access-Control-Allow-Headers': 'Authorization, Content-Type, X-Qin-App-Version, Idempotency-Key, X-Chunk-SHA256'
         } });
       } else if (route === '/v1/health') {
@@ -56,16 +67,13 @@ export default {
         });
       } else if (spaceOperation) {
         response = await handleSpaceRoute(request, env, spaceOperation, spaceRoute?.[1]);
+      } else if (deviceRoute) {
+        response = await handleDeviceRoute(request, env, deviceRoute[1]);
+      } else if (uploadRoute) {
+        response = await handleSnapshotRoute(request, env, !uploadRoute[1] ? 'create' : uploadRoute[3] !== undefined ? 'chunk-put' : 'commit', uploadRoute[1], uploadRoute[3]);
+      } else if (snapshotRoute) {
+        response = await handleSnapshotRoute(request, env, 'read', snapshotRoute[1], snapshotRoute[2]);
       } else {
-        // Upload/device business handlers belong to later tasks; keep their security gates.
-        if (pathname === '/v1/uploads' && request.method === 'POST') {
-          await readJson(request, ['operation', 'snapshotId', 'sourceSnapshotId', 'appVersion', 'formatVersion', 'schemaVersion', 'encoding', 'clientCreatedAt', 'dataHash', 'iv', 'ciphertextBytes', 'chunkCount', 'ciphertextDigest', 'encryptedSummary']);
-          requireVersion(request, env, 'write');
-          await authenticateDevice(request, env);
-        } else if (pathname === '/v1/devices' && request.method === 'GET') {
-          requireVersion(request, env, 'read');
-          await authenticateDevice(request, env);
-        }
         throw new SyncError('NOT_FOUND');
       }
     } catch (error) {

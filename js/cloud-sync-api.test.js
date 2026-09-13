@@ -1,0 +1,276 @@
+"use strict";
+
+const test = require("node:test");
+const assert = require("node:assert/strict");
+const fs = require("node:fs");
+const vm = require("node:vm");
+const { createApi, CloudSyncApiError } = require("./cloud-sync-api.js");
+
+const pairing = { deviceId: "device-1", deviceToken: "test-token" };
+function reply(status, body, headers) {
+  return new Response(status === 204 ? null : JSON.stringify(body), { status, headers });
+}
+function failure(status, code, headers) {
+  return reply(status, { error: { code, message: "untrusted-private-response", retryable: true } }, headers);
+}
+function setup(steps, options = {}) {
+  const calls = [], delays = [];
+  const api = createApi({ enabled: true, apiBaseUrl: "https://sync.example.test/", appVersion: "1.0.39", pairing,
+    sleep: async milliseconds => { delays.push(milliseconds); },
+    fetch: async (url, init) => {
+      calls.push({ url, ...init });
+      assert.ok(steps.length, "Unexpected extra request");
+      const step = steps.shift();
+      if (step instanceof Error) throw step;
+      return typeof step === "function" ? step(init) : step;
+    }, ...options });
+  return { api, calls, delays };
+}
+
+test("GET retries network and 503 at most twice using backoff", async () => {
+  const { api, calls, delays } = setup([new TypeError("private-url"), failure(503, "FREE_QUOTA_EXHAUSTED"), reply(200, { ok: true })]);
+  assert.deepEqual(await api.health(), { ok: true });
+  assert.equal(calls.length, 3);
+  assert.deepEqual(delays, [500, 1500]);
+  assert.equal(calls[0].url, "https://sync.example.test/v1/health");
+});
+
+test("upload writes preserve auth, version, serialized body and idempotency key across retries", async () => {
+  const { api, calls } = setup([new TypeError("offline"), reply(200, { uploadId: "upload-1" })]);
+  const body = { appVersion: "1.0.39", ciphertextDigest: "opaque" };
+  assert.deepEqual(await api.createUpload(body, "stable-op-id"), { uploadId: "upload-1" });
+  for (const call of calls) {
+    assert.equal(call.method, "POST");
+    assert.equal(call.headers["X-Qin-App-Version"], "1.0.39");
+    assert.equal(call.headers.Authorization, "Device device-1.test-token");
+    assert.equal(call.headers["Idempotency-Key"], "stable-op-id");
+    assert.equal(call.headers["Content-Type"], "application/json");
+    assert.equal(call.body, JSON.stringify(body));
+    assert.equal(call.credentials, "omit");
+    assert.equal(call.redirect, "error");
+    assert.equal(call.cache, "no-store");
+    assert.equal(call.referrerPolicy, "no-referrer");
+  }
+});
+
+test("public lifecycle writes generate one key per operation without sending device credentials", async () => {
+  let serial = 0;
+  const { api, calls } = setup([new TypeError("offline"), reply(201, { spaceId: "s" }), reply(201, { spaceId: "t" })], {
+    randomUUID: () => "operation-" + (++serial)
+  });
+  await api.createSpace({ authKey: "opaque" });
+  await api.createSpace({ authKey: "different" });
+  assert.deepEqual(calls.map(call => call.headers["Idempotency-Key"]), ["operation-1", "operation-1", "operation-2"]);
+  assert.ok(calls.every(call => !Object.hasOwn(call.headers, "Authorization")));
+});
+
+test("chunk PUT is retryable without a key and downloads return bytes", async () => {
+  const bytes = new Uint8Array([1, 2, 255]);
+  const { api, calls } = setup([failure(429, "AUTH_COOLDOWN"), reply(204), new Response(bytes)]);
+  assert.equal(await api.putChunk("upload-1", 2, bytes, "A".repeat(43)), null);
+  assert.equal(calls.length, 2);
+  for (const call of calls) {
+    assert.equal(call.method, "PUT");
+    assert.equal(call.url, "https://sync.example.test/v1/uploads/upload-1/chunks/2");
+    assert.equal(call.headers["X-Chunk-SHA256"], "A".repeat(43));
+    assert.equal(call.headers["Content-Type"], "application/octet-stream");
+    assert.deepEqual(call.body, bytes);
+    assert.ok(!Object.hasOwn(call.headers, "Idempotency-Key"));
+  }
+  assert.deepEqual(new Uint8Array(await api.getChunk("snapshot-1", 2)), bytes);
+});
+
+test("non-idempotent device mutations never retry even for network, 429, or 503", async () => {
+  for (const step of [new TypeError("offline"), failure(429, "AUTH_COOLDOWN"), failure(503, "FREE_QUOTA_EXHAUSTED")]) {
+    for (const operation of [api => api.renameDevice("device-2", { encryptedName: {} }), api => api.revokeDevice("device-2", { deleteSnapshots: false })]) {
+      const { api, calls, delays } = setup([step]);
+      await assert.rejects(operation(api), error => error instanceof CloudSyncApiError && error.retryable === false);
+      assert.equal(calls.length, 1);
+      assert.deepEqual(delays, []);
+    }
+  }
+});
+
+test("Retry-After seconds and HTTP dates are honored without shortening backoff", async () => {
+  const { api, delays } = setup([
+    failure(429, "AUTH_COOLDOWN", { "Retry-After": "2" }),
+    failure(503, "FREE_QUOTA_EXHAUSTED", { "Retry-After": "Sun, 13 Sep 2026 00:00:04 GMT" }), reply(200, {})
+  ], { now: () => Date.parse("2026-09-13T00:00:00Z") });
+  await api.health();
+  assert.deepEqual(delays, [2000, 4000]);
+  const fallback = setup([failure(503, "FREE_QUOTA_EXHAUSTED", { "Retry-After": "invalid" }), failure(503, "FREE_QUOTA_EXHAUSTED", { "Retry-After": "0" }), reply(200, {})]);
+  await fallback.api.health();
+  assert.deepEqual(fallback.delays, [500, 1500]);
+});
+
+test("exhausted offline and quota retries expose only safe dedicated errors", async () => {
+  for (const [steps, code, text] of [
+    [Array.from({ length: 3 }, () => new TypeError("secret-url-token")), "OFFLINE", /网络/],
+    [Array.from({ length: 3 }, () => failure(503, "FREE_QUOTA_EXHAUSTED")), "FREE_QUOTA_EXHAUSTED", /额度/]
+  ]) {
+    const { api, calls } = setup(steps);
+    await assert.rejects(api.health(), error => error.code === code && text.test(error.message) && !/secret|untrusted/.test(String(error)));
+    assert.equal(calls.length, 3);
+  }
+});
+
+test("401 on a paired endpoint becomes invalid pairing without deleting storage", async () => {
+  for (const code of ["AUTH_FAILED", "DEVICE_REVOKED", "UNKNOWN"]) {
+    const { api, calls, delays } = setup([failure(401, code)]);
+    await assert.rejects(api.listDevices(), error => error.code === "DEVICE_REVOKED" && error.pairingInvalid && !error.retryable && /重新配对/.test(error.message));
+    assert.equal(calls.length, 1);
+    assert.deepEqual(delays, []);
+    assert.deepEqual(pairing, { deviceId: "device-1", deviceToken: "test-token" });
+  }
+});
+
+test("public auth failures, old versions and deleted snapshots remain distinguishable", async () => {
+  for (const [status, serverCode, invoke, expectedCode, text] of [
+    [401, "AUTH_FAILED", api => api.pair("ABCD", {}, "pair-key"), "AUTH_FAILED", /验证/],
+    [426, "UPGRADE_REQUIRED", api => api.listDevices(), "UPGRADE_REQUIRED", /更新/],
+    [404, "NOT_FOUND", api => api.getSnapshot("removed"), "SOURCE_DELETED", /删除/],
+    [404, "NOT_FOUND", api => api.getChunk("removed", 0), "SOURCE_DELETED", /删除/],
+    [404, "NOT_FOUND", api => api.listDevices(), "NOT_FOUND", /不存在/],
+    [500, "INTERNAL_ERROR", api => api.health(), "INTERNAL_ERROR", /服务/],
+    [409, "IDEMPOTENCY_CONFLICT", api => api.createUpload({}, "old"), "IDEMPOTENCY_CONFLICT", /重复/]
+  ]) {
+    const { api, calls } = setup([failure(status, serverCode)]);
+    await assert.rejects(invoke(api), error => error.code === expectedCode && text.test(error.message) && !error.pairingInvalid);
+    assert.equal(calls.length, 1);
+  }
+});
+
+test("disabled or unsafe base URL fails closed before fetch", async () => {
+  const cases = [{ enabled: false }, { apiBaseUrl: "" }, { apiBaseUrl: "http://sync.example.test" },
+    { apiBaseUrl: "https://user:password@sync.example.test" }, { apiBaseUrl: "https://sync.example.test/?token=secret" },
+    { apiBaseUrl: "https://sync.example.test/#fragment" }, { enabled: "true" }];
+  for (const config of cases) {
+    const { api, calls } = setup([], config);
+    await assert.rejects(api.health(), { code: "SYNC_NOT_CONFIGURED" });
+    assert.equal(calls.length, 0);
+  }
+  const context = {};
+  vm.runInNewContext(fs.readFileSync(require.resolve("./cloud-sync-config.js"), "utf8"), context);
+  assert.equal(context.QinshiCloudSyncConfig.enabled, false);
+  assert.equal(context.QinshiCloudSyncConfig.apiBaseUrl, "");
+  assert.ok(Object.isFrozen(context.QinshiCloudSyncConfig));
+});
+
+test("missing or malformed pairing cannot send an authenticated request", async () => {
+  for (const saved of [null, {}, { deviceId: "id", deviceToken: "bad\r\ntoken" }, { deviceId: 123, deviceToken: 456 }]) {
+    const { api, calls } = setup([], { pairing: saved });
+    await assert.rejects(api.listDevices(), { code: "PAIRING_REQUIRED" });
+    assert.equal(calls.length, 0);
+  }
+});
+
+test("unsafe paths, indices, operation keys and chunk headers fail before transport", async () => {
+  const operations = [
+    api => api.getSnapshot(".."), api => api.getSnapshot("\ud800"),
+    api => api.getChunk("snapshot", -1), api => api.getChunk("snapshot", 0.5),
+    api => api.createUpload({}, ""), api => api.createUpload({}, "injected\r\nheader"),
+    api => api.putChunk("upload", 0, new Uint8Array([1]), "bad\r\nheader"),
+    api => api.putChunk("upload", 0, new Uint8Array([1]), undefined)
+  ];
+  for (const invoke of operations) {
+    const { api, calls } = setup([]);
+    await assert.rejects(invoke(api), { code: "INVALID_REQUEST" });
+    assert.equal(calls.length, 0);
+  }
+});
+
+test("retries retain the original pairing and chunk bytes even when callers mutate them", async () => {
+  const bytes = new Uint8Array([1, 2, 3]);
+  let reads = 0;
+  const { api, calls } = setup([
+    () => { bytes.fill(0); throw new TypeError("offline"); }, reply(204)
+  ], { getPairing: async () => { reads++; return { deviceId: "device", deviceToken: "token-" + reads }; } });
+  await api.putChunk("upload", 0, bytes, "A".repeat(43));
+  assert.equal(reads, 1);
+  assert.deepEqual(calls.map(call => [...call.body]), [[1, 2, 3], [1, 2, 3]]);
+  assert.deepEqual(calls.map(call => call.headers.Authorization), ["Device device.token-1", "Device device.token-1"]);
+});
+
+test("missing or malformed app versions are rejected before fetch", async () => {
+  for (const appVersion of [undefined, "", "1.0.39\r\nsecret", "not-a-version"]) {
+    const { api, calls } = setup([], { appVersion });
+    await assert.rejects(api.health(), { code: "UPGRADE_REQUIRED" });
+    assert.equal(calls.length, 0);
+  }
+});
+
+test("all endpoint methods use the actual Worker routes and encoded segments", async () => {
+  const operations = [
+    [api => api.getParameters("AB CD-EF"), "GET", "/v1/spaces/AB%20CD-EF/parameters", false],
+    [api => api.pair("ABC", {}, "k"), "POST", "/v1/spaces/ABC/pair", false],
+    [api => api.recover("ABC", {}, "k"), "POST", "/v1/spaces/ABC/recover", false],
+    [api => api.listDevices(), "GET", "/v1/devices", true],
+    [api => api.renameDevice("other", { encryptedName: "opaque" }), "PATCH", "/v1/devices/other", true],
+    [api => api.revokeDevice("other", { deleteSnapshots: true }), "DELETE", "/v1/devices/other", true],
+    [api => api.commitUpload("upload", {}, "k"), "POST", "/v1/uploads/upload/commit", true],
+    [api => api.getSnapshot("snapshot"), "GET", "/v1/snapshots/snapshot", true],
+    [api => api.changePassword({}, "k"), "POST", "/v1/security/password", true],
+    [api => api.rotateRecoveryKey({}, "k"), "POST", "/v1/security/recovery-key", true],
+    [api => api.deleteSpace({}, "k"), "DELETE", "/v1/spaces/current", true]
+  ];
+  for (const [invoke, method, path, authenticated] of operations) {
+    const { api, calls } = setup([reply(200, { ok: true })], { apiBaseUrl: "https://sync.example.test/base///" });
+    assert.deepEqual(await invoke(api), { ok: true });
+    assert.equal(calls[0].url, "https://sync.example.test/base" + path);
+    assert.equal(calls[0].method, method);
+    assert.equal(Object.hasOwn(calls[0].headers, "Authorization"), authenticated);
+  }
+});
+
+test("the 15-second timeout covers headers and response body, aborting each attempt", async () => {
+  for (const stalledBody of [false, true]) {
+    const timers = new Map(), calls = [];
+    let timerId = 0;
+    const api = createApi({ enabled: true, apiBaseUrl: "https://sync.example.test", appVersion: "1.0.39", sleep: async () => {},
+      setTimeout: (callback, ms) => { assert.equal(ms, 15000); timers.set(++timerId, callback); return timerId; },
+      clearTimeout: id => timers.delete(id),
+      fetch: async (url, init) => {
+        calls.push(init);
+        if (stalledBody) return { ok: true, status: 200, json: () => new Promise(() => {}) };
+        return new Promise(() => {});
+      }
+    });
+    const result = assert.rejects(api.health(), { code: "TIMEOUT" });
+    for (let index = 0; index < 3; index++) {
+      await new Promise(resolve => setImmediate(resolve));
+      assert.equal(timers.size, 1);
+      [...timers.values()][0]();
+    }
+    await result;
+    assert.equal(calls.length, 3);
+    assert.ok(calls.every(call => call.signal.aborted));
+    assert.equal(timers.size, 0);
+  }
+});
+
+test("malformed success JSON and unknown server errors do not leak or trigger network retries", async () => {
+  for (const step of [new Response("private-ciphertext", { status: 200 }), failure(400, "secret-code-token")]) {
+    const { api, calls } = setup([step]);
+    await assert.rejects(api.health(), error => ["INVALID_RESPONSE", "HTTP_ERROR"].includes(error.code) && !/private|secret|untrusted/.test(JSON.stringify(error) + error.message));
+    assert.equal(calls.length, 1);
+  }
+});
+
+test("browser global resolves public config, PWA version and latest pairing without logging secrets", async () => {
+  const logs = [], calls = [];
+  let token = "first-token";
+  const context = { URL, AbortController, setTimeout, clearTimeout,
+    QinshiCloudSyncConfig: { enabled: true, apiBaseUrl: "https://sync.example.test" }, QinshiPWA: { version: "1.0.40" },
+    QinshiCloudSyncStorage: { loadPairing: async () => ({ deviceId: "device-1", deviceToken: token }),
+      forgetPairing: () => assert.fail("Transport must not delete pairing") },
+    console: Object.fromEntries(["log", "info", "warn", "error", "debug"].map(method => [method, (...args) => logs.push(args)])),
+    fetch: async (url, init) => { calls.push(init); return failure(401, "AUTH_FAILED"); }
+  };
+  vm.runInNewContext(fs.readFileSync(require.resolve("./cloud-sync-api.js"), "utf8"), context);
+  await assert.rejects(context.QinshiCloudSyncApi.listDevices(), { code: "DEVICE_REVOKED" });
+  token = "second-token";
+  await assert.rejects(context.QinshiCloudSyncApi.listDevices(), { code: "DEVICE_REVOKED" });
+  assert.equal(calls[0].headers["X-Qin-App-Version"], "1.0.40");
+  assert.equal(calls[1].headers.Authorization, "Device device-1.second-token");
+  assert.deepEqual(logs, []);
+});

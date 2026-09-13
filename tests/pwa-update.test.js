@@ -41,7 +41,9 @@ async function loadPwa(registration, options = {}) {
   const fetchCalls = [];
   const deletedCaches = [];
   const replacedLocations = [];
+  let reloadCalls = 0;
   const localStorageData = new Map([['qinshi-progress', 'keep-me']]);
+  const sessionStorageData = new Map(options.sessionEntries || []);
   let fetchAttempt = 0;
   const serviceWorker = {
     controller: {},
@@ -57,13 +59,18 @@ async function loadPwa(registration, options = {}) {
     location: {
       protocol: 'https:',
       href: 'https://example.test/Qinshi/?view=atlas#settings',
-      reload() {},
+      reload() { reloadCalls += 1; },
       replace(url) { replacedLocations.push(String(url)); }
     },
     navigator: { serviceWorker },
     matchMedia: () => ({ matches: false }),
     addEventListener(type, listener) { windowListeners.set(type, listener); },
     QinshiPWA: null
+  };
+  windowObject.sessionStorage = {
+    getItem(key) { return sessionStorageData.get(key) || null; },
+    setItem(key, value) { sessionStorageData.set(key, String(value)); },
+    removeItem(key) { sessionStorageData.delete(key); }
   };
   const fetchImpl = options.fetch || (async () => ({
     ok: true,
@@ -91,6 +98,7 @@ async function loadPwa(registration, options = {}) {
       getItem(key) { return localStorageData.get(key) || null; },
       setItem(key, value) { localStorageData.set(key, String(value)); }
     },
+    sessionStorage: windowObject.sessionStorage,
     Promise,
     Date,
     URL,
@@ -114,9 +122,160 @@ async function loadPwa(registration, options = {}) {
     documentListeners,
     deletedCaches,
     replacedLocations,
-    localStorageData
+    localStorageData,
+    sessionStorageData,
+    serviceWorkerListeners,
+    get reloadCalls() { return reloadCalls; }
   };
 }
+
+function idleRegistration(overrides = {}) {
+  return { waiting: null, installing: null, addEventListener() {}, async update() {}, ...overrides };
+}
+
+const currentLimits = { minimumReadVersion: '1.0.39', minimumWriteVersion: '1.0.39' };
+
+test('同步预检重新读取无缓存版本信标，当前版本满足读写要求时放行', async () => {
+  let updates = 0;
+  const loaded = await loadPwa(idleRegistration({ async update() { updates += 1; } }));
+  const before = loaded.fetchCalls.length;
+  const result = await loaded.api.ensureCurrentForSync(currentLimits);
+  assert.equal(result.ready, true);
+  assert.equal(result.updateRequired, false);
+  assert.equal(loaded.fetchCalls.length, before + 1);
+  assert.equal(loaded.fetchCalls.at(-1)[1].cache, 'no-store');
+  assert.equal(loaded.fetchCalls.at(-1)[1].headers['Cache-Control'], 'no-cache');
+  assert.equal(updates, 0);
+});
+
+for (const requirement of [
+  { name: '公网版本', remote: '1.0.40', limits: currentLimits },
+  { name: 'Worker 最低读版本', remote: '1.0.39', limits: { ...currentLimits, minimumReadVersion: '1.0.40' } },
+  { name: 'Worker 最低写版本', remote: '1.0.39', limits: { ...currentLimits, minimumWriteVersion: '1.0.100' } }
+]) {
+  test(`同步预检在${requirement.name}要求更新时阻断，且不能自动应用或删除待恢复操作`, async () => {
+    const messages = [];
+    const pending = JSON.stringify({ type: 'pull', snapshotId: 'immutable-snapshot-1' });
+    let updates = 0;
+    const registration = idleRegistration({ async update() { updates += 1; } });
+    const loaded = await loadPwa(registration, {
+      sessionEntries: [['qin-cloud-sync-pending', pending]],
+      fetch: async () => ({ ok: true, async json() { return { version: requirement.remote }; } })
+    });
+    const before = updates;
+    registration.update = async function () {
+      updates += 1;
+      this.waiting = { postMessage(message) { messages.push(message); } };
+    };
+    const result = await loaded.api.ensureCurrentForSync(requirement.limits);
+    assert.equal(result.ready, false);
+    assert.equal(result.updateRequired, true);
+    assert.equal(updates, before + 1);
+    assert.equal(loaded.elements.get('pwa-update-notice').hidden, false);
+    assert.equal(loaded.sessionStorageData.get('qin-cloud-sync-pending'), pending);
+    assert.equal(loaded.localStorageData.get('qinshi-progress'), 'keep-me');
+    assert.deepEqual(messages, []);
+    assert.deepEqual(loaded.deletedCaches, []);
+    assert.deepEqual(loaded.replacedLocations, []);
+    loaded.serviceWorkerListeners.get('controllerchange')();
+    assert.equal(loaded.reloadCalls, 0);
+  });
+}
+
+test('同步预检按数值比较版本，公网较旧或 Worker 最低版本较低不阻断', async () => {
+  const loaded = await loadPwa(idleRegistration(), {
+    fetch: async () => ({ ok: true, async json() { return { version: '1.0.9' }; } })
+  });
+  const result = await loaded.api.ensureCurrentForSync({ minimumReadVersion: '1.0.9', minimumWriteVersion: '1.0.10' });
+  assert.equal(result.ready, true);
+  assert.equal(result.updateRequired, false);
+});
+
+test('同步预检离线时重试三次后阻断，不误报必须更新或触发重载', async () => {
+  let offline = false;
+  const loaded = await loadPwa(idleRegistration(), {
+    fetch: async () => {
+      if (offline) throw new Error('offline');
+      return { ok: true, async json() { return { version: '1.0.39' }; } };
+    }
+  });
+  offline = true;
+  const before = loaded.fetchCalls.length;
+  const result = await loaded.api.ensureCurrentForSync(currentLimits);
+  assert.equal(result.ready, false);
+  assert.equal(result.updateRequired, false);
+  assert.equal(loaded.fetchCalls.length, before + 3);
+  assert.match(loaded.elements.get('pwa-status').textContent, /失败/);
+  assert.equal(loaded.reloadCalls, 0);
+  assert.deepEqual(loaded.deletedCaches, []);
+});
+
+test('无效或缺失的 Worker 版本约束不能放行同步', async () => {
+  const loaded = await loadPwa(idleRegistration());
+  for (const limits of [undefined, {}, { ...currentLimits, minimumWriteVersion: 'not-a-version' }]) {
+    const result = await loaded.api.ensureCurrentForSync(limits);
+    assert.equal(result.ready, false);
+    assert.equal(result.updateRequired, false);
+  }
+});
+
+test('无效公网版本不能放行同步', async () => {
+  const loaded = await loadPwa(idleRegistration(), {
+    fetch: async () => ({ ok: true, async json() { return { version: 'not-a-version' }; } })
+  });
+  const result = await loaded.api.ensureCurrentForSync(currentLimits);
+  assert.equal(result.ready, false);
+  assert.equal(result.updateRequired, false);
+});
+
+test('已确定必须更新但 Service Worker 更新失败时仍保留 updateRequired', async () => {
+  let attempts = 0;
+  const loaded = await loadPwa(idleRegistration({ async update() { attempts += 1; throw new Error('offline'); } }));
+  const result = await loaded.api.ensureCurrentForSync({ ...currentLimits, minimumWriteVersion: '1.0.40' });
+  assert.equal(result.ready, false);
+  assert.equal(result.updateRequired, true);
+  assert.equal(attempts, 3);
+  assert.match(loaded.elements.get('pwa-status').textContent, /强制修复更新/);
+});
+
+test('显式更新在 worker 未就绪时保留 pending 并提示强制修复更新', async () => {
+  const pending = JSON.stringify({ type: 'restore', snapshotId: 'history-snapshot-1' });
+  const loaded = await loadPwa(idleRegistration(), { sessionEntries: [['qin-cloud-sync-pending', pending]] });
+  assert.equal(loaded.api.applyWaitingUpdate(), false);
+  assert.match(loaded.elements.get('pwa-status').textContent, /强制修复更新/);
+  assert.equal(loaded.sessionStorageData.get('qin-cloud-sync-pending'), pending);
+  loaded.serviceWorkerListeners.get('controllerchange')();
+  assert.equal(loaded.reloadCalls, 0);
+});
+
+test('只有显式应用 waiting worker 后才重载一次，精确 pending ID 跨重载保持不变', async () => {
+  const messages = [];
+  const pending = JSON.stringify({ type: 'pull', snapshotId: 'immutable-snapshot-1' });
+  const loaded = await loadPwa(idleRegistration({ waiting: { postMessage(message) { messages.push(message.type); } } }), {
+    sessionEntries: [['qin-cloud-sync-pending', pending]]
+  });
+  loaded.serviceWorkerListeners.get('controllerchange')();
+  assert.equal(loaded.reloadCalls, 0);
+  assert.equal(loaded.api.applyWaitingUpdate(), true);
+  assert.deepEqual(messages, ['SKIP_WAITING']);
+  assert.equal(loaded.reloadCalls, 0);
+  loaded.serviceWorkerListeners.get('controllerchange')();
+  loaded.serviceWorkerListeners.get('controllerchange')();
+  assert.equal(loaded.reloadCalls, 1);
+  assert.equal(loaded.sessionStorageData.get('qin-cloud-sync-pending'), pending);
+});
+
+test('显式更新发送失败返回 false，不能让后续 controllerchange 意外重载', async () => {
+  const pending = JSON.stringify({ type: 'pull', snapshotId: 'immutable-snapshot-1' });
+  const loaded = await loadPwa(idleRegistration({ waiting: { postMessage() { throw new Error('worker unavailable'); } } }), {
+    sessionEntries: [['qin-cloud-sync-pending', pending]]
+  });
+  assert.equal(loaded.api.applyWaitingUpdate(), false);
+  loaded.serviceWorkerListeners.get('controllerchange')();
+  assert.equal(loaded.reloadCalls, 0);
+  assert.equal(loaded.sessionStorageData.get('qin-cloud-sync-pending'), pending);
+  assert.match(loaded.elements.get('pwa-status').textContent, /强制修复更新/);
+});
 
 test('注册 Service Worker 时绕过 HTTP 缓存检查最新版', async () => {
   const registration = {

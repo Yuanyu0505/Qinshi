@@ -159,6 +159,50 @@
     return requestUpdateCheck(false);
   }
 
+  function compareVersions(left, right) {
+    function parts(version) {
+      if (typeof version !== "string" || !/^\d+\.\d+\.\d+$/.test(version)) {
+        throw new Error("版本格式不正确。");
+      }
+      return version.split(".").map(function (part) { return part.replace(/^0+(?=\d)/, ""); });
+    }
+    var a = parts(left);
+    var b = parts(right);
+    for (var index = 0; index < 3; index += 1) {
+      if (a[index].length !== b[index].length) return a[index].length < b[index].length ? -1 : 1;
+      if (a[index] !== b[index]) return a[index] < b[index] ? -1 : 1;
+    }
+    return 0;
+  }
+
+  function ensureCurrentForSync(workerLimits) {
+    var updateRequired = false;
+    setStatus("正在检查同步所需版本…", false);
+    return withRetry(fetchRemoteVersion).then(function (remoteVersion) {
+      var limits = workerLimits || {};
+      // Validate every requirement before deciding; missing limits must fail closed.
+      var publicVersion = compareVersions(APP_VERSION, remoteVersion);
+      var readVersion = compareVersions(APP_VERSION, limits.minimumReadVersion);
+      var writeVersion = compareVersions(APP_VERSION, limits.minimumWriteVersion);
+      updateRequired = publicVersion < 0 || readVersion < 0 || writeVersion < 0;
+      if (!updateRequired) {
+        setStatus("当前版本满足同步要求。", false);
+        return { ready: true, updateRequired: false };
+      }
+      setStatus("同步前需要更新工具，正在准备更新…", false);
+      var preparation = registration ? updateRegistration() : Promise.resolve(false);
+      return preparation.then(function (hasWaitingWorker) {
+        if (!hasWaitingWorker) setStatus("同步前需要更新工具；更新尚未就绪，请稍后重试或使用“强制修复更新”。", true);
+        return { ready: false, updateRequired: true };
+      });
+    }).catch(function () {
+      setStatus(updateRequired ?
+        "同步前需要更新工具；准备更新失败，请稍后重试或使用“强制修复更新”。" :
+        "同步版本检查失败，请检查网络和版本信息后重试。", true);
+      return { ready: false, updateRequired: updateRequired };
+    });
+  }
+
   function registerServiceWorker() {
     if (window.location.protocol === "file:") {
       setModeStatus("本地文件模式");
@@ -184,10 +228,21 @@
   }
 
   function applyUpdate() {
-    if (!waitingWorker) return;
+    syncRegistrationState();
+    if (!waitingWorker) {
+      setStatus("更新尚未就绪，同步操作仍待继续；请稍后重试或使用“强制修复更新”。", true);
+      return false;
+    }
     reloadAfterUpdate = true;
     setStatus("正在切换到新版本…", false);
-    waitingWorker.postMessage({ type: "SKIP_WAITING" });
+    try {
+      waitingWorker.postMessage({ type: "SKIP_WAITING" });
+      return true;
+    } catch (error) {
+      reloadAfterUpdate = false;
+      setStatus("切换版本失败，同步操作仍待继续；请稍后重试或使用“强制修复更新”。", true);
+      return false;
+    }
   }
 
   function repairUpdate() {
@@ -278,6 +333,8 @@
 
   window.QinshiPWA = {
     checkForUpdate: checkForUpdate,
+    ensureCurrentForSync: ensureCurrentForSync,
+    applyWaitingUpdate: applyUpdate,
     repairUpdate: repairUpdate,
     version: APP_VERSION
   };

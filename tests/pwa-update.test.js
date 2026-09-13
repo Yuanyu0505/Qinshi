@@ -125,6 +125,7 @@ async function loadPwa(registration, options = {}) {
     localStorageData,
     sessionStorageData,
     serviceWorkerListeners,
+    serviceWorker,
     get reloadCalls() { return reloadCalls; }
   };
 }
@@ -165,7 +166,7 @@ for (const requirement of [
     const before = updates;
     registration.update = async function () {
       updates += 1;
-      this.waiting = { postMessage(message) { messages.push(message); } };
+      this.waiting = { state: 'installed', postMessage(message) { messages.push(message); } };
     };
     const result = await loaded.api.ensureCurrentForSync(requirement.limits);
     assert.equal(result.ready, false);
@@ -251,7 +252,7 @@ test('显式更新在 worker 未就绪时保留 pending 并提示强制修复更
 test('只有显式应用 waiting worker 后才重载一次，精确 pending ID 跨重载保持不变', async () => {
   const messages = [];
   const pending = JSON.stringify({ type: 'pull', snapshotId: 'immutable-snapshot-1' });
-  const loaded = await loadPwa(idleRegistration({ waiting: { postMessage(message) { messages.push(message.type); } } }), {
+  const loaded = await loadPwa(idleRegistration({ waiting: { state: 'installed', postMessage(message) { messages.push(message.type); } } }), {
     sessionEntries: [['qin-cloud-sync-pending', pending]]
   });
   loaded.serviceWorkerListeners.get('controllerchange')();
@@ -267,7 +268,7 @@ test('只有显式应用 waiting worker 后才重载一次，精确 pending ID �
 
 test('显式更新发送失败返回 false，不能让后续 controllerchange 意外重载', async () => {
   const pending = JSON.stringify({ type: 'pull', snapshotId: 'immutable-snapshot-1' });
-  const loaded = await loadPwa(idleRegistration({ waiting: { postMessage() { throw new Error('worker unavailable'); } } }), {
+  const loaded = await loadPwa(idleRegistration({ waiting: { state: 'installed', postMessage() { throw new Error('worker unavailable'); } } }), {
     sessionEntries: [['qin-cloud-sync-pending', pending]]
   });
   assert.equal(loaded.api.applyWaitingUpdate(), false);
@@ -275,6 +276,47 @@ test('显式更新发送失败返回 false，不能让后续 controllerchange �
   assert.equal(loaded.reloadCalls, 0);
   assert.equal(loaded.sessionStorageData.get('qin-cloud-sync-pending'), pending);
   assert.match(loaded.elements.get('pwa-status').textContent, /强制修复更新/);
+});
+
+test('其他标签页激活旧 waiting worker 后显式更新必须阻断并保留精确 pending', async () => {
+  const messages = [];
+  const worker = { state: 'installed', postMessage(message) { messages.push(message.type); } };
+  const registration = idleRegistration({ waiting: worker });
+  const pending = JSON.stringify({ type: 'pull', snapshotId: 'immutable-snapshot-1' });
+  const loaded = await loadPwa(registration, { sessionEntries: [['qin-cloud-sync-pending', pending]] });
+  assert.equal(loaded.elements.get('pwa-update-notice').hidden, false);
+
+  registration.waiting = null;
+  worker.state = 'activated';
+  loaded.serviceWorkerListeners.get('controllerchange')();
+  assert.equal(loaded.reloadCalls, 0);
+  assert.equal(loaded.api.applyWaitingUpdate(), false);
+  assert.deepEqual(messages, []);
+  loaded.serviceWorkerListeners.get('controllerchange')();
+  assert.equal(loaded.reloadCalls, 0);
+  assert.equal(loaded.sessionStorageData.get('qin-cloud-sync-pending'), pending);
+  assert.equal(loaded.elements.get('pwa-update-notice').hidden, true);
+  assert.match(loaded.elements.get('pwa-status').textContent, /强制修复更新/);
+  const fetches = loaded.fetchCalls.length;
+  assert.equal(await loaded.api.checkForUpdate(), false);
+  assert.equal(loaded.fetchCalls.length, fetches + 1);
+});
+
+test('显式更新不能使用非 installed 状态的 worker 或无 controller 的首次安装', async () => {
+  for (const state of ['installing', 'activating', 'activated', 'redundant', undefined]) {
+    const messages = [];
+    const registration = idleRegistration({ waiting: { state, postMessage(message) { messages.push(message.type); } } });
+    const loaded = await loadPwa(registration);
+    assert.equal(loaded.api.applyWaitingUpdate(), false, String(state));
+    assert.deepEqual(messages, []);
+    loaded.serviceWorkerListeners.get('controllerchange')();
+    assert.equal(loaded.reloadCalls, 0);
+  }
+  const messages = [];
+  const loaded = await loadPwa(idleRegistration({ waiting: { state: 'installed', postMessage(message) { messages.push(message.type); } } }));
+  loaded.serviceWorker.controller = null;
+  assert.equal(loaded.api.applyWaitingUpdate(), false);
+  assert.deepEqual(messages, []);
 });
 
 test('注册 Service Worker 时绕过 HTTP 缓存检查最新版', async () => {
@@ -372,7 +414,7 @@ test('强制修复只移除本站 Service Worker 和 PWA 缓存并保留个人�
 });
 
 test('检查更新会识别 update 完成后已经进入 waiting 的新版', async () => {
-  const waitingWorker = { postMessage() {} };
+  const waitingWorker = { state: 'installed', postMessage() {} };
   const registration = {
     waiting: null,
     installing: null,
@@ -387,9 +429,10 @@ test('检查更新会识别 update 完成后已经进入 waiting 的新版', asy
 
 test('注册完成时已在 installing 的新版安装后会立即显示更新提示', async () => {
   const listeners = new Map();
+  const messages = [];
   const installingWorker = {
     state: 'installing',
-    postMessage() {},
+    postMessage(message) { messages.push(message.type); },
     addEventListener(type, listener) { listeners.set(type, listener); }
   };
   const registration = {
@@ -398,7 +441,7 @@ test('注册完成时已在 installing 的新版安装后会立即显示更新�
     addEventListener() {},
     async update() {}
   };
-  const { elements } = await loadPwa(registration);
+  const { api, elements } = await loadPwa(registration);
 
   assert.equal(typeof listeners.get('statechange'), 'function');
   registration.waiting = installingWorker;
@@ -406,4 +449,6 @@ test('注册完成时已在 installing 的新版安装后会立即显示更新�
   listeners.get('statechange')();
 
   assert.equal(elements.get('pwa-update-notice').hidden, false);
+  assert.equal(api.applyWaitingUpdate(), true);
+  assert.deepEqual(messages, ['SKIP_WAITING']);
 });

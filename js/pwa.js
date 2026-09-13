@@ -38,12 +38,22 @@
     setStatus("发现新版本，点击“立即更新”后生效。", false);
   }
 
+  function syncWaitingWorker() {
+    var worker = registration && registration.waiting;
+    if (worker && worker.state === "installed" && navigator.serviceWorker.controller) {
+      showUpdate(worker);
+    } else {
+      waitingWorker = null;
+      var notice = byId("pwa-update-notice");
+      if (notice) notice.hidden = true;
+    }
+    return Boolean(waitingWorker);
+  }
+
   function watchInstalling(worker) {
     if (!worker) return;
     function handleStateChange() {
-      if (worker.state === "installed" && navigator.serviceWorker.controller) {
-        showUpdate(registration.waiting || worker);
-      }
+      syncWaitingWorker();
     }
     if (worker === watchedInstallingWorker) {
       handleStateChange();
@@ -55,8 +65,8 @@
   }
 
   function syncRegistrationState() {
+    syncWaitingWorker();
     if (!registration) return false;
-    if (registration.waiting && navigator.serviceWorker.controller) showUpdate(registration.waiting);
     watchInstalling(registration.installing);
     return Boolean(waitingWorker);
   }
@@ -230,6 +240,7 @@
   function applyUpdate() {
     syncRegistrationState();
     if (!waitingWorker) {
+      reloadAfterUpdate = false;
       setStatus("更新尚未就绪，同步操作仍待继续；请稍后重试或使用“强制修复更新”。", true);
       return false;
     }

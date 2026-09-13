@@ -13,6 +13,12 @@ function reply(status, body, headers) {
 function failure(status, code, headers) {
   return reply(status, { error: { code, message: "untrusted-private-response", retryable: true } }, headers);
 }
+function interruptedResponse() {
+  return new Response(new ReadableStream({
+    start(controller) { controller.enqueue(new TextEncoder().encode('{"private":"partial')); },
+    pull(controller) { controller.error(new TypeError("private-body-transport-detail")); }
+  }), { status: 200 });
+}
 function setup(steps, options = {}) {
   const calls = [], delays = [];
   const api = createApi({ enabled: true, apiBaseUrl: "https://sync.example.test/", appVersion: "1.0.39", pairing,
@@ -121,6 +127,60 @@ test("401 on a paired endpoint becomes invalid pairing without deleting storage"
     assert.equal(calls.length, 1);
     assert.deepEqual(delays, []);
     assert.deepEqual(pairing, { deviceId: "device-1", deviceToken: "test-token" });
+  }
+});
+
+test("dual-auth 401 preserves pairing when a single device-only confirmation succeeds", async () => {
+  for (const method of ["changePassword", "rotateRecoveryKey", "deleteSpace"]) {
+    let pairingReads = 0;
+    const { api, calls, delays } = setup([
+      failure(401, "AUTH_FAILED"), reply(200, { devices: [] })
+    ], { getPairing: async () => { pairingReads++; return { deviceId: "device", deviceToken: "token-" + pairingReads }; } });
+    await assert.rejects(api[method]({ authKey: "wrong-private-auth" }, "security-key"), { code: "AUTH_FAILED", status: 401, pairingInvalid: false, retryable: false });
+    assert.equal(pairingReads, 1);
+    assert.equal(calls.length, 2);
+    assert.deepEqual(delays, []);
+    assert.equal(calls[1].url, "https://sync.example.test/v1/devices");
+    assert.equal(calls[1].method, "GET");
+    assert.deepEqual(calls[1].headers, { "X-Qin-App-Version": "1.0.39", Authorization: "Device device.token-1" });
+    assert.equal(calls[1].body, undefined);
+    assert.equal(calls[0].headers["Idempotency-Key"], "security-key");
+  }
+});
+
+test("dual-auth 401 marks revoked only after one device-only confirmation also returns 401", async () => {
+  for (const method of ["changePassword", "rotateRecoveryKey", "deleteSpace"]) {
+    const { api, calls, delays } = setup([failure(401, "AUTH_FAILED"), failure(401, "AUTH_FAILED")]);
+    await assert.rejects(api[method]({}, "security-key"), { code: "DEVICE_REVOKED", status: 401, pairingInvalid: true, retryable: false });
+    assert.equal(calls.length, 2);
+    assert.equal(calls[1].method, "GET");
+    assert.equal(calls[1].url, "https://sync.example.test/v1/devices");
+    assert.deepEqual(delays, []);
+  }
+});
+
+test("dual-auth confirmation failures preserve original auth failure without retries or recursive probes", async () => {
+  const responses = [() => new TypeError("private-network-detail"), () => failure(503, "FREE_QUOTA_EXHAUSTED"),
+    () => failure(429, "AUTH_COOLDOWN"), () => new Response("private-malformed-json"),
+    () => reply(200, null), () => interruptedResponse()];
+  for (const method of ["changePassword", "rotateRecoveryKey", "deleteSpace"]) {
+    for (const response of responses) {
+      const { api, calls, delays } = setup([failure(401, "AUTH_FAILED"), response()]);
+      await assert.rejects(api[method]({}, "security-key"), error => error.code === "AUTH_FAILED" && error.status === 401 &&
+        !error.pairingInvalid && !error.retryable && !/private|untrusted/.test(error.message + JSON.stringify(error)));
+      assert.equal(calls.length, 2);
+      assert.equal(calls[1].method, "GET");
+      assert.deepEqual(delays, []);
+    }
+  }
+});
+
+test("public pair and recovery 401 never probe or invalidate an existing pairing", async () => {
+  for (const method of ["pair", "recover"]) {
+    const { api, calls } = setup([failure(401, "AUTH_FAILED")]);
+    await assert.rejects(api[method]("ABCD", {}, "public-key"), { code: "AUTH_FAILED", pairingInvalid: false });
+    assert.equal(calls.length, 1);
+    assert.equal(calls[0].headers.Authorization, undefined);
   }
 });
 
@@ -256,6 +316,54 @@ test("malformed success JSON and unknown server errors do not leak or trigger ne
   }
 });
 
+test("JSON body interruptions retry only safe operations with unchanged requests", async () => {
+  const operations = [
+    api => api.health(),
+    api => api.createUpload({ ciphertextDigest: "opaque" }, "body-retry-key"),
+    api => api.putChunk("upload", 0, new Uint8Array([1, 2, 3]), "A".repeat(43))
+  ];
+  for (const invoke of operations) {
+    const { api, calls, delays } = setup([interruptedResponse(), interruptedResponse(), reply(200, { ok: true })]);
+    assert.deepEqual(await invoke(api), { ok: true });
+    assert.equal(calls.length, 3);
+    assert.deepEqual(delays, [500, 1500]);
+    for (const call of calls.slice(1)) {
+      assert.equal(call.url, calls[0].url);
+      assert.equal(call.method, calls[0].method);
+      assert.deepEqual(call.headers, calls[0].headers);
+      assert.deepEqual(call.body, calls[0].body);
+    }
+  }
+});
+
+test("binary body interruptions retry downloads and retain the request", async () => {
+  const { api, calls, delays } = setup([interruptedResponse(), new Response(new Uint8Array([4, 5, 6]))]);
+  assert.deepEqual(new Uint8Array(await api.getChunk("snapshot", 0)), new Uint8Array([4, 5, 6]));
+  assert.equal(calls.length, 2);
+  assert.equal(calls[1].url, "https://sync.example.test/v1/snapshots/snapshot/chunks/0");
+  assert.deepEqual(calls[1].headers, calls[0].headers);
+  assert.deepEqual(delays, [500]);
+});
+
+test("non-idempotent body interruptions never retry and exhausted safe retries stay sanitized", async () => {
+  const unsafe = setup([interruptedResponse()]);
+  await assert.rejects(unsafe.api.renameDevice("other", { encryptedName: {} }), { code: "OFFLINE", retryable: false });
+  assert.equal(unsafe.calls.length, 1);
+  assert.deepEqual(unsafe.delays, []);
+  const safe = setup([interruptedResponse(), interruptedResponse(), interruptedResponse()]);
+  await assert.rejects(safe.api.health(), error => error.code === "OFFLINE" && !/private/.test(error.message + JSON.stringify(error)));
+  assert.equal(safe.calls.length, 3);
+});
+
+test("complete JSON syntax or shape errors are invalid responses without retry", async () => {
+  for (const response of [new Response('{"incomplete":'), reply(200, null), reply(200, []), reply(200, 42)]) {
+    const { api, calls, delays } = setup([response]);
+    await assert.rejects(api.health(), { code: "INVALID_RESPONSE", retryable: false });
+    assert.equal(calls.length, 1);
+    assert.deepEqual(delays, []);
+  }
+});
+
 test("browser global resolves public config, PWA version and latest pairing without logging secrets", async () => {
   const logs = [], calls = [];
   let token = "first-token";
@@ -264,7 +372,11 @@ test("browser global resolves public config, PWA version and latest pairing with
     QinshiCloudSyncStorage: { loadPairing: async () => ({ deviceId: "device-1", deviceToken: token }),
       forgetPairing: () => assert.fail("Transport must not delete pairing") },
     console: Object.fromEntries(["log", "info", "warn", "error", "debug"].map(method => [method, (...args) => logs.push(args)])),
-    fetch: async (url, init) => { calls.push(init); return failure(401, "AUTH_FAILED"); }
+    fetch: async (url, init) => {
+      calls.push(init);
+      if (init.method === "POST") context.QinshiPWA.version = "1.0.99";
+      return failure(401, "AUTH_FAILED");
+    }
   };
   vm.runInNewContext(fs.readFileSync(require.resolve("./cloud-sync-api.js"), "utf8"), context);
   await assert.rejects(context.QinshiCloudSyncApi.listDevices(), { code: "DEVICE_REVOKED" });
@@ -272,5 +384,9 @@ test("browser global resolves public config, PWA version and latest pairing with
   await assert.rejects(context.QinshiCloudSyncApi.listDevices(), { code: "DEVICE_REVOKED" });
   assert.equal(calls[0].headers["X-Qin-App-Version"], "1.0.40");
   assert.equal(calls[1].headers.Authorization, "Device device-1.second-token");
+  await assert.rejects(context.QinshiCloudSyncApi.changePassword({ authKey: "private-auth" }, "private-op"), { code: "DEVICE_REVOKED" });
+  assert.equal(calls.length, 4);
+  assert.equal(calls[3].method, "GET");
+  assert.equal(calls[3].headers["X-Qin-App-Version"], "1.0.40");
   assert.deepEqual(logs, []);
 });

@@ -142,7 +142,7 @@
           var serverCode = payload && payload.error && payload.error.code;
           var status = response.status;
           var code = SERVER_CODES.indexOf(serverCode) !== -1 ? serverCode : "HTTP_ERROR";
-          if (status === 401) code = details.auth ? "DEVICE_REVOKED" : "AUTH_FAILED";
+          if (status === 401) code = details.auth && details.auth !== "dual" ? "DEVICE_REVOKED" : "AUTH_FAILED";
           else if (status === 426) code = "UPGRADE_REQUIRED";
           else if (status === 404 && details.snapshot) code = "SOURCE_DELETED";
           else if (code === "HTTP_ERROR" && status === 503) code = "SERVICE_UNAVAILABLE";
@@ -154,11 +154,38 @@
           throw failure;
         }
         if (response.status === 204) return null;
-        try { return await (details.binary ? response.arrayBuffer() : response.json()); }
-        catch (error) { throw safeError("INVALID_RESPONSE"); }
+        var reader = details.binary ? response.arrayBuffer : response.json;
+        if (typeof reader !== "function") throw safeError("INVALID_RESPONSE");
+        var result;
+        try { result = await reader.call(response); }
+        catch (error) {
+          // A body stream can fail after fetch resolves. Only transport TypeError
+          // follows the same retry allowlist; complete malformed JSON does not.
+          if (error && error.name === "TypeError") throw safeError("OFFLINE", canRetry);
+          throw safeError("INVALID_RESPONSE");
+        }
+        if (!details.binary && (!result || typeof result !== "object" || Array.isArray(result))) {
+          throw safeError("INVALID_RESPONSE");
+        }
+        return result;
       })();
       try { return await Promise.race([transport, timeout]); }
       finally { clearTimer(timer); }
+    }
+
+    async function confirmPairingFailure(base, init, originalError) {
+      // These endpoints also authenticate a fresh password/recovery value. Probe
+      // the original device credential once, never replaying a write or recursively
+      // calling request(). An inconclusive probe must not invalidate local pairing.
+      var confirmation = Object.assign({}, init, {
+        method: "GET", body: undefined,
+        headers: { "X-Qin-App-Version": init.headers["X-Qin-App-Version"], Authorization: init.headers.Authorization }
+      });
+      try { await perform(base + "/v1/devices", confirmation, { auth: true }, false); }
+      catch (error) {
+        if (error instanceof CloudSyncApiError && error.status === 401 && error.code === "DEVICE_REVOKED") return error;
+      }
+      return originalError;
     }
 
     async function request(path, details) {
@@ -190,6 +217,7 @@
         try { return await perform(base + path, init, details, canRetry); }
         catch (error) {
           if (!(error instanceof CloudSyncApiError)) throw safeError("INVALID_RESPONSE");
+          if (details.auth === "dual" && error.status === 401) throw await confirmPairingFailure(base, init, error);
           if (!error.retryable || attempt >= RETRY_DELAYS.length) throw error;
           await waitDelay(Math.max(RETRY_DELAYS[attempt], error.retryAfterMs || 0));
         }
@@ -216,9 +244,9 @@
       commitUpload: async function (id, body, key) { return write("/v1/uploads/" + segment(id) + "/commit", body, key, true); },
       getSnapshot: async function (id) { return request("/v1/snapshots/" + segment(id), { auth: true, snapshot: true }); },
       getChunk: async function (id, index) { return request("/v1/snapshots/" + segment(id) + "/chunks/" + chunkIndex(index), { auth: true, snapshot: true, binary: true }); },
-      changePassword: function (body, key) { return write("/v1/security/password", body, key, true); },
-      rotateRecoveryKey: function (body, key) { return write("/v1/security/recovery-key", body, key, true); },
-      deleteSpace: function (body, key) { return write("/v1/spaces/current", body, key, true, "DELETE"); }
+      changePassword: function (body, key) { return write("/v1/security/password", body, key, "dual"); },
+      rotateRecoveryKey: function (body, key) { return write("/v1/security/recovery-key", body, key, "dual"); },
+      deleteSpace: function (body, key) { return write("/v1/spaces/current", body, key, "dual", "DELETE"); }
     };
   }
 

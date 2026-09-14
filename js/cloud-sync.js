@@ -36,6 +36,7 @@
   function createSync(dependencies) {
     var options = dependencies || {};
     var pendingUpload = null; // Same-page retries reuse immutable ciphertext, never recollect data.
+    var pendingEnrollment = null; // Request proof only; never password or recovery key, never persisted.
     var busy = false;
 
     function dependency(name, globalName) {
@@ -59,7 +60,17 @@
     async function handleFailure(error) {
       if (error && error.code === 'DEVICE_REVOKED' && error.pairingInvalid === true) {
         pendingUpload = null;
-        await storage().forgetPairing();
+        pendingEnrollment = null;
+        // UI may await the notice before local credentials disappear. Without an
+        // injected callback this is a no-op; the original safe API error still reaches UI.
+        try {
+          if (typeof options.notifyPairingInvalid === 'function') {
+            await options.notifyPairingInvalid(Object.freeze({ code: 'DEVICE_REVOKED',
+              message: '本设备的配对已失效或被撤销，请重新配对。' }));
+          }
+        } catch (noticeError) { /* Never expose callback details or hide revocation. */ }
+        try { await storage().forgetPairing(); }
+        catch (cleanupError) { /* Preserve the original error, including frozen errors. */ }
       }
       throw error;
     }
@@ -87,6 +98,7 @@
     }
 
     async function requireUnpaired() {
+      if (pendingEnrollment) throw new Error('已有配对操作待恢复，请重试恢复或忘记当前设备后再继续。');
       if (await storage().loadPairing()) throw new Error('本机已配对，请先忘记当前设备。');
     }
 
@@ -181,6 +193,25 @@
         deviceToken: device.deviceToken, masterKey: masterKey, deviceName: name, pairedAt: now() });
     }
 
+    async function finishEnrollment(pending) {
+      var current = await storage().loadPairing();
+      if (current && (current.spaceId !== pending.spaceId || current.deviceId !== pending.device.deviceId)) {
+        throw new Error('待恢复配对与本机已有配对不匹配。');
+      }
+      if (!pending.response) {
+        pending.response = pending.operation === 'create'
+          ? await api().createSpace(pending.body, pending.operationId)
+          : await api().pair(pending.syncCode, pending.body, pending.operationId);
+      }
+      await savePairing(pending.response, pending.spaceId, pending.device, pending.name, pending.masterKey);
+      // Persistence failures retry just persistence; once paired, an initial upload
+      // failure belongs to upload recovery and must not replay enrollment.
+      pendingEnrollment = null;
+      if (pending.operation === 'join') return { status: 'joined', deviceId: pending.device.deviceId };
+      var upload = await uploadCurrent();
+      return { status: 'created', syncCode: pending.syncCode, deviceId: pending.device.deviceId, upload: upload };
+    }
+
     async function createSpace(input) {
       return exclusive(async function () {
         if (!input || typeof input.password !== 'string' || !input.password || input.password !== input.confirmPassword) throw new Error('两次输入的密码必须一致且不能为空。');
@@ -207,10 +238,9 @@
         var acknowledged = await confirm(Object.freeze({ syncCode: syncCode, recoveryKey: recovery.displayKey }));
         recovery = null; recoveryKeys = null; passwordKeys = null;
         if (acknowledged !== true) throw new Error('请确认已保存恢复密钥。');
-        var response = await api().createSpace(body, uuid());
-        await savePairing(response, spaceId, device, name, masterKey);
-        var upload = await uploadCurrent();
-        return { status: 'created', syncCode: syncCode, deviceId: device.deviceId, upload: upload };
+        pendingEnrollment = { operation: 'create', operationId: uuid(), syncCode: syncCode,
+          spaceId: spaceId, device: device, name: name, masterKey: masterKey, body: body };
+        return finishEnrollment(pendingEnrollment);
       });
     }
 
@@ -226,9 +256,10 @@
         var keys = await cryptoApi().derivePasswordKeys(input.password, params.kdf);
         var masterKey = await cryptoApi().unwrapMasterKey(params.passwordWrappedMaster, keys.wrappingKey, params.spaceId);
         var device = await localDevice(name, params.spaceId, masterKey);
-        var paired = await api().pair(code, { authKey: keys.authKey, device: device, appVersion: version() }, uuid());
-        await savePairing(paired, params.spaceId, device, name, masterKey);
-        return { status: 'joined', deviceId: device.deviceId };
+        pendingEnrollment = { operation: 'join', operationId: uuid(), syncCode: code,
+          spaceId: params.spaceId, device: device, name: name, masterKey: masterKey,
+          body: { authKey: keys.authKey, device: device, appVersion: version() } };
+        return finishEnrollment(pendingEnrollment);
       });
     }
 
@@ -267,16 +298,23 @@
     }
 
     async function sendUpload(pending) {
-      var session = await api().createUpload(pending.body, pending.operationId);
-      if (!session || session.snapshotId !== pending.body.snapshotId || typeof session.uploadId !== 'string' ||
-        !Array.isArray(session.uploadedChunks)) throw new Error('上传会话响应不正确。');
-      for (var chunk of pending.chunks) {
-        if (session.uploadedChunks.indexOf(chunk.index) === -1) {
-          await api().putChunk(session.uploadId, chunk.index, decode(chunk.data), chunk.digest);
+      if (pending.phase !== 'commit-pending') {
+        var session = await api().createUpload(pending.body, pending.operationId);
+        if (!session || session.snapshotId !== pending.body.snapshotId || typeof session.uploadId !== 'string' ||
+          !Array.isArray(session.uploadedChunks)) throw new Error('上传会话响应不正确。');
+        pending.uploadId = session.uploadId;
+        for (var chunk of pending.chunks) {
+          if (session.uploadedChunks.indexOf(chunk.index) === -1) {
+            await api().putChunk(session.uploadId, chunk.index, decode(chunk.data), chunk.digest);
+          }
         }
+        // A committed receipt outlives snapshot/history ciphertext. Once a commit
+        // might have reached the server, replay it directly; never put chunks again.
+        pending.commitBody = { beforeUploadId: null, sourceSnapshotId: null };
+        pending.phase = 'commit-pending';
       }
-      var committed = await api().commitUpload(session.uploadId, { beforeUploadId: null, sourceSnapshotId: null }, pending.operationId);
-      if (!committed || committed.latestSnapshotId !== pending.body.snapshotId || committed.operationId !== session.uploadId) throw new Error('上传提交响应不正确。');
+      var committed = await api().commitUpload(pending.uploadId, pending.commitBody, pending.operationId);
+      if (!committed || committed.latestSnapshotId !== pending.body.snapshotId || committed.operationId !== pending.uploadId) throw new Error('上传提交响应不正确。');
       await storage().clearPendingOperation();
       pendingUpload = null;
       return { status: 'uploaded', snapshotId: committed.latestSnapshotId };
@@ -310,13 +348,18 @@
         ciphertextBytes: chunks.byteLength, chunkCount: chunks.chunks.length, ciphertextDigest: chunks.digest };
       body.encryptedSummary = await encryptMetadata({ dataHash: envelope.dataHash }, pairing.masterKey, 'snapshot-summary',
         summaryContext(pairing.spaceId, pairing.deviceId, body));
-      pendingUpload = { operationId: uuid(), spaceId: pairing.spaceId, deviceId: pairing.deviceId, body: body, chunks: chunks.chunks };
+      pendingUpload = { phase: 'uploading', operationId: uuid(), spaceId: pairing.spaceId,
+        deviceId: pairing.deviceId, body: body, chunks: chunks.chunks };
       await storage().savePendingOperation({ type: 'upload', snapshotId: snapshotId });
       return sendUpload(pendingUpload);
     }
 
     async function resumePendingOperation() {
       return exclusive(async function () {
+        if (pendingEnrollment) {
+          await preflight();
+          return finishEnrollment(pendingEnrollment);
+        }
         if (pendingUpload) return uploadCurrent();
         var pending = await storage().loadPendingOperation();
         if (!pending) return { status: 'idle' };
@@ -331,7 +374,9 @@
       createSpace: createSpace, joinSpace: joinSpace,
       uploadCurrentDevice: function () { return exclusive(uploadCurrent); },
       getDashboard: getDashboard,
-      forgetCurrentDevice: function () { return exclusive(async function () { pendingUpload = null; await storage().forgetPairing(); }); },
+      forgetCurrentDevice: function () { return exclusive(async function () {
+        pendingUpload = null; pendingEnrollment = null; await storage().forgetPairing();
+      }); },
       resumePendingOperation: resumePendingOperation,
       detectDeviceName: detectDeviceName, normalizeSyncCode: normalizeSyncCode
     };

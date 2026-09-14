@@ -175,6 +175,87 @@ test('join wrong password never registers or saves pairing', async () => {
   assert.equal(h.events.includes('savePairing'), false);
 });
 
+test('create enrollment resumes a lost response with original acknowledged credentials and operation', async () => {
+  const h = harness();
+  const createSpace = h.api.createSpace;
+  let receipt;
+  let sent;
+  h.api.createSpace = async (...args) => {
+    if (!receipt) {
+      sent = structuredClone(args);
+      receipt = await createSpace(...args);
+      throw new Error('create response lost');
+    }
+    assert.deepEqual(args, sent);
+    return receipt;
+  };
+  await assert.rejects(create(h), /create response lost/);
+  assert.equal(h.state.pairing, null);
+  assert.equal(h.state.pending, null);
+  await assert.rejects(create(h), /待恢复/);
+  const result = await h.sync.resumePendingOperation();
+  assert.equal(result.status, 'created');
+  assert.equal(result.syncCode, sent[0].syncCode);
+  assert.equal(h.state.spaces.length, 1);
+  assert.equal(h.state.credentials.length, 1);
+  assert.equal(h.state.pairing.deviceToken, sent[0].device.deviceToken);
+  assert.equal(h.state.commits.length, 1);
+});
+
+test('join enrollment resumes a lost response without making another device or uploading', async () => {
+  const h = harness();
+  const created = await create(h);
+  h.state.pairing = null;
+  const localBefore = structuredClone(h.state.data);
+  const pair = h.api.pair;
+  let receipt;
+  let sent;
+  h.api.pair = async (...args) => {
+    if (!receipt) {
+      sent = structuredClone(args);
+      receipt = await pair(...args);
+      throw new Error('pair response lost');
+    }
+    assert.deepEqual(args, sent);
+    return receipt;
+  };
+  await assert.rejects(h.sync.joinSpace({ syncCode: created.syncCode, password }), /pair response lost/);
+  assert.equal(h.state.pairing, null);
+  h.events.length = 0;
+  assert.equal((await h.sync.resumePendingOperation()).status, 'joined');
+  assert.equal(h.state.pairing.deviceToken, sent[1].device.deviceToken);
+  assert.equal(h.events.includes('getParameters'), false);
+  assert.equal(h.events.includes('collect'), false);
+  assert.equal(h.state.commits.length, 1);
+  assert.deepEqual(h.state.data, localBefore);
+});
+
+test('enrollment local save failure retries persistence without replaying accepted remote enrollment', async () => {
+  for (const operation of ['create', 'join']) {
+    const h = harness();
+    let syncCode;
+    if (operation === 'join') {
+      syncCode = (await create(h)).syncCode;
+      h.state.pairing = null;
+    }
+    const savePairing = h.storage.savePairing;
+    let expected;
+    let fail = true;
+    h.storage.savePairing = async value => {
+      if (fail) { fail = false; expected = structuredClone(value); throw new Error('local persistence failed'); }
+      assert.deepEqual(value, expected);
+      return savePairing(value);
+    };
+    const attempt = operation === 'create' ? create(h) : h.sync.joinSpace({ syncCode, password });
+    await assert.rejects(attempt, /local persistence failed/);
+    h.api.createSpace = h.api.pair = async () => { assert.fail('accepted enrollment must not be sent again'); };
+    assert.equal((await h.sync.resumePendingOperation()).status, operation === 'create' ? 'created' : 'joined');
+    assert.deepEqual(h.state.pairing, expected);
+    assert.equal(h.state.pending, null);
+    assert.equal(h.state.commits.length, 1);
+  }
+});
+
 test('upload preflight blocks before collection, encryption or upload', async () => {
   const h = harness();
   await create(h);
@@ -258,6 +339,54 @@ test('upload retry reuses encrypted bytes and stable operation UUID after ambigu
   assert.equal(h.state.pending, null);
 });
 
+test('upload commit replay survives trimmed ciphertext without recreating or putting chunks', async () => {
+  const h = harness();
+  await create(h);
+  h.state.data.qinshi_progress = 'changed';
+  const commit = h.api.commitUpload;
+  let receipt;
+  let request;
+  h.api.commitUpload = async (...args) => {
+    h.events.push('commit-receipt');
+    if (!receipt) {
+      request = structuredClone(args);
+      receipt = await commit(...args);
+      throw Object.assign(new Error('response lost after commit'), { code: 'TIMEOUT' });
+    }
+    assert.deepEqual(args, request);
+    return receipt;
+  };
+  await assert.rejects(h.sync.uploadCurrentDevice(), /response lost/);
+  h.state.chunks = [];
+  h.state.devices[0].latestSnapshot = null;
+  const createUpload = h.api.createUpload;
+  h.api.createUpload = async (...args) => ({ ...await createUpload(...args), uploadedChunks: [] });
+  h.api.putChunk = async () => { throw Object.assign(new Error('committed upload cannot accept chunks'), { code: 'IDEMPOTENCY_CONFLICT' }); };
+  h.events.length = 0;
+  const result = await h.sync.resumePendingOperation();
+  assert.equal(result.snapshotId, receipt.latestSnapshotId);
+  assert.deepEqual(h.events, ['health', 'preflight', 'commit-receipt']);
+  assert.equal(h.state.pending, null);
+});
+
+test('upload chunk failure retries the same create request before entering commit phase', async () => {
+  const h = harness();
+  await create(h);
+  h.state.data.qinshi_progress = 'changed';
+  const putChunk = h.api.putChunk;
+  let failed = false;
+  h.api.putChunk = async (...args) => {
+    if (!failed) { failed = true; throw new Error('chunk offline'); }
+    return putChunk(...args);
+  };
+  await assert.rejects(h.sync.uploadCurrentDevice(), /chunk offline/);
+  const staged = structuredClone(h.state.uploads.at(-1));
+  assert.equal(h.state.commits.length, 1);
+  await h.sync.resumePendingOperation();
+  assert.deepEqual(h.state.uploads.at(-1), staged);
+  assert.equal(h.state.commits.length, 2);
+});
+
 test('resume after reload never recollects or silently starts an automatic upload', async () => {
   const h = harness();
   h.state.pending = { type: 'upload', snapshotId: randomUUID() };
@@ -275,6 +404,60 @@ test('revoked device clears pairing and pending operation but preserves local pr
   assert.equal(h.state.pairing, null);
   assert.equal(h.state.pending, null);
   assert.deepEqual(h.state.data, localBefore);
+});
+
+test('revoked device awaits safe notice before forgetting and preserves original error', async () => {
+  const h = harness();
+  await create(h);
+  const pairingBefore = structuredClone(h.state.pairing);
+  const localBefore = structuredClone(h.state.data);
+  const original = Object.assign(new Error('unsafe server detail'), { code: 'DEVICE_REVOKED', pairingInvalid: true });
+  let releaseNotice;
+  let noticeStarted;
+  const started = new Promise(resolve => { noticeStarted = resolve; });
+  h.deps.notifyPairingInvalid = async value => {
+    h.events.push('notice');
+    assert.deepEqual(Object.keys(value).sort(), ['code', 'message']);
+    assert.equal(value.code, 'DEVICE_REVOKED');
+    assert.equal(value.message.includes(original.message), false);
+    for (const secret of [pairingBefore.masterKey, pairingBefore.deviceToken, password,
+      h.state.spaces[0].body.authKey, h.state.devices[0].encryptedName.ciphertext]) {
+      assert.equal(JSON.stringify(value).includes(secret), false);
+    }
+    noticeStarted();
+    await new Promise(resolve => { releaseNotice = resolve; });
+    h.events.push('notice-finished');
+  };
+  h.api.listDevices = async () => { throw original; };
+  h.events.length = 0;
+  const outcome = h.sync.getDashboard().catch(error => error);
+  await Promise.race([started, outcome.then(() => assert.fail('notice was skipped'))]);
+  assert.deepEqual(h.state.pairing, pairingBefore);
+  releaseNotice();
+  assert.equal(await outcome, original);
+  assert.deepEqual(h.events, ['notice', 'notice-finished', 'forgetPairing']);
+  assert.equal(h.state.pairing, null);
+  assert.deepEqual(h.state.data, localBefore);
+});
+
+test('revoked notice and cleanup failures cannot replace the original error', async () => {
+  for (const [noticeFails, cleanupFails] of [[true, false], [false, true], [true, true]]) {
+    const h = harness();
+    await create(h);
+    const localBefore = structuredClone(h.state.data);
+    const original = Object.freeze(Object.assign(new Error('revoked original'), { code: 'DEVICE_REVOKED', pairingInvalid: true }));
+    h.deps.notifyPairingInvalid = async () => { h.events.push('notice'); if (noticeFails) throw new Error('private callback detail'); };
+    const forget = h.storage.forgetPairing;
+    h.storage.forgetPairing = async () => {
+      if (cleanupFails) { h.events.push('cleanup-failed'); throw new Error('private storage detail'); }
+      return forget();
+    };
+    h.api.listDevices = async () => { throw original; };
+    h.events.length = 0;
+    await assert.rejects(h.sync.getDashboard(), error => error === original);
+    assert.deepEqual(h.events, ['notice', cleanupFails ? 'cleanup-failed' : 'forgetPairing']);
+    assert.deepEqual(h.state.data, localBefore);
+  }
 });
 
 test('forget current device affects local pairing only and leaves qinshi data untouched', async () => {

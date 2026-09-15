@@ -387,6 +387,111 @@ test('upload chunk failure retries the same create request before entering commi
   assert.equal(h.state.commits.length, 2);
 });
 
+test('upload authoritative commit 404 after staged expiry allows an explicit same-ciphertext new session retry', async () => {
+  const h = harness();
+  await create(h);
+  h.state.data.qinshi_progress = 'pending progress';
+  let clock = 0;
+  let session;
+  let creations = 0;
+  let originalRequest;
+  let originalChunk;
+  let attempts = 0;
+  const missing = Object.freeze(Object.assign(new Error('expired upload session'), { status: 404, code: 'HTTP_ERROR' }));
+  h.api.createUpload = async (body, key) => {
+    h.events.push('new-session');
+    const request = JSON.stringify({ body, key });
+    if (originalRequest) assert.ok(request === originalRequest, 'must retain exact upload metadata and operation key');
+    else originalRequest = request;
+    creations++;
+    session = { uploadId: `staged-${creations}`, snapshotId: body.snapshotId,
+      expiresAt: clock + 24 * 60 * 60 * 1000, uploadedChunks: [] };
+    return session;
+  };
+  h.api.putChunk = async (id, index, bytes, digest) => {
+    h.events.push('chunk');
+    assert.equal(id, session.uploadId);
+    assert.equal(index, 0);
+    const chunk = JSON.stringify({ bytes: Buffer.from(bytes).toString('base64url'), digest });
+    if (originalChunk) assert.ok(chunk === originalChunk, 'must retain exact ciphertext bytes');
+    else originalChunk = chunk;
+  };
+  h.api.commitUpload = async (id, body, key) => {
+    h.events.push('commit');
+    assert.equal(id, session.uploadId);
+    assert.equal(key, JSON.parse(originalRequest).key);
+    assert.deepEqual(body, { beforeUploadId: null, sourceSnapshotId: null });
+    attempts++;
+    if (attempts === 1) throw Object.assign(new Error('commit never reached server'), { status: 0, code: 'OFFLINE' });
+    if (clock >= session.expiresAt) throw missing;
+    return { operationId: id, latestSnapshotId: session.snapshotId, historySnapshotIds: [], serverCommittedAt: clock };
+  };
+  await assert.rejects(h.sync.uploadCurrentDevice(), /never reached/);
+  const pending = structuredClone(h.state.pending);
+  assert.deepEqual(Object.keys(pending).sort(), ['snapshotId', 'type']);
+  clock = 24 * 60 * 60 * 1000 + 1;
+  h.state.data.qinshi_progress = 'new local progress must not replace the pending snapshot';
+  h.events.length = 0;
+  await assert.rejects(h.sync.resumePendingOperation(), error => error === missing);
+  assert.deepEqual(h.events, ['health', 'preflight', 'commit']);
+  assert.equal(creations, 1);
+  assert.deepEqual(h.state.pending, pending);
+  h.events.length = 0;
+  const result = await h.sync.uploadCurrentDevice();
+  assert.equal(result.snapshotId, pending.snapshotId);
+  assert.equal(creations, 2);
+  assert.deepEqual(h.events, ['health', 'preflight', 'new-session', 'chunk', 'commit']);
+  assert.equal(h.state.pending, null);
+});
+
+test('upload ambiguous commit failures keep commit-first regardless of error code spelling', async () => {
+  for (const failure of [
+    { status: 0, code: 'OFFLINE' }, { status: 0, code: 'TIMEOUT' },
+    { status: 503, code: 'SERVICE_UNAVAILABLE' }, { status: 0, code: 'NOT_FOUND' },
+    { status: '404', code: 'NOT_FOUND' }, null
+  ]) {
+    const h = harness();
+    await create(h);
+    h.state.data.qinshi_progress = 'changed';
+    const commit = h.api.commitUpload;
+    const original = failure && Object.assign(new Error('ambiguous commit'), failure);
+    let first = true;
+    h.api.commitUpload = async (...args) => {
+      h.events.push('commit-attempt');
+      if (first) {
+        first = false;
+        if (original) throw original;
+        return {}; // Complete but malformed response is not proof that the session is absent.
+      }
+      return commit(...args);
+    };
+    await assert.rejects(h.sync.uploadCurrentDevice(), error => original ? error === original : /提交响应/.test(error.message));
+    const creations = h.state.uploads.length;
+    h.events.length = 0;
+    await h.sync.resumePendingOperation();
+    assert.equal(h.state.uploads.length, creations);
+    assert.deepEqual(h.events, ['health', 'preflight', 'commit-attempt', 'commitUpload']);
+    assert.equal(h.state.pending, null);
+  }
+});
+
+test('upload local cleanup 404 cannot reset a successful commit to uploading', async () => {
+  const h = harness();
+  await create(h);
+  h.state.data.qinshi_progress = 'changed';
+  const clearPending = h.storage.clearPendingOperation;
+  let first = true;
+  h.storage.clearPendingOperation = async () => {
+    if (first) { first = false; throw Object.assign(new Error('local cleanup failure'), { status: 404 }); }
+    return clearPending();
+  };
+  await assert.rejects(h.sync.uploadCurrentDevice(), /local cleanup failure/);
+  h.events.length = 0;
+  await h.sync.resumePendingOperation();
+  assert.deepEqual(h.events, ['health', 'preflight', 'commitUpload']);
+  assert.equal(h.state.pending, null);
+});
+
 test('resume after reload never recollects or silently starts an automatic upload', async () => {
   const h = harness();
   h.state.pending = { type: 'upload', snapshotId: randomUUID() };

@@ -313,7 +313,20 @@
         pending.commitBody = { beforeUploadId: null, sourceSnapshotId: null };
         pending.phase = 'commit-pending';
       }
-      var committed = await api().commitUpload(pending.uploadId, pending.commitBody, pending.operationId);
+      var committed;
+      try {
+        committed = await api().commitUpload(pending.uploadId, pending.commitBody, pending.operationId);
+      } catch (error) {
+        // Only a definitive HTTP 404 from commit proves the old session is gone.
+        // Preserve immutable ciphertext/request identity and let the next explicit
+        // retry create a replacement session; all ambiguous failures stay commit-first.
+        if (error && error.status === 404) {
+          pending.phase = 'uploading';
+          delete pending.uploadId;
+          delete pending.commitBody;
+        }
+        throw error;
+      }
       if (!committed || committed.latestSnapshotId !== pending.body.snapshotId || committed.operationId !== pending.uploadId) throw new Error('上传提交响应不正确。');
       await storage().clearPendingOperation();
       pendingUpload = null;

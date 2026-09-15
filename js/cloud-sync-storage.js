@@ -18,6 +18,7 @@
   var ROLLBACK_COPY_KEY = "rollback-copy";
   var PENDING_OPERATION_KEY = "qin-cloud-sync-pending";
   var PAIRING_FIELDS = ["spaceId", "deviceId", "deviceToken", "masterKey", "deviceName", "pairedAt"];
+  var RECOVERY_LEASE_MS = 60000;
 
   function errorFrom(source, fallback) {
     return source && source.error ? source.error : new Error(fallback);
@@ -238,10 +239,10 @@
 
     // The read and conditional write share one IDB readwrite transaction. Do not
     // await between requests: Safari may auto-close an inactive transaction.
-    function changeRollback(saved, ownerId, removing) {
+    function rollbackTransaction(action) {
       return openStore().then(function (database) {
         return new Promise(function (resolve, reject) {
-          var tx, failure, settled = false;
+          var tx, failure, result, settled = false;
           function settle(handler, value) {
             if (settled) return;
             settled = true;
@@ -257,23 +258,61 @@
             tx = database.transaction(STORE_NAME, 'readwrite');
             tx.onabort = function () { settle(reject, failure || errorFrom(tx, 'IndexedDB transaction aborted.')); };
             tx.onerror = function () { settle(reject, failure || errorFrom(tx, 'IndexedDB transaction failed.')); };
-            tx.oncomplete = function () { settle(resolve); };
+            tx.oncomplete = function () { settle(resolve, result); };
             var store = tx.objectStore(STORE_NAME);
             var request = store.get(ROLLBACK_COPY_KEY);
             request.onerror = function () { fail(errorFrom(request, 'IndexedDB request failed.')); };
             request.onsuccess = function () {
               try {
-                var current = request.result;
-                if (!removing && current !== undefined) throw rollbackConflict();
-                var currentOwner = current && typeof current === 'object' ? current.ownerId : undefined;
-                if (removing && current === undefined && ownerId !== undefined) throw rollbackConflict();
-                if (removing && current !== undefined && currentOwner !== ownerId) throw rollbackConflict();
-                var mutation = removing ? store.delete(ROLLBACK_COPY_KEY) : store.put(saved, ROLLBACK_COPY_KEY);
+                var next = action(request.result);
+                result = next.result;
+                if (next.readOnly) return;
+                var mutation = next.removing ? store.delete(ROLLBACK_COPY_KEY) : store.put(next.value, ROLLBACK_COPY_KEY);
                 mutation.onerror = function () { fail(errorFrom(mutation, 'IndexedDB request failed.')); };
               } catch (error) { fail(error); }
             };
           } catch (error) { fail(error); }
         });
+      });
+    }
+
+    function leaseNow() {
+      var value = config.now ? config.now() : Date.now();
+      if (!Number.isSafeInteger(value) || value < 0 || value > Number.MAX_SAFE_INTEGER - RECOVERY_LEASE_MS) throw new Error('回滚租约时钟不正确。');
+      return value;
+    }
+
+    function checkRecovery(current, ownerId, actionId, time) {
+      if (!current || current.ownerId !== ownerId || current.recoveryActionId !== actionId ||
+        !Number.isSafeInteger(current.recoveryLeaseUntil) || current.recoveryLeaseUntil <= time) throw rollbackConflict();
+    }
+
+    function changeRollback(saved, ownerId, removing, actionId) {
+      return rollbackTransaction(function (current) {
+        if (!removing && current !== undefined) throw rollbackConflict();
+        var currentOwner = current && typeof current === 'object' ? current.ownerId : undefined;
+        if (removing && current === undefined && ownerId !== undefined) throw rollbackConflict();
+        if (removing && current !== undefined && currentOwner !== ownerId) throw rollbackConflict();
+        if (removing && actionId !== undefined) checkRecovery(current, ownerId, actionId, leaseNow());
+        // Once recovery has taken ownership, the original overwrite actor must
+        // never regain write/clear rights, even after its recovery lease expires.
+        if (removing && actionId === undefined && current && current.recoveryActionId !== undefined) throw rollbackConflict();
+        return { removing: removing, value: saved };
+      });
+    }
+
+    function recoveryLease(ownerId, actionId, renewing) {
+      if (typeof actionId !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(actionId)) {
+        return Promise.reject(new Error('回滚恢复 action 不正确。'));
+      }
+      return rollbackTransaction(function (current) {
+        var time = leaseNow();
+        if (!isPlainObject(current) || current.ownerId !== ownerId) throw rollbackConflict();
+        if (renewing) checkRecovery(current, ownerId, actionId, time);
+        else if (current.recoveryActionId !== undefined &&
+          (!Number.isSafeInteger(current.recoveryLeaseUntil) || current.recoveryLeaseUntil > time)) throw rollbackConflict();
+        var saved = Object.assign({}, current, { recoveryActionId: actionId, recoveryLeaseUntil: time + RECOVERY_LEASE_MS });
+        return { value: saved, result: saved };
       });
     }
 
@@ -348,7 +387,15 @@
         return changeRollback(saved, saved.ownerId, false);
       },
       loadRollbackCopy: function () { return readRecord(ROLLBACK_COPY_KEY); },
-      clearRollbackCopy: function (ownerId) { return changeRollback(undefined, ownerId, true); }
+      assertRollbackOwner: function (ownerId) {
+        return rollbackTransaction(function (current) {
+          if (!current || current.ownerId !== ownerId || current.recoveryActionId !== undefined) throw rollbackConflict();
+          return { readOnly: true, result: current };
+        });
+      },
+      acquireRollbackRecovery: function (ownerId, actionId) { return recoveryLease(ownerId, actionId, false); },
+      renewRollbackRecovery: function (ownerId, actionId) { return recoveryLease(ownerId, actionId, true); },
+      clearRollbackCopy: function (ownerId, actionId) { return changeRollback(undefined, ownerId, true, actionId); }
     };
   }
 

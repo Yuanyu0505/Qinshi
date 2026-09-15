@@ -437,3 +437,49 @@ test('legacy scalar rollback values remain explicitly clearable without an owner
     assert.equal(await store.loadRollbackCopy(), null);
   }
 });
+
+const actionA = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc';
+const actionB = 'dddddddd-dddd-4ddd-8ddd-dddddddddddd';
+
+test('recovery lease is exclusive across contexts and blocks the original overwrite owner', async () => {
+  const adapter = createFakeIndexedDb();
+  let clock = 1000;
+  const a = storageApi.createStorage({ indexedDB: adapter, sessionStorage: createSessionStorage(), now: () => clock });
+  const b = storageApi.createStorage({ indexedDB: adapter, sessionStorage: createSessionStorage(), now: () => clock });
+  await a.claimRollbackCopy({ ownerId: ownerA, data: { qinshi_progress: 'original' } });
+  const leased = await a.acquireRollbackRecovery(ownerA, actionA);
+  assert.equal(leased.recoveryActionId, actionA);
+  assert.ok(leased.recoveryLeaseUntil > clock);
+  await assert.rejects(b.acquireRollbackRecovery(ownerA, actionB), error => error.code === 'ROLLBACK_CONFLICT');
+  await assert.rejects(b.clearRollbackCopy(ownerA), error => error.code === 'ROLLBACK_CONFLICT');
+  await assert.rejects(b.assertRollbackOwner(ownerA), error => error.code === 'ROLLBACK_CONFLICT');
+  await assert.rejects(b.claimRollbackCopy({ ownerId: ownerB, data: {} }), error => error.code === 'ROLLBACK_CONFLICT');
+  clock += 1000;
+  const renewed = await a.renewRollbackRecovery(ownerA, actionA);
+  assert.ok(renewed.recoveryLeaseUntil > leased.recoveryLeaseUntil);
+  await a.clearRollbackCopy(ownerA, actionA);
+  assert.equal(await b.loadRollbackCopy(), null);
+  assert.equal(adapter.openCount(), adapter.closeCount());
+});
+
+test('expired recovery lease is takeable after a crash and permanently invalidates the stale action', async () => {
+  const adapter = createFakeIndexedDb();
+  let clock = 0;
+  const deps = { indexedDB: adapter, sessionStorage: createSessionStorage(), now: () => clock };
+  const a = storageApi.createStorage(deps);
+  const b = storageApi.createStorage(deps);
+  await a.claimRollbackCopy({ ownerId: ownerA, data: { qinshi_progress: 'original' } });
+  const lease = await a.acquireRollbackRecovery(ownerA, actionA);
+  clock = lease.recoveryLeaseUntil;
+  await assert.rejects(a.renewRollbackRecovery(ownerA, actionA), error => error.code === 'ROLLBACK_CONFLICT');
+  const taken = await b.acquireRollbackRecovery(ownerA, actionB);
+  assert.equal(taken.recoveryActionId, actionB);
+  assert.deepEqual(taken.data, { qinshi_progress: 'original' });
+  await assert.rejects(a.renewRollbackRecovery(ownerA, actionA), error => error.code === 'ROLLBACK_CONFLICT');
+  await assert.rejects(a.clearRollbackCopy(ownerA, actionA), error => error.code === 'ROLLBACK_CONFLICT');
+  adapter.abortNextTransaction();
+  await assert.rejects(b.clearRollbackCopy(ownerA, actionB), /aborted/);
+  assert.equal((await b.loadRollbackCopy()).recoveryActionId, actionB);
+  await b.clearRollbackCopy(ownerA, actionB);
+  assert.equal(adapter.openCount(), adapter.closeCount());
+});

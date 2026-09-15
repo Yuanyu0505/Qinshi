@@ -387,13 +387,7 @@
     }
 
     async function ownedRollback(ownerId) {
-      var copy = await storage().loadRollbackCopy();
-      if (!copy || copy.ownerId !== ownerId) {
-        var error = new Error('回滚 owner 已变化，请先处理已有回滚。');
-        error.code = 'ROLLBACK_CONFLICT';
-        throw error;
-      }
-      return copy;
+      return storage().assertRollbackOwner(ownerId);
     }
 
     async function readSource(snapshotId, pairing) {
@@ -531,8 +525,14 @@
     }
 
     async function recovery(action) {
+      if (action !== undefined && action !== 'restore' && action !== 'discard') throw new Error('请明确选择回滚恢复方式。');
       var copy = await storage().loadRollbackCopy();
       if (!copy) return { status: 'idle' };
+      var actionId;
+      if (action !== undefined) {
+        actionId = uuid();
+        copy = await storage().acquireRollbackRecovery(copy.ownerId, actionId);
+      }
       var settings = dependency('settings', 'QinshiSettings');
       // Use the core's allowlist/schema validation even when IndexedDB was tampered with.
       var saved = await core().createSnapshotEnvelope({ appVersion: version(), sourceDeviceId: 'rollback-recovery',
@@ -540,10 +540,19 @@
       if (action === undefined) return { status: 'recovery-required', createdAt: copy.createdAt,
         matchesCurrent: core().canonicalStringify(settings.collectManagedData()) === core().canonicalStringify(saved.data),
         actions: ['恢复覆盖前数据', '保留当前数据并删除回滚副本'] };
-      if (action !== 'restore' && action !== 'discard') throw new Error('请明确选择回滚恢复方式。');
-      if (action === 'restore') await settings.restoreManagedData(saved.data);
+      var renewed = await storage().renewRollbackRecovery(copy.ownerId, actionId);
+      // A suspended page can resume after the IDB result's lease has expired.
+      // Require a fresh 30-second write budget, then do not await before the
+      // bounded synchronous local transaction (managed data is capped at 10 MiB).
+      var time = options.recoveryNow ? options.recoveryNow() : Date.now();
+      if (!Number.isSafeInteger(time) || renewed.recoveryLeaseUntil - time < 30000) {
+        var expired = new Error('回滚恢复租约已过期，请重新选择恢复操作。');
+        expired.code = 'ROLLBACK_CONFLICT';
+        throw expired;
+      }
+      if (action === 'restore') settings.replaceManagedData(saved.data);
       await storage().clearPendingOperation();
-      await storage().clearRollbackCopy(copy.ownerId);
+      await storage().clearRollbackCopy(copy.ownerId, actionId);
       preparedPulls = new WeakMap();
       if (action === 'restore') dependency('location', 'location').reload();
       return { status: action === 'restore' ? 'recovered' : 'discarded' };

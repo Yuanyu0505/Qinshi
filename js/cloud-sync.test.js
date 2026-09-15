@@ -603,14 +603,35 @@ async function pullHarness() {
   h.source = source;
   h.state.data = { qinshi_progress: 'unsynced local', qinshi_extra: 'must be removed' };
   h.state.rollback = null;
+  h.state.clock = 0;
+  h.deps.recoveryNow = () => h.state.clock;
   h.storage.loadRollbackCopy = async () => structuredClone(h.state.rollback);
   h.storage.saveRollbackCopy = async copy => { h.events.push('save-rollback'); h.state.rollback = structuredClone(copy); };
   h.storage.claimRollbackCopy = async copy => {
     if (h.state.rollback) throw Object.assign(new Error('回滚已被占用'), { code: 'ROLLBACK_CONFLICT' });
     return h.storage.saveRollbackCopy(copy);
   };
-  h.storage.clearRollbackCopy = async ownerId => {
+  const conflict = () => Object.assign(new Error('回滚租约或 owner 冲突'), { code: 'ROLLBACK_CONFLICT' });
+  h.storage.assertRollbackOwner = async ownerId => {
+    if (!h.state.rollback || h.state.rollback.ownerId !== ownerId || h.state.rollback.recoveryActionId !== undefined) throw conflict();
+    return structuredClone(h.state.rollback);
+  };
+  h.storage.acquireRollbackRecovery = async (ownerId, actionId) => {
+    const copy = h.state.rollback;
+    if (!copy || copy.ownerId !== ownerId || (copy.recoveryActionId && copy.recoveryLeaseUntil > h.state.clock)) throw conflict();
+    copy.recoveryActionId = actionId;
+    copy.recoveryLeaseUntil = h.state.clock + 60000;
+    return structuredClone(copy);
+  };
+  h.storage.renewRollbackRecovery = async (ownerId, actionId) => {
+    const copy = h.state.rollback;
+    if (!copy || copy.ownerId !== ownerId || copy.recoveryActionId !== actionId || copy.recoveryLeaseUntil <= h.state.clock) throw conflict();
+    copy.recoveryLeaseUntil = h.state.clock + 60000;
+    return structuredClone(copy);
+  };
+  h.storage.clearRollbackCopy = async (ownerId, actionId) => {
     if (h.state.rollback && h.state.rollback.ownerId !== ownerId) throw Object.assign(new Error('回滚 owner 冲突'), { code: 'ROLLBACK_CONFLICT' });
+    if (h.state.rollback?.recoveryActionId && (h.state.rollback.recoveryActionId !== actionId || h.state.rollback.recoveryLeaseUntil <= h.state.clock)) throw conflict();
     h.events.push('clear-rollback'); h.state.rollback = null;
   };
   h.deps.settings.makePayload = reason => ({ formatVersion: 1, appName: 'Qin', reason, data: structuredClone(h.state.data) });
@@ -823,10 +844,12 @@ test('rollback recovery never silently deletes evidence and requires an explicit
 
 test('rollback restoration failure retains evidence and cannot claim successful recovery', async () => {
   const h = await pullHarness();
+  const before = structuredClone(h.state.data);
   h.state.rollback = { createdAt: time, data: { qinshi_progress: 'original' } };
-  h.deps.settings.restoreManagedData = () => { throw new Error('restore unavailable'); };
+  h.deps.settings.replaceManagedData = () => { throw new Error('restore unavailable'); };
   await assert.rejects(h.sync.recoverInterruptedRollback('restore'), /restore unavailable/);
   assert.ok(h.state.rollback);
+  assert.deepEqual(h.state.data, before);
 });
 
 test('rollback evidence blocks uploads and is discovered on resume even without pending session state', async () => {
@@ -992,4 +1015,132 @@ test('owned crash recovery restores or discards only the captured owner and keep
     assert.equal(h.state.rollback, null);
     assert.equal(h.state.pending, null);
   }
+});
+
+test('recovery validation holds an exclusive lease against another recovery and original overwrite owner', async () => {
+  const h = await pullHarness();
+  const ownerId = randomUUID();
+  h.state.rollback = { ownerId, createdAt: time, data: { qinshi_progress: 'original' } };
+  const b = moduleApi.createSync({ ...h.deps, core: { ...h.core } });
+  const createEnvelope = h.core.createSnapshotEnvelope;
+  let release, started;
+  const validating = new Promise(resolve => { started = resolve; });
+  h.core.createSnapshotEnvelope = async input => {
+    started(); await new Promise(resolve => { release = resolve; });
+    return createEnvelope(input);
+  };
+  const outcome = h.sync.recoverInterruptedRollback('restore');
+  await validating;
+  try {
+    await assert.rejects(b.recoverInterruptedRollback('discard'), error => error.code === 'ROLLBACK_CONFLICT');
+    await assert.rejects(b.preparePull(h.source.snapshotId), /回滚/);
+    await assert.rejects(h.storage.clearRollbackCopy(ownerId), error => error.code === 'ROLLBACK_CONFLICT');
+    await assert.rejects(h.storage.assertRollbackOwner(ownerId), error => error.code === 'ROLLBACK_CONFLICT');
+  } finally { release(); }
+  await outcome;
+  assert.deepEqual(h.state.data, { qinshi_progress: 'original' });
+  assert.equal(h.state.rollback, null);
+  assert.equal(h.events.filter(event => event === 'replace-local').length, 1);
+  assert.equal(h.events.includes('restore-local'), false);
+});
+
+test('expired stale recovery cannot write after a second context takes over and a new overwrite claims', async () => {
+  const h = await pullHarness();
+  h.state.rollback = { ownerId: randomUUID(), createdAt: time, data: { qinshi_progress: 'old rollback' } };
+  const b = moduleApi.createSync({ ...h.deps, core: { ...h.core } });
+  const createEnvelope = h.core.createSnapshotEnvelope;
+  let release, started;
+  const validating = new Promise(resolve => { started = resolve; });
+  h.core.createSnapshotEnvelope = async input => {
+    started(); await new Promise(resolve => { release = resolve; });
+    return createEnvelope(input);
+  };
+  const stale = h.sync.recoverInterruptedRollback('restore').catch(error => error);
+  await validating;
+  h.state.clock = 60001;
+  await b.recoverInterruptedRollback('restore');
+  const later = { ownerId: randomUUID(), createdAt: time, data: { qinshi_progress: 'new rollback' } };
+  await h.storage.claimRollbackCopy(later);
+  h.state.data = { qinshi_progress: 'new operation data' };
+  h.events.length = 0;
+  release();
+  assert.equal((await stale).code, 'ROLLBACK_CONFLICT');
+  assert.deepEqual(h.state.data, { qinshi_progress: 'new operation data' });
+  assert.deepEqual(h.state.rollback, later);
+  assert.equal(h.events.includes('replace-local'), false);
+  assert.equal(h.events.includes('restore-local'), false);
+});
+
+test('recovery renew failure happens before transactional local replacement and retains rollback', async () => {
+  const h = await pullHarness();
+  const before = structuredClone(h.state.data);
+  h.state.rollback = { ownerId: randomUUID(), createdAt: time, data: { qinshi_progress: 'original' } };
+  h.storage.renewRollbackRecovery = async () => { throw Object.assign(new Error('expired recovery lease'), { code: 'ROLLBACK_CONFLICT' }); };
+  await assert.rejects(h.sync.recoverInterruptedRollback('restore'), error => error.code === 'ROLLBACK_CONFLICT');
+  assert.deepEqual(h.state.data, before);
+  assert.ok(h.state.rollback);
+  assert.equal(h.events.includes('replace-local'), false);
+  assert.equal(h.events.includes('restore-local'), false);
+});
+
+test('recovery cleanup error preserves leased evidence until explicit retry after expiry', async () => {
+  const h = await pullHarness();
+  h.state.rollback = { ownerId: randomUUID(), createdAt: time, data: { qinshi_progress: 'original' } };
+  const clear = h.storage.clearRollbackCopy;
+  h.storage.clearRollbackCopy = async () => { throw new Error('conditional cleanup failed'); };
+  await assert.rejects(h.sync.recoverInterruptedRollback('restore'), /conditional cleanup/);
+  assert.deepEqual(h.state.data, { qinshi_progress: 'original' });
+  assert.equal(typeof h.state.rollback.recoveryActionId, 'string');
+  h.storage.clearRollbackCopy = clear;
+  await assert.rejects(moduleApi.createSync(h.deps).recoverInterruptedRollback('discard'), error => error.code === 'ROLLBACK_CONFLICT');
+  h.state.clock = h.state.rollback.recoveryLeaseUntil;
+  await moduleApi.createSync(h.deps).recoverInterruptedRollback('discard');
+  assert.equal(h.state.rollback, null);
+});
+
+test('recovery suspended after renewal rejects an expired lease before local write', async () => {
+  const h = await pullHarness();
+  const before = structuredClone(h.state.data);
+  h.state.rollback = { ownerId: randomUUID(), createdAt: time, data: { qinshi_progress: 'original' } };
+  const renew = h.storage.renewRollbackRecovery;
+  h.storage.renewRollbackRecovery = async (...args) => {
+    const record = await renew(...args);
+    h.state.clock = record.recoveryLeaseUntil;
+    return record;
+  };
+  await assert.rejects(h.sync.recoverInterruptedRollback('restore'), error => error.code === 'ROLLBACK_CONFLICT');
+  assert.deepEqual(h.state.data, before);
+  assert.equal(h.events.includes('replace-local'), false);
+});
+
+test('recovery uses real transactional settings replacement so a failed key restores the prior local map', async () => {
+  const h = await pullHarness();
+  const values = new Map([['qinshi_a', 'before'], ['qinshi_keep', 'kept'], ['external', 'untouched']]);
+  const before = Object.fromEntries(values);
+  const localStorage = {
+    get length() { return values.size; },
+    key(index) { return Array.from(values.keys())[index] || null; },
+    getItem(key) { return values.get(key) ?? null; },
+    setItem(key, value) { if (key === 'qinshi_bad') throw new Error('key write failed'); values.set(key, value); },
+    removeItem(key) { values.delete(key); }
+  };
+  const context = { localStorage, document: { addEventListener() {}, getElementById() { return null; } }, window: {} };
+  require('node:vm').runInNewContext(require('node:fs').readFileSync(require('node:path').join(__dirname, 'settings.js'), 'utf8'), context);
+  h.deps.settings = context.window.QinshiSettings;
+  h.state.rollback = { ownerId: randomUUID(), createdAt: time, data: { qinshi_a: 'replacement', qinshi_bad: 'fails' } };
+  await assert.rejects(h.sync.recoverInterruptedRollback('restore'), /key write failed/);
+  assert.deepEqual(Object.fromEntries(values), before);
+  assert.equal(typeof h.state.rollback.recoveryActionId, 'string');
+});
+
+test('original overwrite cannot automatically restore local data after a recovery action acquires its record', async () => {
+  const h = await pullHarness();
+  h.api.commitUpload = async () => {
+    await h.storage.acquireRollbackRecovery(h.state.rollback.ownerId, randomUUID());
+    throw new Error('cloud failure during recovery');
+  };
+  await assert.rejects(h.sync.confirmPull(await h.sync.preparePull(h.source.snapshotId)), error => error.code === 'ROLLBACK_CONFLICT');
+  assert.equal(h.events.includes('restore-local'), false);
+  assert.deepEqual(h.state.data, { qinshi_progress: 'local progress' });
+  assert.equal(typeof h.state.rollback.recoveryActionId, 'string');
 });

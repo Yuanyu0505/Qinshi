@@ -167,6 +167,11 @@
         if (!details.binary && (!result || typeof result !== "object" || Array.isArray(result))) {
           throw safeError("INVALID_RESPONSE");
         }
+        if (details.withDigest) {
+          var digest = response.headers && response.headers.get('X-Chunk-SHA256');
+          if (typeof digest !== 'string' || !/^[A-Za-z0-9_-]{42}[AEIMQUYcgkosw048]$/.test(digest)) throw safeError('INVALID_RESPONSE');
+          return { bytes: result, digest: digest };
+        }
         return result;
       })();
       try { return await Promise.race([transport, timeout]); }
@@ -243,7 +248,7 @@
       },
       commitUpload: async function (id, body, key) { return write("/v1/uploads/" + segment(id) + "/commit", body, key, true); },
       getSnapshot: async function (id) { return request("/v1/snapshots/" + segment(id), { auth: true, snapshot: true }); },
-      getChunk: async function (id, index) { return request("/v1/snapshots/" + segment(id) + "/chunks/" + chunkIndex(index), { auth: true, snapshot: true, binary: true }); },
+      getChunk: async function (id, index, options) { return request("/v1/snapshots/" + segment(id) + "/chunks/" + chunkIndex(index), { auth: true, snapshot: true, binary: true, withDigest: !!(options && options.withDigest) }); },
       changePassword: function (body, key) { return write("/v1/security/password", body, key, "dual"); },
       rotateRecoveryKey: function (body, key) { return write("/v1/security/recovery-key", body, key, "dual"); },
       deleteSpace: function (body, key) { return write("/v1/spaces/current", body, key, "dual", "DELETE"); }

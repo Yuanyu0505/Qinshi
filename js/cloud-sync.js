@@ -38,6 +38,7 @@
     var pendingUpload = null; // Same-page retries reuse immutable ciphertext, never recollect data.
     var pendingEnrollment = null; // Request proof only; never password or recovery key, never persisted.
     var busy = false;
+    var preparedPulls = new WeakMap(); // Preview handles never expose plaintext or pairing credentials.
 
     function dependency(name, globalName) {
       var value = options[name] || root[globalName];
@@ -83,10 +84,17 @@
       finally { busy = false; }
     }
 
-    async function preflight() {
+    async function preflight(pending) {
       var limits = await api().health();
       var result = await dependency('pwa', 'QinshiPWA').ensureCurrentForSync(limits);
-      if (!result || result.ready !== true) throw new Error('请先完成版本检查或更新工具后再继续同步。');
+      if (!result || result.ready !== true) {
+        if (pending && result && result.updateRequired === true) {
+          await storage().savePendingOperation(pending);
+          var pwa = dependency('pwa', 'QinshiPWA');
+          if (typeof pwa.applyUpdate === 'function') await pwa.applyUpdate();
+        }
+        throw new Error('请先完成版本检查或更新工具后再继续同步。');
+      }
       core().assertVersionAllowed(version(), limits, 'write');
       return limits;
     }
@@ -336,6 +344,7 @@
     async function uploadCurrent() {
       // Health + PWA gate happens before reading qinshi_ or doing snapshot crypto.
       await preflight();
+      await assertNoRollback();
       var pairing = await requirePairing();
       if (pendingUpload) {
         if (pendingUpload.deviceId !== pairing.deviceId || pendingUpload.spaceId !== pairing.spaceId) throw new Error('续传设备与当前配对不匹配。');
@@ -367,8 +376,160 @@
       return sendUpload(pendingUpload);
     }
 
+    async function assertNoRollback() {
+      if (await storage().loadRollbackCopy()) throw new Error('存在未处理的回滚副本，请先恢复覆盖前数据或明确保留当前数据。');
+    }
+
+    async function readSource(snapshotId, pairing) {
+      var metadata = await api().getSnapshot(snapshotId);
+      if (!metadata || metadata.snapshotId !== snapshotId || typeof metadata.deviceId !== 'string' ||
+        !Number.isSafeInteger(metadata.chunkCount) || metadata.chunkCount < 1 || metadata.chunkCount > 20 ||
+        !Number.isSafeInteger(metadata.ciphertextBytes) || metadata.ciphertextBytes < 16 ||
+        metadata.ciphertextBytes > MAX_CIPHERTEXT_BYTES) throw new Error('来源快照校验失败。');
+      return authenticatedSnapshot(metadata, pairing, metadata.deviceId);
+    }
+
+    async function prepareSource(snapshotId, type) {
+      if (typeof snapshotId !== 'string' || !snapshotId.trim()) throw new Error('请明确选择一个来源快照。');
+      if (pendingUpload || pendingEnrollment) throw new Error('请先处理已有同步操作。');
+      await assertNoRollback();
+      await preflight({ type: type, snapshotId: snapshotId });
+      var pairing = await requirePairing();
+      var metadata = await readSource(snapshotId, pairing);
+      var devices = (await dashboard(pairing)).devices;
+      var sourceDevice = devices.find(function (device) { return device.deviceId === metadata.deviceId; });
+      var currentDevice = devices.find(function (device) { return device.deviceId === pairing.deviceId; });
+      if (!sourceDevice || !currentDevice || currentDevice.revoked) throw new Error('来源或当前设备不可用。');
+      if (type === 'restore' && (metadata.deviceId !== pairing.deviceId ||
+        !sourceDevice.historySnapshots.some(function (item) { return item.snapshotId === snapshotId; }))) {
+        throw new Error('请选择当前设备的历史快照。');
+      }
+      var chunks = [], total = 0;
+      for (var index = 0; index < metadata.chunkCount; index += 1) {
+        var chunk = await api().getChunk(snapshotId, index, { withDigest: true });
+        if (!chunk || !(chunk.bytes instanceof ArrayBuffer) || typeof chunk.digest !== 'string') throw new Error('密文分块校验失败。');
+        var bytes = new Uint8Array(chunk.bytes);
+        total += bytes.length;
+        if (!bytes.length || bytes.length > 524288 || total > metadata.ciphertextBytes) throw new Error('密文分块校验失败。');
+        chunks.push({ index: index, byteLength: bytes.length, data: encode(bytes), digest: chunk.digest });
+      }
+      if (total !== metadata.ciphertextBytes) throw new Error('密文分块校验失败。');
+      var ciphertext = await cryptoApi().joinAndVerifyChunks(chunks, metadata.ciphertextDigest);
+      var envelope = await core().validateSnapshotEnvelope(await cryptoApi().decryptSnapshot({
+        version: 1, algorithm: 'AES-256-GCM', encoding: metadata.encoding, iv: metadata.iv, ciphertext: encode(ciphertext)
+      }, pairing.masterKey, Object.assign({}, metadata, { spaceId: pairing.spaceId, sourceDeviceId: metadata.deviceId })));
+      if (envelope.schemaVersion !== metadata.schemaVersion) throw new Error('来源快照校验失败。');
+      var preview = Object.freeze({ type: type, snapshotId: snapshotId, sourceDeviceName: sourceDevice.deviceName,
+        currentDeviceName: currentDevice.deviceName, serverCreatedAt: metadata.serverCreatedAt,
+        appVersion: envelope.appVersion, itemCount: Object.keys(envelope.data).length,
+        byteSize: new TextEncoder().encode(core().canonicalStringify(envelope.data)).length,
+        confirmationText: sourceDevice.deviceName + ' → ' + currentDevice.deviceName + '\n当前设备全部个人数据将被覆盖',
+        handle: Object.freeze({}) });
+      preparedPulls.set(preview, { envelope: envelope, metadata: metadata, spaceId: pairing.spaceId,
+        deviceId: pairing.deviceId, cancelled: false, replacing: false });
+      return preview;
+    }
+
+    async function stageReplacement(data, pairing, operation, sourceSnapshotId) {
+      var envelope = await core().createSnapshotEnvelope({ appVersion: version(), sourceDeviceId: pairing.deviceId,
+        clientCreatedAt: now(), data: data });
+      var snapshotId = uuid();
+      var record = await cryptoApi().encryptSnapshot(envelope, pairing.masterKey,
+        Object.assign({}, envelope, { spaceId: pairing.spaceId, snapshotId: snapshotId }));
+      var bytes = decode(record.ciphertext);
+      if (bytes.length > MAX_CIPHERTEXT_BYTES) throw new Error('快照密文不能超过 10 MiB。');
+      var chunks = await cryptoApi().chunkCiphertext(bytes);
+      var body = { operation: operation, snapshotId: snapshotId, sourceSnapshotId: sourceSnapshotId,
+        appVersion: envelope.appVersion, formatVersion: envelope.formatVersion, schemaVersion: envelope.schemaVersion,
+        encoding: record.encoding, clientCreatedAt: envelope.clientCreatedAt, dataHash: envelope.dataHash, iv: record.iv,
+        ciphertextBytes: chunks.byteLength, chunkCount: chunks.chunks.length, ciphertextDigest: chunks.digest };
+      body.encryptedSummary = await encryptMetadata({ dataHash: envelope.dataHash }, pairing.masterKey, 'snapshot-summary',
+        summaryContext(pairing.spaceId, pairing.deviceId, body));
+      var operationId = uuid();
+      var session = await api().createUpload(body, operationId);
+      if (!session || session.snapshotId !== snapshotId || typeof session.uploadId !== 'string' ||
+        !Array.isArray(session.uploadedChunks)) throw new Error('上传会话响应不正确。');
+      for (var chunk of chunks.chunks) {
+        if (session.uploadedChunks.indexOf(chunk.index) === -1) await api().putChunk(session.uploadId, chunk.index, decode(chunk.data), chunk.digest);
+      }
+      return { uploadId: session.uploadId, snapshotId: snapshotId, operationId: operationId };
+    }
+
+    async function confirmPull(preview) {
+      return exclusive(async function () {
+        var prepared = preview && preparedPulls.get(preview);
+        if (!prepared || prepared.cancelled) throw new Error('来源确认已失效，请重新选择快照。');
+        await assertNoRollback();
+        await preflight({ type: preview.type, snapshotId: preview.snapshotId });
+        var pairing = await requirePairing();
+        if (pairing.spaceId !== prepared.spaceId || pairing.deviceId !== prepared.deviceId) throw new Error('来源确认与当前配对不匹配。');
+        var metadata = await readSource(preview.snapshotId, pairing);
+        if (core().canonicalStringify(metadata) !== core().canonicalStringify(prepared.metadata)) throw new Error('来源快照已变化，请重新确认。');
+        if (prepared.cancelled) throw new Error('已取消覆盖。');
+        var settings = dependency('settings', 'QinshiSettings');
+        var before = (await core().createSnapshotEnvelope({ appVersion: version(), sourceDeviceId: pairing.deviceId,
+          clientCreatedAt: now(), data: settings.collectManagedData() })).data;
+        var backupDownloadFailed = false;
+        try {
+          var payload = settings.makePayload('before-cloud-sync');
+          payload.data = before; // Back up exactly the rollback image, never a second collection.
+          await settings.downloadPayload(payload, 'before-cloud-sync');
+        } catch (downloadError) { backupDownloadFailed = true; }
+        await storage().saveRollbackCopy({ createdAt: now(), data: before });
+        await storage().savePendingOperation({ type: preview.type, snapshotId: preview.snapshotId });
+        var replacementStarted = false;
+        try {
+          var prefix = preview.type === 'restore' ? 'restore' : 'replace';
+          var stagedBefore = await stageReplacement(before, pairing, prefix + '-before', null);
+          var stagedAfter = await stageReplacement(prepared.envelope.data, pairing, prefix + '-after', preview.snapshotId);
+          if (prepared.cancelled) throw new Error('已取消覆盖。');
+          // Fail closed if local editing continued while encryption/network was pending.
+          if (core().canonicalStringify(settings.collectManagedData()) !== core().canonicalStringify(before)) throw new Error('本机数据已变化，请处理回滚副本后重新确认。');
+          prepared.replacing = true;
+          replacementStarted = true;
+          await settings.replaceManagedData(prepared.envelope.data);
+          var committed = await api().commitUpload(stagedAfter.uploadId,
+            { beforeUploadId: stagedBefore.uploadId, sourceSnapshotId: preview.snapshotId }, stagedAfter.operationId);
+          if (!committed || committed.operationId !== stagedAfter.uploadId || committed.latestSnapshotId !== stagedAfter.snapshotId ||
+            !Array.isArray(committed.historySnapshotIds) || committed.historySnapshotIds[0] !== stagedBefore.snapshotId) throw new Error('云端提交响应不正确。');
+        } catch (error) {
+          if (replacementStarted) {
+            try { await settings.restoreManagedData(before); }
+            catch (restoreError) { throw new Error('覆盖失败且本机自动恢复失败，请使用保留的回滚副本恢复覆盖前数据。'); }
+          }
+          throw error;
+        } finally { preparedPulls.delete(preview); }
+        // Both sides have committed. Cleanup failures retain evidence, not undo a known commit.
+        await storage().clearPendingOperation();
+        await storage().clearRollbackCopy();
+        dependency('location', 'location').reload();
+        return { status: 'replaced', snapshotId: stagedAfter.snapshotId, backupDownloadFailed: backupDownloadFailed };
+      });
+    }
+
+    async function recovery(action) {
+      var copy = await storage().loadRollbackCopy();
+      if (!copy) return { status: 'idle' };
+      var settings = dependency('settings', 'QinshiSettings');
+      // Use the core's allowlist/schema validation even when IndexedDB was tampered with.
+      var saved = await core().createSnapshotEnvelope({ appVersion: version(), sourceDeviceId: 'rollback-recovery',
+        clientCreatedAt: copy.createdAt, data: copy.data });
+      if (action === undefined) return { status: 'recovery-required', createdAt: copy.createdAt,
+        matchesCurrent: core().canonicalStringify(settings.collectManagedData()) === core().canonicalStringify(saved.data),
+        actions: ['恢复覆盖前数据', '保留当前数据并删除回滚副本'] };
+      if (action !== 'restore' && action !== 'discard') throw new Error('请明确选择回滚恢复方式。');
+      if (action === 'restore') await settings.restoreManagedData(saved.data);
+      await storage().clearPendingOperation();
+      await storage().clearRollbackCopy();
+      preparedPulls = new WeakMap();
+      if (action === 'restore') dependency('location', 'location').reload();
+      return { status: action === 'restore' ? 'recovered' : 'discarded' };
+    }
+
     async function resumePendingOperation() {
       return exclusive(async function () {
+        var interrupted = await recovery();
+        if (interrupted.status !== 'idle') return interrupted;
         if (pendingEnrollment) {
           await preflight();
           return finishEnrollment(pendingEnrollment);
@@ -379,6 +540,9 @@
         // A reload intentionally retains no ciphertext or secrets in sessionStorage.
         // Manual upload will compare cloud latest before creating a new operation.
         if (pending.type === 'upload') return { status: 'manual-upload-required', snapshotId: pending.snapshotId };
+        if (pending.type === 'pull' || pending.type === 'restore') {
+          return { status: 'confirmation-required', preview: await prepareSource(pending.snapshotId, pending.type) };
+        }
         return { status: 'pending', operation: pending };
       });
     }
@@ -387,6 +551,16 @@
       createSpace: createSpace, joinSpace: joinSpace,
       uploadCurrentDevice: function () { return exclusive(uploadCurrent); },
       getDashboard: getDashboard,
+      preparePull: function (snapshotId) { return exclusive(function () { return prepareSource(snapshotId, 'pull'); }); },
+      restoreHistory: function (snapshotId) { return exclusive(function () { return prepareSource(snapshotId, 'restore'); }); },
+      confirmPull: confirmPull,
+      cancelPull: function (preview) {
+        var prepared = preview && preparedPulls.get(preview);
+        if (!prepared || prepared.replacing) return false;
+        prepared.cancelled = true;
+        return true;
+      },
+      recoverInterruptedRollback: function (action) { return exclusive(function () { return recovery(action); }); },
       forgetCurrentDevice: function () { return exclusive(async function () {
         pendingUpload = null; pendingEnrollment = null; await storage().forgetPairing();
       }); },

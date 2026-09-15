@@ -82,7 +82,10 @@ export default {
     }
     response.headers.set('Cache-Control', 'no-store');
     response.headers.set('Vary', 'Origin');
-    if (origin !== null) response.headers.set('Access-Control-Allow-Origin', origin);
+    if (origin !== null) {
+      response.headers.set('Access-Control-Allow-Origin', origin);
+      response.headers.set('Access-Control-Expose-Headers', 'X-Chunk-SHA256');
+    }
     if (response.status === 405) response.headers.set('Allow', allowedMethods);
     logRequest({ requestId, route, status: response.status, code });
     return response;

@@ -34,7 +34,8 @@ function harness(options = {}) {
       state.pending = structuredClone(value);
     },
     async loadPendingOperation() { return structuredClone(state.pending); },
-    async clearPendingOperation() { state.pending = null; }
+    async clearPendingOperation() { state.pending = null; },
+    async loadRollbackCopy() { return structuredClone(state.rollback || null); }
   };
   const api = {
     async health() { events.push('health'); return limits; },
@@ -592,4 +593,293 @@ test('join rejects Unicode case-folding aliases before touching network', async 
   const h = harness();
   await assert.rejects(h.sync.joinSpace({ syncCode: 'ı'.repeat(26), password }), /同步码/);
   assert.deepEqual(h.events, []);
+});
+
+async function pullHarness() {
+  const h = harness();
+  await create(h);
+  const source = structuredClone(h.state.devices[0].latestSnapshot);
+  const sourceBytes = h.state.chunks.map(bytes => bytes.slice());
+  h.source = source;
+  h.state.data = { qinshi_progress: 'unsynced local', qinshi_extra: 'must be removed' };
+  h.state.rollback = null;
+  h.storage.loadRollbackCopy = async () => structuredClone(h.state.rollback);
+  h.storage.saveRollbackCopy = async copy => { h.events.push('save-rollback'); h.state.rollback = structuredClone(copy); };
+  h.storage.clearRollbackCopy = async () => { h.events.push('clear-rollback'); h.state.rollback = null; };
+  h.deps.settings.makePayload = reason => ({ formatVersion: 1, appName: 'Qin', reason, data: structuredClone(h.state.data) });
+  h.deps.settings.downloadPayload = payload => { h.events.push('json-backup'); h.state.backup = structuredClone(payload); };
+  h.deps.settings.replaceManagedData = data => { h.events.push('replace-local'); h.state.data = structuredClone(data); };
+  h.deps.settings.restoreManagedData = data => { h.events.push('restore-local'); h.state.data = structuredClone(data); };
+  h.deps.location = { reload() { h.events.push('reload'); } };
+  h.deps.pwa.applyUpdate = () => { h.events.push('apply-update'); assert.deepEqual(h.state.pending, { type: h.resumeType || 'pull', snapshotId: source.snapshotId }); };
+  h.api.getSnapshot = async id => { h.events.push('download:' + id); assert.equal(id, source.snapshotId); return structuredClone(source); };
+  h.api.getChunk = async (id, index, options) => {
+    assert.equal(id, source.snapshotId);
+    assert.equal(options.withDigest, true);
+    return { bytes: sourceBytes[index].slice().buffer, digest: createHash('sha256').update(sourceBytes[index]).digest('base64url') };
+  };
+  const sessions = new Map();
+  h.api.createUpload = async (body, key) => {
+    h.events.push('stage:' + body.operation);
+    h.state.uploads.push(structuredClone({ body, key }));
+    const uploadId = randomUUID();
+    sessions.set(uploadId, { body: structuredClone(body), key, chunks: [] });
+    return { uploadId, snapshotId: body.snapshotId, uploadedChunks: [] };
+  };
+  h.api.putChunk = async (id, index, bytes, digest) => {
+    assert.equal(createHash('sha256').update(bytes).digest('base64url'), digest);
+    sessions.get(id).chunks[index] = { index, byteLength: bytes.length, data: Buffer.from(bytes).toString('base64url'), digest };
+  };
+  h.api.commitUpload = async (id, body, key) => {
+    h.events.push('commit-cloud');
+    const after = sessions.get(id), before = sessions.get(body.beforeUploadId);
+    assert.equal(after.key, key);
+    assert.equal(after.body.sourceSnapshotId, source.snapshotId);
+    assert.equal(body.sourceSnapshotId, source.snapshotId);
+    assert.equal(before.body.operation, after.body.operation.replace('-after', '-before'));
+    h.state.commits.push({ id, body, key });
+    h.state.committedPair = { before, after };
+    return { operationId: id, latestSnapshotId: after.body.snapshotId, historySnapshotIds: [before.body.snapshotId], serverCommittedAt: 2 };
+  };
+  h.events.length = 0;
+  return h;
+}
+
+test('pull pins source id, keeps preview opaque, backs up before replacement and commits one pair', async () => {
+  const h = await pullHarness();
+  const before = structuredClone(h.state.data);
+  const preview = await h.sync.preparePull(h.source.snapshotId);
+  assert.equal(preview.snapshotId, h.source.snapshotId);
+  assert.equal(preview.sourceDeviceName, 'Windows 设备');
+  assert.equal(preview.currentDeviceName, 'Windows 设备');
+  assert.equal(preview.serverCreatedAt, 1);
+  assert.equal(preview.itemCount, 1);
+  assert.match(preview.confirmationText, /Windows 设备 → Windows 设备/);
+  assert.match(preview.confirmationText, /当前设备全部个人数据将被覆盖/);
+  assert.equal(JSON.stringify(preview).includes('local progress'), false);
+  assert.deepEqual(h.state.data, before);
+  h.state.devices[0].latestSnapshot = null; // Never resolve a latest alias after selection.
+  await h.sync.confirmPull(preview);
+  assert.deepEqual(h.state.data, { qinshi_progress: 'local progress' });
+  assert.deepEqual(h.state.backup.data, before);
+  assert.equal(h.state.rollback, null);
+  assert.equal(h.state.pending, null);
+  assert.deepEqual(h.events.filter(event => !['collect', 'listDevices'].includes(event)), [
+    'health', 'preflight', 'download:' + h.source.snapshotId,
+    'health', 'preflight', 'download:' + h.source.snapshotId,
+    'json-backup', 'save-rollback', 'stage:replace-before', 'stage:replace-after',
+    'replace-local', 'commit-cloud', 'clear-rollback', 'reload'
+  ]);
+  for (const [side, expected] of [['before', before], ['after', { qinshi_progress: 'local progress' }]]) {
+    const staged = h.state.committedPair[side];
+    const bytes = await h.cryptoApi.joinAndVerifyChunks(staged.chunks, staged.body.ciphertextDigest);
+    const envelope = await h.cryptoApi.decryptSnapshot({ version: 1, algorithm: 'AES-256-GCM', ...staged.body, ciphertext: Buffer.from(bytes).toString('base64url') }, h.state.pairing.masterKey,
+      { ...staged.body, spaceId: h.state.pairing.spaceId, sourceDeviceId: h.state.pairing.deviceId });
+    assert.deepEqual(envelope.data, expected);
+    assert.notEqual(staged.body.iv, h.source.iv);
+    assert.notEqual(staged.body.snapshotId, h.source.snapshotId);
+  }
+  await assert.rejects(h.sync.confirmPull(preview), /确认|失效/);
+});
+
+test('pull rejects missing explicit id or forged confirmation before side effects', async () => {
+  const h = await pullHarness();
+  await assert.rejects(h.sync.preparePull(), /快照/);
+  await assert.rejects(h.sync.confirmPull({ snapshotId: h.source.snapshotId }), /确认|失效/);
+  assert.deepEqual(h.events, []);
+});
+
+test('pull PWA update resumes the exact source id after reload without persisting plaintext', async () => {
+  const h = await pullHarness();
+  h.state.ready = false;
+  h.deps.pwa.ensureCurrentForSync = async () => { h.events.push('preflight'); return { ready: h.state.ready, updateRequired: !h.state.ready }; };
+  await assert.rejects(h.sync.preparePull(h.source.snapshotId), /版本|更新/);
+  assert.deepEqual(h.events, ['health', 'preflight', 'apply-update']);
+  assert.deepEqual(h.state.pending, { type: 'pull', snapshotId: h.source.snapshotId });
+  h.state.ready = true;
+  h.state.devices[0].latestSnapshot = null;
+  h.events.length = 0;
+  const resumed = await moduleApi.createSync(h.deps).resumePendingOperation();
+  assert.equal(resumed.status, 'confirmation-required');
+  assert.equal(resumed.preview.snapshotId, h.source.snapshotId);
+  assert.equal(h.events.includes('replace-local'), false);
+});
+
+test('pull validates chunk and total digests, metadata identity, AAD and schema before any backup', async () => {
+  for (const change of ['chunk', 'chunk-digest', 'full-digest', 'identity', 'aad', 'schema']) {
+    const h = await pullHarness();
+    const getChunk = h.api.getChunk;
+    if (change === 'chunk') h.api.getChunk = async (...args) => { const result = await getChunk(...args); new Uint8Array(result.bytes)[0] ^= 1; return result; };
+    if (change === 'chunk-digest') h.api.getChunk = async (...args) => ({ ...await getChunk(...args), digest: 'A'.repeat(43) });
+    if (change === 'full-digest') h.source.ciphertextDigest = 'A'.repeat(43);
+    if (change === 'identity') h.api.getSnapshot = async () => ({ ...h.source, snapshotId: randomUUID() });
+    if (change === 'aad') h.cryptoApi.decryptSnapshot = (record, key, fields) => cryptoModule.createCrypto({ crypto: webcrypto }).decryptSnapshot(record, key, { ...fields, spaceId: randomUUID() });
+    if (change === 'schema') h.cryptoApi.decryptSnapshot = async () => ({ formatVersion: 99, data: { outside: 'forbidden' } });
+    await assert.rejects(h.sync.preparePull(h.source.snapshotId));
+    assert.equal(h.events.includes('json-backup'), false, change);
+    assert.equal(h.state.rollback, null, change);
+  }
+});
+
+test('pull source deletion at confirmation never backs up or replaces local data', async () => {
+  const h = await pullHarness();
+  const preview = await h.sync.preparePull(h.source.snapshotId);
+  h.api.getSnapshot = async () => { throw new Error('source deleted'); };
+  await assert.rejects(h.sync.confirmPull(preview), /source deleted/);
+  assert.equal(h.events.includes('json-backup'), false);
+});
+
+test('pull blocked JSON download still saves IndexedDB rollback before replacing', async () => {
+  const h = await pullHarness();
+  h.deps.settings.downloadPayload = () => { h.events.push('blocked-download'); throw new Error('download blocked'); };
+  const result = await h.sync.confirmPull(await h.sync.preparePull(h.source.snapshotId));
+  assert.equal(result.backupDownloadFailed, true);
+  assert.ok(h.events.indexOf('save-rollback') < h.events.indexOf('replace-local'));
+});
+
+test('pull rollback storage exhaustion aborts before staging or modifying local data', async () => {
+  const h = await pullHarness();
+  const before = structuredClone(h.state.data);
+  h.storage.saveRollbackCopy = async () => { throw new Error('quota exceeded'); };
+  await assert.rejects(h.sync.confirmPull(await h.sync.preparePull(h.source.snapshotId)), /quota/);
+  assert.deepEqual(h.state.data, before);
+  assert.equal(h.events.includes('stage:replace-before'), false);
+});
+
+test('pull local, stage and cloud failures preserve original data and rollback evidence', async () => {
+  for (const phase of ['stage', 'local', 'cloud']) {
+    const h = await pullHarness();
+    const before = structuredClone(h.state.data);
+    if (phase === 'stage') h.api.createUpload = async () => { throw new Error('stage failed'); };
+    if (phase === 'local') h.deps.settings.replaceManagedData = () => { h.state.data = {}; throw new Error('local failed'); };
+    if (phase === 'cloud') h.api.commitUpload = async () => { throw new Error('cloud failed'); };
+    await assert.rejects(h.sync.confirmPull(await h.sync.preparePull(h.source.snapshotId)), new RegExp(phase + ' failed'));
+    assert.deepEqual(h.state.data, before);
+    assert.deepEqual(h.state.rollback.data, before);
+    assert.equal(h.events.includes('clear-rollback'), false);
+    assert.equal(h.events.includes('reload'), false);
+    await assert.rejects(h.sync.preparePull(h.source.snapshotId), /回滚/);
+  }
+});
+
+test('pull cancellation before local replacement aborts and keeps recovery evidence', async () => {
+  const h = await pullHarness();
+  const preview = await h.sync.preparePull(h.source.snapshotId);
+  const createUpload = h.api.createUpload;
+  h.api.createUpload = async (...args) => { h.sync.cancelPull(preview); return createUpload(...args); };
+  await assert.rejects(h.sync.confirmPull(preview), /取消/);
+  assert.equal(h.events.includes('replace-local'), false);
+  assert.ok(h.state.rollback);
+});
+
+test('pull locks duplicate controls while replacement is in progress', async () => {
+  const h = await pullHarness();
+  const preview = await h.sync.preparePull(h.source.snapshotId);
+  const commit = h.api.commitUpload;
+  h.api.commitUpload = async (...args) => {
+    await assert.rejects(h.sync.confirmPull(preview), /正在进行/);
+    await assert.rejects(h.sync.uploadCurrentDevice(), /正在进行/);
+    assert.equal(h.sync.cancelPull(preview), false);
+    return commit(...args);
+  };
+  await h.sync.confirmPull(preview);
+});
+
+test('restore history prepares explicit confirmation and uses the restore atomic pair', async () => {
+  const h = await pullHarness();
+  h.state.devices[0].historySnapshots = [h.source];
+  h.state.devices[0].latestSnapshot = null;
+  const preview = await h.sync.restoreHistory(h.source.snapshotId);
+  assert.equal(preview.type, 'restore');
+  assert.equal(h.events.includes('replace-local'), false);
+  await h.sync.confirmPull(preview);
+  assert.equal(h.state.committedPair.before.body.operation, 'restore-before');
+  assert.equal(h.state.committedPair.after.body.operation, 'restore-after');
+});
+
+test('rollback recovery never silently deletes evidence and requires an explicit action', async () => {
+  const h = await pullHarness();
+  h.state.rollback = { createdAt: time, data: { qinshi_progress: 'original' } };
+  let recovered = await h.sync.recoverInterruptedRollback();
+  assert.equal(recovered.status, 'recovery-required');
+  assert.equal(recovered.matchesCurrent, false);
+  assert.deepEqual(recovered.actions, ['恢复覆盖前数据', '保留当前数据并删除回滚副本']);
+  assert.ok(h.state.rollback);
+  await h.sync.recoverInterruptedRollback('restore');
+  assert.deepEqual(h.state.data, { qinshi_progress: 'original' });
+  assert.equal(h.state.rollback, null);
+  h.state.rollback = { createdAt: time, data: { qinshi_progress: 'other' } };
+  await h.sync.recoverInterruptedRollback('discard');
+  assert.deepEqual(h.state.data, { qinshi_progress: 'original' });
+  assert.equal(h.state.rollback, null);
+});
+
+test('rollback restoration failure retains evidence and cannot claim successful recovery', async () => {
+  const h = await pullHarness();
+  h.state.rollback = { createdAt: time, data: { qinshi_progress: 'original' } };
+  h.deps.settings.restoreManagedData = () => { throw new Error('restore unavailable'); };
+  await assert.rejects(h.sync.recoverInterruptedRollback('restore'), /restore unavailable/);
+  assert.ok(h.state.rollback);
+});
+
+test('rollback evidence blocks uploads and is discovered on resume even without pending session state', async () => {
+  const h = await pullHarness();
+  h.state.rollback = { createdAt: time, data: { qinshi_progress: 'original' } };
+  await assert.rejects(h.sync.uploadCurrentDevice(), /回滚/);
+  assert.equal((await moduleApi.createSync(h.deps).resumePendingOperation()).status, 'recovery-required');
+  assert.equal(h.events.includes('collect'), true); // Recovery comparison, never upload staging.
+  assert.equal(h.events.some(event => event.startsWith('stage:')), false);
+  assert.ok(h.state.rollback);
+});
+
+test('pull cleanup failure after both commits retains current data and rollback evidence', async () => {
+  const h = await pullHarness();
+  h.storage.clearPendingOperation = async () => { throw new Error('cleanup failed'); };
+  await assert.rejects(h.sync.confirmPull(await h.sync.preparePull(h.source.snapshotId)), /cleanup failed/);
+  assert.deepEqual(h.state.data, { qinshi_progress: 'local progress' });
+  assert.ok(h.state.committedPair);
+  assert.ok(h.state.rollback);
+  assert.equal(h.events.includes('restore-local'), false);
+});
+
+test('pull detects local edits during staging and never overwrites them', async () => {
+  const h = await pullHarness();
+  const createUpload = h.api.createUpload;
+  h.api.createUpload = async (...args) => { h.state.data.qinshi_progress = 'edited while waiting'; return createUpload(...args); };
+  await assert.rejects(h.sync.confirmPull(await h.sync.preparePull(h.source.snapshotId)), /本机数据已变化/);
+  assert.equal(h.state.data.qinshi_progress, 'edited while waiting');
+  assert.equal(h.events.includes('replace-local'), false);
+  assert.ok(h.state.rollback);
+});
+
+test('restore update resume retains restore type and rejects other-device history', async () => {
+  const h = await pullHarness();
+  h.resumeType = 'restore';
+  h.state.devices[0].historySnapshots = [h.source];
+  h.state.devices[0].latestSnapshot = null;
+  h.deps.pwa.ensureCurrentForSync = async () => ({ ready: h.state.ready, updateRequired: !h.state.ready });
+  h.state.ready = false;
+  await assert.rejects(h.sync.restoreHistory(h.source.snapshotId), /更新|版本/);
+  assert.deepEqual(h.state.pending, { type: 'restore', snapshotId: h.source.snapshotId });
+  h.state.ready = true;
+  assert.equal((await moduleApi.createSync(h.deps).resumePendingOperation()).preview.type, 'restore');
+  h.state.devices[0].historySnapshots = [];
+  await assert.rejects(h.sync.restoreHistory(h.source.snapshotId), /历史快照/);
+});
+
+test('pull from a different device shows full names and re-encrypts with current-device AAD', async () => {
+  const h = await pullHarness();
+  h.state.pairing = null;
+  await h.sync.joinSpace({ syncCode: h.state.spaces[0].body.syncCode, password, deviceName: '当前平板的完整设备名称' });
+  h.state.devices.push({ ...h.state.pairRequest.body.device, revoked: false, latestSnapshot: null, historySnapshots: [] });
+  await assert.rejects(h.sync.restoreHistory(h.source.snapshotId), /当前设备的历史/);
+  const preview = await h.sync.preparePull(h.source.snapshotId);
+  assert.match(preview.confirmationText, /Windows 设备 → 当前平板的完整设备名称/);
+  await h.sync.confirmPull(preview);
+  const staged = h.state.committedPair.after;
+  const bytes = await h.cryptoApi.joinAndVerifyChunks(staged.chunks, staged.body.ciphertextDigest);
+  const record = { version: 1, algorithm: 'AES-256-GCM', ...staged.body, ciphertext: Buffer.from(bytes).toString('base64url') };
+  const fields = { ...staged.body, spaceId: h.state.pairing.spaceId, sourceDeviceId: h.state.pairing.deviceId };
+  assert.deepEqual((await h.cryptoApi.decryptSnapshot(record, h.state.pairing.masterKey, fields)).data, { qinshi_progress: 'local progress' });
+  await assert.rejects(h.cryptoApi.decryptSnapshot(record, h.state.pairing.masterKey, { ...fields, sourceDeviceId: h.source.deviceId }), /校验/);
 });

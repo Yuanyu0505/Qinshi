@@ -97,6 +97,22 @@ test("non-idempotent device mutations never retry even for network, 429, or 503"
   }
 });
 
+test('chunk detail downloads preserve validated server digest for verification', async () => {
+  const bytes = new Uint8Array([1, 2, 3]);
+  const digest = 'A'.repeat(43);
+  const { api } = setup([new Response(bytes, { headers: { 'X-Chunk-SHA256': digest } })]);
+  const result = await api.getChunk('snapshot', 0, { withDigest: true });
+  assert.deepEqual(new Uint8Array(result.bytes), bytes);
+  assert.equal(result.digest, digest);
+});
+
+test('chunk detail downloads reject missing and malformed digest headers', async () => {
+  for (const digest of [null, 'bad', 'B'.repeat(43)]) {
+    const { api } = setup([new Response(new Uint8Array([1]), { headers: digest ? { 'X-Chunk-SHA256': digest } : {} })]);
+    await assert.rejects(api.getChunk('snapshot', 0, { withDigest: true }), error => error.code === 'INVALID_RESPONSE');
+  }
+});
+
 test("Retry-After seconds and HTTP dates are honored without shortening backoff", async () => {
   const { api, delays } = setup([
     failure(429, "AUTH_COOLDOWN", { "Retry-After": "2" }),

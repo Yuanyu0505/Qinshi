@@ -86,6 +86,23 @@ it('creates a staged session, resumes chunk indices, and replays one immutable c
   expect((await put(item)).status).toBe(409);
 });
 
+it('exposes chunk digests to the exact allowed browser origin on success and errors', async () => {
+  const item = await complete();
+  const path = `/v1/snapshots/${item.body.snapshotId}/chunks/0`;
+  const response = await get(path);
+  expect(response.status).toBe(200);
+  expect(response.headers.get('Access-Control-Allow-Origin')).toBe('https://yuanyu0505.github.io');
+  expect(response.headers.get('Access-Control-Expose-Headers')).toBe('X-Chunk-SHA256');
+  expect(response.headers.get('X-Chunk-SHA256')).toBe(item.body.ciphertextDigest);
+  const missing = await get(`/v1/snapshots/${crypto.randomUUID()}/chunks/0`);
+  expect(missing.status).toBe(404);
+  expect(missing.headers.get('Access-Control-Expose-Headers')).toBe('X-Chunk-SHA256');
+  const forbidden = await get(path, { headers: { Origin: 'https://evil.test' } });
+  expect(forbidden.status).toBe(403);
+  expect(forbidden.headers.get('Access-Control-Expose-Headers')).toBeNull();
+  expect(forbidden.headers.get('Access-Control-Allow-Origin')).toBeNull();
+});
+
 it('rejects changed create/commit bodies under the same operation without mutation', async () => {
   const key = crypto.randomUUID();
   const item = await complete({}, { key });

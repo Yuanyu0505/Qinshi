@@ -380,6 +380,22 @@
       if (await storage().loadRollbackCopy()) throw new Error('存在未处理的回滚副本，请先恢复覆盖前数据或明确保留当前数据。');
     }
 
+    async function assertNoOtherPending(type, snapshotId) {
+      if (pendingUpload || pendingEnrollment) throw new Error('请先处理已有同步操作。');
+      var pending = await storage().loadPendingOperation();
+      if (pending && (pending.type !== type || pending.snapshotId !== snapshotId)) throw new Error('请先处理已有同步操作。');
+    }
+
+    async function ownedRollback(ownerId) {
+      var copy = await storage().loadRollbackCopy();
+      if (!copy || copy.ownerId !== ownerId) {
+        var error = new Error('回滚 owner 已变化，请先处理已有回滚。');
+        error.code = 'ROLLBACK_CONFLICT';
+        throw error;
+      }
+      return copy;
+    }
+
     async function readSource(snapshotId, pairing) {
       var metadata = await api().getSnapshot(snapshotId);
       if (!metadata || metadata.snapshotId !== snapshotId || typeof metadata.deviceId !== 'string' ||
@@ -391,7 +407,7 @@
 
     async function prepareSource(snapshotId, type) {
       if (typeof snapshotId !== 'string' || !snapshotId.trim()) throw new Error('请明确选择一个来源快照。');
-      if (pendingUpload || pendingEnrollment) throw new Error('请先处理已有同步操作。');
+      await assertNoOtherPending(type, snapshotId);
       await assertNoRollback();
       await preflight({ type: type, snapshotId: snapshotId });
       var pairing = await requirePairing();
@@ -457,8 +473,10 @@
 
     async function confirmPull(preview) {
       return exclusive(async function () {
+        if (pendingUpload || pendingEnrollment) throw new Error('请先处理已有同步操作。');
         var prepared = preview && preparedPulls.get(preview);
         if (!prepared || prepared.cancelled) throw new Error('来源确认已失效，请重新选择快照。');
+        await assertNoOtherPending(preview.type, preview.snapshotId);
         await assertNoRollback();
         await preflight({ type: preview.type, snapshotId: preview.snapshotId });
         var pairing = await requirePairing();
@@ -469,20 +487,24 @@
         var settings = dependency('settings', 'QinshiSettings');
         var before = (await core().createSnapshotEnvelope({ appVersion: version(), sourceDeviceId: pairing.deviceId,
           clientCreatedAt: now(), data: settings.collectManagedData() })).data;
+        prepared.ownerId = uuid();
+        // Claim before the browser download: a competing tab must have no backup
+        // or write side effects even if it passed the earlier read-only precheck.
+        await storage().claimRollbackCopy({ ownerId: prepared.ownerId, createdAt: now(), data: before });
         var backupDownloadFailed = false;
-        try {
-          var payload = settings.makePayload('before-cloud-sync');
-          payload.data = before; // Back up exactly the rollback image, never a second collection.
-          await settings.downloadPayload(payload, 'before-cloud-sync');
-        } catch (downloadError) { backupDownloadFailed = true; }
-        await storage().saveRollbackCopy({ createdAt: now(), data: before });
-        await storage().savePendingOperation({ type: preview.type, snapshotId: preview.snapshotId });
         var replacementStarted = false;
         try {
+          await storage().savePendingOperation({ type: preview.type, snapshotId: preview.snapshotId });
+          try {
+            var payload = settings.makePayload('before-cloud-sync');
+            payload.data = before; // Back up exactly the owned rollback image.
+            await settings.downloadPayload(payload, 'before-cloud-sync');
+          } catch (downloadError) { backupDownloadFailed = true; }
           var prefix = preview.type === 'restore' ? 'restore' : 'replace';
           var stagedBefore = await stageReplacement(before, pairing, prefix + '-before', null);
           var stagedAfter = await stageReplacement(prepared.envelope.data, pairing, prefix + '-after', preview.snapshotId);
           if (prepared.cancelled) throw new Error('已取消覆盖。');
+          await ownedRollback(prepared.ownerId);
           // Fail closed if local editing continued while encryption/network was pending.
           if (core().canonicalStringify(settings.collectManagedData()) !== core().canonicalStringify(before)) throw new Error('本机数据已变化，请处理回滚副本后重新确认。');
           prepared.replacing = true;
@@ -494,14 +516,15 @@
             !Array.isArray(committed.historySnapshotIds) || committed.historySnapshotIds[0] !== stagedBefore.snapshotId) throw new Error('云端提交响应不正确。');
         } catch (error) {
           if (replacementStarted) {
-            try { await settings.restoreManagedData(before); }
+            var rollback = await ownedRollback(prepared.ownerId);
+            try { await settings.restoreManagedData(rollback.data); }
             catch (restoreError) { throw new Error('覆盖失败且本机自动恢复失败，请使用保留的回滚副本恢复覆盖前数据。'); }
           }
           throw error;
         } finally { preparedPulls.delete(preview); }
         // Both sides have committed. Cleanup failures retain evidence, not undo a known commit.
         await storage().clearPendingOperation();
-        await storage().clearRollbackCopy();
+        await storage().clearRollbackCopy(prepared.ownerId);
         dependency('location', 'location').reload();
         return { status: 'replaced', snapshotId: stagedAfter.snapshotId, backupDownloadFailed: backupDownloadFailed };
       });
@@ -520,7 +543,7 @@
       if (action !== 'restore' && action !== 'discard') throw new Error('请明确选择回滚恢复方式。');
       if (action === 'restore') await settings.restoreManagedData(saved.data);
       await storage().clearPendingOperation();
-      await storage().clearRollbackCopy();
+      await storage().clearRollbackCopy(copy.ownerId);
       preparedPulls = new WeakMap();
       if (action === 'restore') dependency('location', 'location').reload();
       return { status: action === 'restore' ? 'recovered' : 'discarded' };

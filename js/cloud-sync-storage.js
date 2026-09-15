@@ -230,6 +230,53 @@
       return transaction("readwrite", function (store) { return store.delete(key); });
     }
 
+    function rollbackConflict() {
+      var error = new Error('回滚副本已被其他操作占用，请先处理已有回滚。');
+      error.code = 'ROLLBACK_CONFLICT';
+      return error;
+    }
+
+    // The read and conditional write share one IDB readwrite transaction. Do not
+    // await between requests: Safari may auto-close an inactive transaction.
+    function changeRollback(saved, ownerId, removing) {
+      return openStore().then(function (database) {
+        return new Promise(function (resolve, reject) {
+          var tx, failure, settled = false;
+          function settle(handler, value) {
+            if (settled) return;
+            settled = true;
+            closeDatabase(database);
+            handler(value);
+          }
+          function fail(error) {
+            failure = error;
+            try { if (tx) tx.abort(); } catch (ignored) { /* Preserve the safe original failure. */ }
+            settle(reject, error);
+          }
+          try {
+            tx = database.transaction(STORE_NAME, 'readwrite');
+            tx.onabort = function () { settle(reject, failure || errorFrom(tx, 'IndexedDB transaction aborted.')); };
+            tx.onerror = function () { settle(reject, failure || errorFrom(tx, 'IndexedDB transaction failed.')); };
+            tx.oncomplete = function () { settle(resolve); };
+            var store = tx.objectStore(STORE_NAME);
+            var request = store.get(ROLLBACK_COPY_KEY);
+            request.onerror = function () { fail(errorFrom(request, 'IndexedDB request failed.')); };
+            request.onsuccess = function () {
+              try {
+                var current = request.result;
+                if (!removing && current !== undefined) throw rollbackConflict();
+                var currentOwner = current && typeof current === 'object' ? current.ownerId : undefined;
+                if (removing && current === undefined && ownerId !== undefined) throw rollbackConflict();
+                if (removing && current !== undefined && currentOwner !== ownerId) throw rollbackConflict();
+                var mutation = removing ? store.delete(ROLLBACK_COPY_KEY) : store.put(saved, ROLLBACK_COPY_KEY);
+                mutation.onerror = function () { fail(errorFrom(mutation, 'IndexedDB request failed.')); };
+              } catch (error) { fail(error); }
+            };
+          } catch (error) { fail(error); }
+        });
+      });
+    }
+
     function getSessionStorage() {
       if (!sessionStorage || typeof sessionStorage.getItem !== "function" ||
         typeof sessionStorage.setItem !== "function" || typeof sessionStorage.removeItem !== "function") {
@@ -287,10 +334,21 @@
         } catch (error) {
           return Promise.reject(error);
         }
-        return writeRecord(ROLLBACK_COPY_KEY, saved);
+        return changeRollback(saved, undefined, false);
+      },
+      claimRollbackCopy: function (copy) {
+        var saved;
+        try {
+          saved = cloneRollbackCopy(copy);
+          if (!saved || typeof saved.ownerId !== 'string' ||
+            !/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(saved.ownerId)) {
+            throw new Error('回滚 owner 不正确。');
+          }
+        } catch (error) { return Promise.reject(error); }
+        return changeRollback(saved, saved.ownerId, false);
       },
       loadRollbackCopy: function () { return readRecord(ROLLBACK_COPY_KEY); },
-      clearRollbackCopy: function () { return deleteRecord(ROLLBACK_COPY_KEY); }
+      clearRollbackCopy: function (ownerId) { return changeRollback(undefined, ownerId, true); }
     };
   }
 

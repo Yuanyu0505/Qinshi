@@ -605,7 +605,14 @@ async function pullHarness() {
   h.state.rollback = null;
   h.storage.loadRollbackCopy = async () => structuredClone(h.state.rollback);
   h.storage.saveRollbackCopy = async copy => { h.events.push('save-rollback'); h.state.rollback = structuredClone(copy); };
-  h.storage.clearRollbackCopy = async () => { h.events.push('clear-rollback'); h.state.rollback = null; };
+  h.storage.claimRollbackCopy = async copy => {
+    if (h.state.rollback) throw Object.assign(new Error('回滚已被占用'), { code: 'ROLLBACK_CONFLICT' });
+    return h.storage.saveRollbackCopy(copy);
+  };
+  h.storage.clearRollbackCopy = async ownerId => {
+    if (h.state.rollback && h.state.rollback.ownerId !== ownerId) throw Object.assign(new Error('回滚 owner 冲突'), { code: 'ROLLBACK_CONFLICT' });
+    h.events.push('clear-rollback'); h.state.rollback = null;
+  };
   h.deps.settings.makePayload = reason => ({ formatVersion: 1, appName: 'Qin', reason, data: structuredClone(h.state.data) });
   h.deps.settings.downloadPayload = payload => { h.events.push('json-backup'); h.state.backup = structuredClone(payload); };
   h.deps.settings.replaceManagedData = data => { h.events.push('replace-local'); h.state.data = structuredClone(data); };
@@ -667,7 +674,7 @@ test('pull pins source id, keeps preview opaque, backs up before replacement and
   assert.deepEqual(h.events.filter(event => !['collect', 'listDevices'].includes(event)), [
     'health', 'preflight', 'download:' + h.source.snapshotId,
     'health', 'preflight', 'download:' + h.source.snapshotId,
-    'json-backup', 'save-rollback', 'stage:replace-before', 'stage:replace-after',
+    'save-rollback', 'json-backup', 'stage:replace-before', 'stage:replace-after',
     'replace-local', 'commit-cloud', 'clear-rollback', 'reload'
   ]);
   for (const [side, expected] of [['before', before], ['after', { qinshi_progress: 'local progress' }]]) {
@@ -882,4 +889,107 @@ test('pull from a different device shows full names and re-encrypts with current
   const fields = { ...staged.body, spaceId: h.state.pairing.spaceId, sourceDeviceId: h.state.pairing.deviceId };
   assert.deepEqual((await h.cryptoApi.decryptSnapshot(record, h.state.pairing.masterKey, fields)).data, { qinshi_progress: 'local progress' });
   await assert.rejects(h.cryptoApi.decryptSnapshot(record, h.state.pairing.masterKey, { ...fields, sourceDeviceId: h.source.deviceId }), /校验/);
+});
+
+test('stale pull preview cannot override an upload that became pending after preparation', async () => {
+  for (const persistent of [true, false]) {
+    const h = await pullHarness();
+    const preview = await h.sync.preparePull(h.source.snapshotId);
+    h.api.commitUpload = async () => { throw new Error('ambiguous upload'); };
+    await assert.rejects(h.sync.uploadCurrentDevice(), /ambiguous upload/);
+    if (!persistent) h.state.pending = null; // Still reject the private pending upload.
+    h.events.length = 0;
+    await assert.rejects(h.sync.confirmPull(preview), /已有同步|待处理/);
+    assert.deepEqual(h.events, []);
+    assert.equal(h.state.rollback, null);
+  }
+});
+
+test('stale restore confirmation rejects a different persistent operation before any side effect', async () => {
+  const h = await pullHarness();
+  h.state.devices[0].historySnapshots = [h.source];
+  const preview = await h.sync.restoreHistory(h.source.snapshotId);
+  h.state.pending = { type: 'upload', snapshotId: randomUUID() };
+  h.events.length = 0;
+  await assert.rejects(h.sync.confirmPull(preview), /已有同步|待处理/);
+  assert.deepEqual(h.events, []);
+});
+
+test('two tabs cannot both back up or replace when racing to claim the rollback copy', async () => {
+  const h = await pullHarness();
+  const b = moduleApi.createSync({ ...h.deps, storage: { ...h.storage,
+    loadPendingOperation: async () => null, savePendingOperation: async () => {}, clearPendingOperation: async () => {} } });
+  const aPreview = await h.sync.preparePull(h.source.snapshotId);
+  const bPreview = await b.preparePull(h.source.snapshotId);
+  const claim = h.storage.claimRollbackCopy;
+  let release;
+  let claimed;
+  const started = new Promise(resolve => { claimed = resolve; });
+  h.storage.claimRollbackCopy = async copy => { await claim(copy); claimed(); await new Promise(resolve => { release = resolve; }); };
+  const outcome = h.sync.confirmPull(aPreview);
+  await Promise.race([started, outcome.then(() => assert.fail('atomic rollback claim was skipped'))]);
+  const owner = h.state.rollback.ownerId;
+  assert.match(owner, /^[0-9a-f-]{36}$/);
+  h.events.length = 0;
+  await assert.rejects(b.confirmPull(bPreview), /回滚/);
+  assert.deepEqual(h.events, []);
+  assert.equal(h.state.rollback.ownerId, owner);
+  release();
+  await outcome;
+  assert.equal(h.state.rollback, null);
+  assert.equal(h.events.filter(event => event === 'json-backup').length, 1);
+});
+
+test('atomic rollback claim loser does not download a backup even after both tabs passed prechecks', async () => {
+  const h = await pullHarness();
+  const preview = await h.sync.preparePull(h.source.snapshotId);
+  h.storage.claimRollbackCopy = async () => {
+    h.state.rollback = { ownerId: randomUUID(), createdAt: time, data: { qinshi_progress: 'other tab' } };
+    throw Object.assign(new Error('回滚已被占用'), { code: 'ROLLBACK_CONFLICT' });
+  };
+  await assert.rejects(h.sync.confirmPull(preview), error => error.code === 'ROLLBACK_CONFLICT');
+  assert.equal(h.events.includes('json-backup'), false);
+  assert.equal(h.events.some(event => event.startsWith('stage:')), false);
+  assert.equal(h.state.rollback.data.qinshi_progress, 'other tab');
+});
+
+test('stale failure cannot restore or clear another owner rollback record', async () => {
+  const h = await pullHarness();
+  const replacement = { ownerId: randomUUID(), createdAt: time, data: { qinshi_progress: 'other tab rollback' } };
+  h.api.commitUpload = async () => {
+    h.state.rollback = structuredClone(replacement);
+    h.state.data = { qinshi_progress: 'other tab current' };
+    throw new Error('commit failed after ownership changed');
+  };
+  await assert.rejects(h.sync.confirmPull(await h.sync.preparePull(h.source.snapshotId)), /回滚|owner/);
+  assert.deepEqual(h.state.data, { qinshi_progress: 'other tab current' });
+  assert.deepEqual(h.state.rollback, replacement);
+  assert.equal(h.events.includes('restore-local'), false);
+});
+
+test('explicit recovery cannot clear a new record installed after the original read', async () => {
+  const h = await pullHarness();
+  h.state.rollback = { ownerId: randomUUID(), createdAt: time, data: { qinshi_progress: 'original' } };
+  const replacement = { ownerId: randomUUID(), createdAt: time, data: { qinshi_progress: 'other tab' } };
+  h.storage.clearPendingOperation = async () => { h.state.rollback = structuredClone(replacement); };
+  await assert.rejects(h.sync.recoverInterruptedRollback('discard'), error => error.code === 'ROLLBACK_CONFLICT');
+  assert.deepEqual(h.state.rollback, replacement);
+});
+
+test('owned crash recovery restores or discards only the captured owner and keeps session metadata minimal', async () => {
+  for (const action of ['restore', 'discard']) {
+    const h = await pullHarness();
+    h.api.commitUpload = async () => { throw new Error('interrupted commit'); };
+    await assert.rejects(h.sync.confirmPull(await h.sync.preparePull(h.source.snapshotId)), /interrupted/);
+    assert.deepEqual(Object.keys(h.state.pending).sort(), ['snapshotId', 'type']);
+    const ownerId = h.state.rollback.ownerId;
+    assert.equal(typeof ownerId, 'string');
+    const fresh = moduleApi.createSync(h.deps);
+    assert.equal((await fresh.resumePendingOperation()).status, 'recovery-required');
+    await assert.rejects(fresh.preparePull(h.source.snapshotId), /回滚/);
+    const result = await fresh.recoverInterruptedRollback(action);
+    assert.equal(result.status, action === 'restore' ? 'recovered' : 'discarded');
+    assert.equal(h.state.rollback, null);
+    assert.equal(h.state.pending, null);
+  }
 });

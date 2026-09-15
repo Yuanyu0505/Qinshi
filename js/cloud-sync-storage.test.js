@@ -26,11 +26,10 @@ function createFakeIndexedDb() {
   function later(callback) { queueMicrotask(callback); }
 
   function requestResult(request, result, transaction) {
-    later(function () {
+    transaction.enqueue(function () {
       if (transaction.aborted) return;
-      request.result = clone(result);
+      request.result = clone(typeof result === 'function' ? result() : result);
       if (request.onsuccess) request.onsuccess({ target: request });
-      transaction.finish();
     });
     return request;
   }
@@ -42,7 +41,35 @@ function createFakeIndexedDb() {
     this.finished = false;
     this.aborted = false;
     this.error = null;
+    this.requests = [];
+    this.scheduled = false;
+    (database.transactions ||= []).push(this);
   }
+
+  FakeTransaction.prototype.enqueue = function (callback) {
+    this.requests.push(callback);
+    this.pump();
+  };
+  FakeTransaction.prototype.pump = function () {
+    const tx = this;
+    if (tx.database.transactions[0] !== tx || tx.scheduled || tx.finished) return;
+    tx.scheduled = true;
+    later(() => {
+      tx.scheduled = false;
+      if (tx.aborted) return;
+      const request = tx.requests.shift();
+      if (request) { request(); tx.pump(); }
+      else tx.finish();
+    });
+  };
+  FakeTransaction.prototype.release = function () {
+    this.database.transactions.shift();
+    this.database.transactions[0]?.pump();
+  };
+  FakeTransaction.prototype.abort = function () {
+    this.aborted = this.finished = true;
+    later(() => { this.onabort?.({ target: this }); this.release(); });
+  };
 
   FakeTransaction.prototype.objectStore = function (name) {
     const transaction = this;
@@ -52,14 +79,13 @@ function createFakeIndexedDb() {
         const request = {};
         if (failNextRead) {
           failNextRead = false;
-          later(function () {
+          transaction.enqueue(function () {
             request.error = new Error("read failed");
             if (request.onerror) request.onerror({ target: request });
-            transaction.finish();
           });
           return request;
         }
-        return requestResult(request, transaction.database.stores.get(name).get(key), transaction);
+        return requestResult(request, () => transaction.database.stores.get(name).get(key), transaction);
       },
       put: function (value, key) {
         transaction.writes.push({ type: "put", key: key, value: clone(value) });
@@ -82,6 +108,7 @@ function createFakeIndexedDb() {
         transaction.aborted = true;
         transaction.error = new Error("transaction aborted");
         if (transaction.onabort) transaction.onabort({ target: transaction });
+        transaction.release();
         return;
       }
       const store = transaction.database.stores.get(transaction.storeName);
@@ -90,6 +117,7 @@ function createFakeIndexedDb() {
         else store.delete(write.key);
       });
       if (transaction.oncomplete) transaction.oncomplete({ target: transaction });
+      transaction.release();
     });
   };
 
@@ -342,4 +370,70 @@ test("a version change closes an openStore connection without closing it eagerly
 
   assert.equal(database.closed, true);
   assert.equal(adapter.closeCount(), 1);
+});
+
+const ownerA = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+const ownerB = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
+
+test('rollback claim atomically admits one owner across two storage connections', async () => {
+  const adapter = createFakeIndexedDb();
+  const a = createStore(adapter, createSessionStorage());
+  const b = createStore(adapter, createSessionStorage());
+  const results = await Promise.allSettled([
+    a.claimRollbackCopy({ ownerId: ownerA, data: { qinshi_progress: 'A' } }),
+    b.claimRollbackCopy({ ownerId: ownerB, data: { qinshi_progress: 'B' } })
+  ]);
+  assert.equal(results[0].status, 'fulfilled');
+  assert.equal(results[1].status, 'rejected');
+  assert.equal(results[1].reason.code, 'ROLLBACK_CONFLICT');
+  assert.deepEqual(await b.loadRollbackCopy(), { ownerId: ownerA, data: { qinshi_progress: 'A' } });
+  assert.equal(adapter.closeCount(), adapter.openCount());
+});
+
+test('rollback owner clear prevents non-owner and stale-owner deletion including legacy writes', async () => {
+  const adapter = createFakeIndexedDb();
+  const a = createStore(adapter, createSessionStorage());
+  const b = createStore(adapter, createSessionStorage());
+  await a.claimRollbackCopy({ ownerId: ownerA, data: { qinshi_progress: 'A' } });
+  for (const owner of [undefined, ownerB]) await assert.rejects(b.clearRollbackCopy(owner), error => error.code === 'ROLLBACK_CONFLICT');
+  await assert.rejects(b.saveRollbackCopy({ qinshi_progress: 'legacy bypass' }), error => error.code === 'ROLLBACK_CONFLICT');
+  await a.clearRollbackCopy(ownerA);
+  await b.claimRollbackCopy({ ownerId: ownerB, data: { qinshi_progress: 'B' } });
+  await assert.rejects(a.clearRollbackCopy(ownerA), error => error.code === 'ROLLBACK_CONFLICT');
+  assert.equal((await a.loadRollbackCopy()).ownerId, ownerB);
+  await b.clearRollbackCopy(ownerB);
+  assert.equal(await a.loadRollbackCopy(), null);
+  await assert.rejects(a.clearRollbackCopy(ownerA), error => error.code === 'ROLLBACK_CONFLICT');
+  assert.equal(adapter.closeCount(), adapter.openCount());
+});
+
+test('rollback claim snapshots inputs, fails closed on transaction/read errors and preserves legacy recovery', async () => {
+  const adapter = createFakeIndexedDb();
+  const store = createStore(adapter, createSessionStorage());
+  const copy = { ownerId: ownerA, data: { qinshi_progress: 'original' } };
+  const claim = store.claimRollbackCopy(copy);
+  copy.data.qinshi_progress = 'mutated';
+  await claim;
+  assert.equal((await store.loadRollbackCopy()).data.qinshi_progress, 'original');
+  await store.clearRollbackCopy(ownerA);
+  adapter.abortNextTransaction();
+  await assert.rejects(store.claimRollbackCopy(copy), /aborted/);
+  assert.equal(await store.loadRollbackCopy(), null);
+  adapter.failNextRead();
+  await assert.rejects(store.claimRollbackCopy(copy), /read failed/);
+  assert.equal(await store.loadRollbackCopy(), null);
+  await assert.rejects(store.claimRollbackCopy({ data: {} }), /owner|回滚/);
+  await store.saveRollbackCopy({ qinshi_progress: 'legacy' });
+  await store.clearRollbackCopy();
+  assert.equal(await store.loadRollbackCopy(), null);
+  assert.equal(adapter.closeCount(), adapter.openCount());
+});
+
+test('legacy scalar rollback values remain explicitly clearable without an owner', async () => {
+  const store = createStore(createFakeIndexedDb(), createSessionStorage());
+  for (const value of [null, false, 0, 'legacy']) {
+    await store.saveRollbackCopy(value);
+    await store.clearRollbackCopy();
+    assert.equal(await store.loadRollbackCopy(), null);
+  }
 });

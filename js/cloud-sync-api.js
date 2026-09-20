@@ -83,10 +83,11 @@
       } catch (error) { throw safeError("SYNC_NOT_CONFIGURED"); }
     }
 
-    async function loadPairing() {
+    async function loadPairing(override) {
       try {
         var saved;
-        if (options.getPairing) saved = await options.getPairing();
+        if (override !== undefined) saved = override;
+        else if (options.getPairing) saved = await options.getPairing();
         else if (Object.hasOwn(options, "pairing")) saved = options.pairing;
         else if (root.QinshiCloudSyncStorage) saved = await root.QinshiCloudSyncStorage.loadPairing();
         if (!saved || typeof saved.deviceId !== "string" || typeof saved.deviceToken !== "string" ||
@@ -199,7 +200,8 @@
       if (typeof appVersion !== "string" || !/^\d+\.\d+\.\d+$/.test(appVersion)) throw safeError("UPGRADE_REQUIRED");
       var method = details.method || "GET";
       var headers = { "X-Qin-App-Version": appVersion };
-      if (details.auth) headers.Authorization = await loadPairing();
+      if (details.pairingOverride !== undefined && details.key === undefined) throw safeError('INVALID_REQUEST');
+      if (details.auth) headers.Authorization = await loadPairing(details.pairingOverride);
       if (details.idempotent) headers["Idempotency-Key"] = operationKey(details.key);
       var body;
       if (details.chunk) {
@@ -229,8 +231,9 @@
       }
     }
 
-    function write(path, body, key, auth, method) {
-      return request(path, { method: method || "POST", body: body, key: key, auth: auth, idempotent: true });
+    function write(path, body, key, auth, method, replay) {
+      return request(path, { method: method || "POST", body: body, key: key, auth: auth, idempotent: true,
+        pairingOverride: replay && replay.pairing });
     }
 
     return {
@@ -249,9 +252,9 @@
       commitUpload: async function (id, body, key) { return write("/v1/uploads/" + segment(id) + "/commit", body, key, true); },
       getSnapshot: async function (id) { return request("/v1/snapshots/" + segment(id), { auth: true, snapshot: true }); },
       getChunk: async function (id, index, options) { return request("/v1/snapshots/" + segment(id) + "/chunks/" + chunkIndex(index), { auth: true, snapshot: true, binary: true, withDigest: !!(options && options.withDigest) }); },
-      changePassword: function (body, key) { return write("/v1/security/password", body, key, "dual"); },
-      rotateRecoveryKey: function (body, key) { return write("/v1/security/recovery-key", body, key, "dual"); },
-      deleteSpace: function (body, key) { return write("/v1/spaces/current", body, key, "dual", "DELETE"); }
+      changePassword: function (body, key, replay) { return write("/v1/security/password", body, key, "dual", "POST", replay); },
+      rotateRecoveryKey: function (body, key, replay) { return write("/v1/security/recovery-key", body, key, "dual", "POST", replay); },
+      deleteSpace: function (body, key, replay) { return write("/v1/spaces/current", body, key, "dual", "DELETE", replay); }
     };
   }
 

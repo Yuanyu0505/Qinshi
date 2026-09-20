@@ -37,6 +37,20 @@ function harness(options = {}) {
     async clearPendingOperation() { state.pending = null; },
     async loadRollbackCopy() { return structuredClone(state.rollback || null); }
   };
+  function conditionalIdentity(expected, allowAbsent) {
+    if (state.rollback) throw Object.assign(new Error('回滚冲突'), { code: 'ROLLBACK_CONFLICT' });
+    const same = expected === null ? state.pairing === null : state.pairing &&
+      ['spaceId', 'deviceId', 'deviceToken'].every(key => expected[key] === state.pairing[key]);
+    if (!same && !(allowAbsent && state.pairing === null)) throw Object.assign(new Error('配对冲突'), { code: 'PAIRING_CONFLICT' });
+  }
+  storage.replacePairingIfCurrent = async (expected, replacement) => {
+    conditionalIdentity(expected, false);
+    await storage.savePairing(replacement);
+  };
+  storage.forgetPairingIfCurrent = async (expected, options) => {
+    conditionalIdentity(expected, options?.allowAbsent === true);
+    events.push('forgetPairing'); state.pairing = null;
+  };
   const api = {
     async health() { events.push('health'); return limits; },
     async createSpace(body, key) {
@@ -907,6 +921,117 @@ test('delete space acknowledged response cannot clear a newer pairing or rollbac
       assert.equal(h.state.pairing, null);
     }
   }
+});
+
+test('security conditional local transitions reject races after last coordinator read', async () => {
+  for (const operation of ['rename', 'reset', 'revoke', 'delete', 'forget']) {
+    for (const mutation of ['pairing', 'rollback']) {
+      const h = await securityHarness();
+      const original = structuredClone(h.state.pairing), data = structuredClone(h.state.data);
+      h.deps.confirmRevokeDevice = async () => true;
+      h.deps.confirmDeleteSpace = async () => '永久删除同步空间';
+      const method = ['rename', 'reset'].includes(operation) ? 'replacePairingIfCurrent' : 'forgetPairingIfCurrent';
+      const transition = h.storage[method];
+      let called = false;
+      h.storage[method] = async (...args) => {
+        called = true;
+        if (mutation === 'pairing') h.state.pairing = { ...original, deviceToken: 'another-token' };
+        else h.state.rollback = { ownerId: 'another-owner', data };
+        return transition(...args);
+      };
+      const actions = {
+        rename: () => h.sync.renameDevice(original.deviceId, 'renamed'),
+        reset: () => h.sync.resetPasswordWithRecovery({ syncCode: h.code, recoveryKey: h.state.credentials[0].recoveryKey, newPassword: 'new', confirmPassword: 'new' }),
+        revoke: () => h.sync.revokeDevice(original.deviceId, true),
+        delete: () => h.sync.deleteSpace({ syncCode: h.code, password }),
+        forget: () => h.sync.forgetCurrentDevice()
+      };
+      await assert.rejects(actions[operation](), /配对|回滚/);
+      assert.equal(called, true);
+      assert.deepEqual(h.state.pairing, mutation === 'pairing' ? { ...original, deviceToken: 'another-token' } : original);
+      assert.deepEqual(h.state.data, data);
+    }
+  }
+});
+
+test('self revoke response rechecks new pending and rollback before conditional cleanup', async () => {
+  for (const kind of ['pending', 'rollback']) {
+    const h = await securityHarness(), original = structuredClone(h.state.pairing);
+    h.deps.confirmRevokeDevice = async () => true;
+    h.api.revokeDevice = async () => {
+      h.state[kind] = kind === 'pending' ? { type: 'upload', snapshotId: 'new' } : { ownerId: 'new', data: h.state.data };
+      return null;
+    };
+    await assert.rejects(h.sync.revokeDevice(original.deviceId, false), /同步|回滚/);
+    assert.deepEqual(h.state.pairing, original);
+    assert.notEqual(h.state[kind], null);
+  }
+});
+
+test('security definitive server failures release proof so corrected input can proceed', async () => {
+  for (const [code, status] of [['AUTH_FAILED', 401], ['INVALID_REQUEST', 400], ['IDEMPOTENCY_CONFLICT', 409], ['UPGRADE_REQUIRED', 426]]) {
+    const h = await securityHarness();
+    const change = h.api.changePassword;
+    h.api.changePassword = async () => { throw Object.assign(new Error(code), { code, status, retryable: false }); };
+    const input = { syncCode: h.code, currentPassword: password, newPassword: 'new', confirmPassword: 'new' };
+    await assert.rejects(h.sync.changePassword(input), { code });
+    h.api.changePassword = change;
+    await h.sync.changePassword(input);
+    assert.equal(h.state.security.length, 1);
+  }
+});
+
+test('security pre-send pairing failure releases unsent proof and allows a fresh operation', async () => {
+  const h = await securityHarness();
+  h.deps.confirmDeleteSpace = async () => { h.state.pairing.deviceToken = h.cryptoApi.randomId(32); return '永久删除同步空间'; };
+  await assert.rejects(h.sync.deleteSpace({ syncCode: h.code, password }), /配对/);
+  await h.sync.forgetCurrentDevice();
+  assert.equal(h.state.pairing, null);
+  assert.deepEqual(h.state.security, []);
+});
+
+test('security unavailable API method is a pre-send failure rather than a retained ambiguous proof', async () => {
+  const h = await securityHarness();
+  h.api.changePassword = undefined;
+  await assert.rejects(h.sync.changePassword({ syncCode: h.code, currentPassword: password, newPassword: 'new', confirmPassword: 'new' }));
+  await h.sync.forgetCurrentDevice();
+  assert.equal(h.state.pairing, null);
+});
+
+test('delete receipt replay survives revoked detection with original Authorization and no new prompt', async () => {
+  const h = await securityHarness(), calls = [];
+  const original = structuredClone(h.state.pairing);
+  let replay = false, confirmations = 0;
+  const transport = require('./cloud-sync-api.js').createApi({ enabled: true, apiBaseUrl: 'https://sync.example.test',
+    appVersion: '1.0.39', getPairing: () => h.storage.loadPairing(), sleep: async () => {},
+    fetch: async (url, init) => {
+      calls.push(structuredClone({ url, method: init.method, headers: init.headers, body: init.body }));
+      if (init.method === 'DELETE') {
+        if (!replay) throw new TypeError('response lost');
+        return new Response(null, { status: 204 });
+      }
+      return new Response(JSON.stringify({ error: { code: 'AUTH_FAILED' } }), { status: 401 });
+    }
+  });
+  h.api.deleteSpace = transport.deleteSpace;
+  h.api.listDevices = transport.listDevices;
+  h.deps.confirmDeleteSpace = async () => { confirmations++; return '永久删除同步空间'; };
+  await assert.rejects(h.sync.deleteSpace({ syncCode: h.code, password }), { code: 'OFFLINE' });
+  await assert.rejects(h.sync.getDashboard(), { code: 'DEVICE_REVOKED' });
+  assert.equal(h.state.pairing, null);
+  replay = true;
+  await h.sync.resumePendingOperation();
+  assert.equal(h.state.pairing, null);
+  assert.equal(confirmations, 1);
+  const writes = calls.filter(call => call.method === 'DELETE');
+  assert.equal(writes.length, 4);
+  for (const write of writes) {
+    assert.equal(write.headers.Authorization, `Device ${original.deviceId}.${original.deviceToken}`);
+    assert.equal(write.headers['Idempotency-Key'], writes[0].headers['Idempotency-Key']);
+    assert.equal(write.body, writes[0].body);
+  }
+  assert.equal(h.state.pending, null);
+  assert.deepEqual(h.state.data, { qinshi_progress: 'local progress' });
 });
 
 test('join rejects Unicode case-folding aliases before touching network', async () => {

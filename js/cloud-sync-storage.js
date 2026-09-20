@@ -238,6 +238,74 @@
       return error;
     }
 
+    function pairingIdentity(value) {
+      if (value === null) return null;
+      var identity = {};
+      ['spaceId', 'deviceId', 'deviceToken'].forEach(function (field) {
+        if (!value || typeof value[field] !== 'string' || !value[field]) throw new Error('配对凭据不正确。');
+        identity[field] = value[field];
+      });
+      return identity;
+    }
+
+    function conditionalPairing(expected, replacement, allowAbsent) {
+      var identity, saved;
+      try {
+        identity = pairingIdentity(expected);
+        saved = replacement === null ? null : sanitizePairing(replacement);
+      } catch (error) { return Promise.reject(error); }
+      return openStore().then(function (database) {
+        return new Promise(function (resolve, reject) {
+          var tx, failure, settled = false;
+          function settle(handler, value) {
+            if (settled) return;
+            settled = true;
+            closeDatabase(database);
+            handler(value);
+          }
+          function fail(error) {
+            failure = error;
+            try { if (tx) tx.abort(); } catch (ignored) { /* Keep the original failure. */ }
+            settle(reject, error);
+          }
+          try {
+            tx = database.transaction(STORE_NAME, 'readwrite');
+            tx.onabort = function () { settle(reject, failure || errorFrom(tx, 'IndexedDB transaction aborted.')); };
+            tx.onerror = function () { settle(reject, failure || errorFrom(tx, 'IndexedDB transaction failed.')); };
+            tx.oncomplete = function () { settle(resolve); };
+            var store = tx.objectStore(STORE_NAME);
+            var rollback = store.get(ROLLBACK_COPY_KEY);
+            rollback.onerror = function () { fail(errorFrom(rollback, 'IndexedDB request failed.')); };
+            rollback.onsuccess = function () {
+              if (rollback.result !== undefined) { fail(rollbackConflict()); return; }
+              var pairing = store.get(PAIRING_KEY);
+              pairing.onerror = function () { fail(errorFrom(pairing, 'IndexedDB request failed.')); };
+              pairing.onsuccess = function () {
+                try {
+                  var current = pairing.result;
+                  var absent = current === undefined;
+                  var matches = identity === null ? absent : current && ['spaceId', 'deviceId', 'deviceToken'].every(function (field) {
+                    return current[field] === identity[field];
+                  });
+                  if (!matches && !(saved === null && allowAbsent && absent)) {
+                    var conflict = new Error('配对已变化，请重新处理当前配对。');
+                    conflict.code = 'PAIRING_CONFLICT';
+                    throw conflict;
+                  }
+                  // No await between reads and mutation; comparison and rollback
+                  // fence are part of this same serialized readwrite transaction.
+                  var mutation = saved === null ? store.delete(PAIRING_KEY) : store.put(saved, PAIRING_KEY);
+                  mutation.onerror = function () { fail(errorFrom(mutation, 'IndexedDB request failed.')); };
+                } catch (error) { fail(error); }
+              };
+            };
+          } catch (error) { fail(error); }
+        });
+      });
+      // Deliberately never remove session pending state: a marker can arrive
+      // while IDB commits, and it is not part of this atomic transaction.
+    }
+
     // The read and conditional write share one IDB readwrite transaction. Do not
     // await between requests: Safari may auto-close an inactive transaction.
     function rollbackTransaction(action) {
@@ -360,6 +428,11 @@
 
     return {
       openStore: openStore,
+      replacePairingIfCurrent: function (expected, replacement) {
+        if (replacement === null) return Promise.reject(new Error('配对凭据不正确。'));
+        return conditionalPairing(expected, replacement, false);
+      },
+      forgetPairingIfCurrent: function (expected, options) { return conditionalPairing(expected, null, !!(options && options.allowAbsent === true)); },
       savePairing: function (pairing) {
         var saved;
         try {

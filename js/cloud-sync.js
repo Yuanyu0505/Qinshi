@@ -198,11 +198,13 @@
         encryptedName: await encryptMetadata({ deviceName: name }, masterKey, 'device-name', nameContext(spaceId, deviceId)) };
     }
 
-    async function savePairing(response, spaceId, device, name, masterKey) {
+    async function savePairing(response, spaceId, device, name, masterKey, expected) {
       if (!response || response.spaceId !== spaceId || response.deviceId !== device.deviceId) throw new Error('同步服务配对响应不正确。');
       core().assertVersionAllowed(version(), response, 'write');
-      await storage().savePairing({ spaceId: spaceId, deviceId: device.deviceId,
-        deviceToken: device.deviceToken, masterKey: masterKey, deviceName: name, pairedAt: now() });
+      var saved = { spaceId: spaceId, deviceId: device.deviceId,
+        deviceToken: device.deviceToken, masterKey: masterKey, deviceName: name, pairedAt: now() };
+      if (expected !== undefined) await storage().replacePairingIfCurrent(expected, saved);
+      else await storage().savePairing(saved);
     }
 
     async function finishEnrollment(pending) {
@@ -660,7 +662,7 @@
         if (!response || response.deviceId !== id || core().canonicalStringify(response.encryptedName) !== core().canonicalStringify(encryptedName)) throw new Error('设备重命名响应不正确。');
         if (id === pairing.deviceId) {
           await assertSamePairing(pairing);
-          await storage().savePairing(Object.assign({}, pairing, { deviceName: name }));
+          await storage().replacePairingIfCurrent(pairing, Object.assign({}, pairing, { deviceName: name }));
         }
         return { status: 'renamed', deviceId: id };
       });
@@ -682,8 +684,9 @@
         await assertSamePairing(pairing);
         await api().revokeDevice(id, { deleteSnapshots: deleteSnapshots });
         if (id === pairing.deviceId) {
+          await assertSecurityIdle();
           await assertSamePairing(pairing);
-          await storage().forgetPairing();
+          await storage().forgetPairingIfCurrent(pairing);
         }
         preparedPulls = new WeakMap();
         return { status: 'revoked', deviceId: id, deleteSnapshots: deleteSnapshots };
@@ -730,30 +733,49 @@
       var current = await storage().loadPairing();
       if ((current && (!pending.pairing || current.spaceId !== pending.pairing.spaceId ||
         current.deviceId !== pending.pairing.deviceId || current.deviceToken !== pending.pairing.deviceToken)) ||
-        (!current && pending.pairing && !pending.acknowledged && pending.method !== 'recover')) throw new Error('安全操作与当前配对不匹配。');
+        (!current && pending.pairing && !pending.acknowledged && pending.method !== 'recover' &&
+          !(pending.method === 'deleteSpace' && pending.sent))) throw new Error('安全操作与当前配对不匹配。');
+      return current;
+    }
+
+    function definitiveSecurityFailure(error) {
+      if (!error || error.retryable === true) return false;
+      if (error.status >= 400 && error.status < 500 && error.status !== 408) return true;
+      // These safe API failures occur before fetch. Invalid/missing response and
+      // network/service errors may follow a commit and must retain the proof.
+      return ['PAIRING_REQUIRED', 'SYNC_NOT_CONFIGURED', 'INVALID_REQUEST', 'UPGRADE_REQUIRED'].indexOf(error.code) !== -1;
     }
 
     async function finishSecurity(pending) {
-      // Recheck durable fences after user interaction, retries and server waits.
-      await assertSecurityContext(pending);
-      if (!pending.acknowledged) {
-        pending.response = pending.method === 'recover'
-          ? await api().recover(pending.code, pending.body, pending.operationId)
-          : await api()[pending.method](pending.body, pending.operationId);
-        if (pending.method !== 'deleteSpace') {
-          var expectedId = pending.device ? pending.device.deviceId : pending.pairing.deviceId;
-          if (!pending.response || pending.response.spaceId !== pending.spaceId || pending.response.deviceId !== expectedId) throw new Error('安全操作响应不正确。');
-          core().assertVersionAllowed(version(), pending.response, 'write');
+      try {
+        // Recheck durable fences after user interaction, retries and server waits.
+        await assertSecurityContext(pending);
+        if (!pending.acknowledged) {
+          var transport = api();
+          if (typeof transport[pending.method] !== 'function') throw new Error('云同步安全操作依赖不可用。');
+          var replay = pending.sent && pending.pairing ? { pairing: pending.pairing } : undefined;
+          pending.sent = true;
+          pending.response = pending.method === 'recover'
+            ? await transport.recover(pending.code, pending.body, pending.operationId)
+            : await transport[pending.method](pending.body, pending.operationId, replay);
+          if (pending.method !== 'deleteSpace') {
+            var expectedId = pending.device ? pending.device.deviceId : pending.pairing.deviceId;
+            if (!pending.response || pending.response.spaceId !== pending.spaceId || pending.response.deviceId !== expectedId) throw new Error('安全操作响应不正确。');
+            core().assertVersionAllowed(version(), pending.response, 'write');
+          }
+          pending.acknowledged = true;
         }
-        pending.acknowledged = true;
+        var current = await assertSecurityContext(pending);
+        if (pending.method === 'recover') await savePairing(pending.response, pending.spaceId, pending.device, pending.name, pending.masterKey, current);
+        if (pending.method === 'deleteSpace') await storage().forgetPairingIfCurrent(pending.pairing, { allowAbsent: true });
+        pendingSecurity = null;
+        preparedPulls = new WeakMap();
+        return { status: pending.method === 'recover' ? 'password-reset' : pending.method === 'deleteSpace' ? 'deleted' :
+          pending.method === 'changePassword' ? 'password-changed' : 'recovery-key-rotated' };
+      } catch (error) {
+        if (!pending.sent || (!pending.acknowledged && definitiveSecurityFailure(error))) pendingSecurity = null;
+        throw error;
       }
-      await assertSecurityContext(pending);
-      if (pending.method === 'recover') await savePairing(pending.response, pending.spaceId, pending.device, pending.name, pending.masterKey);
-      if (pending.method === 'deleteSpace') await storage().forgetPairing();
-      pendingSecurity = null;
-      preparedPulls = new WeakMap();
-      return { status: pending.method === 'recover' ? 'password-reset' : pending.method === 'deleteSpace' ? 'deleted' :
-        pending.method === 'changePassword' ? 'password-changed' : 'recovery-key-rotated' };
     }
 
     async function securityOperation(method, input) {
@@ -822,7 +844,8 @@
       recoverInterruptedRollback: function (action) { return exclusive(function () { return recovery(action); }); },
       forgetCurrentDevice: function () { return exclusive(async function () {
         await assertSecurityIdle();
-        pendingUpload = null; pendingEnrollment = null; await storage().forgetPairing();
+        await storage().forgetPairingIfCurrent(await storage().loadPairing());
+        pendingUpload = null; pendingEnrollment = null;
       }); },
       resumePendingOperation: resumePendingOperation,
       detectDeviceName: detectDeviceName, normalizeSyncCode: normalizeSyncCode

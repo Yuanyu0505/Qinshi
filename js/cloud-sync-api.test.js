@@ -41,6 +41,32 @@ test("GET retries network and 503 at most twice using backoff", async () => {
   assert.equal(calls[0].url, "https://sync.example.test/v1/health");
 });
 
+test('security replay pairing override uses original token for retries and dual-auth confirmation only', async () => {
+  for (const method of ['changePassword', 'rotateRecoveryKey', 'deleteSpace']) {
+    const original = { deviceId: 'original', deviceToken: 'original-token' };
+    const h = setup([new TypeError('lost'), failure(401, 'AUTH_FAILED'), reply(200, { devices: [] }), reply(204)], {
+      getPairing: async () => ({ deviceId: 'current', deviceToken: 'current-token' })
+    });
+    await assert.rejects(h.api[method]({ authKey: 'derived' }, 'same-op', { pairing: original }), { code: 'AUTH_FAILED' });
+    for (const call of h.calls) assert.equal(call.headers.Authorization, 'Device original.original-token');
+    assert.equal(h.calls[0].body, h.calls[1].body);
+    assert.equal(h.calls[0].headers['Idempotency-Key'], 'same-op');
+    assert.equal(h.calls[2].method, 'GET');
+    await h.api[method]({ authKey: 'derived' }, 'new-op');
+    assert.equal(h.calls.at(-1).headers.Authorization, 'Device current.current-token');
+  }
+});
+
+test('delete receipt replay accepts absent storage pairing only with valid explicit override and operation key', async () => {
+  const h = setup([reply(204)], { getPairing: async () => null });
+  await assert.rejects(h.api.deleteSpace({}, 'same-op'), { code: 'PAIRING_REQUIRED' });
+  await assert.rejects(h.api.deleteSpace({}, 'same-op', { pairing: { deviceId: 'bad\n', deviceToken: 't' } }), { code: 'PAIRING_REQUIRED' });
+  await assert.rejects(h.api.deleteSpace({}, undefined, { pairing }), { code: 'INVALID_REQUEST' });
+  await h.api.deleteSpace({ confirmation: '永久删除同步空间' }, 'same-op', { pairing });
+  assert.equal(h.calls.length, 1);
+  assert.equal(h.calls[0].headers.Authorization, 'Device device-1.test-token');
+});
+
 test("upload writes preserve auth, version, serialized body and idempotency key across retries", async () => {
   const { api, calls } = setup([new TypeError("offline"), reply(200, { uploadId: "upload-1" })]);
   const body = { appVersion: "1.0.39", ciphertextDigest: "opaque" };

@@ -201,6 +201,81 @@ function createStore(adapter, sessionStorage) {
   return storageApi.createStorage({ indexedDB: adapter, sessionStorage: sessionStorage });
 }
 
+test('conditional pairing transitions atomically reject a replaced identity and preserve session evidence', async () => {
+  const adapter = createFakeIndexedDb(), session = createSessionStorage();
+  const a = createStore(adapter, session), b = createStore(adapter, session);
+  const old = { spaceId: 's', deviceId: 'old', deviceToken: 'token', masterKey: 'master' };
+  const newer = { ...old, deviceId: 'new', deviceToken: 'new-token' };
+  await a.savePairing(old);
+  await a.savePendingOperation({ type: 'upload', snapshotId: 'pending' });
+  const switching = b.savePairing(newer);
+  const replacing = a.replacePairingIfCurrent(old, { ...old, deviceName: 'rename' });
+  await switching;
+  await assert.rejects(replacing, { code: 'PAIRING_CONFLICT' });
+  await assert.rejects(a.forgetPairingIfCurrent(old), { code: 'PAIRING_CONFLICT' });
+  await assert.rejects(a.forgetPairingIfCurrent(old, { allowAbsent: true }), { code: 'PAIRING_CONFLICT' });
+  assert.deepEqual(await a.loadPairing(), newer);
+  assert.deepEqual(await a.loadPendingOperation(), { type: 'upload', snapshotId: 'pending' });
+});
+
+test('conditional pairing transitions reject rollback inserted before their transaction and never clear it', async () => {
+  const adapter = createFakeIndexedDb(), session = createSessionStorage();
+  const store = createStore(adapter, session), other = createStore(adapter, session);
+  const pairing = { spaceId: 's', deviceId: 'd', deviceToken: 't', masterKey: 'm' };
+  await store.savePairing(pairing);
+  const rollback = { ownerId: 'owner', data: { qinshi_progress: 'before' } };
+  const claiming = other.saveRollbackCopy(rollback);
+  const replacing = store.replacePairingIfCurrent(pairing, { ...pairing, deviceName: 'new' });
+  await claiming;
+  await assert.rejects(replacing, { code: 'ROLLBACK_CONFLICT' });
+  await assert.rejects(store.forgetPairingIfCurrent(pairing), { code: 'ROLLBACK_CONFLICT' });
+  assert.deepEqual(await store.loadPairing(), pairing);
+  assert.deepEqual(await store.loadRollbackCopy(), rollback);
+});
+
+test('conditional pairing transition has one winner and supports explicit absent replay without touching pending', async () => {
+  const adapter = createFakeIndexedDb(), session = createSessionStorage();
+  const store = createStore(adapter, session), other = createStore(adapter, session);
+  const one = { spaceId: 's', deviceId: 'one', deviceToken: 't', masterKey: 'm' };
+  const two = { ...one, deviceId: 'two' };
+  const results = await Promise.allSettled([store.replacePairingIfCurrent(null, one), other.replacePairingIfCurrent(null, two)]);
+  assert.equal(results.filter(r => r.status === 'fulfilled').length, 1);
+  assert.equal(results.find(r => r.status === 'rejected').reason.code, 'PAIRING_CONFLICT');
+  await store.savePendingOperation({ type: 'upload', snapshotId: 'new-pending' });
+  const winner = await store.loadPairing();
+  await store.forgetPairingIfCurrent(winner);
+  await assert.rejects(store.forgetPairingIfCurrent(winner), { code: 'PAIRING_CONFLICT' });
+  await store.forgetPairingIfCurrent(winner, { allowAbsent: true });
+  assert.equal(await store.loadPairing(), null);
+  assert.deepEqual(await store.loadPendingOperation(), { type: 'upload', snapshotId: 'new-pending' });
+  await store.saveRollbackCopy({ data: {} });
+  await assert.rejects(store.forgetPairingIfCurrent(winner, { allowAbsent: true }), { code: 'ROLLBACK_CONFLICT' });
+});
+
+test('conditional pairing transition snapshots inputs and failed IDB requests or commits preserve pairing', async () => {
+  const adapter = createFakeIndexedDb(), store = createStore(adapter, createSessionStorage());
+  const old = { spaceId: 's', deviceId: 'old', deviceToken: 't', masterKey: 'm' };
+  await store.savePairing(old);
+  for (const failure of ['failNextRead', 'abortNextTransaction']) {
+    adapter[failure]();
+    await assert.rejects(store.replacePairingIfCurrent(old, { ...old, deviceName: 'new' }));
+    assert.deepEqual(await store.loadPairing(), old);
+  }
+  const expected = { ...old }, replacement = { ...old, deviceName: 'captured' };
+  const changing = store.replacePairingIfCurrent(expected, replacement);
+  expected.deviceToken = 'tampered'; replacement.deviceName = 'tampered';
+  await changing;
+  assert.equal((await store.loadPairing()).deviceName, 'captured');
+});
+
+test('conditional replacement rejects null rather than interpreting invalid input as deletion', async () => {
+  const store = createStore(createFakeIndexedDb(), createSessionStorage());
+  const pairing = { spaceId: 's', deviceId: 'd', deviceToken: 't', masterKey: 'm' };
+  await store.savePairing(pairing);
+  await assert.rejects(store.replacePairingIfCurrent(pairing, null), /配对/);
+  assert.deepEqual(await store.loadPairing(), pairing);
+});
+
 test("creates the version-one state store during an IndexedDB upgrade", async () => {
   const adapter = createFakeIndexedDb();
   const store = createStore(adapter, createSessionStorage());

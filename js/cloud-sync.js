@@ -1,6 +1,6 @@
 /**
  * 手动云同步协调层。网络、浏览器、时钟与存储均可注入；不启动后台同步。
- * 密码/恢复密钥仅在创建或加入调用内使用，不进入持久化状态或日志。
+ * 密码/恢复密钥仅在凭据操作调用内使用，不进入持久化状态或日志。
  */
 (function (root, factory) {
   if (typeof module === 'object' && module.exports) module.exports = factory(root);
@@ -39,6 +39,7 @@
     var options = dependencies || {};
     var pendingUpload = null; // Same-page retries reuse immutable ciphertext, never recollect data.
     var pendingEnrollment = null; // Request proof only; never password or recovery key, never persisted.
+    var pendingSecurity = null; // Immutable lifecycle proof for same-page retry, never raw credentials.
     var busy = false;
     var preparedPulls = new WeakMap(); // Preview handles never expose plaintext or pairing credentials.
 
@@ -108,6 +109,7 @@
     }
 
     async function requireUnpaired() {
+      if (pendingSecurity) throw new Error('请先处理已有同步操作。');
       if (pendingEnrollment) throw new Error('已有配对操作待恢复，请重试恢复或忘记当前设备后再继续。');
       if (await storage().loadPairing()) throw new Error('本机已配对，请先忘记当前设备。');
     }
@@ -344,6 +346,7 @@
     }
 
     async function uploadCurrent() {
+      if (pendingSecurity) throw new Error('请先处理已有同步操作。');
       // Health + PWA gate happens before reading qinshi_ or doing snapshot crypto.
       await preflight();
       await assertNoRollback();
@@ -383,7 +386,7 @@
     }
 
     async function assertNoOtherPending(type, snapshotId) {
-      if (pendingUpload || pendingEnrollment) throw new Error('请先处理已有同步操作。');
+      if (pendingUpload || pendingEnrollment || pendingSecurity) throw new Error('请先处理已有同步操作。');
       var pending = await storage().loadPendingOperation();
       if (pending && (pending.type !== type || pending.snapshotId !== snapshotId)) throw new Error('请先处理已有同步操作。');
     }
@@ -610,6 +613,10 @@
       return exclusive(async function () {
         var interrupted = await recovery();
         if (interrupted.status !== 'idle') return interrupted;
+        if (pendingSecurity) {
+          await preflight();
+          return finishSecurity(pendingSecurity);
+        }
         if (pendingEnrollment) {
           await preflight();
           return finishEnrollment(pendingEnrollment);
@@ -627,10 +634,182 @@
       });
     }
 
+    async function assertSecurityIdle() {
+      await assertNoOtherPending();
+      await assertNoRollback();
+    }
+
+    async function assertSamePairing(pairing) {
+      var current = await storage().loadPairing();
+      if (!current || current.spaceId !== pairing.spaceId || current.deviceId !== pairing.deviceId ||
+        current.deviceToken !== pairing.deviceToken) throw new Error('安全操作与当前配对不匹配。');
+    }
+
+    async function renameDevice(id, value) {
+      return exclusive(async function () {
+        await assertSecurityIdle();
+        if (typeof id !== 'string' || !id) throw new Error('请选择设备。');
+        if (typeof value !== 'string') throw new Error('设备名称不正确。');
+        var name = deviceName(value);
+        await preflight();
+        var pairing = await requirePairing();
+        var encryptedName = await encryptMetadata({ deviceName: name }, pairing.masterKey, 'device-name', nameContext(pairing.spaceId, id));
+        await assertSecurityIdle();
+        await assertSamePairing(pairing);
+        var response = await api().renameDevice(id, { encryptedName: encryptedName });
+        if (!response || response.deviceId !== id || core().canonicalStringify(response.encryptedName) !== core().canonicalStringify(encryptedName)) throw new Error('设备重命名响应不正确。');
+        if (id === pairing.deviceId) {
+          await assertSamePairing(pairing);
+          await storage().savePairing(Object.assign({}, pairing, { deviceName: name }));
+        }
+        return { status: 'renamed', deviceId: id };
+      });
+    }
+
+    async function revokeDevice(id, deleteSnapshots) {
+      return exclusive(async function () {
+        await assertSecurityIdle();
+        if (typeof deleteSnapshots !== 'boolean') throw new Error('请明确选择保留或删除该设备快照。');
+        if (typeof options.confirmRevokeDevice !== 'function') throw new Error('请确认撤销设备。');
+        await preflight();
+        var pairing = await requirePairing();
+        var target = (await dashboard(pairing)).devices.find(function (device) { return device.deviceId === id; });
+        if (!target) throw new Error('请选择有效设备。');
+        var confirmed = await options.confirmRevokeDevice(Object.freeze({ deviceId: id, deviceName: target.deviceName,
+          deleteSnapshots: deleteSnapshots, choices: Object.freeze(['保留该设备快照', '同时删除该设备快照']) }));
+        if (confirmed !== true) throw new Error('已取消撤销设备。');
+        await assertSecurityIdle();
+        await assertSamePairing(pairing);
+        await api().revokeDevice(id, { deleteSnapshots: deleteSnapshots });
+        if (id === pairing.deviceId) {
+          await assertSamePairing(pairing);
+          await storage().forgetPairing();
+        }
+        preparedPulls = new WeakMap();
+        return { status: 'revoked', deviceId: id, deleteSnapshots: deleteSnapshots };
+      });
+    }
+
+    function requireNewPassword(input) {
+      if (!input || typeof input.newPassword !== 'string' || !input.newPassword || input.newPassword !== input.confirmPassword) throw new Error('两次输入的新密码必须一致且不能为空。');
+    }
+
+    async function securityParameters(input, pairing) {
+      var code = normalizeSyncCode(input.syncCode);
+      var params = await api().getParameters(code);
+      core().assertVersionAllowed(version(), params, 'write');
+      if (pairing && params.spaceId !== pairing.spaceId) throw new Error('同步码与当前配对不匹配。');
+      return { code: code, params: params };
+    }
+
+    async function freshAuthenticator(secret, params, pairing, recovery) {
+      if (typeof secret !== 'string' || !secret) throw new Error(recovery ? '请输入恢复密钥。' : '请输入当前同步密码。');
+      var keys = recovery
+        ? await cryptoApi().deriveRecoveryKeys(await cryptoApi().parseRecoveryKey(secret), params.kdf.salt)
+        : await cryptoApi().derivePasswordKeys(secret, params.kdf);
+      var masterKey = await cryptoApi().unwrapMasterKey(recovery ? params.recoveryWrappedMaster : params.passwordWrappedMaster,
+        keys.wrappingKey, params.spaceId);
+      if (pairing && masterKey !== pairing.masterKey) throw new Error('凭据与当前配对主密钥不匹配。');
+      return { authKey: keys.authKey, masterKey: masterKey };
+    }
+
+    async function newRecovery(input, code, params, masterKey) {
+      var confirm = input.confirmRecoveryCredentials || options.confirmRecoveryCredentials;
+      if (typeof confirm !== 'function') throw new Error('请先提供恢复密钥保存确认。');
+      var recovery = await cryptoApi().generateRecoveryKey();
+      var keys = await cryptoApi().deriveRecoveryKeys(recovery.recoveryKey, params.kdf.salt);
+      var wrapped = await cryptoApi().wrapMasterKey(masterKey, keys.wrappingKey, params.spaceId);
+      var acknowledged = await confirm(Object.freeze({ syncCode: code, recoveryKey: recovery.displayKey }));
+      if (acknowledged !== true) throw new Error('请确认已保存恢复密钥。');
+      return { newRecoveryAuthKey: keys.authKey, newRecoveryWrappedMaster: wrapped };
+    }
+
+    async function assertSecurityContext(pending) {
+      if (await storage().loadPendingOperation()) throw new Error('请先处理已有同步操作。');
+      await assertNoRollback();
+      var current = await storage().loadPairing();
+      if ((current && (!pending.pairing || current.spaceId !== pending.pairing.spaceId ||
+        current.deviceId !== pending.pairing.deviceId || current.deviceToken !== pending.pairing.deviceToken)) ||
+        (!current && pending.pairing && !pending.acknowledged && pending.method !== 'recover')) throw new Error('安全操作与当前配对不匹配。');
+    }
+
+    async function finishSecurity(pending) {
+      // Recheck durable fences after user interaction, retries and server waits.
+      await assertSecurityContext(pending);
+      if (!pending.acknowledged) {
+        pending.response = pending.method === 'recover'
+          ? await api().recover(pending.code, pending.body, pending.operationId)
+          : await api()[pending.method](pending.body, pending.operationId);
+        if (pending.method !== 'deleteSpace') {
+          var expectedId = pending.device ? pending.device.deviceId : pending.pairing.deviceId;
+          if (!pending.response || pending.response.spaceId !== pending.spaceId || pending.response.deviceId !== expectedId) throw new Error('安全操作响应不正确。');
+          core().assertVersionAllowed(version(), pending.response, 'write');
+        }
+        pending.acknowledged = true;
+      }
+      await assertSecurityContext(pending);
+      if (pending.method === 'recover') await savePairing(pending.response, pending.spaceId, pending.device, pending.name, pending.masterKey);
+      if (pending.method === 'deleteSpace') await storage().forgetPairing();
+      pendingSecurity = null;
+      preparedPulls = new WeakMap();
+      return { status: pending.method === 'recover' ? 'password-reset' : pending.method === 'deleteSpace' ? 'deleted' :
+        pending.method === 'changePassword' ? 'password-changed' : 'recovery-key-rotated' };
+    }
+
+    async function securityOperation(method, input) {
+      return exclusive(async function () {
+        await assertSecurityIdle();
+        if (!input && method === 'rotateRecoveryKey' && typeof options.requestSecurityCredentials === 'function') {
+          input = await options.requestSecurityCredentials(Object.freeze({ operation: method }));
+        }
+        input = input || {};
+        if (method === 'changePassword' || method === 'recover') requireNewPassword(input);
+        var pairing = method === 'recover' ? await storage().loadPairing() : await requirePairing();
+        var useRecovery = method === 'recover' || (method === 'deleteSpace' && input.recoveryKey !== undefined);
+        if (method === 'deleteSpace' && input.recoveryKey !== undefined && input.password !== undefined) throw new Error('请仅提供密码或恢复密钥中的一种。');
+        await preflight();
+        var lookup = await securityParameters(input, pairing);
+        var params = lookup.params;
+        var authenticated = await freshAuthenticator(useRecovery ? input.recoveryKey :
+          (method === 'changePassword' ? input.currentPassword : input.password), params, pairing, useRecovery);
+        var body = { appVersion: version() };
+        body[useRecovery ? 'recoveryAuthKey' : 'authKey'] = authenticated.authKey;
+        if (method === 'changePassword' || method === 'recover') {
+          var keys = await cryptoApi().derivePasswordKeys(input.newPassword, params.kdf);
+          body.newAuthKey = keys.authKey;
+          body.newPasswordWrappedMaster = await cryptoApi().wrapMasterKey(authenticated.masterKey, keys.wrappingKey, params.spaceId);
+        }
+        if (method === 'rotateRecoveryKey' || method === 'recover') {
+          Object.assign(body, await newRecovery(input, lookup.code, params, authenticated.masterKey));
+        }
+        var device, name;
+        if (method === 'recover') {
+          name = deviceName(input.deviceName);
+          device = await localDevice(name, params.spaceId, authenticated.masterKey);
+          body.device = device;
+        }
+        if (method === 'deleteSpace') {
+          var confirm = input.confirmDeleteSpace || options.confirmDeleteSpace;
+          if (typeof confirm !== 'function' || await confirm(Object.freeze({ spaceId: params.spaceId,
+            confirmationText: '永久删除同步空间' })) !== '永久删除同步空间') throw new Error('请再次准确输入确认文字：永久删除同步空间。');
+          body.confirmation = '永久删除同步空间';
+        }
+        await assertSecurityIdle();
+        pendingSecurity = { method: method, operationId: uuid(), code: lookup.code, spaceId: params.spaceId,
+          pairing: pairing, body: body, device: device, name: name, masterKey: method === 'recover' ? authenticated.masterKey : undefined };
+        return finishSecurity(pendingSecurity);
+      });
+    }
+
     return {
       createSpace: createSpace, joinSpace: joinSpace,
       uploadCurrentDevice: function () { return exclusive(uploadCurrent); },
       getDashboard: getDashboard,
+      renameDevice: renameDevice, revokeDevice: revokeDevice,
+      changePassword: function (input) { return securityOperation('changePassword', input); },
+      rotateRecoveryKey: function (input) { return securityOperation('rotateRecoveryKey', input); },
+      resetPasswordWithRecovery: function (input) { return securityOperation('recover', input); },
+      deleteSpace: function (input) { return securityOperation('deleteSpace', input); },
       preparePull: function (snapshotId) { return exclusive(function () { return prepareSource(snapshotId, 'pull'); }); },
       restoreHistory: function (snapshotId) { return exclusive(function () { return prepareSource(snapshotId, 'restore'); }); },
       confirmPull: confirmPull,
@@ -642,6 +821,7 @@
       },
       recoverInterruptedRollback: function (action) { return exclusive(function () { return recovery(action); }); },
       forgetCurrentDevice: function () { return exclusive(async function () {
+        await assertSecurityIdle();
         pendingUpload = null; pendingEnrollment = null; await storage().forgetPairing();
       }); },
       resumePendingOperation: resumePendingOperation,

@@ -589,6 +589,326 @@ test('device naming follows phone/tablet priority and accepts editable overrides
   ]) assert.equal(moduleApi.createSync({ navigator }).detectDeviceName(), expected);
 });
 
+// Security API boundary: the in-memory server accepts the real protocol fields;
+// all credential derivation and authenticated encryption remain real.
+async function securityHarness() {
+  const h = harness();
+  const created = await create(h);
+  h.code = created.syncCode;
+  h.state.security = [];
+  for (const method of ['changePassword', 'rotateRecoveryKey', 'deleteSpace']) {
+    h.api[method] = async (body, key) => {
+      h.state.security.push(structuredClone({ method, body, key }));
+      return method === 'deleteSpace' ? null : { ...limits, spaceId: h.state.pairing.spaceId, deviceId: h.state.pairing.deviceId };
+    };
+  }
+  h.api.renameDevice = async (id, body) => {
+    h.state.rename = structuredClone({ id, body });
+    h.state.devices.find(d => d.deviceId === id).encryptedName = body.encryptedName;
+    return { deviceId: id, ...body };
+  };
+  h.api.revokeDevice = async (id, body) => { h.state.revoke = { id, body }; return null; };
+  h.api.recover = async (code, body, key) => {
+    h.state.security.push(structuredClone({ method: 'recover', code, body, key }));
+    return { ...limits, spaceId: h.state.spaces[0].body.spaceId, deviceId: body.device.deviceId };
+  };
+  h.deps.requestSecurityCredentials = async () => ({ syncCode: h.code, password });
+  return h;
+}
+
+test('rename encrypts full name with device AAD and updates only current pairing name', async () => {
+  const h = await securityHarness();
+  const before = structuredClone(h.state.pairing);
+  await h.sync.renameDevice(before.deviceId, '安卓平板完整名称');
+  assert.deepEqual(Object.keys(h.state.rename.body), ['encryptedName']);
+  assert.equal(JSON.stringify(h.state.rename).includes('安卓平板完整名称'), false);
+  assert.equal((await h.sync.getDashboard()).devices[0].deviceName, '安卓平板完整名称');
+  assert.deepEqual(h.state.pairing, { ...before, deviceName: '安卓平板完整名称' });
+  h.state.devices[0].deviceId = randomUUID();
+  await assert.rejects(h.sync.getDashboard(), /元数据/);
+});
+
+test('revoke requires full authenticated name and explicit snapshot choice confirmation', async () => {
+  const h = await securityHarness();
+  const id = h.state.pairing.deviceId;
+  const name = '完整设备名称'.repeat(30);
+  await h.sync.renameDevice(id, name);
+  h.deps.confirmRevokeDevice = async detail => {
+    assert.equal(detail.deviceName, name);
+    assert.deepEqual(detail.choices, ['保留该设备快照', '同时删除该设备快照']);
+    assert.equal(detail.deleteSnapshots, false);
+    return true;
+  };
+  for (const choice of [undefined, null, 0, 'false']) await assert.rejects(h.sync.revokeDevice(id, choice), /快照/);
+  assert.equal(h.state.revoke, undefined);
+  h.deps.confirmRevokeDevice = async () => false;
+  await assert.rejects(h.sync.revokeDevice(id, false), /取消/);
+  assert.equal(h.state.revoke, undefined);
+  h.deps.confirmRevokeDevice = async detail => {
+    assert.equal(detail.deviceName, name);
+    assert.deepEqual(detail.choices, ['保留该设备快照', '同时删除该设备快照']);
+    assert.equal(detail.deleteSnapshots, true);
+    return true;
+  };
+  const local = structuredClone(h.state.data);
+  await h.sync.revokeDevice(id, true);
+  assert.deepEqual(h.state.revoke, { id, body: { deleteSnapshots: true } });
+  assert.equal(h.state.pairing, null);
+  assert.deepEqual(h.state.data, local);
+});
+
+test('password change preserves pairing and recovery while sending only derived credentials', async () => {
+  const h = await securityHarness();
+  const pairing = structuredClone(h.state.pairing);
+  const recovery = h.state.spaces[0].body.recoveryWrappedMaster;
+  await h.sync.changePassword({ syncCode: h.code, currentPassword: password,
+    newPassword: 'new test password', confirmPassword: 'new test password' });
+  const body = h.state.security[0].body;
+  assert.deepEqual(Object.keys(body).sort(), ['appVersion', 'authKey', 'newAuthKey', 'newPasswordWrappedMaster']);
+  assert.equal(body.authKey, h.state.spaces[0].body.authKey);
+  const keys = await h.cryptoApi.derivePasswordKeys('new test password', h.state.spaces[0].body.kdf);
+  assert.equal(body.newAuthKey, keys.authKey);
+  assert.equal(await h.cryptoApi.unwrapMasterKey(body.newPasswordWrappedMaster, keys.wrappingKey, pairing.spaceId), pairing.masterKey);
+  assert.deepEqual(h.state.pairing, pairing);
+  assert.deepEqual(h.state.spaces[0].body.recoveryWrappedMaster, recovery);
+  assert.equal(JSON.stringify(h.state.security).includes(password), false);
+  assert.equal(JSON.stringify(h.state.security).includes('new test password'), false);
+});
+
+test('password change rejects wrong fresh credentials and mismatched space without mutation', async () => {
+  const h = await securityHarness();
+  const input = { syncCode: h.code, currentPassword: 'wrong', newPassword: 'new', confirmPassword: 'new' };
+  await assert.rejects(h.sync.changePassword(input), /主密钥/);
+  await assert.rejects(h.sync.changePassword({ ...input, currentPassword: password, confirmPassword: 'other' }), /密码/);
+  const params = h.api.getParameters;
+  h.api.getParameters = async code => ({ ...await params(code), spaceId: randomUUID() });
+  await assert.rejects(h.sync.changePassword({ ...input, currentPassword: password }), /配对/);
+  assert.deepEqual(h.state.security, []);
+});
+
+test('recovery rotation requires saved acknowledgement and atomically replaces only recovery values', async () => {
+  const h = await securityHarness();
+  for (const value of [false, undefined, 'true']) {
+    h.deps.confirmRecoveryCredentials = async () => value;
+    await assert.rejects(h.sync.rotateRecoveryKey(), /保存/);
+  }
+  assert.deepEqual(h.state.security, []);
+  let shown;
+  h.deps.confirmRecoveryCredentials = async value => { shown = value; return true; };
+  const pairing = structuredClone(h.state.pairing);
+  const result = await h.sync.rotateRecoveryKey();
+  const body = h.state.security[0].body;
+  assert.deepEqual(Object.keys(body).sort(), ['appVersion', 'authKey', 'newRecoveryAuthKey', 'newRecoveryWrappedMaster']);
+  const raw = await h.cryptoApi.parseRecoveryKey(shown.recoveryKey);
+  const keys = await h.cryptoApi.deriveRecoveryKeys(raw, h.state.spaces[0].body.kdf.salt);
+  assert.equal(body.newRecoveryAuthKey, keys.authKey);
+  assert.notEqual(body.newRecoveryAuthKey, h.state.spaces[0].body.recoveryAuthKey);
+  assert.equal(await h.cryptoApi.unwrapMasterKey(body.newRecoveryWrappedMaster, keys.wrappingKey, pairing.spaceId), pairing.masterKey);
+  assert.deepEqual(h.state.pairing, pairing);
+  for (const secret of [shown.recoveryKey, raw, password]) {
+    assert.equal(JSON.stringify([result, h.state.security, h.state.pairing, h.state.pending]).includes(secret), false);
+  }
+});
+
+test('recovery password reset uses recover transaction and persists only newly registered device', async () => {
+  const h = await securityHarness();
+  const old = structuredClone(h.state.pairing);
+  const local = structuredClone(h.state.data);
+  let shown;
+  h.deps.confirmRecoveryCredentials = async value => { shown = value; return true; };
+  await h.sync.resetPasswordWithRecovery({ syncCode: h.code, recoveryKey: h.state.credentials[0].recoveryKey,
+    newPassword: 'reset password', confirmPassword: 'reset password', deviceName: '恢复设备' });
+  const request = h.state.security[0];
+  assert.equal(request.method, 'recover');
+  assert.deepEqual(Object.keys(request.body).sort(), ['appVersion', 'device', 'newAuthKey', 'newPasswordWrappedMaster',
+    'newRecoveryAuthKey', 'newRecoveryWrappedMaster', 'recoveryAuthKey']);
+  assert.equal(request.body.recoveryAuthKey, h.state.spaces[0].body.recoveryAuthKey);
+  assert.equal(h.state.pairing.deviceId, request.body.device.deviceId);
+  assert.notEqual(h.state.pairing.deviceToken, old.deviceToken);
+  assert.equal(h.state.pairing.masterKey, old.masterKey);
+  assert.equal(h.state.pairing.deviceName, '恢复设备');
+  const keys = await h.cryptoApi.derivePasswordKeys('reset password', h.state.spaces[0].body.kdf);
+  assert.equal(await h.cryptoApi.unwrapMasterKey(request.body.newPasswordWrappedMaster, keys.wrappingKey, old.spaceId), old.masterKey);
+  const recoveryKeys = await h.cryptoApi.deriveRecoveryKeys(await h.cryptoApi.parseRecoveryKey(shown.recoveryKey), h.state.spaces[0].body.kdf.salt);
+  assert.equal(await h.cryptoApi.unwrapMasterKey(request.body.newRecoveryWrappedMaster, recoveryKeys.wrappingKey, old.spaceId), old.masterKey);
+  assert.deepEqual(h.state.data, local);
+  for (const secret of [shown.recoveryKey, 'reset password', '恢复设备', h.state.credentials[0].recoveryKey]) {
+    assert.equal(JSON.stringify(request).includes(secret), false);
+  }
+});
+
+test('delete space needs fresh authenticator followed by exact second text confirmation and preserves local data', async () => {
+  for (const mode of ['password', 'recoveryKey']) {
+    const h = await securityHarness();
+    const local = structuredClone(h.state.data);
+    const pairing = structuredClone(h.state.pairing);
+    const input = { syncCode: h.code, [mode]: mode === 'password' ? password : h.state.credentials[0].recoveryKey };
+    await assert.rejects(h.sync.deleteSpace(input), /确认/);
+    for (const value of [true, undefined, ' 永久删除同步空间', '永久删除同步空间 ']) {
+      h.deps.confirmDeleteSpace = async () => value;
+      await assert.rejects(h.sync.deleteSpace(input), /确认/);
+    }
+    assert.deepEqual(h.state.security, []);
+    assert.deepEqual(h.state.pairing, pairing);
+    h.deps.confirmDeleteSpace = async detail => { assert.equal(detail.confirmationText, '永久删除同步空间'); return detail.confirmationText; };
+    await h.sync.deleteSpace(input);
+    const body = h.state.security[0].body;
+    assert.deepEqual(Object.keys(body).sort(), ['appVersion', mode === 'password' ? 'authKey' : 'recoveryAuthKey', 'confirmation'].sort());
+    assert.equal(h.state.pairing, null);
+    assert.deepEqual(h.state.data, local);
+  }
+});
+
+test('security and forget reject unresolved pending or rollback before any side effects', async () => {
+  const h = await securityHarness();
+  const pairing = structuredClone(h.state.pairing);
+  const operations = [() => h.sync.renameDevice(pairing.deviceId, 'new'), () => h.sync.revokeDevice(pairing.deviceId, true),
+    () => h.sync.changePassword({}), () => h.sync.rotateRecoveryKey(), () => h.sync.resetPasswordWithRecovery({}),
+    () => h.sync.deleteSpace({}), () => h.sync.forgetCurrentDevice()];
+  for (const kind of ['pending', 'rollback']) {
+    h.state[kind] = kind === 'pending' ? { type: 'upload', snapshotId: randomUUID() } : { ownerId: randomUUID(), data: h.state.data };
+    h.events.length = 0;
+    for (const action of operations) await assert.rejects(action(), /已有同步|回滚/);
+    assert.deepEqual(h.events, []);
+    assert.deepEqual(h.state.pairing, pairing);
+    h.state[kind] = null;
+  }
+});
+
+test('recovery reset lost response resumes same one-time credentials and device without redisplay', async () => {
+  const h = await securityHarness();
+  const recover = h.api.recover;
+  let sent, receipt;
+  h.api.recover = async (...args) => {
+    if (!sent) { sent = structuredClone(args); receipt = await recover(...args); throw new Error('response lost'); }
+    assert.deepEqual(args, sent); return receipt;
+  };
+  await assert.rejects(h.sync.resetPasswordWithRecovery({ syncCode: h.code, recoveryKey: h.state.credentials[0].recoveryKey,
+    newPassword: 'new', confirmPassword: 'new' }), /response lost/);
+  await assert.rejects(h.sync.forgetCurrentDevice(), /已有同步/);
+  await assert.rejects(h.sync.uploadCurrentDevice(), /已有同步/);
+  await h.sync.resumePendingOperation();
+  assert.equal(h.state.credentials.length, 2);
+  assert.equal(h.state.pairing.deviceId, sent[1].device.deviceId);
+  assert.equal(h.state.security.length, 1);
+});
+
+test('rename requires explicit nonempty name instead of silently using a detected name', async () => {
+  const h = await securityHarness();
+  for (const value of [undefined, null, '', '   ']) await assert.rejects(h.sync.renameDevice(h.state.pairing.deviceId, value), /名称/);
+  assert.equal(h.state.rename, undefined);
+});
+
+test('revoke retention stays explicit and missing confirmation cannot revoke', async () => {
+  const h = await securityHarness();
+  const id = h.state.pairing.deviceId;
+  await assert.rejects(h.sync.revokeDevice(id, false), /确认/);
+  assert.equal(h.state.revoke, undefined);
+  h.deps.confirmRevokeDevice = async detail => { assert.equal(detail.deleteSnapshots, false); return true; };
+  await h.sync.revokeDevice(id, false);
+  assert.deepEqual(h.state.revoke.body, { deleteSnapshots: false });
+});
+
+test('delete space rejects wrong password and dual authenticators before showing final confirmation', async () => {
+  const h = await securityHarness();
+  h.deps.confirmDeleteSpace = async () => assert.fail('Must authenticate before second confirmation');
+  await assert.rejects(h.sync.deleteSpace({ syncCode: h.code, password: 'wrong' }), /主密钥/);
+  await assert.rejects(h.sync.deleteSpace({ syncCode: h.code, password, recoveryKey: h.state.credentials[0].recoveryKey }), /一种/);
+  assert.deepEqual(h.state.security, []);
+});
+
+test('recovery reset cancellation preserves old pairing; unpaired recovery registers without upload', async () => {
+  const h = await securityHarness();
+  const input = { syncCode: h.code, recoveryKey: h.state.credentials[0].recoveryKey, newPassword: 'new', confirmPassword: 'new' };
+  const old = structuredClone(h.state.pairing);
+  h.deps.confirmRecoveryCredentials = async () => false;
+  await assert.rejects(h.sync.resetPasswordWithRecovery(input), /保存/);
+  assert.deepEqual(h.state.pairing, old);
+  assert.deepEqual(h.state.security, []);
+  h.state.pairing = null;
+  h.deps.confirmRecoveryCredentials = async () => true;
+  const uploads = h.state.uploads.length;
+  await h.sync.resetPasswordWithRecovery(input);
+  assert.notEqual(h.state.pairing.deviceToken, old.deviceToken);
+  assert.equal(h.state.uploads.length, uploads);
+});
+
+test('security rechecks rollback and pairing after asynchronous confirmation', async () => {
+  for (const mutation of ['rollback', 'pairing']) {
+    const h = await securityHarness();
+    h.deps.confirmDeleteSpace = async () => {
+      if (mutation === 'rollback') h.state.rollback = { ownerId: randomUUID(), data: h.state.data };
+      else h.state.pairing.deviceToken = h.cryptoApi.randomId(32);
+      return '永久删除同步空间';
+    };
+    await assert.rejects(h.sync.deleteSpace({ syncCode: h.code, password }), /回滚|配对/);
+    assert.deepEqual(h.state.security, []);
+    assert.notEqual(h.state.pairing, null);
+  }
+});
+
+test('recovery reset retries pairing persistence only after acknowledged server transaction', async () => {
+  const h = await securityHarness();
+  const save = h.storage.savePairing;
+  h.storage.savePairing = async () => { throw new Error('storage unavailable'); };
+  await assert.rejects(h.sync.resetPasswordWithRecovery({ syncCode: h.code, recoveryKey: h.state.credentials[0].recoveryKey,
+    newPassword: 'new', confirmPassword: 'new' }), /storage unavailable/);
+  assert.equal(h.state.security.length, 1);
+  h.storage.savePairing = save;
+  await h.sync.resumePendingOperation();
+  assert.equal(h.state.security.length, 1);
+  assert.equal(h.state.credentials.length, 2);
+  assert.equal(h.state.pairing.deviceId, h.state.security[0].body.device.deviceId);
+});
+
+test('recovery reset can resume after old device revocation is independently detected', async () => {
+  const h = await securityHarness();
+  const recover = h.api.recover;
+  let receipt;
+  h.api.recover = async (...args) => {
+    if (!receipt) { receipt = await recover(...args); throw new Error('response lost'); }
+    return receipt;
+  };
+  await assert.rejects(h.sync.resetPasswordWithRecovery({ syncCode: h.code, recoveryKey: h.state.credentials[0].recoveryKey,
+    newPassword: 'new', confirmPassword: 'new' }), /response lost/);
+  h.api.listDevices = async () => { throw Object.assign(new Error('revoked'), { code: 'DEVICE_REVOKED', pairingInvalid: true }); };
+  await assert.rejects(h.sync.getDashboard(), /revoked/);
+  assert.equal(h.state.pairing, null);
+  await h.sync.resumePendingOperation();
+  assert.equal(h.state.pairing.deviceId, receipt.deviceId);
+});
+
+test('revoke cannot act on pairing switched during confirmation', async () => {
+  const h = await securityHarness();
+  const id = h.state.pairing.deviceId;
+  h.deps.confirmRevokeDevice = async () => { h.state.pairing.deviceToken = h.cryptoApi.randomId(32); return true; };
+  await assert.rejects(h.sync.revokeDevice(id, true), /配对/);
+  assert.equal(h.state.revoke, undefined);
+  assert.notEqual(h.state.pairing, null);
+});
+
+test('delete space acknowledged response cannot clear a newer pairing or rollback evidence', async () => {
+  for (const mutation of ['pairing', 'rollback']) {
+    const h = await securityHarness();
+    const remove = h.api.deleteSpace;
+    h.deps.confirmDeleteSpace = async () => '永久删除同步空间';
+    h.api.deleteSpace = async (...args) => {
+      await remove(...args);
+      if (mutation === 'pairing') h.state.pairing.deviceToken = h.cryptoApi.randomId(32);
+      else h.state.rollback = { ownerId: randomUUID(), data: h.state.data };
+      return null;
+    };
+    await assert.rejects(h.sync.deleteSpace({ syncCode: h.code, password }), /配对|回滚/);
+    assert.notEqual(h.state.pairing, null);
+    if (mutation === 'rollback') {
+      h.state.rollback = null;
+      await h.sync.resumePendingOperation();
+      assert.equal(h.state.security.length, 1);
+      assert.equal(h.state.pairing, null);
+    }
+  }
+});
+
 test('join rejects Unicode case-folding aliases before touching network', async () => {
   const h = harness();
   await assert.rejects(h.sync.joinSpace({ syncCode: 'ı'.repeat(26), password }), /同步码/);

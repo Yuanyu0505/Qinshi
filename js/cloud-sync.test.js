@@ -676,6 +676,44 @@ test('device naming follows phone/tablet priority and accepts editable overrides
   ]) assert.equal(moduleApi.createSync({ navigator }).detectDeviceName(), expected);
 });
 
+test('settings state sorts selectable sources, excludes current latest and keeps current histories separate', () => {
+  const ui = moduleApi.createSettingsState();
+  ui.setDashboard({ deviceId: 'current', devices: [
+    { deviceId: 'current', deviceName: '本机', latestSnapshot: { snapshotId: 'mine-latest', serverCreatedAt: 400 },
+      historySnapshots: [{ snapshotId: 'mine-history', serverCreatedAt: 100 }] },
+    { deviceId: 'other-a', deviceName: '设备 A', latestSnapshot: { snapshotId: 'a-latest', serverCreatedAt: 300 },
+      historySnapshots: [{ snapshotId: 'a-history', serverCreatedAt: 350 }] },
+    { deviceId: 'other-b', deviceName: '设备 B', latestSnapshot: { snapshotId: 'b-latest', serverCreatedAt: 200 }, historySnapshots: [] }
+  ] });
+  assert.deepEqual(ui.sources().map(item => [item.snapshot.snapshotId, item.badge]), [
+    ['a-history', '历史'], ['a-latest', '最新'], ['b-latest', '最新']
+  ]);
+  assert.deepEqual(ui.currentHistory().map(item => item.snapshotId), ['mine-history']);
+  assert.equal(ui.selectedSource(), null);
+  ui.selectSource('a-latest');
+  assert.equal(ui.selectedSource().snapshot.snapshotId, 'a-latest');
+});
+
+test('settings state requires explicit confirmation, acknowledges recovery and serializes writes', async () => {
+  const ui = moduleApi.createSettingsState();
+  assert.equal(ui.canConfirmOverwrite(), false);
+  ui.setPreview({ snapshotId: 'snapshot-a' });
+  assert.equal(ui.canConfirmOverwrite(), false);
+  ui.setOverwriteConfirmed(true);
+  assert.equal(ui.canConfirmOverwrite(), true);
+  assert.equal(ui.canDismissRecovery(), false);
+  ui.setRecoveryAcknowledged(true);
+  assert.equal(ui.canDismissRecovery(), true);
+
+  let release;
+  const first = ui.withWriteLock(() => new Promise(resolve => { release = resolve; }));
+  assert.equal(ui.writeInFlight(), true);
+  assert.equal(await ui.withWriteLock(async () => 'duplicate'), false);
+  release('done');
+  assert.equal(await first, 'done');
+  assert.equal(ui.writeInFlight(), false);
+});
+
 // Security API boundary: the in-memory server accepts the real protocol fields;
 // all credential derivation and authenticated encryption remain real.
 async function securityHarness() {

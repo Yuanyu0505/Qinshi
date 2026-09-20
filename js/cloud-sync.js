@@ -35,6 +35,79 @@
     return code;
   }
 
+  function createSettingsState() {
+    var dashboard = { deviceId: '', devices: [] };
+    var sourceItems = [];
+    var historyItems = [];
+    var selected = null;
+    var preview = null;
+    var overwriteConfirmed = false;
+    var recoveryAcknowledged = false;
+    var writeInFlight = false;
+
+    function snapshotTime(item) {
+      var value = item && item.snapshot && item.snapshot.serverCreatedAt;
+      if (typeof value === 'number') return value;
+      var parsed = Date.parse(value || '');
+      return Number.isFinite(parsed) ? parsed : 0;
+    }
+
+    function setDashboard(value) {
+      dashboard = value && Array.isArray(value.devices) ? value : { deviceId: '', devices: [] };
+      sourceItems = [];
+      historyItems = [];
+      dashboard.devices.forEach(function (device) {
+        if (!device || device.revoked) return;
+        if (device.deviceId === dashboard.deviceId) {
+          historyItems = (device.historySnapshots || []).slice().sort(function (a, b) {
+            return snapshotTime({ snapshot: b }) - snapshotTime({ snapshot: a });
+          });
+          return;
+        }
+        if (device.latestSnapshot) sourceItems.push({ device: device, snapshot: device.latestSnapshot, badge: '最新' });
+        (device.historySnapshots || []).forEach(function (snapshot) {
+          sourceItems.push({ device: device, snapshot: snapshot, badge: '历史' });
+        });
+      });
+      sourceItems.sort(function (a, b) { return snapshotTime(b) - snapshotTime(a); });
+      selected = null;
+      preview = null;
+      overwriteConfirmed = false;
+    }
+
+    function withWriteLock(action, onChange) {
+      if (writeInFlight) return Promise.resolve(false);
+      writeInFlight = true;
+      if (onChange) onChange(true);
+      return Promise.resolve().then(action).finally(function () {
+        writeInFlight = false;
+        if (onChange) onChange(false);
+      });
+    }
+
+    return {
+      setDashboard: setDashboard,
+      dashboard: function () { return dashboard; },
+      sources: function () { return sourceItems.slice(); },
+      currentHistory: function () { return historyItems.slice(); },
+      selectedSource: function () { return selected; },
+      selectSource: function (snapshotId) {
+        selected = sourceItems.find(function (item) { return item.snapshot.snapshotId === snapshotId; }) || null;
+        preview = null;
+        overwriteConfirmed = false;
+        return selected;
+      },
+      setPreview: function (value) { preview = value || null; overwriteConfirmed = false; },
+      preview: function () { return preview; },
+      setOverwriteConfirmed: function (value) { overwriteConfirmed = value === true; },
+      canConfirmOverwrite: function () { return Boolean(preview && overwriteConfirmed && !writeInFlight); },
+      setRecoveryAcknowledged: function (value) { recoveryAcknowledged = value === true; },
+      canDismissRecovery: function () { return recoveryAcknowledged; },
+      withWriteLock: withWriteLock,
+      writeInFlight: function () { return writeInFlight; }
+    };
+  }
+
   function createSync(dependencies) {
     var options = dependencies || {};
     var pendingUpload = null; // Same-page retries reuse immutable ciphertext, never recollect data.
@@ -883,7 +956,405 @@
     };
   }
 
-  var sync = createSync();
+  var confirmRevokeDevice = null;
+  var sync = createSync({
+    confirmRevokeDevice: function (detail) {
+      return confirmRevokeDevice ? confirmRevokeDevice(detail) : false;
+    }
+  });
+
+  function bindSettingsUI(syncClient, doc) {
+    var panel = doc.getElementById('cloud-sync-panel');
+    if (!panel) return null;
+    var state = createSettingsState();
+    var configured = Boolean(root.QinshiCloudSyncConfig && root.QinshiCloudSyncConfig.enabled === true &&
+      typeof root.QinshiCloudSyncConfig.apiBaseUrl === 'string' && /^https:\/\//.test(root.QinshiCloudSyncConfig.apiBaseUrl));
+    var lastResult = '尚无同步操作';
+    var replacing = false;
+
+    function element(id) { return doc.getElementById(id); }
+    function setText(id, value) { var target = element(id); if (target) target.textContent = value == null ? '' : String(value); }
+    function formatDate(value) {
+      if (!value) return '未知时间';
+      var date = new Date(value);
+      return Number.isNaN(date.getTime()) ? String(value) : date.toLocaleString('zh-CN', { hour12: false });
+    }
+    function formatBytes(value) {
+      if (!Number.isFinite(value) || value < 0) return '未知大小';
+      if (value < 1024) return value + ' B';
+      if (value < 1024 * 1024) return (value / 1024).toFixed(1) + ' KiB';
+      return (value / (1024 * 1024)).toFixed(1) + ' MiB';
+    }
+    function status(message, error) {
+      var target = element('cloud-sync-status');
+      target.textContent = message || '';
+      target.classList.toggle('error-text', error === true);
+    }
+    function setProgress(message, active) {
+      var target = element('cloud-sync-progress');
+      target.hidden = !active;
+      target.querySelector('span').textContent = message || '';
+      var progress = target.querySelector('progress');
+      if (active) progress.removeAttribute('value');
+      else progress.value = 0;
+    }
+    function renderActionState() {
+      panel.querySelectorAll('[data-cloud-action]').forEach(function (button) {
+        button.disabled = !configured || state.writeInFlight();
+      });
+      element('cloud-sync-prepare').disabled = !configured || state.writeInFlight() || !state.selectedSource();
+      element('cloud-sync-confirm-overwrite').disabled = !configured || !state.canConfirmOverwrite();
+      element('cloud-sync-cancel-overwrite').disabled = replacing;
+    }
+    function appendLine(parent, className, text) {
+      var line = doc.createElement('span');
+      line.className = className;
+      line.textContent = text;
+      parent.appendChild(line);
+      return line;
+    }
+    function snapshotCard(item) {
+      var label = doc.createElement('label');
+      label.className = 'cloud-sync-source-card';
+      var radio = doc.createElement('input');
+      radio.type = 'radio';
+      radio.name = 'cloud-sync-source';
+      radio.value = item.snapshot.snapshotId;
+      radio.addEventListener('change', function () {
+        state.selectSource(radio.value);
+        renderActionState();
+      });
+      label.appendChild(radio);
+      var body = doc.createElement('span');
+      body.className = 'cloud-sync-card-body';
+      appendLine(body, 'cloud-sync-card-title', item.device.deviceName);
+      appendLine(body, 'cloud-sync-card-meta', item.badge + ' · ' + formatDate(item.snapshot.serverCreatedAt));
+      appendLine(body, 'cloud-sync-card-meta', '工具 ' + (item.snapshot.appVersion || '未知') + ' · ' + formatBytes(item.snapshot.ciphertextBytes));
+      label.appendChild(body);
+      return label;
+    }
+    function renderDashboard(dashboard) {
+      state.setDashboard(dashboard);
+      element('cloud-sync-unbound').hidden = dashboard.paired === true;
+      element('cloud-sync-paired').hidden = dashboard.paired !== true;
+      if (dashboard.paired !== true) { renderActionState(); return; }
+      var current = dashboard.devices.find(function (device) { return device.deviceId === dashboard.deviceId; });
+      setText('cloud-sync-current-device', dashboard.deviceName || (current && current.deviceName) || '当前设备');
+      setText('cloud-sync-tool-version', root.QinshiPWA && root.QinshiPWA.version || '未知');
+      setText('cloud-sync-cloud-state', configured ? '已连接' : '服务未配置');
+      setText('cloud-sync-last-upload', current && current.lastUploadedAt ? formatDate(current.lastUploadedAt) : '尚未上传');
+      setText('cloud-sync-last-result', lastResult);
+
+      var sources = element('cloud-sync-source-list');
+      sources.replaceChildren();
+      state.sources().forEach(function (item) { sources.appendChild(snapshotCard(item)); });
+      if (!state.sources().length) appendLine(sources, 'muted-tip', '暂无其他设备快照。');
+
+      var histories = element('cloud-sync-history-list');
+      histories.replaceChildren();
+      state.currentHistory().forEach(function (snapshot) {
+        var card = doc.createElement('article');
+        card.className = 'cloud-sync-history-card';
+        appendLine(card, 'cloud-sync-card-title', '本设备历史');
+        appendLine(card, 'cloud-sync-card-meta', formatDate(snapshot.serverCreatedAt) + ' · 工具 ' + (snapshot.appVersion || '未知'));
+        appendLine(card, 'cloud-sync-card-meta', formatBytes(snapshot.ciphertextBytes));
+        var button = doc.createElement('button');
+        button.type = 'button';
+        button.className = 'seg cloud-sync-action';
+        button.textContent = '恢复此历史';
+        button.dataset.cloudAction = '';
+        button.addEventListener('click', function () {
+          run('正在读取历史快照…', async function () {
+            var preview = await syncClient.restoreHistory(snapshot.snapshotId);
+            showOverwrite(preview);
+            return preview;
+          }, '已读取历史快照，请核对覆盖方向。', false);
+        });
+        card.appendChild(button);
+        histories.appendChild(card);
+      });
+      if (!state.currentHistory().length) appendLine(histories, 'muted-tip', '本设备暂无可恢复历史。');
+
+      var select = element('cloud-sync-device-select');
+      select.replaceChildren();
+      dashboard.devices.forEach(function (device) {
+        var option = doc.createElement('option');
+        option.value = device.deviceId;
+        option.textContent = device.deviceName + (device.current ? '（当前设备）' : '') + (device.revoked ? '（已撤销）' : '');
+        select.appendChild(option);
+      });
+      if (select.options.length) {
+        var selectedDevice = dashboard.devices.find(function (device) { return device.deviceId === select.value; });
+        element('cloud-sync-rename-value').value = selectedDevice ? selectedDevice.deviceName : '';
+      }
+      renderActionState();
+    }
+    async function refreshDashboard() {
+      var dashboard;
+      if (!configured && root.QinshiCloudSyncStorage) {
+        var pairing = await root.QinshiCloudSyncStorage.loadPairing();
+        dashboard = pairing ? { paired: true, deviceId: pairing.deviceId, deviceName: pairing.deviceName,
+          devices: [{ deviceId: pairing.deviceId, deviceName: pairing.deviceName, current: true,
+            revoked: false, latestSnapshot: null, historySnapshots: [] }] } : { paired: false, devices: [] };
+      } else dashboard = await syncClient.getDashboard();
+      renderDashboard(dashboard);
+      return dashboard;
+    }
+    function clearSecrets(form) {
+      form.querySelectorAll('input[type="password"]').forEach(function (input) { input.value = ''; });
+    }
+    function values(form) {
+      var result = {};
+      new root.FormData(form).forEach(function (value, key) { result[key] = String(value); });
+      return result;
+    }
+    function run(progressText, action, successText, refreshAfter) {
+      if (!configured) {
+        status('云同步服务尚未配置，本机数据和 JSON 备份不受影响。', true);
+        return Promise.resolve(false);
+      }
+      return state.withWriteLock(async function () {
+        setProgress(progressText, true);
+        status(progressText, false);
+        try {
+          var result = await action();
+          lastResult = typeof successText === 'function' ? successText(result) : successText;
+          status(lastResult, false);
+          if (refreshAfter !== false) await refreshDashboard();
+          return result;
+        } catch (error) {
+          lastResult = '操作失败';
+          status('操作失败：' + (error && error.message ? error.message : '未知错误'), true);
+          try { await refreshDashboard(); } catch (refreshError) { /* Keep the actionable operation error. */ }
+          return null;
+        } finally {
+          setProgress('', false);
+        }
+      }, renderActionState);
+    }
+    function downloadRecovery(credentials) {
+      var text = 'Qin 跨设备数据同步凭据\n\n同步码：' + credentials.syncCode + '\n恢复密钥：' + credentials.recoveryKey +
+        '\n\n请离线妥善保存。任何人取得这些信息都可能尝试访问您的同步空间。\n';
+      var url = root.URL.createObjectURL(new Blob([text], { type: 'text/plain;charset=utf-8' }));
+      var anchor = doc.createElement('a');
+      anchor.href = url;
+      anchor.download = 'Qin-云同步恢复凭据.txt';
+      anchor.click();
+      root.setTimeout(function () { root.URL.revokeObjectURL(url); }, 0);
+    }
+    function showRecovery(credentials) {
+      state.setRecoveryAcknowledged(false);
+      setText('cloud-sync-recovery-code', credentials.syncCode);
+      setText('cloud-sync-recovery-key', credentials.recoveryKey);
+      var layer = element('cloud-sync-recovery-layer');
+      var checkbox = element('cloud-sync-recovery-ack');
+      var confirm = element('cloud-sync-recovery-confirm');
+      checkbox.checked = false;
+      confirm.disabled = true;
+      layer.hidden = false;
+      layer.querySelector('[role="dialog"]').focus();
+      element('cloud-sync-recovery-download').onclick = function () { downloadRecovery(credentials); };
+      checkbox.onchange = function () {
+        state.setRecoveryAcknowledged(checkbox.checked);
+        confirm.disabled = !state.canDismissRecovery();
+      };
+      return new Promise(function (resolve) {
+        confirm.onclick = function () {
+          if (!state.canDismissRecovery()) return;
+          layer.hidden = true;
+          setText('cloud-sync-recovery-code', '');
+          setText('cloud-sync-recovery-key', '');
+          confirm.onclick = null;
+          resolve(true);
+        };
+      });
+    }
+    function showOverwrite(preview) {
+      state.setPreview(preview);
+      replacing = false;
+      setText('cloud-sync-direction', preview.sourceDeviceName + ' → ' + preview.currentDeviceName);
+      var summary = element('cloud-sync-confirm-summary');
+      summary.replaceChildren();
+      [['来源时间', formatDate(preview.serverCreatedAt)], ['快照工具版本', preview.appVersion],
+        ['数据摘要', preview.itemCount + ' 项 · ' + formatBytes(preview.byteSize)]].forEach(function (row) {
+        var term = doc.createElement('dt'); term.textContent = row[0];
+        var detail = doc.createElement('dd'); detail.textContent = row[1];
+        summary.appendChild(term); summary.appendChild(detail);
+      });
+      element('cloud-sync-confirm-check').checked = false;
+      element('cloud-sync-confirm-layer').hidden = false;
+      element('cloud-sync-confirm-layer').querySelector('[role="dialog"]').focus();
+      renderActionState();
+    }
+    async function resumePending() {
+      if (!configured) return;
+      await state.withWriteLock(async function () {
+        try {
+          var pending = await syncClient.resumePendingOperation();
+          if (!pending || pending.status === 'idle') return;
+          if (pending.status === 'confirmation-required') {
+            showOverwrite(pending.preview);
+            status('工具已更新，请重新核对来源和目标后确认覆盖。', false);
+          } else if (pending.status === 'recovery-required') {
+            element('cloud-sync-rollback').hidden = false;
+            setText('cloud-sync-rollback-detail', '副本时间：' + formatDate(pending.createdAt) +
+              (pending.matchesCurrent ? '；当前数据与回滚副本一致。' : '；当前数据与回滚副本不同。'));
+            status('请先明确处理上次同步留下的回滚副本。', true);
+          } else if (pending.status === 'manual-upload-required') {
+            status('检测到未完成的本机上传，请点击“上传本机快照”继续。', false);
+          } else {
+            lastResult = '上次同步操作已安全恢复。';
+            status(lastResult, false);
+            await refreshDashboard();
+          }
+        } catch (error) {
+          status('恢复上次同步操作失败：' + (error && error.message ? error.message : '未知错误'), true);
+        }
+      }, renderActionState);
+    }
+
+    confirmRevokeDevice = function (detail) {
+      var handling = detail.deleteSnapshots ? '同时删除该设备的最新版和历史快照' : '保留该设备的云端快照';
+      return Promise.resolve(root.confirm('确认撤销设备“' + detail.deviceName + '”？\n' + handling + '。'));
+    };
+    element('cloud-sync-config-notice').hidden = configured;
+    element('cloud-sync-create-device').value = syncClient.detectDeviceName();
+    element('cloud-sync-join-device').value = syncClient.detectDeviceName();
+    element('cloud-sync-reset-device').value = syncClient.detectDeviceName();
+    panel.querySelectorAll('[data-secret-target]').forEach(function (button) {
+      button.addEventListener('click', function () {
+        var input = element(button.dataset.secretTarget);
+        var visible = input.type === 'text';
+        input.type = visible ? 'password' : 'text';
+        button.textContent = visible ? '显示' : '隐藏';
+        button.setAttribute('aria-label', (visible ? '显示' : '隐藏') + button.getAttribute('aria-label').replace(/^(显示|隐藏)/, ''));
+      });
+    });
+    element('cloud-sync-create-form').addEventListener('submit', function (event) {
+      event.preventDefault();
+      var form = event.currentTarget, input = values(form);
+      clearSecrets(form);
+      input.confirmRecoveryCredentials = showRecovery;
+      run('正在创建同步空间并上传本机快照…', function () { return syncClient.createSpace(input); }, '同步空间已创建，本机快照已上传。');
+    });
+    element('cloud-sync-join-form').addEventListener('submit', function (event) {
+      event.preventDefault();
+      var form = event.currentTarget, input = values(form);
+      clearSecrets(form);
+      run('正在加入同步空间…', function () { return syncClient.joinSpace(input); }, '已加入同步空间；尚未上传或覆盖任何数据。');
+    });
+    element('cloud-sync-reset-form').addEventListener('submit', function (event) {
+      event.preventDefault();
+      var form = event.currentTarget, input = values(form);
+      clearSecrets(form);
+      input.confirmRecoveryCredentials = showRecovery;
+      run('正在用恢复密钥重设密码并撤销旧设备…', function () { return syncClient.resetPasswordWithRecovery(input); },
+        '同步密码已重设，全部旧设备凭据已撤销；本设备已重新绑定。');
+    });
+    element('cloud-sync-upload').addEventListener('click', function () {
+      run('正在生成并上传本机快照…', function () { return syncClient.uploadCurrentDevice(); }, function (result) {
+        return result && result.status === 'unchanged' ? '本机数据无变化。' : '本机快照上传完成。';
+      });
+    });
+    element('cloud-sync-refresh').addEventListener('click', function () {
+      run('正在刷新设备列表…', refreshDashboard, '设备列表已刷新。', false);
+    });
+    element('cloud-sync-prepare').addEventListener('click', function () {
+      var source = state.selectedSource();
+      if (!source) return;
+      run('正在读取所选来源快照…', async function () {
+        var preview = await syncClient.preparePull(source.snapshot.snapshotId);
+        showOverwrite(preview);
+        return preview;
+      }, '已读取来源快照，请核对覆盖方向。', false);
+    });
+    element('cloud-sync-confirm-check').addEventListener('change', function (event) {
+      state.setOverwriteConfirmed(event.currentTarget.checked);
+      renderActionState();
+    });
+    element('cloud-sync-cancel-overwrite').addEventListener('click', function () {
+      var preview = state.preview();
+      if (!preview || replacing) return;
+      syncClient.cancelPull(preview);
+      state.setPreview(null);
+      element('cloud-sync-confirm-layer').hidden = true;
+      status('已取消覆盖，当前设备数据未更改。', false);
+      element('cloud-sync-prepare').focus();
+      renderActionState();
+    });
+    element('cloud-sync-confirm-overwrite').addEventListener('click', function () {
+      if (!state.canConfirmOverwrite()) return;
+      var preview = state.preview();
+      replacing = true;
+      renderActionState();
+      run('正在备份并覆盖当前设备，请勿关闭页面…', function () { return syncClient.confirmPull(preview); },
+        '覆盖同步完成，工具即将重新载入。', false).finally(function () {
+          replacing = false;
+          state.setPreview(null);
+          element('cloud-sync-confirm-layer').hidden = true;
+          renderActionState();
+        });
+    });
+    element('cloud-sync-device-select').addEventListener('change', function (event) {
+      var device = state.dashboard().devices.find(function (item) { return item.deviceId === event.currentTarget.value; });
+      element('cloud-sync-rename-value').value = device ? device.deviceName : '';
+    });
+    element('cloud-sync-rename').addEventListener('click', function () {
+      run('正在重命名设备…', function () { return syncClient.renameDevice(element('cloud-sync-device-select').value,
+        element('cloud-sync-rename-value').value); }, '设备名称已更新。');
+    });
+    element('cloud-sync-revoke').addEventListener('click', function () {
+      run('正在撤销设备…', function () { return syncClient.revokeDevice(element('cloud-sync-device-select').value,
+        element('cloud-sync-revoke-delete').checked); }, '设备已撤销。');
+    });
+    element('cloud-sync-password-form').addEventListener('submit', function (event) {
+      event.preventDefault();
+      var form = event.currentTarget, input = values(form);
+      clearSecrets(form);
+      run('正在修改同步密码…', function () { return syncClient.changePassword(input); }, '同步密码已修改。');
+    });
+    element('cloud-sync-recovery-form').addEventListener('submit', function (event) {
+      event.preventDefault();
+      var form = event.currentTarget, input = values(form);
+      clearSecrets(form);
+      input.confirmRecoveryCredentials = showRecovery;
+      run('正在轮换恢复密钥…', function () { return syncClient.rotateRecoveryKey(input); }, '恢复密钥已轮换，旧密钥已失效。');
+    });
+    element('cloud-sync-forget').addEventListener('click', function () {
+      if (!root.confirm('忘记本设备只会清除本机云同步凭据，不会删除个人进度。是否继续？')) return;
+      run('正在忘记本设备…', function () { return syncClient.forgetCurrentDevice(); }, '已忘记本设备，本机个人进度仍保留。');
+    });
+    element('cloud-sync-delete-form').addEventListener('submit', function (event) {
+      event.preventDefault();
+      var form = event.currentTarget, input = values(form), confirmation = input.confirmation;
+      delete input.confirmation;
+      clearSecrets(form);
+      input.confirmDeleteSpace = function () { return confirmation; };
+      run('正在永久删除同步空间…', function () { return syncClient.deleteSpace(input); }, '同步空间已永久删除，本机个人进度仍保留。');
+    });
+    element('cloud-sync-rollback-restore').addEventListener('click', function () {
+      run('正在恢复覆盖前数据…', function () { return syncClient.recoverInterruptedRollback('restore'); },
+        '覆盖前数据已恢复，工具即将重新载入。', false);
+    });
+    element('cloud-sync-rollback-discard').addEventListener('click', function () {
+      if (!root.confirm('确认保留当前数据并删除本机回滚副本？此操作不可撤销。')) return;
+      run('正在删除本机回滚副本…', function () { return syncClient.recoverInterruptedRollback('discard'); },
+        '已保留当前数据并删除回滚副本。', false).then(function (result) {
+          if (result) element('cloud-sync-rollback').hidden = true;
+        });
+    });
+
+    renderActionState();
+    refreshDashboard().then(resumePending).catch(function (error) {
+      status('无法读取云同步状态：' + (error && error.message ? error.message : '未知错误'), true);
+      renderDashboard({ paired: false, devices: [] });
+    });
+    return Object.freeze({ state: state, refresh: refreshDashboard });
+  }
+
   sync.createSync = createSync;
+  sync.createSettingsState = createSettingsState;
+  sync.bindSettingsUI = bindSettingsUI;
+  if (root.document) bindSettingsUI(sync, root.document);
   return sync;
 });

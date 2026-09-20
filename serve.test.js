@@ -131,6 +131,44 @@ test("GET /css/style.css 返回 200 且为 CSS", async () => {
   });
 });
 
+test("云同步设置页包含完整手动流程且脚本依赖顺序正确", () => {
+  const html = fs.readFileSync(path.join(__dirname, "index.html"), "utf8");
+  const scriptIndex = (name) => html.indexOf(`js/${name}.js`);
+  assert.match(html, /id="cloud-sync-panel"/);
+  assert.match(html, /id="cloud-sync-unbound"/);
+  assert.match(html, /id="cloud-sync-paired"[^>]*hidden/);
+  assert.match(html, /id="cloud-sync-status"[^>]*role="status"[^>]*aria-live="polite"/);
+  assert.match(html, /上传本机快照/);
+  assert.match(html, /从其他设备同步/);
+  assert.match(html, /手动选择一台来源设备，用它的全部工具数据覆盖当前设备；不会自动合并。/);
+  assert.match(html, /工具版本由 PWA 更新；本面板只同步工具内保存的数据。同步开始前会先检查并更新工具版本。/);
+  assert.ok(scriptIndex("cloud-sync-core") < scriptIndex("cloud-sync"));
+  assert.ok(scriptIndex("cloud-sync-config") < scriptIndex("cloud-sync-api"));
+  assert.ok(scriptIndex("settings") < scriptIndex("cloud-sync"));
+  assert.ok(scriptIndex("pwa") < scriptIndex("cloud-sync"));
+});
+
+test("云同步设置页保留 JSON 备份并提供显式来源、确认、恢复密钥和安全操作", () => {
+  const html = fs.readFileSync(path.join(__dirname, "index.html"), "utf8");
+  assert.match(html, /id="settings-export"[^>]*>导出备份/);
+  assert.match(html, /id="settings-import-trigger"[^>]*>导入备份/);
+  assert.match(html, /id="settings-import-file"[^>]*accept="application\/json,.json"[^>]*hidden/);
+  assert.match(html, /id="cloud-sync-source-list"/);
+  assert.match(html, /id="cloud-sync-confirm-check"[^>]*type="checkbox"/);
+  assert.match(html, /id="cloud-sync-confirm-overwrite"[^>]*disabled[^>]*>确认覆盖当前设备/);
+  assert.match(html, /id="cloud-sync-progress"[^>]*>\s*<progress/s);
+  assert.match(html, /id="cloud-sync-recovery-ack"[^>]*type="checkbox"/);
+  assert.match(html, /id="cloud-sync-recovery-confirm"[^>]*disabled/);
+  for (const id of ["cloud-sync-upload", "cloud-sync-rename", "cloud-sync-revoke",
+    "cloud-sync-reset-password-action", "cloud-sync-change-password", "cloud-sync-rotate-recovery", "cloud-sync-forget", "cloud-sync-delete-space"]) {
+    assert.match(html, new RegExp(`id="${id}"`), id);
+  }
+  assert.match(html, /autocomplete="new-password"/);
+  assert.match(html, /autocomplete="current-password"/);
+  assert.match(html, /aria-label="显示创建同步密码"/);
+  assert.match(html, /aria-label="显示加入同步密码"/);
+});
+
 test("首页提供合阵工作台及其数据、核心和界面脚本", async () => {
   await withServer(async (port) => {
     const page = await get(port, "/");

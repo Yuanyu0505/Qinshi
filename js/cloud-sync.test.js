@@ -887,6 +887,55 @@ test('rollback evidence blocks uploads and is discovered on resume even without 
   assert.ok(h.state.rollback);
 });
 
+test('pull acknowledged commit fences automatic rollback before a transient post-commit renewal failure', async () => {
+  const h = await pullHarness();
+  const before = structuredClone(h.state.data);
+  const renew = h.storage.renewRollbackWrite;
+  let renewals = 0;
+  h.storage.renewRollbackWrite = async (...args) => {
+    // Only the post-commit renewal fails; an erroneous catch renewal would succeed.
+    if (++renewals === 2) throw new Error('post-commit renewal failed');
+    return renew(...args);
+  };
+  await assert.rejects(h.sync.confirmPull(await h.sync.preparePull(h.source.snapshotId)), /post-commit renewal failed/);
+  assert.deepEqual(h.state.data, { qinshi_progress: 'local progress' });
+  assert.deepEqual(h.state.rollback.data, before);
+  assert.equal(h.events.includes('restore-local'), false);
+  assert.equal(h.events.includes('clear-rollback'), false);
+  assert.equal(h.events.includes('reload'), false);
+  assert.equal(h.events.filter(event => event === 'commit-cloud').length, 1);
+  assert.equal(renewals, 2);
+  assert.equal(h.state.heartbeat, null);
+});
+
+test('pull conditional rollback clear failure after commit preserves selected data and evidence', async () => {
+  const h = await pullHarness();
+  const before = structuredClone(h.state.data);
+  h.storage.clearRollbackCopy = async () => { throw new Error('conditional cleanup failed'); };
+  await assert.rejects(h.sync.confirmPull(await h.sync.preparePull(h.source.snapshotId)), /conditional cleanup failed/);
+  assert.deepEqual(h.state.data, { qinshi_progress: 'local progress' });
+  assert.deepEqual(h.state.rollback.data, before);
+  assert.equal(h.events.includes('restore-local'), false);
+  assert.equal(h.events.includes('reload'), false);
+  assert.equal(h.events.filter(event => event === 'commit-cloud').length, 1);
+  assert.equal(h.state.heartbeat, null);
+});
+
+test('pull invalid commit receipts retain fenced automatic rollback behavior', async () => {
+  for (const receipt of [null, {}, { status: 'failed' }, { operationId: 'wrong', latestSnapshotId: 'wrong', historySnapshotIds: [] }]) {
+    const h = await pullHarness();
+    const before = structuredClone(h.state.data);
+    h.api.commitUpload = async () => receipt;
+    await assert.rejects(h.sync.confirmPull(await h.sync.preparePull(h.source.snapshotId)), /云端提交响应不正确/);
+    assert.deepEqual(h.state.data, before);
+    assert.deepEqual(h.state.rollback.data, before);
+    assert.equal(h.events.filter(event => event === 'restore-local').length, 1);
+    assert.equal(h.events.includes('clear-rollback'), false);
+    assert.equal(h.events.includes('reload'), false);
+    assert.equal(h.state.heartbeat, null);
+  }
+});
+
 test('pull cleanup failure after both commits retains current data and rollback evidence', async () => {
   const h = await pullHarness();
   h.storage.clearPendingOperation = async () => { throw new Error('cleanup failed'); };

@@ -539,11 +539,13 @@
           settings.replaceManagedData(prepared.envelope.data);
           var committed = await api().commitUpload(stagedAfter.uploadId,
             { beforeUploadId: stagedBefore.uploadId, sourceSnapshotId: preview.snapshotId }, stagedAfter.operationId);
-          var committedPermit = await lease.renew();
-          requireLeaseWindow(committedPermit.writeLeaseUntil);
           if (!committed || committed.operationId !== stagedAfter.uploadId || committed.latestSnapshotId !== stagedAfter.snapshotId ||
             !Array.isArray(committed.historySnapshotIds) || committed.historySnapshotIds[0] !== stagedBefore.snapshotId) throw new Error('云端提交响应不正确。');
+          // Acknowledged cloud replacement must fence automatic local rollback
+          // before any fallible lease renewal or cleanup can enter the catch path.
           cloudCommitted = true;
+          var committedPermit = await lease.renew();
+          requireLeaseWindow(committedPermit.writeLeaseUntil);
           await storage().clearPendingOperation();
           var clearPermit = await lease.renew();
           requireLeaseWindow(clearPermit.writeLeaseUntil);

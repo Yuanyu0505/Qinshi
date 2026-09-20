@@ -483,3 +483,47 @@ test('expired recovery lease is takeable after a crash and permanently invalidat
   await b.clearRollbackCopy(ownerA, actionB);
   assert.equal(adapter.openCount(), adapter.closeCount());
 });
+
+test('owner write lease excludes recovery, requires its fence for clear, and releases without losing rollback', async () => {
+  const adapter = createFakeIndexedDb();
+  let clock = 1000;
+  const store = storageApi.createStorage({ indexedDB: adapter, sessionStorage: createSessionStorage(), now: () => clock });
+  await store.claimRollbackCopy({ ownerId: ownerA, data: { qinshi_progress: 'original' } });
+  const lease = await store.acquireRollbackWrite(ownerA, actionA);
+  assert.equal(lease.writeFenceId, actionA);
+  assert.ok(lease.writeLeaseUntil > clock);
+  await assert.rejects(store.acquireRollbackRecovery(ownerA, actionB), error => error.code === 'ROLLBACK_CONFLICT');
+  await assert.rejects(store.clearRollbackCopy(ownerA), error => error.code === 'ROLLBACK_CONFLICT');
+  clock += 15000;
+  assert.ok((await store.renewRollbackWrite(ownerA, actionA)).writeLeaseUntil > lease.writeLeaseUntil);
+  await store.releaseRollbackWrite(ownerA, actionA);
+  assert.deepEqual(await store.loadRollbackCopy(), { ownerId: ownerA, data: { qinshi_progress: 'original' } });
+  await store.acquireRollbackRecovery(ownerA, actionB);
+  await assert.rejects(store.releaseRollbackWrite(ownerA, actionA), error => error.code === 'ROLLBACK_CONFLICT');
+  await assert.rejects(store.renewRollbackWrite(ownerA, actionA), error => error.code === 'ROLLBACK_CONFLICT');
+  assert.equal(adapter.openCount(), adapter.closeCount());
+});
+
+test('expired owner write fence permits recovery takeover but cannot renew, release, or clear afterwards', async () => {
+  const adapter = createFakeIndexedDb();
+  let clock = 0;
+  const a = storageApi.createStorage({ indexedDB: adapter, sessionStorage: createSessionStorage(), now: () => clock });
+  const b = storageApi.createStorage({ indexedDB: adapter, sessionStorage: createSessionStorage(), now: () => clock });
+  await a.claimRollbackCopy({ ownerId: ownerA, data: { qinshi_progress: 'original' } });
+  await a.acquireRollbackWrite(ownerA, actionA);
+  clock = 59999;
+  await assert.rejects(b.acquireRollbackRecovery(ownerA, actionB), error => error.code === 'ROLLBACK_CONFLICT');
+  clock = 60000;
+  await assert.rejects(a.renewRollbackWrite(ownerA, actionA), error => error.code === 'ROLLBACK_CONFLICT');
+  await b.acquireRollbackRecovery(ownerA, actionB);
+  await assert.rejects(a.acquireRollbackWrite(ownerA, actionA), error => error.code === 'ROLLBACK_CONFLICT');
+  await assert.rejects(a.releaseRollbackWrite(ownerA, actionA), error => error.code === 'ROLLBACK_CONFLICT');
+  await assert.rejects(a.clearRollbackCopy(ownerA, undefined, actionA), error => error.code === 'ROLLBACK_CONFLICT');
+  await b.clearRollbackCopy(ownerA, actionB);
+  await b.claimRollbackCopy({ ownerId: ownerB, data: {} });
+  await b.acquireRollbackWrite(ownerB, actionB);
+  await assert.rejects(a.clearRollbackCopy(ownerA, undefined, actionA), error => error.code === 'ROLLBACK_CONFLICT');
+  await b.clearRollbackCopy(ownerB, undefined, actionB);
+  assert.equal(await a.loadRollbackCopy(), null);
+  assert.equal(adapter.openCount(), adapter.closeCount());
+});

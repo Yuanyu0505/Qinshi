@@ -605,6 +605,8 @@ async function pullHarness() {
   h.state.rollback = null;
   h.state.clock = 0;
   h.deps.recoveryNow = () => h.state.clock;
+  h.deps.setInterval = (callback, milliseconds) => { h.state.heartbeat = { callback, milliseconds }; return 1; };
+  h.deps.clearInterval = () => { h.state.heartbeat = null; };
   h.storage.loadRollbackCopy = async () => structuredClone(h.state.rollback);
   h.storage.saveRollbackCopy = async copy => { h.events.push('save-rollback'); h.state.rollback = structuredClone(copy); };
   h.storage.claimRollbackCopy = async copy => {
@@ -619,6 +621,8 @@ async function pullHarness() {
   h.storage.acquireRollbackRecovery = async (ownerId, actionId) => {
     const copy = h.state.rollback;
     if (!copy || copy.ownerId !== ownerId || (copy.recoveryActionId && copy.recoveryLeaseUntil > h.state.clock)) throw conflict();
+    if (copy.writeFenceId && copy.writeLeaseUntil > h.state.clock) throw conflict();
+    delete copy.writeFenceId; delete copy.writeLeaseUntil;
     copy.recoveryActionId = actionId;
     copy.recoveryLeaseUntil = h.state.clock + 60000;
     return structuredClone(copy);
@@ -629,9 +633,30 @@ async function pullHarness() {
     copy.recoveryLeaseUntil = h.state.clock + 60000;
     return structuredClone(copy);
   };
-  h.storage.clearRollbackCopy = async (ownerId, actionId) => {
+  function validWrite(ownerId, fenceId) {
+    const copy = h.state.rollback;
+    if (!copy || copy.ownerId !== ownerId || copy.recoveryActionId || copy.writeFenceId !== fenceId || copy.writeLeaseUntil <= h.state.clock) throw conflict();
+    return copy;
+  }
+  h.storage.acquireRollbackWrite = async (ownerId, fenceId) => {
+    const copy = h.state.rollback;
+    if (!copy || copy.ownerId !== ownerId || copy.recoveryActionId || (copy.writeFenceId && copy.writeLeaseUntil > h.state.clock)) throw conflict();
+    copy.writeFenceId = fenceId; copy.writeLeaseUntil = h.state.clock + 60000;
+    return structuredClone(copy);
+  };
+  h.storage.renewRollbackWrite = async (ownerId, fenceId) => {
+    const copy = validWrite(ownerId, fenceId);
+    copy.writeLeaseUntil = h.state.clock + 60000;
+    return structuredClone(copy);
+  };
+  h.storage.releaseRollbackWrite = async (ownerId, fenceId) => {
+    const copy = validWrite(ownerId, fenceId);
+    delete copy.writeFenceId; delete copy.writeLeaseUntil;
+  };
+  h.storage.clearRollbackCopy = async (ownerId, actionId, fenceId) => {
     if (h.state.rollback && h.state.rollback.ownerId !== ownerId) throw Object.assign(new Error('回滚 owner 冲突'), { code: 'ROLLBACK_CONFLICT' });
     if (h.state.rollback?.recoveryActionId && (h.state.rollback.recoveryActionId !== actionId || h.state.rollback.recoveryLeaseUntil <= h.state.clock)) throw conflict();
+    if (h.state.rollback?.writeFenceId) validWrite(ownerId, fenceId);
     h.events.push('clear-rollback'); h.state.rollback = null;
   };
   h.deps.settings.makePayload = reason => ({ formatVersion: 1, appName: 'Qin', reason, data: structuredClone(h.state.data) });
@@ -1136,6 +1161,7 @@ test('recovery uses real transactional settings replacement so a failed key rest
 test('original overwrite cannot automatically restore local data after a recovery action acquires its record', async () => {
   const h = await pullHarness();
   h.api.commitUpload = async () => {
+    h.state.clock = h.state.rollback.writeLeaseUntil || h.state.clock;
     await h.storage.acquireRollbackRecovery(h.state.rollback.ownerId, randomUUID());
     throw new Error('cloud failure during recovery');
   };
@@ -1143,4 +1169,112 @@ test('original overwrite cannot automatically restore local data after a recover
   assert.equal(h.events.includes('restore-local'), false);
   assert.deepEqual(h.state.data, { qinshi_progress: 'local progress' });
   assert.equal(typeof h.state.rollback.recoveryActionId, 'string');
+});
+
+test('owner write lease blocks competing recovery throughout cloud commit and final clear', async () => {
+  const h = await pullHarness();
+  const b = moduleApi.createSync(h.deps);
+  const commit = h.api.commitUpload;
+  h.api.commitUpload = async (...args) => {
+    assert.equal(typeof h.state.rollback.writeFenceId, 'string');
+    await assert.rejects(b.recoverInterruptedRollback('discard'), error => error.code === 'ROLLBACK_CONFLICT');
+    await assert.rejects(h.storage.clearRollbackCopy(h.state.rollback.ownerId), error => error.code === 'ROLLBACK_CONFLICT');
+    return commit(...args);
+  };
+  await h.sync.confirmPull(await h.sync.preparePull(h.source.snapshotId));
+  const cleared = h.events.indexOf('clear-rollback');
+  assert.deepEqual(h.events.slice(cleared + 1), ['reload']);
+  assert.equal(h.state.heartbeat, null);
+});
+
+test('suspended write owner cannot replace, auto-restore, clear, or reload after recovery takeover', async () => {
+  for (const [phase, renewal] of [['replace', 1], ['restore', 2], ['clear', 3]]) {
+    const h = await pullHarness();
+    const b = moduleApi.createSync(h.deps);
+    const renew = h.storage.renewRollbackWrite;
+    const later = { ownerId: randomUUID(), createdAt: time, data: { qinshi_progress: 'new rollback' } };
+    let renewals = 0;
+    h.storage.renewRollbackWrite = async (...args) => {
+      const prior = await renew(...args);
+      if (++renewals === renewal) {
+        h.state.clock = prior.writeLeaseUntil;
+        await b.recoverInterruptedRollback('restore');
+        await h.storage.claimRollbackCopy(later);
+        h.state.data = { qinshi_progress: 'new operation data' };
+        h.events.length = 0;
+      }
+      return prior;
+    };
+    if (phase === 'restore') h.api.commitUpload = async () => { throw new Error('cloud failed'); };
+    await assert.rejects(h.sync.confirmPull(await h.sync.preparePull(h.source.snapshotId)), error => error.code === 'ROLLBACK_CONFLICT', phase);
+    assert.deepEqual(h.state.data, { qinshi_progress: 'new operation data' }, phase);
+    assert.deepEqual(h.state.rollback, later, phase);
+    assert.deepEqual(h.events, [], phase);
+    assert.equal(h.state.heartbeat, null);
+  }
+});
+
+test('owner write heartbeat renews long cloud operations and keeps recovery excluded', async () => {
+  const h = await pullHarness();
+  const b = moduleApi.createSync(h.deps);
+  const commit = h.api.commitUpload;
+  h.api.commitUpload = async (...args) => {
+    assert.equal(h.state.heartbeat?.milliseconds, 15000);
+    for (let index = 0; index < 6; index++) {
+      h.state.clock += 15000;
+      await h.state.heartbeat.callback();
+      await assert.rejects(b.recoverInterruptedRollback('discard'), error => error.code === 'ROLLBACK_CONFLICT');
+    }
+    return commit(...args);
+  };
+  await h.sync.confirmPull(await h.sync.preparePull(h.source.snapshotId));
+  assert.equal(h.state.clock, 90000);
+  assert.equal(h.state.rollback, null);
+  assert.equal(h.state.heartbeat, null);
+});
+
+test('handled owner write failure restores under its fence then releases the lease for immediate recovery', async () => {
+  const h = await pullHarness();
+  const before = structuredClone(h.state.data);
+  h.api.commitUpload = async () => { throw new Error('cloud failed'); };
+  await assert.rejects(h.sync.confirmPull(await h.sync.preparePull(h.source.snapshotId)), /cloud failed/);
+  assert.deepEqual(h.state.data, before);
+  assert.equal(h.state.rollback.writeFenceId, undefined);
+  assert.equal(h.state.heartbeat, null);
+  await moduleApi.createSync(h.deps).recoverInterruptedRollback('discard');
+  assert.equal(h.state.rollback, null);
+});
+
+test('owner lease expiry between renew return and caller continuation is checked before the local write', async () => {
+  const h = await pullHarness();
+  const before = structuredClone(h.state.data);
+  let first = true;
+  h.deps.recoveryNow = () => {
+    const time = h.state.clock;
+    if (first) {
+      first = false;
+      queueMicrotask(() => { h.state.clock = 60001; });
+    }
+    return time;
+  };
+  await assert.rejects(h.sync.confirmPull(await h.sync.preparePull(h.source.snapshotId)), error => error.code === 'ROLLBACK_CONFLICT');
+  assert.deepEqual(h.state.data, before);
+  assert.equal(h.events.includes('replace-local'), false);
+  assert.equal(h.events.includes('commit-cloud'), false);
+});
+
+test('cancellation accepted during owner lease acquisition still prevents the first local write', async () => {
+  const h = await pullHarness();
+  const before = structuredClone(h.state.data);
+  const preview = await h.sync.preparePull(h.source.snapshotId);
+  const acquire = h.storage.acquireRollbackWrite;
+  h.storage.acquireRollbackWrite = async (...args) => {
+    const copy = await acquire(...args);
+    assert.equal(h.sync.cancelPull(preview), true);
+    return copy;
+  };
+  await assert.rejects(h.sync.confirmPull(preview), /取消/);
+  assert.deepEqual(h.state.data, before);
+  assert.equal(h.events.includes('replace-local'), false);
+  assert.equal(h.state.rollback.writeFenceId, undefined);
 });

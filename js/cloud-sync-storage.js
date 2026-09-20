@@ -19,6 +19,7 @@
   var PENDING_OPERATION_KEY = "qin-cloud-sync-pending";
   var PAIRING_FIELDS = ["spaceId", "deviceId", "deviceToken", "masterKey", "deviceName", "pairedAt"];
   var RECOVERY_LEASE_MS = 60000;
+  var OWNER_WRITE_LEASE_MS = 60000;
 
   function errorFrom(source, fallback) {
     return source && source.error ? source.error : new Error(fallback);
@@ -287,13 +288,20 @@
         !Number.isSafeInteger(current.recoveryLeaseUntil) || current.recoveryLeaseUntil <= time) throw rollbackConflict();
     }
 
-    function changeRollback(saved, ownerId, removing, actionId) {
+    function checkWrite(current, ownerId, fenceId, time) {
+      if (!current || current.ownerId !== ownerId || current.recoveryActionId !== undefined ||
+        current.writeFenceId !== fenceId || typeof fenceId !== 'string' ||
+        !Number.isSafeInteger(current.writeLeaseUntil) || current.writeLeaseUntil <= time) throw rollbackConflict();
+    }
+
+    function changeRollback(saved, ownerId, removing, actionId, fenceId) {
       return rollbackTransaction(function (current) {
         if (!removing && current !== undefined) throw rollbackConflict();
         var currentOwner = current && typeof current === 'object' ? current.ownerId : undefined;
         if (removing && current === undefined && ownerId !== undefined) throw rollbackConflict();
         if (removing && current !== undefined && currentOwner !== ownerId) throw rollbackConflict();
         if (removing && actionId !== undefined) checkRecovery(current, ownerId, actionId, leaseNow());
+        if (removing && (fenceId !== undefined || (current && current.writeFenceId !== undefined))) checkWrite(current, ownerId, fenceId, leaseNow());
         // Once recovery has taken ownership, the original overwrite actor must
         // never regain write/clear rights, even after its recovery lease expires.
         if (removing && actionId === undefined && current && current.recoveryActionId !== undefined) throw rollbackConflict();
@@ -308,10 +316,36 @@
       return rollbackTransaction(function (current) {
         var time = leaseNow();
         if (!isPlainObject(current) || current.ownerId !== ownerId) throw rollbackConflict();
+        if (current.writeFenceId !== undefined &&
+          (!Number.isSafeInteger(current.writeLeaseUntil) || current.writeLeaseUntil > time)) throw rollbackConflict();
         if (renewing) checkRecovery(current, ownerId, actionId, time);
         else if (current.recoveryActionId !== undefined &&
           (!Number.isSafeInteger(current.recoveryLeaseUntil) || current.recoveryLeaseUntil > time)) throw rollbackConflict();
         var saved = Object.assign({}, current, { recoveryActionId: actionId, recoveryLeaseUntil: time + RECOVERY_LEASE_MS });
+        delete saved.writeFenceId;
+        delete saved.writeLeaseUntil;
+        return { value: saved, result: saved };
+      });
+    }
+
+    function writeLease(ownerId, fenceId, mode) {
+      if (typeof fenceId !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(fenceId)) {
+        return Promise.reject(new Error('回滚写入 fence 不正确。'));
+      }
+      return rollbackTransaction(function (current) {
+        var time = leaseNow();
+        if (!isPlainObject(current) || current.ownerId !== ownerId || current.recoveryActionId !== undefined) throw rollbackConflict();
+        if (mode !== 'acquire') checkWrite(current, ownerId, fenceId, time);
+        else if (current.writeFenceId !== undefined &&
+          (!Number.isSafeInteger(current.writeLeaseUntil) || current.writeLeaseUntil > time)) throw rollbackConflict();
+        var saved = Object.assign({}, current);
+        if (mode === 'release') {
+          delete saved.writeFenceId;
+          delete saved.writeLeaseUntil;
+        } else {
+          saved.writeFenceId = fenceId;
+          saved.writeLeaseUntil = time + OWNER_WRITE_LEASE_MS;
+        }
         return { value: saved, result: saved };
       });
     }
@@ -395,7 +429,10 @@
       },
       acquireRollbackRecovery: function (ownerId, actionId) { return recoveryLease(ownerId, actionId, false); },
       renewRollbackRecovery: function (ownerId, actionId) { return recoveryLease(ownerId, actionId, true); },
-      clearRollbackCopy: function (ownerId, actionId) { return changeRollback(undefined, ownerId, true, actionId); }
+      acquireRollbackWrite: function (ownerId, fenceId) { return writeLease(ownerId, fenceId, 'acquire'); },
+      renewRollbackWrite: function (ownerId, fenceId) { return writeLease(ownerId, fenceId, 'renew'); },
+      releaseRollbackWrite: function (ownerId, fenceId) { return writeLease(ownerId, fenceId, 'release'); },
+      clearRollbackCopy: function (ownerId, actionId, fenceId) { return changeRollback(undefined, ownerId, true, actionId, fenceId); }
     };
   }
 

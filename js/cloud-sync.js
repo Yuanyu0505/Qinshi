@@ -9,6 +9,8 @@
   'use strict';
 
   var MAX_CIPHERTEXT_BYTES = 10 * 1024 * 1024;
+  var WRITE_LEASE_RENEW_INTERVAL_MS = 15000;
+  var MIN_LOCAL_WRITE_WINDOW_MS = 30000;
 
   function encode(bytes) {
     var binary = '';
@@ -386,8 +388,35 @@
       if (pending && (pending.type !== type || pending.snapshotId !== snapshotId)) throw new Error('请先处理已有同步操作。');
     }
 
-    async function ownedRollback(ownerId) {
-      return storage().assertRollbackOwner(ownerId);
+    function requireLeaseWindow(expiresAt) {
+      var time = options.recoveryNow ? options.recoveryNow() : Date.now();
+      if (!Number.isSafeInteger(time) || !Number.isSafeInteger(expiresAt) || expiresAt - time < MIN_LOCAL_WRITE_WINDOW_MS) {
+        var expired = new Error('回滚写入租约已失效，请重新选择恢复操作。');
+        expired.code = 'ROLLBACK_CONFLICT';
+        throw expired;
+      }
+    }
+
+    async function startWriteLease(ownerId) {
+      var fenceId = uuid();
+      await storage().acquireRollbackWrite(ownerId, fenceId);
+      var active = true, failure = null, renewing = null;
+      async function renew() {
+        if (failure) throw failure;
+        var copy = await storage().renewRollbackWrite(ownerId, fenceId);
+        requireLeaseWindow(copy.writeLeaseUntil);
+        return copy;
+      }
+      var timer = (options.setInterval || root.setInterval)(function () {
+        if (!active || renewing) return renewing;
+        renewing = renew().catch(function (error) { if (active) failure = error; })
+          .finally(function () { renewing = null; });
+        return renewing;
+      }, WRITE_LEASE_RENEW_INTERVAL_MS);
+      return { fenceId: fenceId, renew: renew, stop: function () {
+        active = false;
+        (options.clearInterval || root.clearInterval)(timer);
+      } };
     }
 
     async function readSource(snapshotId, pairing) {
@@ -487,6 +516,7 @@
         await storage().claimRollbackCopy({ ownerId: prepared.ownerId, createdAt: now(), data: before });
         var backupDownloadFailed = false;
         var replacementStarted = false;
+        var cloudCommitted = false, cleared = false, lease = null;
         try {
           await storage().savePendingOperation({ type: preview.type, snapshotId: preview.snapshotId });
           try {
@@ -498,29 +528,50 @@
           var stagedBefore = await stageReplacement(before, pairing, prefix + '-before', null);
           var stagedAfter = await stageReplacement(prepared.envelope.data, pairing, prefix + '-after', preview.snapshotId);
           if (prepared.cancelled) throw new Error('已取消覆盖。');
-          await ownedRollback(prepared.ownerId);
+          lease = await startWriteLease(prepared.ownerId);
+          var writePermit = await lease.renew();
+          if (prepared.cancelled) throw new Error('已取消覆盖。');
           // Fail closed if local editing continued while encryption/network was pending.
           if (core().canonicalStringify(settings.collectManagedData()) !== core().canonicalStringify(before)) throw new Error('本机数据已变化，请处理回滚副本后重新确认。');
+          requireLeaseWindow(writePermit.writeLeaseUntil);
           prepared.replacing = true;
           replacementStarted = true;
-          await settings.replaceManagedData(prepared.envelope.data);
+          settings.replaceManagedData(prepared.envelope.data);
           var committed = await api().commitUpload(stagedAfter.uploadId,
             { beforeUploadId: stagedBefore.uploadId, sourceSnapshotId: preview.snapshotId }, stagedAfter.operationId);
+          var committedPermit = await lease.renew();
+          requireLeaseWindow(committedPermit.writeLeaseUntil);
           if (!committed || committed.operationId !== stagedAfter.uploadId || committed.latestSnapshotId !== stagedAfter.snapshotId ||
             !Array.isArray(committed.historySnapshotIds) || committed.historySnapshotIds[0] !== stagedBefore.snapshotId) throw new Error('云端提交响应不正确。');
+          cloudCommitted = true;
+          await storage().clearPendingOperation();
+          var clearPermit = await lease.renew();
+          requireLeaseWindow(clearPermit.writeLeaseUntil);
+          // Conditional clear is the terminal IDB fence. No local data writes or
+          // asynchronous work may follow successful removal of the rollback record.
+          await storage().clearRollbackCopy(prepared.ownerId, undefined, lease.fenceId);
+          cleared = true;
+          lease.stop();
+          dependency('location', 'location').reload();
+          return { status: 'replaced', snapshotId: stagedAfter.snapshotId, backupDownloadFailed: backupDownloadFailed };
         } catch (error) {
-          if (replacementStarted) {
-            var rollback = await ownedRollback(prepared.ownerId);
-            try { await settings.restoreManagedData(rollback.data); }
+          if (replacementStarted && !cloudCommitted) {
+            var rollback = await lease.renew();
+            requireLeaseWindow(rollback.writeLeaseUntil);
+            try { settings.restoreManagedData(rollback.data); }
             catch (restoreError) { throw new Error('覆盖失败且本机自动恢复失败，请使用保留的回滚副本恢复覆盖前数据。'); }
           }
           throw error;
-        } finally { preparedPulls.delete(preview); }
-        // Both sides have committed. Cleanup failures retain evidence, not undo a known commit.
-        await storage().clearPendingOperation();
-        await storage().clearRollbackCopy(prepared.ownerId);
-        dependency('location', 'location').reload();
-        return { status: 'replaced', snapshotId: stagedAfter.snapshotId, backupDownloadFailed: backupDownloadFailed };
+        } finally {
+          preparedPulls.delete(preview);
+          if (lease) {
+            lease.stop();
+            if (!cleared) {
+              try { await storage().releaseRollbackWrite(prepared.ownerId, lease.fenceId); }
+              catch (releaseError) { /* A stale token must not release newer ownership. */ }
+            }
+          }
+        }
       });
     }
 
@@ -544,12 +595,7 @@
       // A suspended page can resume after the IDB result's lease has expired.
       // Require a fresh 30-second write budget, then do not await before the
       // bounded synchronous local transaction (managed data is capped at 10 MiB).
-      var time = options.recoveryNow ? options.recoveryNow() : Date.now();
-      if (!Number.isSafeInteger(time) || renewed.recoveryLeaseUntil - time < 30000) {
-        var expired = new Error('回滚恢复租约已过期，请重新选择恢复操作。');
-        expired.code = 'ROLLBACK_CONFLICT';
-        throw expired;
-      }
+      requireLeaseWindow(renewed.recoveryLeaseUntil);
       if (action === 'restore') settings.replaceManagedData(saved.data);
       await storage().clearPendingOperation();
       await storage().clearRollbackCopy(copy.ownerId, actionId);

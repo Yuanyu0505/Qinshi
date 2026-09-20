@@ -172,6 +172,33 @@ test("401 on a paired endpoint becomes invalid pairing without deleting storage"
   }
 });
 
+test('revocation privately binds immutable actual request identity without adding secrets to a frozen error', async () => {
+  const saved = { spaceId: 'space', deviceId: 'old-device', deviceToken: 'old-token', masterKey: 'private-master' };
+  const { api } = setup([() => {
+    saved.deviceToken = 'changed-after-send';
+    return failure(401, 'AUTH_FAILED');
+  }], { getPairing: async () => saved });
+  const error = await api.listDevices().catch(value => Object.freeze(value));
+  assert.equal(error.code, 'DEVICE_REVOKED');
+  assert.deepEqual(api.getRevokedPairing(error), { spaceId: 'space', deviceId: 'old-device', deviceToken: 'old-token' });
+  assert.ok(Object.isFrozen(api.getRevokedPairing(error)));
+  for (const secret of ['old-token', 'private-master']) {
+    assert.equal(JSON.stringify(error).includes(secret), false);
+    assert.equal(String(error).includes(secret), false);
+  }
+  assert.equal(api.getRevokedPairing(new Error('unrelated')), null);
+});
+
+test('dual-auth revocation associates replay override rather than current pairing with the frozen error', async () => {
+  const original = { spaceId: 'space', deviceId: 'old-device', deviceToken: 'old-token' };
+  const { api } = setup([failure(401, 'AUTH_FAILED'), failure(401, 'AUTH_FAILED')], {
+    getPairing: async () => ({ spaceId: 'new-space', deviceId: 'new-device', deviceToken: 'new-token' })
+  });
+  const error = await api.deleteSpace({}, 'original-operation', { pairing: original }).catch(value => Object.freeze(value));
+  assert.deepEqual(api.getRevokedPairing(error), original);
+  assert.equal(JSON.stringify(error).includes('old-token'), false);
+});
+
 test("dual-auth 401 preserves pairing when a single device-only confirmation succeeds", async () => {
   for (const method of ["changePassword", "rotateRecoveryKey", "deleteSpace"]) {
     let pairingReads = 0;

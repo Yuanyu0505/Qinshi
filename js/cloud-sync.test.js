@@ -515,14 +515,15 @@ test('resume after reload never recollects or silently starts an automatic uploa
   assert.deepEqual(h.events, []);
 });
 
-test('revoked device clears pairing and pending operation but preserves local progress', async () => {
+test('revoked device clears only failed pairing and preserves pending operation and local progress', async () => {
   const h = harness();
   await create(h);
   const localBefore = structuredClone(h.state.data);
+  h.state.pending = { type: 'upload', snapshotId: 'must-survive' };
   h.api.listDevices = async () => { throw Object.assign(new Error('device revoked'), { code: 'DEVICE_REVOKED', pairingInvalid: true }); };
   await assert.rejects(h.sync.uploadCurrentDevice(), /revoked/);
   assert.equal(h.state.pairing, null);
-  assert.equal(h.state.pending, null);
+  assert.deepEqual(h.state.pending, { type: 'upload', snapshotId: 'must-survive' });
   assert.deepEqual(h.state.data, localBefore);
 });
 
@@ -567,10 +568,10 @@ test('revoked notice and cleanup failures cannot replace the original error', as
     const localBefore = structuredClone(h.state.data);
     const original = Object.freeze(Object.assign(new Error('revoked original'), { code: 'DEVICE_REVOKED', pairingInvalid: true }));
     h.deps.notifyPairingInvalid = async () => { h.events.push('notice'); if (noticeFails) throw new Error('private callback detail'); };
-    const forget = h.storage.forgetPairing;
-    h.storage.forgetPairing = async () => {
+    const forget = h.storage.forgetPairingIfCurrent;
+    h.storage.forgetPairingIfCurrent = async (...args) => {
       if (cleanupFails) { h.events.push('cleanup-failed'); throw new Error('private storage detail'); }
-      return forget();
+      return forget(...args);
     };
     h.api.listDevices = async () => { throw original; };
     h.events.length = 0;
@@ -578,6 +579,78 @@ test('revoked notice and cleanup failures cannot replace the original error', as
     assert.deepEqual(h.events, ['notice', cleanupFails ? 'cleanup-failed' : 'forgetPairing']);
     assert.deepEqual(h.state.data, localBefore);
   }
+});
+
+test('revocation notification preserves newer pairing, pending marker and rollback evidence', async () => {
+  for (const mutation of ['pairing', 'rollback', 'absent']) {
+    const h = harness();
+    await create(h);
+    const old = structuredClone(h.state.pairing), data = structuredClone(h.state.data);
+    const newer = { ...old, deviceId: randomUUID(), deviceToken: h.cryptoApi.randomId(32) };
+    const original = Object.freeze(Object.assign(new Error('revoked original'), { code: 'DEVICE_REVOKED', pairingInvalid: true }));
+    h.api.listDevices = async () => { throw original; };
+    h.deps.notifyPairingInvalid = async detail => {
+      assert.deepEqual(Object.keys(detail).sort(), ['code', 'message']);
+      for (const secret of [old.deviceToken, old.masterKey, password]) assert.equal(JSON.stringify(detail).includes(secret), false);
+      h.state.pending = { type: 'upload', snapshotId: 'new-pending' };
+      if (mutation === 'pairing') h.state.pairing = newer;
+      if (mutation === 'absent') h.state.pairing = null;
+      if (mutation === 'rollback') h.state.rollback = { ownerId: 'new-owner', data };
+    };
+    await assert.rejects(h.sync.getDashboard(), error => error === original);
+    assert.deepEqual(h.state.pairing, mutation === 'pairing' ? newer : mutation === 'absent' ? null : old);
+    assert.deepEqual(h.state.pending, { type: 'upload', snapshotId: 'new-pending' });
+    if (mutation === 'rollback') assert.deepEqual(h.state.rollback, { ownerId: 'new-owner', data });
+    assert.deepEqual(h.state.data, data);
+  }
+});
+
+test('old-token delete replay revocation cannot remove pairing or pending created during notice', async () => {
+  const h = await securityHarness();
+  const old = structuredClone(h.state.pairing), calls = [];
+  const newer = { ...old, deviceId: randomUUID(), deviceToken: h.cryptoApi.randomId(32) };
+  let replay = false, original;
+  const transport = require('./cloud-sync-api.js').createApi({ enabled: true, apiBaseUrl: 'https://sync.example.test',
+    appVersion: '1.0.39', getPairing: () => h.storage.loadPairing(), sleep: async () => {}, fetch: async (url, init) => {
+      calls.push(init.headers.Authorization);
+      if (!replay) throw new TypeError('response lost');
+      return new Response(JSON.stringify({ error: { code: 'AUTH_FAILED' } }), { status: 401 });
+    }
+  });
+  h.api.getRevokedPairing = transport.getRevokedPairing;
+  h.api.deleteSpace = async (...args) => {
+    try { return await transport.deleteSpace(...args); }
+    catch (error) { original = Object.freeze(error); throw original; }
+  };
+  h.deps.confirmDeleteSpace = async () => '永久删除同步空间';
+  await assert.rejects(h.sync.deleteSpace({ syncCode: h.code, password }), { code: 'OFFLINE' });
+  h.deps.notifyPairingInvalid = async detail => {
+    for (const secret of [old.deviceToken, old.masterKey]) assert.equal(JSON.stringify(detail).includes(secret), false);
+    h.state.pairing = newer;
+    h.state.pending = { type: 'upload', snapshotId: 'new-pending' };
+  };
+  replay = true;
+  await assert.rejects(h.sync.resumePendingOperation(), error => error === original && error.code === 'DEVICE_REVOKED');
+  assert.deepEqual(h.state.pairing, newer);
+  assert.deepEqual(h.state.pending, { type: 'upload', snapshotId: 'new-pending' });
+  assert.ok(calls.every(auth => auth === `Device ${old.deviceId}.${old.deviceToken}`));
+});
+
+test('authenticated failure cleanup uses transport identity when storage changed before actual dispatch', async () => {
+  const h = harness();
+  await create(h);
+  const actual = { ...h.state.pairing, deviceId: randomUUID(), deviceToken: h.cryptoApi.randomId(32) };
+  const transport = require('./cloud-sync-api.js').createApi({ enabled: true, apiBaseUrl: 'https://sync.example.test',
+    appVersion: '1.0.39', getPairing: () => h.storage.loadPairing(), fetch: async () =>
+      new Response(JSON.stringify({ error: { code: 'AUTH_FAILED' } }), { status: 401 }) });
+  h.api.getRevokedPairing = transport.getRevokedPairing;
+  h.api.listDevices = async () => { h.state.pairing = actual; return transport.listDevices(); };
+  let expected;
+  const forget = h.storage.forgetPairingIfCurrent;
+  h.storage.forgetPairingIfCurrent = async pairing => { expected = pairing; return forget(pairing); };
+  await assert.rejects(h.sync.getDashboard(), { code: 'DEVICE_REVOKED' });
+  assert.deepEqual(expected, { spaceId: actual.spaceId, deviceId: actual.deviceId, deviceToken: actual.deviceToken });
+  assert.equal(h.state.pairing, null);
 });
 
 test('forget current device affects local pairing only and leaves qinshi data untouched', async () => {

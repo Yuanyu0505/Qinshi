@@ -70,6 +70,7 @@
     var clearTimer = options.clearTimeout || root.clearTimeout.bind(root);
     var sleep = options.sleep || function (ms) { return new Promise(function (resolve) { setTimer(resolve, ms); }); };
     var now = options.now || Date.now;
+    var revokedPairings = new WeakMap(); // Never attach credentials to public errors.
 
     function baseUrl() {
       var config = options.config || root.QinshiCloudSyncConfig || {};
@@ -92,7 +93,7 @@
         else if (root.QinshiCloudSyncStorage) saved = await root.QinshiCloudSyncStorage.loadPairing();
         if (!saved || typeof saved.deviceId !== "string" || typeof saved.deviceToken !== "string" ||
           !/^[A-Za-z0-9_-]{1,128}$/.test(saved.deviceId) || !/^[A-Za-z0-9_-]{1,256}$/.test(saved.deviceToken)) throw new Error();
-        return "Device " + saved.deviceId + "." + saved.deviceToken;
+        return Object.freeze({ spaceId: saved.spaceId, deviceId: saved.deviceId, deviceToken: saved.deviceToken });
       } catch (error) { throw safeError("PAIRING_REQUIRED"); }
     }
 
@@ -201,7 +202,11 @@
       var method = details.method || "GET";
       var headers = { "X-Qin-App-Version": appVersion };
       if (details.pairingOverride !== undefined && details.key === undefined) throw safeError('INVALID_REQUEST');
-      if (details.auth) headers.Authorization = await loadPairing(details.pairingOverride);
+      var requestPairing;
+      if (details.auth) {
+        requestPairing = await loadPairing(details.pairingOverride);
+        headers.Authorization = 'Device ' + requestPairing.deviceId + '.' + requestPairing.deviceToken;
+      }
       if (details.idempotent) headers["Idempotency-Key"] = operationKey(details.key);
       var body;
       if (details.chunk) {
@@ -224,7 +229,8 @@
         try { return await perform(base + path, init, details, canRetry); }
         catch (error) {
           if (!(error instanceof CloudSyncApiError)) throw safeError("INVALID_RESPONSE");
-          if (details.auth === "dual" && error.status === 401) throw await confirmPairingFailure(base, init, error);
+          if (details.auth === "dual" && error.status === 401) error = await confirmPairingFailure(base, init, error);
+          if (error.code === 'DEVICE_REVOKED' && requestPairing) revokedPairings.set(error, requestPairing);
           if (!error.retryable || attempt >= RETRY_DELAYS.length) throw error;
           await waitDelay(Math.max(RETRY_DELAYS[attempt], error.retryAfterMs || 0));
         }
@@ -237,6 +243,9 @@
     }
 
     return {
+      // Coordinator-only lookup; identity lives in this private WeakMap, never
+      // in enumerable/non-enumerable error fields, callbacks, logs or persistence.
+      getRevokedPairing: function (error) { return revokedPairings.get(error) || null; },
       health: function () { return request("/v1/health", {}); },
       createSpace: function (body, key) { return write("/v1/spaces", body, key, false); },
       getParameters: async function (code) { return request("/v1/spaces/" + segment(code) + "/parameters", {}); },

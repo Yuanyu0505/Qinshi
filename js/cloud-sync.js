@@ -42,6 +42,7 @@
     var pendingSecurity = null; // Immutable lifecycle proof for same-page retry, never raw credentials.
     var busy = false;
     var preparedPulls = new WeakMap(); // Preview handles never expose plaintext or pairing credentials.
+    var revokedPairings = new WeakMap(); // Supports frozen errors without publishing credentials.
 
     function dependency(name, globalName) {
       var value = options[name] || root[globalName];
@@ -61,10 +62,40 @@
     function now() { return options.now ? options.now() : new Date().toISOString(); }
     function uuid() { return options.randomUUID ? options.randomUUID() : webCrypto().randomUUID(); }
 
+    function pairingIdentity(pairing) {
+      if (!pairing || ['spaceId', 'deviceId', 'deviceToken'].some(function (field) {
+        return typeof pairing[field] !== 'string' || !pairing[field];
+      })) return null;
+      return Object.freeze({ spaceId: pairing.spaceId, deviceId: pairing.deviceId, deviceToken: pairing.deviceToken });
+    }
+
+    function samePairing(left, right) {
+      return left && right && ['spaceId', 'deviceId', 'deviceToken'].every(function (field) { return left[field] === right[field]; });
+    }
+
+    async function authenticatedCall(method, args, expected) {
+      var transport = api();
+      // Injected transports may not expose request identity. Capture their
+      // expected identity before dispatch, never after notification/user input.
+      var captured = pairingIdentity(expected === undefined ? await storage().loadPairing() : expected);
+      try { return await transport[method].apply(transport, args); }
+      catch (error) {
+        if (error && error.code === 'DEVICE_REVOKED' && error.pairingInvalid === true) {
+          var actual;
+          try { if (typeof transport.getRevokedPairing === 'function') actual = pairingIdentity(transport.getRevokedPairing(error)); }
+          catch (lookupError) { /* Keep the original error and conservative pre-dispatch identity. */ }
+          if (actual || captured) revokedPairings.set(error, actual || captured);
+        }
+        throw error;
+      }
+    }
+
     async function handleFailure(error) {
       if (error && error.code === 'DEVICE_REVOKED' && error.pairingInvalid === true) {
-        pendingUpload = null;
-        pendingEnrollment = null;
+        var expected = revokedPairings.get(error);
+        if (pendingUpload && samePairing(pendingUpload.pairing, expected)) pendingUpload = null;
+        if (pendingEnrollment && samePairing({ spaceId: pendingEnrollment.spaceId,
+          deviceId: pendingEnrollment.device.deviceId, deviceToken: pendingEnrollment.device.deviceToken }, expected)) pendingEnrollment = null;
         // UI may await the notice before local credentials disappear. Without an
         // injected callback this is a no-op; the original safe API error still reaches UI.
         try {
@@ -73,7 +104,7 @@
               message: '本设备的配对已失效或被撤销，请重新配对。' }));
           }
         } catch (noticeError) { /* Never expose callback details or hide revocation. */ }
-        try { await storage().forgetPairing(); }
+        try { if (expected) await storage().forgetPairingIfCurrent(expected); }
         catch (cleanupError) { /* Preserve the original error, including frozen errors. */ }
       }
       throw error;
@@ -287,7 +318,7 @@
     }
 
     async function dashboard(pairing) {
-      var result = await api().listDevices();
+      var result = await authenticatedCall('listDevices', [], pairing);
       if (!result || !Array.isArray(result.devices)) throw new Error('设备列表不正确。');
       var devices = [];
       for (var row of result.devices) {
@@ -313,13 +344,13 @@
 
     async function sendUpload(pending) {
       if (pending.phase !== 'commit-pending') {
-        var session = await api().createUpload(pending.body, pending.operationId);
+        var session = await authenticatedCall('createUpload', [pending.body, pending.operationId]);
         if (!session || session.snapshotId !== pending.body.snapshotId || typeof session.uploadId !== 'string' ||
           !Array.isArray(session.uploadedChunks)) throw new Error('上传会话响应不正确。');
         pending.uploadId = session.uploadId;
         for (var chunk of pending.chunks) {
           if (session.uploadedChunks.indexOf(chunk.index) === -1) {
-            await api().putChunk(session.uploadId, chunk.index, decode(chunk.data), chunk.digest);
+            await authenticatedCall('putChunk', [session.uploadId, chunk.index, decode(chunk.data), chunk.digest]);
           }
         }
         // A committed receipt outlives snapshot/history ciphertext. Once a commit
@@ -329,7 +360,7 @@
       }
       var committed;
       try {
-        committed = await api().commitUpload(pending.uploadId, pending.commitBody, pending.operationId);
+        committed = await authenticatedCall('commitUpload', [pending.uploadId, pending.commitBody, pending.operationId]);
       } catch (error) {
         // Only a definitive HTTP 404 from commit proves the old session is gone.
         // Preserve immutable ciphertext/request identity and let the next explicit
@@ -378,7 +409,7 @@
       body.encryptedSummary = await encryptMetadata({ dataHash: envelope.dataHash }, pairing.masterKey, 'snapshot-summary',
         summaryContext(pairing.spaceId, pairing.deviceId, body));
       pendingUpload = { phase: 'uploading', operationId: uuid(), spaceId: pairing.spaceId,
-        deviceId: pairing.deviceId, body: body, chunks: chunks.chunks };
+        deviceId: pairing.deviceId, pairing: pairingIdentity(pairing), body: body, chunks: chunks.chunks };
       await storage().savePendingOperation({ type: 'upload', snapshotId: snapshotId });
       return sendUpload(pendingUpload);
     }
@@ -425,7 +456,7 @@
     }
 
     async function readSource(snapshotId, pairing) {
-      var metadata = await api().getSnapshot(snapshotId);
+      var metadata = await authenticatedCall('getSnapshot', [snapshotId], pairing);
       if (!metadata || metadata.snapshotId !== snapshotId || typeof metadata.deviceId !== 'string' ||
         !Number.isSafeInteger(metadata.chunkCount) || metadata.chunkCount < 1 || metadata.chunkCount > 20 ||
         !Number.isSafeInteger(metadata.ciphertextBytes) || metadata.ciphertextBytes < 16 ||
@@ -450,7 +481,7 @@
       }
       var chunks = [], total = 0;
       for (var index = 0; index < metadata.chunkCount; index += 1) {
-        var chunk = await api().getChunk(snapshotId, index, { withDigest: true });
+        var chunk = await authenticatedCall('getChunk', [snapshotId, index, { withDigest: true }], pairing);
         if (!chunk || !(chunk.bytes instanceof ArrayBuffer) || typeof chunk.digest !== 'string') throw new Error('密文分块校验失败。');
         var bytes = new Uint8Array(chunk.bytes);
         total += bytes.length;
@@ -490,11 +521,11 @@
       body.encryptedSummary = await encryptMetadata({ dataHash: envelope.dataHash }, pairing.masterKey, 'snapshot-summary',
         summaryContext(pairing.spaceId, pairing.deviceId, body));
       var operationId = uuid();
-      var session = await api().createUpload(body, operationId);
+      var session = await authenticatedCall('createUpload', [body, operationId], pairing);
       if (!session || session.snapshotId !== snapshotId || typeof session.uploadId !== 'string' ||
         !Array.isArray(session.uploadedChunks)) throw new Error('上传会话响应不正确。');
       for (var chunk of chunks.chunks) {
-        if (session.uploadedChunks.indexOf(chunk.index) === -1) await api().putChunk(session.uploadId, chunk.index, decode(chunk.data), chunk.digest);
+        if (session.uploadedChunks.indexOf(chunk.index) === -1) await authenticatedCall('putChunk', [session.uploadId, chunk.index, decode(chunk.data), chunk.digest], pairing);
       }
       return { uploadId: session.uploadId, snapshotId: snapshotId, operationId: operationId };
     }
@@ -542,8 +573,8 @@
           prepared.replacing = true;
           replacementStarted = true;
           settings.replaceManagedData(prepared.envelope.data);
-          var committed = await api().commitUpload(stagedAfter.uploadId,
-            { beforeUploadId: stagedBefore.uploadId, sourceSnapshotId: preview.snapshotId }, stagedAfter.operationId);
+          var committed = await authenticatedCall('commitUpload', [stagedAfter.uploadId,
+            { beforeUploadId: stagedBefore.uploadId, sourceSnapshotId: preview.snapshotId }, stagedAfter.operationId], pairing);
           if (!committed || committed.operationId !== stagedAfter.uploadId || committed.latestSnapshotId !== stagedAfter.snapshotId ||
             !Array.isArray(committed.historySnapshotIds) || committed.historySnapshotIds[0] !== stagedBefore.snapshotId) throw new Error('云端提交响应不正确。');
           // Acknowledged cloud replacement must fence automatic local rollback
@@ -658,7 +689,7 @@
         var encryptedName = await encryptMetadata({ deviceName: name }, pairing.masterKey, 'device-name', nameContext(pairing.spaceId, id));
         await assertSecurityIdle();
         await assertSamePairing(pairing);
-        var response = await api().renameDevice(id, { encryptedName: encryptedName });
+        var response = await authenticatedCall('renameDevice', [id, { encryptedName: encryptedName }], pairing);
         if (!response || response.deviceId !== id || core().canonicalStringify(response.encryptedName) !== core().canonicalStringify(encryptedName)) throw new Error('设备重命名响应不正确。');
         if (id === pairing.deviceId) {
           await assertSamePairing(pairing);
@@ -682,7 +713,7 @@
         if (confirmed !== true) throw new Error('已取消撤销设备。');
         await assertSecurityIdle();
         await assertSamePairing(pairing);
-        await api().revokeDevice(id, { deleteSnapshots: deleteSnapshots });
+        await authenticatedCall('revokeDevice', [id, { deleteSnapshots: deleteSnapshots }], pairing);
         if (id === pairing.deviceId) {
           await assertSecurityIdle();
           await assertSamePairing(pairing);
@@ -757,7 +788,7 @@
           pending.sent = true;
           pending.response = pending.method === 'recover'
             ? await transport.recover(pending.code, pending.body, pending.operationId)
-            : await transport[pending.method](pending.body, pending.operationId, replay);
+            : await authenticatedCall(pending.method, [pending.body, pending.operationId, replay], pending.pairing);
           if (pending.method !== 'deleteSpace') {
             var expectedId = pending.device ? pending.device.deviceId : pending.pairing.deviceId;
             if (!pending.response || pending.response.spaceId !== pending.spaceId || pending.response.deviceId !== expectedId) throw new Error('安全操作响应不正确。');

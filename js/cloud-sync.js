@@ -1326,6 +1326,11 @@
       renderActionState();
       return true;
     }
+    function showRollback(pending) {
+      element('cloud-sync-rollback').hidden = false;
+      setText('cloud-sync-rollback-detail', '副本时间：' + formatDate(pending.createdAt) +
+        (pending.matchesCurrent ? '；当前数据与回滚副本一致。' : '；当前数据与回滚副本不同。'));
+    }
     async function resumePending() {
       if (!configured) return;
       await state.withWriteLock(async function () {
@@ -1336,9 +1341,7 @@
             showOverwrite(pending.preview, pending.preview.snapshotId, 'resume');
             status('工具已更新，请重新核对来源和目标后确认覆盖。', false);
           } else if (pending.status === 'recovery-required') {
-            element('cloud-sync-rollback').hidden = false;
-            setText('cloud-sync-rollback-detail', '副本时间：' + formatDate(pending.createdAt) +
-              (pending.matchesCurrent ? '；当前数据与回滚副本一致。' : '；当前数据与回滚副本不同。'));
+            showRollback(pending);
             status('请先明确处理上次同步留下的回滚副本。', true);
           } else if (pending.status === 'manual-upload-required') {
             status('检测到未完成的本机上传，请点击“上传本机快照”继续。', false);
@@ -1443,7 +1446,14 @@
           renderActionState();
         }
       }); },
-        '覆盖同步完成，工具即将重新载入。', false).finally(function () {
+        '覆盖同步完成，工具即将重新载入。', false).then(async function (result) {
+          if (result) return result;
+          try {
+            var interrupted = await syncClient.resumePendingOperation();
+            if (interrupted && interrupted.status === 'recovery-required') showRollback(interrupted);
+          } catch (recoveryError) { /* Keep the original actionable operation error. */ }
+          return result;
+        }).finally(function () {
           replacing = false;
           state.invalidatePreview();
           element('cloud-sync-confirm-layer').hidden = true;

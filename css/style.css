@@ -1641,7 +1641,9 @@ figcaption { color: var(--muted); font-size: 13px; margin-top: 8px; }
 .settings-copy { margin: 0 0 12px; color: var(--text); }
 .settings-status { min-height: 1.5em; margin: 8px 0 0; color: var(--gold-dim); }
 .settings-status.error-text { color: #e35d5b; }
-.cloud-sync-panel { position: relative; }
+.cloud-sync-panel { position: relative; min-width: 0; }
+.cloud-sync-panel,
+.cloud-sync-panel * { box-sizing: border-box; }
 .cloud-sync-notice { margin: 12px 0; padding: 10px 12px; border: 1px solid var(--gold-dim); border-radius: 7px; color: var(--text); background: rgba(98, 70, 19, .18); }
 .cloud-sync-form-grid,
 .cloud-sync-device-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
@@ -1666,6 +1668,12 @@ figcaption { color: var(--muted); font-size: 13px; margin-top: 8px; }
 .cloud-sync-history-card { display: grid; gap: 5px; min-width: 0; }
 .cloud-sync-card-title { color: var(--text); font-weight: 700; overflow-wrap: anywhere; }
 .cloud-sync-card-meta { color: var(--muted); font-size: 13px; overflow-wrap: anywhere; }
+.cloud-sync-summary > div,
+.cloud-sync-summary strong,
+.cloud-sync-notice,
+.cloud-sync-section,
+.cloud-sync-box,
+.cloud-sync-status { min-width: 0; overflow-wrap: anywhere; }
 .cloud-sync-progress { display: flex; align-items: center; gap: 10px; margin-top: 12px; color: var(--text); }
 .cloud-sync-progress[hidden],
 .cloud-sync-modal[hidden] { display: none; }
@@ -1685,6 +1693,59 @@ figcaption { color: var(--muted); font-size: 13px; margin-top: 8px; }
 .cloud-sync-inline-form { margin-top: 10px; }
 .cloud-sync-danger-zone { padding-top: 10px; border-top: 1px solid rgba(214, 75, 65, .45); }
 .seg.danger { border-color: rgba(214, 75, 65, .8); color: #ff9189; }
+.cloud-sync-panel .seg.active:not(.danger) {
+  border-color: var(--gold-dim);
+  color: #171006;
+  background: linear-gradient(180deg, #e4bf62, #b88a2e);
+}
+.cloud-sync-panel button:focus-visible,
+.cloud-sync-panel input:focus-visible,
+.cloud-sync-panel select:focus-visible,
+.cloud-sync-dialog:focus-visible {
+  outline: 3px solid #f4d778;
+  outline-offset: 2px;
+}
+
+@media (max-width: 1024px) {
+  .cloud-sync-form-grid,
+  .cloud-sync-device-grid { grid-template-columns: 1fr; }
+  .cloud-sync-panel button,
+  .cloud-sync-panel input:not([type="checkbox"]):not([type="radio"]),
+  .cloud-sync-panel select,
+  #partition-settings #settings-export,
+  #partition-settings #settings-import-trigger { min-width: 44px; min-height: 44px; touch-action: manipulation; }
+  .cloud-sync-dialog label { display: flex; align-items: center; min-height: 44px; }
+  .cloud-sync-panel input:not([type="checkbox"]):not([type="radio"]),
+  .cloud-sync-panel select { font-size: 16px; }
+  .cloud-sync-panel label:has(> input[type="checkbox"]),
+  .cloud-sync-panel label:has(> input[type="radio"]) {
+    display: flex;
+    align-items: center;
+    min-height: 44px;
+  }
+  .cloud-sync-summary > div,
+  .cloud-sync-confirm-summary,
+  .cloud-sync-credentials { grid-template-columns: minmax(0, 1fr); }
+  .cloud-sync-secret { min-width: 0; }
+  .cloud-sync-secret > input { min-width: 0; }
+}
+
+@media (max-width: 600px) {
+  .cloud-sync-panel { padding: 14px; }
+  .cloud-sync-actions { display: grid; grid-template-columns: minmax(0, 1fr); align-items: stretch; }
+  .cloud-sync-actions > button,
+  .cloud-sync-actions > form { width: 100%; min-width: 0; }
+  .cloud-sync-progress { align-items: stretch; flex-direction: column; }
+  .cloud-sync-progress progress { flex: none; width: 100%; }
+  .cloud-sync-modal { align-items: end; justify-items: stretch; padding: 0; }
+  .cloud-sync-dialog {
+    width: 100%;
+    max-height: min(88vh, calc(100dvh - env(safe-area-inset-top)));
+    padding: 16px 14px calc(16px + env(safe-area-inset-bottom));
+    border-width: 1px 0 0;
+    border-radius: 14px 14px 0 0;
+  }
+}
 
 #partition-tactics .tactics-section {
   margin-top: 14px;

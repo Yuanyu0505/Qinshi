@@ -31,6 +31,22 @@ async function assertNoPageOverflow(page, label) {
   assert.ok(sizes.page <= sizes.viewport, label + ' 出现横向页面溢出：' + JSON.stringify(sizes));
 }
 
+async function assertMinTapTargets(page, selector, minimum, label) {
+  const boxes = await page.locator(selector).evaluateAll(nodes => nodes
+    .filter(node => {
+      const style = getComputedStyle(node);
+      const box = node.getBoundingClientRect();
+      return style.display !== 'none' && style.visibility !== 'hidden' && box.width > 0 && box.height > 0;
+    })
+    .map(node => ({ id: node.id || node.textContent.trim(), width: node.getBoundingClientRect().width,
+      height: node.getBoundingClientRect().height })));
+  assert.ok(boxes.length, label + ' 没有可检查的控件');
+  for (const box of boxes) {
+    assert.ok(box.width >= minimum && box.height >= minimum,
+      label + ' 触控区域不足：' + JSON.stringify(box));
+  }
+}
+
 test('390 宽度装备筛选完整显示副属性，页面无横向溢出', async () => {
   const page = await mobilePage('equipment');
   try {
@@ -122,4 +138,89 @@ for (const width of [390, 768, 1024]) {
       await page.screenshot({ path: path.join(os.tmpdir(), 'qinshi-forbidden-' + width + '.png'), fullPage: true });
     } finally { await page.close(); }
   });
+
+  test(width + ' 宽度云同步面板单列、可换行且触控尺寸充足', async () => {
+    const page = await mobilePage('settings', width, width === 390 ? 844 : width === 768 ? 1024 : 1366);
+    try {
+      const panel = page.locator('#cloud-sync-panel');
+      assert.equal(await panel.isVisible(), true);
+      assert.equal(await panel.locator('.cloud-sync-form-grid').evaluate(node => getComputedStyle(node).gridTemplateColumns.split(' ').length), 1);
+      assert.equal(await panel.locator('.cloud-sync-device-grid').first().evaluate(node => getComputedStyle(node).gridTemplateColumns.split(' ').length), 1);
+      await assertMinTapTargets(page, '#cloud-sync-panel [data-cloud-action]:visible, #cloud-sync-panel input:visible, #cloud-sync-panel select:visible',
+        44, '云同步 / ' + width);
+      await assertMinTapTargets(page, '#settings-export:visible, #settings-import-trigger:visible', 44, 'JSON 备份 / ' + width);
+      await assertNoPageOverflow(page, '云同步 / ' + width);
+
+      await page.locator('#cloud-sync-unbound').evaluate(node => { node.hidden = true; });
+      await page.locator('#cloud-sync-paired').evaluate(node => { node.hidden = false; });
+      await assertMinTapTargets(page,
+        '#cloud-sync-paired [data-cloud-action]:visible, #cloud-sync-paired input:not([type="checkbox"]):not([type="radio"]):visible, #cloud-sync-paired select:visible',
+        44, '云同步已绑定控件 / ' + width);
+      await assertMinTapTargets(page,
+        '#cloud-sync-paired label:has(input[type="checkbox"]):visible, #cloud-sync-paired label:has(input[type="radio"]):visible',
+        44, '云同步已绑定选择项 / ' + width);
+      await assertNoPageOverflow(page, '云同步已绑定 / ' + width);
+
+      await page.locator('#cloud-sync-recovery-layer').evaluate(node => { node.hidden = false; });
+      const modal = page.locator('#cloud-sync-recovery-layer');
+      const dialog = modal.locator('[role="dialog"]');
+      const placement = await page.evaluate(() => {
+        const layer = document.querySelector('#cloud-sync-recovery-layer');
+        const dialog = layer.querySelector('[role="dialog"]');
+        const layerStyle = getComputedStyle(layer);
+        const box = dialog.getBoundingClientRect();
+        return { alignItems: layerStyle.alignItems, bottomGap: innerHeight - box.bottom, topGap: box.top,
+          width: box.width, viewport: innerWidth };
+      });
+      if (width === 390) {
+        assert.equal(placement.alignItems, 'end');
+        assert.ok(placement.bottomGap <= 1, '手机弹层没有贴底：' + JSON.stringify(placement));
+        assert.ok(placement.width >= placement.viewport - 2, '手机弹层不是全宽底部面板：' + JSON.stringify(placement));
+      } else {
+        assert.ok(Math.abs(placement.topGap - placement.bottomGap) <= 2,
+          '平板弹层没有垂直居中：' + JSON.stringify(placement));
+      }
+      await assertMinTapTargets(page,
+        '#cloud-sync-recovery-layer button:visible, #cloud-sync-recovery-layer label:has(input):visible', 44,
+        '云同步弹层 / ' + width);
+      await assertNoPageOverflow(page, '云同步弹层 / ' + width);
+    } finally { await page.close(); }
+  });
 }
+
+test('1440 宽度云同步保留双列桌面布局、居中弹层和明确危险色', async () => {
+  const page = await mobilePage('settings', 1440, 1000);
+  try {
+    const panel = page.locator('#cloud-sync-panel');
+    assert.equal(await panel.locator('.cloud-sync-form-grid').evaluate(node => getComputedStyle(node).gridTemplateColumns.split(' ').length), 2);
+    await page.locator('#cloud-sync-paired').evaluate(node => { node.hidden = false; });
+    assert.equal(await panel.locator('.cloud-sync-device-grid').first().evaluate(node => getComputedStyle(node).gridTemplateColumns.split(' ').length), 2);
+    await assertNoPageOverflow(page, '云同步 / 1440');
+    assert.equal(await page.locator('#settings-export').isVisible(), true);
+    assert.equal(await page.locator('#settings-import-trigger').isVisible(), true);
+
+    const ordinary = page.locator('#cloud-sync-create-form button[type="submit"]');
+    const destructive = page.locator('#cloud-sync-reset-password-action');
+    const colors = await Promise.all([ordinary, destructive].map(locator => locator.evaluate(node => ({
+      color: getComputedStyle(node).color, border: getComputedStyle(node).borderColor,
+      background: getComputedStyle(node).backgroundColor
+    }))));
+    assert.notDeepEqual(colors[0], colors[1], '普通操作不应使用与危险操作相同的红色表现');
+    await ordinary.evaluate(node => { node.disabled = false; });
+    await page.evaluate(() => document.activeElement && document.activeElement.blur());
+    for (let index = 0; index < 80 && await page.evaluate(() => document.activeElement?.id !== 'cloud-sync-create-form'); index += 1) {
+      await page.keyboard.press('Tab');
+      if (await page.evaluate(() => document.activeElement?.closest('form')?.id === 'cloud-sync-create-form' &&
+        document.activeElement?.type === 'submit')) break;
+    }
+    assert.equal(await page.evaluate(() => document.activeElement?.closest('form')?.id), 'cloud-sync-create-form');
+    assert.notEqual(await ordinary.evaluate(node => getComputedStyle(node).outlineStyle), 'none');
+
+    await page.locator('#cloud-sync-recovery-layer').evaluate(node => { node.hidden = false; });
+    const placement = await page.locator('#cloud-sync-recovery-layer [role="dialog"]').evaluate(node => {
+      const box = node.getBoundingClientRect();
+      return { top: box.top, bottom: innerHeight - box.bottom };
+    });
+    assert.ok(Math.abs(placement.top - placement.bottom) <= 2, '桌面弹层没有垂直居中：' + JSON.stringify(placement));
+  } finally { await page.close(); }
+});

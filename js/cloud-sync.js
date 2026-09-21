@@ -999,6 +999,10 @@
       typeof root.QinshiCloudSyncConfig.apiBaseUrl === 'string' && /^https:\/\//.test(root.QinshiCloudSyncConfig.apiBaseUrl));
     var lastResult = '尚无同步操作';
     var replacing = false;
+    var activeModal = null;
+    var overwriteTrigger = null;
+    var recoveryTrigger = null;
+    var deleteTrigger = null;
 
     function element(id) { return doc.getElementById(id); }
     function setText(id, value) { var target = element(id); if (target) target.textContent = value == null ? '' : String(value); }
@@ -1026,6 +1030,99 @@
       if (active) progress.removeAttribute('value');
       else progress.value = 0;
     }
+    function modalFocusable(dialog) {
+      if (!dialog || typeof dialog.querySelectorAll !== 'function') return [];
+      return Array.prototype.slice.call(dialog.querySelectorAll(
+        'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])'
+      )).filter(function (node) {
+        return node.hidden !== true && (!node.getClientRects || node.getClientRects().length > 0);
+      });
+    }
+    function restoreModalBackground(records) {
+      records.forEach(function (record) {
+        record.node.inert = record.inert;
+        if (record.ariaHidden === null) record.node.removeAttribute('aria-hidden');
+        else record.node.setAttribute('aria-hidden', record.ariaHidden);
+      });
+    }
+    function closeModal(layer, restoreFocus) {
+      if (!layer) return;
+      var record = activeModal && activeModal.layer === layer ? activeModal : null;
+      if (record && typeof doc.removeEventListener === 'function') doc.removeEventListener('keydown', record.onKeydown, true);
+      if (record) restoreModalBackground(record.background);
+      if (doc.documentElement && doc.documentElement.classList) doc.documentElement.classList.remove('cloud-sync-modal-open');
+      if (doc.body && doc.body.classList) doc.body.classList.remove('cloud-sync-modal-open');
+      layer.hidden = true;
+      if (typeof layer.setAttribute === 'function') layer.setAttribute('aria-hidden', 'true');
+      if (record) activeModal = null;
+      function restore(attempt) {
+        var target = record && record.restoreFocus;
+        if (activeModal || restoreFocus === false || !target || target.isConnected === false || typeof target.focus !== 'function') return false;
+        if (target.disabled === true || (target.getClientRects && target.getClientRects().length === 0)) {
+          if ((attempt || 0) < 80 && typeof root.setTimeout === 'function') {
+            root.setTimeout(function () { restore((attempt || 0) + 1); }, 25);
+          }
+          return false;
+        }
+        target.focus();
+        return true;
+      }
+      if (record) restore(0);
+    }
+    function openModal(layer, options) {
+      options = options || {};
+      if (!layer) return;
+      if (activeModal) throw new Error('请先处理当前确认窗口。');
+      var dialog = layer.querySelector('[role="dialog"]');
+      var background = [];
+      if (doc.body) {
+        for (var current = layer; current && current !== doc.body && current !== doc.documentElement;) {
+          var parent = current.parentElement || current.parentNode;
+          if (!parent) break;
+          Array.prototype.slice.call(parent.children || []).forEach(function (sibling) {
+            if (sibling === current || background.some(function (item) { return item.node === sibling; })) return;
+            var ariaHidden = typeof sibling.getAttribute === 'function' ? sibling.getAttribute('aria-hidden') : null;
+            background.push({ node: sibling, inert: Boolean(sibling.inert), ariaHidden: ariaHidden });
+            sibling.inert = true;
+            if (typeof sibling.setAttribute === 'function') sibling.setAttribute('aria-hidden', 'true');
+          });
+          current = parent;
+        }
+      }
+      layer.hidden = false;
+      if (typeof layer.setAttribute === 'function') layer.setAttribute('aria-hidden', 'false');
+      if (doc.documentElement && doc.documentElement.classList) doc.documentElement.classList.add('cloud-sync-modal-open');
+      if (doc.body && doc.body.classList) doc.body.classList.add('cloud-sync-modal-open');
+      var record = { layer: layer, dialog: dialog, background: background,
+        restoreFocus: options.restoreFocus || doc.activeElement || null, dismiss: options.dismiss || null, onKeydown: null };
+      record.onKeydown = function (event) {
+        if (!activeModal || activeModal !== record) return;
+        if (event.key === 'Escape') {
+          event.preventDefault();
+          event.stopPropagation();
+          if (typeof record.dismiss === 'function') record.dismiss();
+          return;
+        }
+        if (event.key !== 'Tab') return;
+        var focusable = modalFocusable(dialog);
+        if (!focusable.length) {
+          event.preventDefault();
+          if (dialog && typeof dialog.focus === 'function') dialog.focus();
+          return;
+        }
+        var first = focusable[0], last = focusable[focusable.length - 1];
+        if (event.shiftKey && (doc.activeElement === first || !dialog.contains(doc.activeElement))) {
+          event.preventDefault(); last.focus();
+        } else if (!event.shiftKey && (doc.activeElement === last || !dialog.contains(doc.activeElement))) {
+          event.preventDefault(); first.focus();
+        }
+      };
+      activeModal = record;
+      if (typeof doc.addEventListener === 'function') doc.addEventListener('keydown', record.onKeydown, true);
+      var initial = options.initialFocus;
+      if (!initial) initial = modalFocusable(dialog)[0] || dialog;
+      if (initial && typeof initial.focus === 'function') initial.focus();
+    }
     function renderActionState() {
       panel.querySelectorAll('[data-cloud-action]').forEach(function (button) {
         button.disabled = !configured || state.writeInFlight();
@@ -1051,7 +1148,7 @@
       radio.addEventListener('change', function () {
         var change = state.selectSource(radio.value);
         if (change.invalidatedPreview) syncClient.cancelPull(change.invalidatedPreview);
-        element('cloud-sync-confirm-layer').hidden = true;
+        closeModal(element('cloud-sync-confirm-layer'));
         renderActionState();
       });
       label.appendChild(radio);
@@ -1206,8 +1303,6 @@
       var confirm = element('cloud-sync-recovery-confirm');
       checkbox.checked = false;
       confirm.disabled = true;
-      layer.hidden = false;
-      layer.querySelector('[role="dialog"]').focus();
       var download = element('cloud-sync-recovery-download');
       var copyCode = element('cloud-sync-copy-code');
       var copyRecovery = element('cloud-sync-copy-recovery');
@@ -1234,10 +1329,11 @@
         state.setRecoveryAcknowledged(checkbox.checked);
         confirm.disabled = !state.canDismissRecovery();
       };
+      openModal(layer, { initialFocus: checkbox, restoreFocus: recoveryTrigger });
       return new Promise(function (resolve) {
         confirm.onclick = function () {
           if (!state.canDismissRecovery()) return;
-          layer.hidden = true;
+          closeModal(layer);
           setText('cloud-sync-recovery-code', '');
           setText('cloud-sync-recovery-key', '');
           copyStatus.textContent = '';
@@ -1265,11 +1361,9 @@
       input.value = '';
       feedback.textContent = '';
       confirm.disabled = true;
-      layer.hidden = false;
-      layer.querySelector('[role="dialog"]').focus();
       return new Promise(function (resolve) {
         function finish(value) {
-          layer.hidden = true;
+          closeModal(layer);
           input.value = '';
           feedback.textContent = '';
           input.oninput = null;
@@ -1293,6 +1387,7 @@
           }
           finish(confirmationText);
         };
+        openModal(layer, { initialFocus: input, restoreFocus: deleteTrigger, dismiss: function () { finish(''); } });
       });
     }
     function selectDeleteAuth(method) {
@@ -1320,11 +1415,21 @@
         var detail = doc.createElement('dd'); detail.textContent = row[1];
         summary.appendChild(term); summary.appendChild(detail);
       });
-      element('cloud-sync-confirm-check').checked = false;
-      element('cloud-sync-confirm-layer').hidden = false;
-      element('cloud-sync-confirm-layer').querySelector('[role="dialog"]').focus();
+      var confirmationLayer = element('cloud-sync-confirm-layer');
+      var confirmationCheck = element('cloud-sync-confirm-check');
+      confirmationCheck.checked = false;
+      openModal(confirmationLayer, { initialFocus: confirmationCheck, restoreFocus: overwriteTrigger, dismiss: cancelOverwrite });
       renderActionState();
       return true;
+    }
+    function cancelOverwrite() {
+      var preview = state.preview();
+      if (!preview || replacing) return;
+      syncClient.cancelPull(preview);
+      state.invalidatePreview();
+      closeModal(element('cloud-sync-confirm-layer'));
+      status('已取消覆盖，当前设备数据未更改。', false);
+      renderActionState();
     }
     function showRollback(pending) {
       element('cloud-sync-rollback').hidden = false;
@@ -1386,6 +1491,7 @@
     element('cloud-sync-create-form').addEventListener('submit', function (event) {
       event.preventDefault();
       var form = event.currentTarget, input = values(form);
+      recoveryTrigger = event.submitter || form.querySelector('button[type="submit"]') || doc.activeElement;
       input.confirmRecoveryCredentials = showRecovery;
       clearSecretsWhenSettled(form,
         run('正在创建同步空间并上传本机快照…', function () { return syncClient.createSpace(input); }, '同步空间已创建，本机快照已上传。'));
@@ -1399,6 +1505,7 @@
     element('cloud-sync-reset-form').addEventListener('submit', function (event) {
       event.preventDefault();
       var form = event.currentTarget, input = values(form);
+      recoveryTrigger = event.submitter || form.querySelector('button[type="submit"]') || doc.activeElement;
       input.confirmRecoveryCredentials = showRecovery;
       clearSecretsWhenSettled(form,
         run('正在用恢复密钥重设密码并撤销旧设备…', function () { return syncClient.resetPasswordWithRecovery(input); },
@@ -1412,9 +1519,10 @@
     element('cloud-sync-refresh').addEventListener('click', function () {
       run('正在刷新设备列表…', refreshDashboard, '设备列表已刷新。', false);
     });
-    element('cloud-sync-prepare').addEventListener('click', function () {
+    element('cloud-sync-prepare').addEventListener('click', function (event) {
       var source = state.selectedSource();
       if (!source) return;
+      overwriteTrigger = event.currentTarget;
       run('正在读取所选来源快照…', async function () {
         var preview = await syncClient.preparePull(source.snapshot.snapshotId);
         return { preview: preview, shown: showOverwrite(preview, source.snapshot.snapshotId, 'source') };
@@ -1427,14 +1535,7 @@
       renderActionState();
     });
     element('cloud-sync-cancel-overwrite').addEventListener('click', function () {
-      var preview = state.preview();
-      if (!preview || replacing) return;
-      syncClient.cancelPull(preview);
-      state.invalidatePreview();
-      element('cloud-sync-confirm-layer').hidden = true;
-      status('已取消覆盖，当前设备数据未更改。', false);
-      element('cloud-sync-prepare').focus();
-      renderActionState();
+      cancelOverwrite();
     });
     element('cloud-sync-confirm-overwrite').addEventListener('click', function () {
       if (!state.canConfirmOverwrite()) return;
@@ -1449,14 +1550,14 @@
         '覆盖同步完成，工具即将重新载入。', false).then(async function (result) {
           if (result) return result;
           try {
-            var interrupted = await syncClient.resumePendingOperation();
+            var interrupted = await syncClient.recoverInterruptedRollback();
             if (interrupted && interrupted.status === 'recovery-required') showRollback(interrupted);
           } catch (recoveryError) { /* Keep the original actionable operation error. */ }
           return result;
         }).finally(function () {
           replacing = false;
           state.invalidatePreview();
-          element('cloud-sync-confirm-layer').hidden = true;
+          closeModal(element('cloud-sync-confirm-layer'));
           renderActionState();
         });
     });
@@ -1481,6 +1582,7 @@
     element('cloud-sync-recovery-form').addEventListener('submit', function (event) {
       event.preventDefault();
       var form = event.currentTarget, input = values(form);
+      recoveryTrigger = event.submitter || form.querySelector('button[type="submit"]') || doc.activeElement;
       input.confirmRecoveryCredentials = showRecovery;
       clearSecretsWhenSettled(form,
         run('正在轮换恢复密钥…', function () { return syncClient.rotateRecoveryKey(input); }, '恢复密钥已轮换，旧密钥已失效。'));
@@ -1492,6 +1594,7 @@
     element('cloud-sync-delete-form').addEventListener('submit', function (event) {
       event.preventDefault();
       var form = event.currentTarget, input = values(form), method = input.authMethod;
+      deleteTrigger = event.submitter || form.querySelector('button[type="submit"]') || doc.activeElement;
       var hasPassword = typeof input.password === 'string' && input.password.length > 0;
       var hasRecovery = typeof input.recoveryKey === 'string' && input.recoveryKey.length > 0;
       delete input.authMethod;

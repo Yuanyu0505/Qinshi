@@ -9,6 +9,219 @@ const limits = { minimumReadVersion: '1.0.39', minimumWriteVersion: '1.0.39' };
 const password = 'test-only long password';
 const time = '2026-09-11T08:00:00.000Z';
 
+class FakeElement {
+  constructor(tagName, ownerDocument) {
+    this.tagName = String(tagName || 'div').toUpperCase();
+    this.ownerDocument = ownerDocument;
+    this.children = [];
+    this.parentNode = null;
+    this.dataset = {};
+    this.attributes = {};
+    this.listeners = {};
+    this.className = '';
+    this.textContent = '';
+    this.value = '';
+    this.type = this.tagName === 'INPUT' ? 'text' : '';
+    this.name = '';
+    this.hidden = false;
+    this.disabled = false;
+    this.checked = false;
+    this.onclick = null;
+    this.onchange = null;
+    this.classList = {
+      toggle: (name, force) => {
+        const names = new Set(this.className.split(/\s+/).filter(Boolean));
+        const enabled = force === undefined ? !names.has(name) : Boolean(force);
+        if (enabled) names.add(name); else names.delete(name);
+        this.className = [...names].join(' ');
+        return enabled;
+      },
+      add: name => this.classList.toggle(name, true),
+      remove: name => this.classList.toggle(name, false),
+      contains: name => this.className.split(/\s+/).includes(name)
+    };
+  }
+  set id(value) { this._id = value; if (value) this.ownerDocument.ids.set(value, this); }
+  get id() { return this._id || ''; }
+  get options() { return this.tagName === 'SELECT' ? this.children.filter(child => child.tagName === 'OPTION') : undefined; }
+  get elements() { return this.tagName === 'FORM' ? this.querySelectorAll('[name]') : undefined; }
+  appendChild(child) {
+    child.parentNode = this;
+    this.children.push(child);
+    if (this.tagName === 'SELECT' && !this.value && child.tagName === 'OPTION') this.value = child.value;
+    return child;
+  }
+  replaceChildren(...children) {
+    this.children.forEach(child => { child.parentNode = null; });
+    this.children = [];
+    children.forEach(child => this.appendChild(child));
+  }
+  addEventListener(type, listener) { (this.listeners[type] ||= []).push(listener); }
+  dispatch(type) {
+    const event = { type, currentTarget: this, target: this, preventDefault() { this.defaultPrevented = true; } };
+    const results = (this.listeners[type] || []).map(listener => listener(event));
+    const property = this['on' + type];
+    if (typeof property === 'function') results.push(property(event));
+    return results;
+  }
+  click() { if (!this.disabled) return this.dispatch('click'); return []; }
+  focus() { this.ownerDocument.activeElement = this; }
+  setAttribute(name, value) {
+    this.attributes[name] = String(value);
+    if (name === 'id') this.id = String(value);
+    if (name === 'name') this.name = String(value);
+    if (name.startsWith('data-')) this.dataset[name.slice(5).replace(/-([a-z])/g, (_, letter) => letter.toUpperCase())] = String(value);
+  }
+  getAttribute(name) { return Object.hasOwn(this.attributes, name) ? this.attributes[name] : null; }
+  removeAttribute(name) { delete this.attributes[name]; }
+  matches(selector) {
+    if (/^\[.+\]$/.test(selector)) {
+      const content = selector.slice(1, -1);
+      const [name, rawValue] = content.split('=');
+      let actual;
+      if (name.startsWith('data-')) actual = this.dataset[name.slice(5).replace(/-([a-z])/g, (_, letter) => letter.toUpperCase())];
+      else if (name === 'name') actual = this.name || undefined;
+      else actual = this.getAttribute(name);
+      if (rawValue === undefined) return actual !== undefined && actual !== null;
+      return String(actual) === rawValue.replace(/^['"]|['"]$/g, '');
+    }
+    return this.tagName === selector.toUpperCase();
+  }
+  querySelectorAll(selector) {
+    const found = [];
+    const visit = node => node.children.forEach(child => {
+      if (child.matches(selector)) found.push(child);
+      visit(child);
+    });
+    visit(this);
+    return found;
+  }
+  querySelector(selector) { return this.querySelectorAll(selector)[0] || null; }
+}
+
+class FakeDocument {
+  constructor() { this.ids = new Map(); this.activeElement = null; }
+  createElement(tagName) { return new FakeElement(tagName, this); }
+  getElementById(id) { return this.ids.get(id) || null; }
+}
+
+function createSettingsDom() {
+  const doc = new FakeDocument();
+  const panel = doc.createElement('section'); panel.id = 'cloud-sync-panel';
+  const add = (id, tag = 'div', parent = panel) => {
+    const item = doc.createElement(tag); item.id = id; parent.appendChild(item); return item;
+  };
+  const actions = new Set(['cloud-sync-upload', 'cloud-sync-refresh', 'cloud-sync-prepare', 'cloud-sync-confirm-overwrite',
+    'cloud-sync-rename', 'cloud-sync-revoke', 'cloud-sync-forget', 'cloud-sync-rollback-restore', 'cloud-sync-rollback-discard']);
+  const ids = ['cloud-sync-config-notice', 'cloud-sync-unbound', 'cloud-sync-paired', 'cloud-sync-current-device',
+    'cloud-sync-tool-version', 'cloud-sync-cloud-state', 'cloud-sync-last-upload', 'cloud-sync-last-result',
+    'cloud-sync-source-list', 'cloud-sync-history-list', 'cloud-sync-status', 'cloud-sync-rollback',
+    'cloud-sync-rollback-detail', 'cloud-sync-confirm-summary', 'cloud-sync-direction', 'cloud-sync-recovery-code',
+    'cloud-sync-recovery-key', 'cloud-sync-copy-status'];
+  ids.forEach(id => add(id));
+  ['cloud-sync-upload', 'cloud-sync-refresh', 'cloud-sync-prepare', 'cloud-sync-rename', 'cloud-sync-revoke',
+    'cloud-sync-forget', 'cloud-sync-rollback-restore', 'cloud-sync-rollback-discard', 'cloud-sync-cancel-overwrite',
+    'cloud-sync-confirm-overwrite', 'cloud-sync-recovery-download', 'cloud-sync-copy-code', 'cloud-sync-copy-recovery',
+    'cloud-sync-recovery-confirm'].forEach(id => {
+    const button = add(id, 'button');
+    if (actions.has(id)) button.dataset.cloudAction = '';
+  });
+  add('cloud-sync-device-select', 'select');
+  add('cloud-sync-rename-value', 'input');
+  add('cloud-sync-revoke-delete', 'input').type = 'checkbox';
+  add('cloud-sync-confirm-check', 'input').type = 'checkbox';
+  add('cloud-sync-recovery-ack', 'input').type = 'checkbox';
+  ['cloud-sync-create-device', 'cloud-sync-join-device', 'cloud-sync-reset-device'].forEach(id => add(id, 'input'));
+  const progress = add('cloud-sync-progress'); progress.appendChild(doc.createElement('progress')); progress.appendChild(doc.createElement('span'));
+  const modal = (id) => { const layer = doc.getElementById(id); const dialog = doc.createElement('section'); dialog.setAttribute('role', 'dialog'); layer.appendChild(dialog); };
+  add('cloud-sync-confirm-layer'); modal('cloud-sync-confirm-layer');
+  add('cloud-sync-recovery-layer'); modal('cloud-sync-recovery-layer');
+
+  function form(id, fields) {
+    const node = add(id, 'form');
+    fields.forEach(field => {
+      const input = doc.createElement('input');
+      input.name = field.name;
+      if (field.id) input.id = field.id;
+      if (field.secret) { input.type = 'password'; input.dataset.cloudSecret = ''; }
+      node.appendChild(input);
+      if (field.secret) {
+        const toggle = doc.createElement('button');
+        toggle.dataset.secretTarget = input.id;
+        toggle.textContent = '显示';
+        toggle.setAttribute('aria-label', field.label);
+        node.appendChild(toggle);
+      }
+    });
+    const submit = doc.createElement('button'); submit.dataset.cloudAction = ''; node.appendChild(submit);
+    return node;
+  }
+  form('cloud-sync-create-form', [{ name: 'deviceName' }, { name: 'password', id: 'cloud-sync-create-password', secret: true, label: '显示创建同步密码' },
+    { name: 'confirmPassword', id: 'cloud-sync-create-confirm', secret: true, label: '显示创建确认密码' }]);
+  form('cloud-sync-join-form', [{ name: 'syncCode' }, { name: 'deviceName' },
+    { name: 'password', id: 'cloud-sync-join-password', secret: true, label: '显示加入同步密码' }]);
+  form('cloud-sync-reset-form', [{ name: 'syncCode' }, { name: 'deviceName' },
+    { name: 'recoveryKey', id: 'cloud-sync-reset-key', secret: true, label: '显示恢复密钥' },
+    { name: 'newPassword', id: 'cloud-sync-reset-password', secret: true, label: '显示重设后的同步密码' },
+    { name: 'confirmPassword', id: 'cloud-sync-reset-confirm', secret: true, label: '显示重设密码确认' }]);
+  form('cloud-sync-password-form', [{ name: 'syncCode' },
+    { name: 'currentPassword', id: 'cloud-sync-current-password', secret: true, label: '显示当前同步密码' },
+    { name: 'newPassword', id: 'cloud-sync-new-password', secret: true, label: '显示新同步密码' },
+    { name: 'confirmPassword', id: 'cloud-sync-new-password-confirm', secret: true, label: '显示新密码确认' }]);
+  form('cloud-sync-recovery-form', [{ name: 'syncCode' },
+    { name: 'password', id: 'cloud-sync-recovery-password', secret: true, label: '显示恢复密钥操作密码' }]);
+  form('cloud-sync-delete-form', [{ name: 'syncCode' },
+    { name: 'password', id: 'cloud-sync-delete-password', secret: true, label: '显示删除空间密码' }, { name: 'confirmation' }]);
+  return { doc, panel };
+}
+
+function pairedDashboard(sources = []) {
+  return { paired: true, deviceId: 'current', deviceName: '当前设备', devices: [
+    { deviceId: 'current', deviceName: '当前设备', current: true, revoked: false, latestSnapshot: null, historySnapshots: [] },
+    ...sources.map((snapshotId, index) => ({ deviceId: 'other-' + index, deviceName: '来源设备 ' + index, current: false,
+      revoked: false, latestSnapshot: { snapshotId, serverCreatedAt: index + 1, appVersion: '1.0.39', ciphertextBytes: 10 }, historySnapshots: [] }))
+  ] };
+}
+
+function uiClient(overrides = {}) {
+  return {
+    detectDeviceName: () => '测试设备', getDashboard: async () => pairedDashboard(), resumePendingOperation: async () => ({ status: 'idle' }),
+    createSpace: async () => ({}), joinSpace: async () => ({}), resetPasswordWithRecovery: async () => ({}), uploadCurrentDevice: async () => ({}),
+    preparePull: async snapshotId => ({ snapshotId, sourceDeviceName: '来源', currentDeviceName: '当前', serverCreatedAt: 1,
+      appVersion: '1.0.39', itemCount: 1, byteSize: 10 }), restoreHistory: async snapshotId => ({ snapshotId, sourceDeviceName: '历史',
+      currentDeviceName: '当前', serverCreatedAt: 1, appVersion: '1.0.39', itemCount: 1, byteSize: 10 }), cancelPull: () => true,
+    confirmPull: async () => ({}), renameDevice: async () => ({}), revokeDevice: async () => ({}), changePassword: async () => ({}),
+    rotateRecoveryKey: async () => ({}), forgetCurrentDevice: async () => ({}), deleteSpace: async () => ({}),
+    recoverInterruptedRollback: async () => ({}), ...overrides
+  };
+}
+
+async function flushUI() {
+  await new Promise(resolve => setImmediate(resolve));
+  await new Promise(resolve => setImmediate(resolve));
+}
+
+async function withCloudGlobals(config, callback) {
+  const saved = {
+    config: globalThis.QinshiCloudSyncConfig,
+    storage: globalThis.QinshiCloudSyncStorage,
+    pwa: globalThis.QinshiPWA,
+    navigator: Object.getOwnPropertyDescriptor(globalThis, 'navigator')
+  };
+  globalThis.QinshiCloudSyncConfig = config;
+  globalThis.QinshiCloudSyncStorage = undefined;
+  globalThis.QinshiPWA = { version: '1.0.39' };
+  Object.defineProperty(globalThis, 'navigator', { configurable: true, writable: true, value: {} });
+  try { return await callback(); }
+  finally {
+    globalThis.QinshiCloudSyncConfig = saved.config;
+    globalThis.QinshiCloudSyncStorage = saved.storage;
+    globalThis.QinshiPWA = saved.pwa;
+    if (saved.navigator) Object.defineProperty(globalThis, 'navigator', saved.navigator);
+    else delete globalThis.navigator;
+  }
+}
+
 // Only browser persistence and network are substituted. Envelopes, crypto,
 // password KDFs, metadata authentication and orchestration run as production code.
 function harness(options = {}) {
@@ -697,7 +910,10 @@ test('settings state sorts selectable sources, excludes current latest and keeps
 test('settings state requires explicit confirmation, acknowledges recovery and serializes writes', async () => {
   const ui = moduleApi.createSettingsState();
   assert.equal(ui.canConfirmOverwrite(), false);
-  ui.setPreview({ snapshotId: 'snapshot-a' });
+  ui.setDashboard({ deviceId: 'current', devices: [{ deviceId: 'current', historySnapshots: [] },
+    { deviceId: 'other', latestSnapshot: { snapshotId: 'snapshot-a', serverCreatedAt: 1 }, historySnapshots: [] }] });
+  ui.selectSource('snapshot-a');
+  assert.equal(ui.acceptPreparedPreview({ snapshotId: 'snapshot-a' }, 'snapshot-a', 'source'), true);
   assert.equal(ui.canConfirmOverwrite(), false);
   ui.setOverwriteConfirmed(true);
   assert.equal(ui.canConfirmOverwrite(), true);
@@ -712,6 +928,231 @@ test('settings state requires explicit confirmation, acknowledges recovery and s
   release('done');
   assert.equal(await first, 'done');
   assert.equal(ui.writeInFlight(), false);
+});
+
+test('settings state fences source selection races and binds confirmations to exact source or history', () => {
+  const ui = moduleApi.createSettingsState();
+  ui.setDashboard({ deviceId: 'current', devices: [
+    { deviceId: 'current', latestSnapshot: { snapshotId: 'current-latest', serverCreatedAt: 50 },
+      historySnapshots: [{ snapshotId: 'current-history', serverCreatedAt: 40 }] },
+    { deviceId: 'other', latestSnapshot: { snapshotId: 'source-a', serverCreatedAt: 30 },
+      historySnapshots: [{ snapshotId: 'source-b', serverCreatedAt: 20 }] }
+  ] });
+  ui.selectSource('source-a');
+  assert.equal(ui.acceptPreparedPreview({ snapshotId: 'source-a' }, 'source-a', 'source'), true);
+  ui.setOverwriteConfirmed(true);
+  assert.equal(ui.canConfirmOverwrite(), true);
+  assert.equal(ui.selectSource('source-b').invalidatedPreview.snapshotId, 'source-a');
+  assert.equal(ui.canConfirmOverwrite(), false);
+  assert.equal(ui.acceptPreparedPreview({ snapshotId: 'source-a' }, 'source-a', 'source'), false);
+  assert.equal(ui.acceptPreparedPreview({ snapshotId: 'source-b' }, 'source-b', 'source'), true);
+  assert.equal(ui.acceptPreparedPreview({ snapshotId: 'wrong' }, 'current-history', 'history'), false);
+  assert.equal(ui.acceptPreparedPreview({ snapshotId: 'current-history' }, 'current-history', 'history'), true);
+});
+
+function deferredUI() {
+  let resolve, reject;
+  const promise = new Promise((onResolve, onReject) => { resolve = onResolve; reject = onReject; });
+  return { promise, resolve, reject };
+}
+
+function namedField(form, name) {
+  return form.querySelectorAll('[name]').find(input => input.name === name);
+}
+
+test('settings UI rejects a source preview that resolves after selection changed', async () => {
+  await withCloudGlobals({ enabled: true, apiBaseUrl: 'https://sync.invalid' }, async () => {
+    const { doc } = createSettingsDom();
+    const pending = deferredUI();
+    const cancelled = [];
+    const client = uiClient({
+      getDashboard: async () => pairedDashboard(['source-a', 'source-b']),
+      preparePull: () => pending.promise,
+      cancelPull: preview => { cancelled.push(preview.snapshotId); return true; }
+    });
+    const bound = moduleApi.bindSettingsUI(client, doc);
+    await flushUI();
+    const radios = doc.getElementById('cloud-sync-source-list').querySelectorAll('input');
+    const sourceA = radios.find(radio => radio.value === 'source-a');
+    const sourceB = radios.find(radio => radio.value === 'source-b');
+    sourceA.checked = true; sourceA.dispatch('change');
+    doc.getElementById('cloud-sync-prepare').click();
+    sourceB.checked = true; sourceB.dispatch('change');
+    pending.resolve({ snapshotId: 'source-a', sourceDeviceName: 'A', currentDeviceName: '当前', serverCreatedAt: 1,
+      appVersion: '1.0.39', itemCount: 1, byteSize: 10 });
+    await flushUI();
+    assert.equal(doc.getElementById('cloud-sync-confirm-layer').hidden, true);
+    assert.deepEqual(cancelled, ['source-a']);
+    assert.equal(bound.state.canConfirmOverwrite(), false);
+    assert.match(doc.getElementById('cloud-sync-status').textContent, /来源选择已变化/);
+  });
+});
+
+test('settings UI clears and re-hides secrets after resolved and rejected operations', async () => {
+  for (const rejected of [false, true]) {
+    await withCloudGlobals({ enabled: true, apiBaseUrl: 'https://sync.invalid' }, async () => {
+      const { doc } = createSettingsDom();
+      const pending = deferredUI();
+      const client = uiClient({ joinSpace: () => pending.promise });
+      moduleApi.bindSettingsUI(client, doc);
+      await flushUI();
+      const form = doc.getElementById('cloud-sync-join-form');
+      namedField(form, 'syncCode').value = 'code';
+      namedField(form, 'deviceName').value = 'device';
+      const secret = namedField(form, 'password');
+      const toggle = form.querySelector('[data-secret-target]');
+      secret.value = 'captured-value';
+      toggle.click();
+      form.dispatch('submit');
+      secret.value = 'must-be-cleared-after-settle';
+      secret.type = 'text';
+      toggle.textContent = '隐藏';
+      toggle.setAttribute('aria-label', '隐藏加入同步密码');
+      if (rejected) pending.reject(new Error('expected failure')); else pending.resolve({});
+      await flushUI();
+      assert.equal(secret.value, '');
+      assert.equal(secret.type, 'password');
+      assert.equal(toggle.textContent, '显示');
+      assert.equal(toggle.getAttribute('aria-label'), '显示加入同步密码');
+    });
+  }
+});
+
+test('settings UI maps form fields to coordinator arguments through the binder', async () => {
+  await withCloudGlobals({ enabled: true, apiBaseUrl: 'https://sync.invalid' }, async () => {
+    const { doc } = createSettingsDom();
+    let received;
+    const client = uiClient({ joinSpace: async input => { received = input; return {}; } });
+    moduleApi.bindSettingsUI(client, doc);
+    await flushUI();
+    const form = doc.getElementById('cloud-sync-join-form');
+    namedField(form, 'syncCode').value = 'ABC-123';
+    namedField(form, 'deviceName').value = '平板';
+    namedField(form, 'password').value = 'test credential';
+    form.dispatch('submit');
+    await flushUI();
+    assert.deepEqual(received, { syncCode: 'ABC-123', deviceName: '平板', password: 'test credential' });
+  });
+});
+
+test('settings UI recovery copy feedback is secret-free and dismissal releases credential handlers', async () => {
+  await withCloudGlobals({ enabled: true, apiBaseUrl: 'https://sync.invalid' }, async () => {
+    const { doc } = createSettingsDom();
+    const clipboardValues = [];
+    globalThis.navigator.clipboard = { writeText: async value => { clipboardValues.push(value); } };
+    const credentials = { syncCode: 'copy-code-value', recoveryKey: 'copy-key-value' };
+    const client = uiClient({ createSpace: input => input.confirmRecoveryCredentials(credentials).then(() => ({})) });
+    moduleApi.bindSettingsUI(client, doc);
+    await flushUI();
+    const form = doc.getElementById('cloud-sync-create-form');
+    namedField(form, 'deviceName').value = '设备';
+    namedField(form, 'password').value = 'test credential';
+    namedField(form, 'confirmPassword').value = 'test credential';
+    form.dispatch('submit');
+    await flushUI();
+    const copyCode = doc.getElementById('cloud-sync-copy-code');
+    const copyRecovery = doc.getElementById('cloud-sync-copy-recovery');
+    copyCode.click();
+    await flushUI();
+    assert.deepEqual(clipboardValues, [credentials.syncCode]);
+    assert.match(doc.getElementById('cloud-sync-copy-status').textContent, /复制成功/);
+    assert.doesNotMatch(doc.getElementById('cloud-sync-copy-status').textContent, new RegExp(credentials.syncCode));
+    globalThis.navigator.clipboard.writeText = async () => { throw new Error('denied'); };
+    copyRecovery.click();
+    await flushUI();
+    assert.match(doc.getElementById('cloud-sync-copy-status').textContent, /复制失败/);
+    assert.doesNotMatch(doc.getElementById('cloud-sync-copy-status').textContent, new RegExp(credentials.recoveryKey));
+    const ack = doc.getElementById('cloud-sync-recovery-ack');
+    ack.checked = true; ack.dispatch('change');
+    doc.getElementById('cloud-sync-recovery-confirm').click();
+    await flushUI();
+    assert.equal(doc.getElementById('cloud-sync-recovery-code').textContent, '');
+    assert.equal(doc.getElementById('cloud-sync-recovery-key').textContent, '');
+    assert.equal(copyCode.onclick, null);
+    assert.equal(copyRecovery.onclick, null);
+    assert.equal(doc.getElementById('cloud-sync-recovery-download').onclick, null);
+    assert.equal(ack.onchange, null);
+    assert.equal(doc.getElementById('cloud-sync-recovery-confirm').onclick, null);
+    const count = clipboardValues.length;
+    copyCode.click(); copyRecovery.click();
+    await flushUI();
+    assert.equal(clipboardValues.length, count);
+  });
+});
+
+test('settings UI keeps cancel available until replacement-start callback', async () => {
+  await withCloudGlobals({ enabled: true, apiBaseUrl: 'https://sync.invalid' }, async () => {
+    const { doc } = createSettingsDom();
+    const confirmed = deferredUI();
+    const cancelled = [];
+    let replacementStart;
+    const client = uiClient({
+      getDashboard: async () => pairedDashboard(['source-a']),
+      confirmPull: (preview, callbacks) => { replacementStart = callbacks.onReplacementStart; return confirmed.promise; },
+      cancelPull: preview => { cancelled.push(preview.snapshotId); return true; }
+    });
+    moduleApi.bindSettingsUI(client, doc);
+    await flushUI();
+    const radio = doc.getElementById('cloud-sync-source-list').querySelector('input');
+    radio.checked = true; radio.dispatch('change');
+    doc.getElementById('cloud-sync-prepare').click();
+    await flushUI();
+    const check = doc.getElementById('cloud-sync-confirm-check');
+    check.checked = true; check.dispatch('change');
+    assert.equal(doc.getElementById('cloud-sync-confirm-overwrite').disabled, false);
+    doc.getElementById('cloud-sync-confirm-overwrite').click();
+    await flushUI();
+    assert.equal(typeof replacementStart, 'function');
+    assert.equal(doc.getElementById('cloud-sync-cancel-overwrite').disabled, false);
+    doc.getElementById('cloud-sync-cancel-overwrite').click();
+    assert.deepEqual(cancelled, ['source-a']);
+    replacementStart();
+    assert.equal(doc.getElementById('cloud-sync-cancel-overwrite').disabled, true);
+    assert.match(doc.getElementById('cloud-sync-status').textContent, /不能再取消/);
+    confirmed.resolve({});
+    await flushUI();
+  });
+});
+
+test('settings UI reports successful action separately when dashboard refresh fails', async () => {
+  await withCloudGlobals({ enabled: true, apiBaseUrl: 'https://sync.invalid' }, async () => {
+    const { doc } = createSettingsDom();
+    let dashboardReads = 0;
+    const client = uiClient({
+      getDashboard: async () => {
+        dashboardReads += 1;
+        if (dashboardReads > 1) throw new Error('refresh unavailable');
+        return pairedDashboard();
+      },
+      uploadCurrentDevice: async () => ({ status: 'uploaded' })
+    });
+    moduleApi.bindSettingsUI(client, doc);
+    await flushUI();
+    doc.getElementById('cloud-sync-upload').click();
+    await flushUI();
+    const message = doc.getElementById('cloud-sync-status').textContent;
+    assert.match(message, /本机快照上传完成/);
+    assert.match(message, /操作已完成，但状态刷新失败/);
+    assert.doesNotMatch(message, /操作失败/);
+  });
+});
+
+test('settings UI with disabled config never calls the coordinator', async () => {
+  await withCloudGlobals({ enabled: false, apiBaseUrl: '' }, async () => {
+    const { doc } = createSettingsDom();
+    let calls = 0;
+    const client = new Proxy(uiClient(), { get(target, property) {
+      if (typeof target[property] === 'function') return (...args) => { calls += 1; return target[property](...args); };
+      return target[property];
+    } });
+    moduleApi.bindSettingsUI(client, doc);
+    await flushUI();
+    doc.getElementById('cloud-sync-upload').click();
+    doc.getElementById('cloud-sync-join-form').dispatch('submit');
+    await flushUI();
+    assert.equal(calls, 0);
+    assert.match(doc.getElementById('cloud-sync-status').textContent, /尚未配置/);
+  });
 });
 
 // Security API boundary: the in-memory server accepts the real protocol fields;
@@ -1379,6 +1820,19 @@ test('pull cancellation before local replacement aborts and keeps recovery evide
   await assert.rejects(h.sync.confirmPull(preview), /取消/);
   assert.equal(h.events.includes('replace-local'), false);
   assert.ok(h.state.rollback);
+});
+
+test('pull replacement-start callback fires at the synchronous local write boundary', async () => {
+  const h = await pullHarness();
+  const preview = await h.sync.preparePull(h.source.snapshotId);
+  let cancelAtBoundary;
+  await h.sync.confirmPull(preview, { onReplacementStart() {
+    h.events.push('replacement-start');
+    cancelAtBoundary = h.sync.cancelPull(preview);
+  } });
+  assert.equal(cancelAtBoundary, false);
+  assert.ok(h.events.indexOf('stage:replace-after') < h.events.indexOf('replacement-start'));
+  assert.ok(h.events.indexOf('replacement-start') < h.events.indexOf('replace-local'));
 });
 
 test('pull locks duplicate controls while replacement is in progress', async () => {

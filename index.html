@@ -652,15 +652,15 @@
             <form id="cloud-sync-create-form" class="cloud-sync-box">
               <h3>创建同步空间</h3>
               <label>本设备名称<input id="cloud-sync-create-device" name="deviceName" autocomplete="nickname" required></label>
-              <label>同步密码<span class="cloud-sync-secret"><input id="cloud-sync-create-password" name="password" type="password" autocomplete="new-password" required><button type="button" class="link-btn" data-secret-target="cloud-sync-create-password" aria-label="显示创建同步密码">显示</button></span></label>
-              <label>确认同步密码<span class="cloud-sync-secret"><input id="cloud-sync-create-confirm" name="confirmPassword" type="password" autocomplete="new-password" required><button type="button" class="link-btn" data-secret-target="cloud-sync-create-confirm" aria-label="显示创建确认密码">显示</button></span></label>
+              <label>同步密码<span class="cloud-sync-secret"><input id="cloud-sync-create-password" name="password" type="password" autocomplete="new-password" data-cloud-secret required><button type="button" class="link-btn" data-secret-target="cloud-sync-create-password" aria-label="显示创建同步密码">显示</button></span></label>
+              <label>确认同步密码<span class="cloud-sync-secret"><input id="cloud-sync-create-confirm" name="confirmPassword" type="password" autocomplete="new-password" data-cloud-secret required><button type="button" class="link-btn" data-secret-target="cloud-sync-create-confirm" aria-label="显示创建确认密码">显示</button></span></label>
               <button type="submit" class="seg active cloud-sync-action" data-cloud-action>创建同步空间</button>
             </form>
             <form id="cloud-sync-join-form" class="cloud-sync-box">
               <h3>加入已有同步空间</h3>
               <label>同步码<input id="cloud-sync-join-code" name="syncCode" autocomplete="off" required></label>
               <label>本设备名称<input id="cloud-sync-join-device" name="deviceName" autocomplete="nickname" required></label>
-              <label>同步密码<span class="cloud-sync-secret"><input id="cloud-sync-join-password" name="password" type="password" autocomplete="current-password" required><button type="button" class="link-btn" data-secret-target="cloud-sync-join-password" aria-label="显示加入同步密码">显示</button></span></label>
+              <label>同步密码<span class="cloud-sync-secret"><input id="cloud-sync-join-password" name="password" type="password" autocomplete="current-password" data-cloud-secret required><button type="button" class="link-btn" data-secret-target="cloud-sync-join-password" aria-label="显示加入同步密码">显示</button></span></label>
               <button type="submit" class="seg active cloud-sync-action" data-cloud-action>加入已有同步空间</button>
               <p class="muted-tip">加入只绑定本设备，不会自动上传或覆盖本机数据。</p>
             </form>
@@ -668,9 +668,9 @@
               <h3>使用恢复密钥重设密码</h3>
               <label>同步码<input name="syncCode" autocomplete="off" required></label>
               <label>本设备名称<input id="cloud-sync-reset-device" name="deviceName" autocomplete="nickname" required></label>
-              <label>恢复密钥<span class="cloud-sync-secret"><input id="cloud-sync-reset-key" name="recoveryKey" type="password" autocomplete="off" required><button type="button" class="link-btn" data-secret-target="cloud-sync-reset-key" aria-label="显示恢复密钥">显示</button></span></label>
-              <label>新同步密码<span class="cloud-sync-secret"><input id="cloud-sync-reset-password" name="newPassword" type="password" autocomplete="new-password" required><button type="button" class="link-btn" data-secret-target="cloud-sync-reset-password" aria-label="显示重设后的同步密码">显示</button></span></label>
-              <label>确认新密码<span class="cloud-sync-secret"><input id="cloud-sync-reset-confirm" name="confirmPassword" type="password" autocomplete="new-password" required><button type="button" class="link-btn" data-secret-target="cloud-sync-reset-confirm" aria-label="显示重设密码确认">显示</button></span></label>
+              <label>恢复密钥<span class="cloud-sync-secret"><input id="cloud-sync-reset-key" name="recoveryKey" type="password" autocomplete="off" data-cloud-secret required><button type="button" class="link-btn" data-secret-target="cloud-sync-reset-key" aria-label="显示恢复密钥">显示</button></span></label>
+              <label>新同步密码<span class="cloud-sync-secret"><input id="cloud-sync-reset-password" name="newPassword" type="password" autocomplete="new-password" data-cloud-secret required><button type="button" class="link-btn" data-secret-target="cloud-sync-reset-password" aria-label="显示重设后的同步密码">显示</button></span></label>
+              <label>确认新密码<span class="cloud-sync-secret"><input id="cloud-sync-reset-confirm" name="confirmPassword" type="password" autocomplete="new-password" data-cloud-secret required><button type="button" class="link-btn" data-secret-target="cloud-sync-reset-confirm" aria-label="显示重设密码确认">显示</button></span></label>
               <button id="cloud-sync-reset-password-action" type="submit" class="seg danger cloud-sync-action" data-cloud-action>重设密码并撤销全部旧设备</button>
             </form>
           </div>
@@ -712,21 +712,21 @@
             <h3 id="cloud-sync-security-title">安全设置</h3>
             <form id="cloud-sync-password-form" class="cloud-sync-box cloud-sync-inline-form">
               <label>同步码<input name="syncCode" autocomplete="off" required></label>
-              <label>当前同步密码<span class="cloud-sync-secret"><input id="cloud-sync-current-password" name="currentPassword" type="password" autocomplete="current-password" required><button type="button" class="link-btn" data-secret-target="cloud-sync-current-password" aria-label="显示当前同步密码">显示</button></span></label>
-              <label>新同步密码<span class="cloud-sync-secret"><input id="cloud-sync-new-password" name="newPassword" type="password" autocomplete="new-password" required><button type="button" class="link-btn" data-secret-target="cloud-sync-new-password" aria-label="显示新同步密码">显示</button></span></label>
-              <label>确认新密码<span class="cloud-sync-secret"><input id="cloud-sync-new-password-confirm" name="confirmPassword" type="password" autocomplete="new-password" required><button type="button" class="link-btn" data-secret-target="cloud-sync-new-password-confirm" aria-label="显示新密码确认">显示</button></span></label>
+              <label>当前同步密码<span class="cloud-sync-secret"><input id="cloud-sync-current-password" name="currentPassword" type="password" autocomplete="current-password" data-cloud-secret required><button type="button" class="link-btn" data-secret-target="cloud-sync-current-password" aria-label="显示当前同步密码">显示</button></span></label>
+              <label>新同步密码<span class="cloud-sync-secret"><input id="cloud-sync-new-password" name="newPassword" type="password" autocomplete="new-password" data-cloud-secret required><button type="button" class="link-btn" data-secret-target="cloud-sync-new-password" aria-label="显示新同步密码">显示</button></span></label>
+              <label>确认新密码<span class="cloud-sync-secret"><input id="cloud-sync-new-password-confirm" name="confirmPassword" type="password" autocomplete="new-password" data-cloud-secret required><button type="button" class="link-btn" data-secret-target="cloud-sync-new-password-confirm" aria-label="显示新密码确认">显示</button></span></label>
               <button id="cloud-sync-change-password" type="submit" class="seg cloud-sync-action" data-cloud-action>修改同步密码</button>
             </form>
             <form id="cloud-sync-recovery-form" class="cloud-sync-box cloud-sync-inline-form">
               <label>同步码<input name="syncCode" autocomplete="off" required></label>
-              <label>当前同步密码<span class="cloud-sync-secret"><input id="cloud-sync-recovery-password" name="password" type="password" autocomplete="current-password" required><button type="button" class="link-btn" data-secret-target="cloud-sync-recovery-password" aria-label="显示恢复密钥操作密码">显示</button></span></label>
+              <label>当前同步密码<span class="cloud-sync-secret"><input id="cloud-sync-recovery-password" name="password" type="password" autocomplete="current-password" data-cloud-secret required><button type="button" class="link-btn" data-secret-target="cloud-sync-recovery-password" aria-label="显示恢复密钥操作密码">显示</button></span></label>
               <button id="cloud-sync-rotate-recovery" type="submit" class="seg cloud-sync-action" data-cloud-action>重新生成恢复密钥</button>
             </form>
             <div class="cloud-sync-actions cloud-sync-danger-zone">
               <button id="cloud-sync-forget" type="button" class="seg danger cloud-sync-action" data-cloud-action>忘记本设备</button>
               <form id="cloud-sync-delete-form" class="cloud-sync-inline-form">
                 <label>同步码<input name="syncCode" autocomplete="off" required></label>
-                <label>同步密码<span class="cloud-sync-secret"><input id="cloud-sync-delete-password" name="password" type="password" autocomplete="current-password" required><button type="button" class="link-btn" data-secret-target="cloud-sync-delete-password" aria-label="显示删除空间密码">显示</button></span></label>
+                <label>同步密码<span class="cloud-sync-secret"><input id="cloud-sync-delete-password" name="password" type="password" autocomplete="current-password" data-cloud-secret required><button type="button" class="link-btn" data-secret-target="cloud-sync-delete-password" aria-label="显示删除空间密码">显示</button></span></label>
                 <label>不可逆确认<input name="confirmation" autocomplete="off" placeholder="输入：永久删除同步空间" required></label>
                 <button id="cloud-sync-delete-space" type="submit" class="seg danger cloud-sync-action" data-cloud-action>永久删除同步空间</button>
               </form>
@@ -757,7 +757,8 @@
             <h3 id="cloud-sync-recovery-title">保存一次性恢复凭据</h3>
             <p>恢复密钥只在这里显示一次。请下载或妥善保存同步码和恢复密钥。</p>
             <dl class="cloud-sync-credentials"><dt>同步码</dt><dd id="cloud-sync-recovery-code"></dd><dt>恢复密钥</dt><dd id="cloud-sync-recovery-key"></dd></dl>
-            <button id="cloud-sync-recovery-download" type="button" class="seg">下载凭据说明</button>
+            <div class="cloud-sync-actions"><button id="cloud-sync-copy-code" type="button" class="seg">复制同步码</button><button id="cloud-sync-copy-recovery" type="button" class="seg">复制恢复密钥</button><button id="cloud-sync-recovery-download" type="button" class="seg">下载凭据说明</button></div>
+            <p id="cloud-sync-copy-status" class="settings-status" role="status" aria-live="polite"></p>
             <label><input id="cloud-sync-recovery-ack" type="checkbox">我已保存同步码和恢复密钥</label>
             <button id="cloud-sync-recovery-confirm" type="button" class="seg active" disabled>确认已保存并继续</button>
           </section>

@@ -162,6 +162,11 @@ test("云同步设置页保留 JSON 备份并提供显式来源、确认、恢�
   assert.match(html, /id="cloud-sync-copy-code"[^>]*>复制同步码/);
   assert.match(html, /id="cloud-sync-copy-recovery"[^>]*>复制恢复密钥/);
   assert.match(html, /id="cloud-sync-copy-status"[^>]*aria-live="polite"/);
+  assert.match(html, /id="cloud-sync-delete-auth-password"[^>]*name="authMethod"[^>]*value="password"/);
+  assert.match(html, /id="cloud-sync-delete-auth-recovery"[^>]*name="authMethod"[^>]*value="recoveryKey"/);
+  assert.match(html, /id="cloud-sync-delete-confirm-layer"[^>]*hidden[\s\S]*role="dialog"[\s\S]*aria-labelledby="cloud-sync-delete-confirm-title"/);
+  assert.match(html, /id="cloud-sync-delete-confirm-text"[^>]*autocomplete="off"/);
+  assert.doesNotMatch(html.match(/<form id="cloud-sync-delete-form"[\s\S]*?<\/form>/)[0], /name="confirmation"/);
   for (const id of ["cloud-sync-upload", "cloud-sync-rename", "cloud-sync-revoke",
     "cloud-sync-reset-password-action", "cloud-sync-change-password", "cloud-sync-rotate-recovery", "cloud-sync-forget", "cloud-sync-delete-space"]) {
     assert.match(html, new RegExp(`id="${id}"`), id);

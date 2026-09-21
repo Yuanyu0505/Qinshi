@@ -133,7 +133,7 @@ function createSettingsDom() {
   add('cloud-sync-recovery-ack', 'input').type = 'checkbox';
   ['cloud-sync-create-device', 'cloud-sync-join-device', 'cloud-sync-reset-device'].forEach(id => add(id, 'input'));
   const progress = add('cloud-sync-progress'); progress.appendChild(doc.createElement('progress')); progress.appendChild(doc.createElement('span'));
-  const modal = (id) => { const layer = doc.getElementById(id); const dialog = doc.createElement('section'); dialog.setAttribute('role', 'dialog'); layer.appendChild(dialog); };
+  const modal = (id) => { const layer = doc.getElementById(id); layer.hidden = true; const dialog = doc.createElement('section'); dialog.setAttribute('role', 'dialog'); layer.appendChild(dialog); };
   add('cloud-sync-confirm-layer'); modal('cloud-sync-confirm-layer');
   add('cloud-sync-recovery-layer'); modal('cloud-sync-recovery-layer');
 
@@ -143,6 +143,10 @@ function createSettingsDom() {
       const input = doc.createElement('input');
       input.name = field.name;
       if (field.id) input.id = field.id;
+      if (field.type) input.type = field.type;
+      if (field.value !== undefined) input.value = field.value;
+      if (field.checked) input.checked = true;
+      if (field.disabled) input.disabled = true;
       if (field.secret) { input.type = 'password'; input.dataset.cloudSecret = ''; }
       node.appendChild(input);
       if (field.secret) {
@@ -171,7 +175,17 @@ function createSettingsDom() {
   form('cloud-sync-recovery-form', [{ name: 'syncCode' },
     { name: 'password', id: 'cloud-sync-recovery-password', secret: true, label: '显示恢复密钥操作密码' }]);
   form('cloud-sync-delete-form', [{ name: 'syncCode' },
-    { name: 'password', id: 'cloud-sync-delete-password', secret: true, label: '显示删除空间密码' }, { name: 'confirmation' }]);
+    { name: 'authMethod', id: 'cloud-sync-delete-auth-password', type: 'radio', value: 'password', checked: true },
+    { name: 'authMethod', id: 'cloud-sync-delete-auth-recovery', type: 'radio', value: 'recoveryKey' },
+    { name: 'password', id: 'cloud-sync-delete-password', secret: true, label: '显示删除空间密码' },
+    { name: 'recoveryKey', id: 'cloud-sync-delete-recovery-key', secret: true, label: '显示删除空间恢复密钥', disabled: true }]);
+  add('cloud-sync-delete-password-field');
+  add('cloud-sync-delete-recovery-field');
+  add('cloud-sync-delete-confirm-layer'); modal('cloud-sync-delete-confirm-layer');
+  add('cloud-sync-delete-confirm-text', 'input');
+  add('cloud-sync-delete-confirm-status');
+  add('cloud-sync-delete-confirm-cancel', 'button');
+  add('cloud-sync-delete-confirm-submit', 'button');
   return { doc, panel };
 }
 
@@ -960,6 +974,10 @@ function namedField(form, name) {
   return form.querySelectorAll('[name]').find(input => input.name === name);
 }
 
+function authField(form, value) {
+  return form.querySelectorAll('[name]').find(input => input.name === 'authMethod' && input.value === value);
+}
+
 test('settings UI rejects a source preview that resolves after selection changed', async () => {
   await withCloudGlobals({ enabled: true, apiBaseUrl: 'https://sync.invalid' }, async () => {
     const { doc } = createSettingsDom();
@@ -1153,6 +1171,108 @@ test('settings UI with disabled config never calls the coordinator', async () =>
     assert.equal(calls, 0);
     assert.match(doc.getElementById('cloud-sync-status').textContent, /尚未配置/);
   });
+});
+
+test('settings UI password delete waits for authenticated callback and gates the exact phrase', async () => {
+  await withCloudGlobals({ enabled: true, apiBaseUrl: 'https://sync.invalid' }, async () => {
+    const { doc } = createSettingsDom();
+    const operation = deferredUI();
+    let received;
+    const client = uiClient({ deleteSpace: input => { received = input; return operation.promise; } });
+    moduleApi.bindSettingsUI(client, doc);
+    await flushUI();
+    const form = doc.getElementById('cloud-sync-delete-form');
+    namedField(form, 'syncCode').value = 'DELETE-CODE';
+    namedField(form, 'password').value = 'delete credential';
+    form.dispatch('submit');
+    await flushUI();
+    assert.deepEqual(Object.keys(received).sort(), ['confirmDeleteSpace', 'password', 'syncCode']);
+    assert.equal(received.password, 'delete credential');
+    assert.equal(Object.hasOwn(received, 'recoveryKey'), false);
+    assert.equal(doc.getElementById('cloud-sync-delete-password').value, '');
+    assert.equal(doc.getElementById('cloud-sync-delete-confirm-layer').hidden, true);
+
+    const confirmation = received.confirmDeleteSpace({ confirmationText: '永久删除同步空间' });
+    assert.equal(doc.getElementById('cloud-sync-delete-confirm-layer').hidden, false);
+    assert.equal(doc.getElementById('cloud-sync-upload').disabled, true);
+    assert.equal(doc.getElementById('cloud-sync-delete-confirm-cancel').disabled, false);
+    const phrase = doc.getElementById('cloud-sync-delete-confirm-text');
+    const submit = doc.getElementById('cloud-sync-delete-confirm-submit');
+    phrase.value = ' 永久删除同步空间'; phrase.dispatch('input');
+    assert.equal(submit.disabled, true);
+    phrase.value = '永久删除同步空间'; phrase.dispatch('input');
+    assert.equal(submit.disabled, false);
+    submit.click();
+    assert.equal(await confirmation, '永久删除同步空间');
+    assert.equal(doc.getElementById('cloud-sync-delete-confirm-layer').hidden, true);
+    assert.equal(phrase.value, '');
+    assert.equal(phrase.oninput, null);
+    assert.equal(submit.onclick, null);
+    assert.equal(doc.getElementById('cloud-sync-delete-confirm-cancel').onclick, null);
+    operation.resolve({ status: 'deleted' });
+    await flushUI();
+  });
+});
+
+test('settings UI recovery delete submits only recovery key and explicit cancel releases dialog state', async () => {
+  await withCloudGlobals({ enabled: true, apiBaseUrl: 'https://sync.invalid' }, async () => {
+    const { doc } = createSettingsDom();
+    const operation = deferredUI();
+    let received;
+    const client = uiClient({ deleteSpace: input => { received = input; return operation.promise; } });
+    moduleApi.bindSettingsUI(client, doc);
+    await flushUI();
+    const form = doc.getElementById('cloud-sync-delete-form');
+    const passwordChoice = authField(form, 'password');
+    const recoveryChoice = authField(form, 'recoveryKey');
+    passwordChoice.checked = false;
+    recoveryChoice.checked = true;
+    recoveryChoice.dispatch('change');
+    namedField(form, 'syncCode').value = 'DELETE-CODE';
+    namedField(form, 'recoveryKey').value = 'recovery credential';
+    form.dispatch('submit');
+    await flushUI();
+    assert.deepEqual(Object.keys(received).sort(), ['confirmDeleteSpace', 'recoveryKey', 'syncCode']);
+    assert.equal(received.recoveryKey, 'recovery credential');
+    assert.equal(Object.hasOwn(received, 'password'), false);
+    assert.equal(doc.getElementById('cloud-sync-delete-recovery-key').value, '');
+    const confirmation = received.confirmDeleteSpace({ confirmationText: '永久删除同步空间' });
+    doc.getElementById('cloud-sync-delete-confirm-text').value = '永久删除同步空间';
+    doc.getElementById('cloud-sync-delete-confirm-cancel').click();
+    assert.equal(await confirmation, '');
+    assert.equal(doc.getElementById('cloud-sync-delete-confirm-layer').hidden, true);
+    assert.equal(doc.getElementById('cloud-sync-delete-confirm-text').value, '');
+    assert.equal(doc.getElementById('cloud-sync-delete-confirm-submit').onclick, null);
+    assert.equal(doc.getElementById('cloud-sync-delete-confirm-cancel').onclick, null);
+    operation.reject(new Error('confirmation cancelled'));
+    await flushUI();
+  });
+});
+
+test('settings UI refuses missing or dual permanent-delete credentials before coordinator call', async () => {
+  for (const dual of [false, true]) {
+    await withCloudGlobals({ enabled: true, apiBaseUrl: 'https://sync.invalid' }, async () => {
+      const { doc } = createSettingsDom();
+      let calls = 0;
+      const client = uiClient({ deleteSpace: async () => { calls += 1; return {}; } });
+      moduleApi.bindSettingsUI(client, doc);
+      await flushUI();
+      const form = doc.getElementById('cloud-sync-delete-form');
+      namedField(form, 'syncCode').value = 'DELETE-CODE';
+      if (dual) {
+        namedField(form, 'password').value = 'first credential';
+        const recovery = namedField(form, 'recoveryKey');
+        recovery.disabled = false;
+        recovery.value = 'second credential';
+      }
+      form.dispatch('submit');
+      await flushUI();
+      assert.equal(calls, 0);
+      assert.match(doc.getElementById('cloud-sync-status').textContent, /一种验证方式|验证凭据/);
+      assert.equal(namedField(form, 'password').value, '');
+      assert.equal(namedField(form, 'recoveryKey').value, '');
+    });
+  }
 });
 
 // Security API boundary: the in-memory server accepts the real protocol fields;

@@ -1254,6 +1254,56 @@
         };
       });
     }
+    function showDeleteConfirmation(detail) {
+      var confirmationText = '永久删除同步空间';
+      if (!detail || detail.confirmationText !== confirmationText) return Promise.resolve('');
+      var layer = element('cloud-sync-delete-confirm-layer');
+      var input = element('cloud-sync-delete-confirm-text');
+      var confirm = element('cloud-sync-delete-confirm-submit');
+      var cancel = element('cloud-sync-delete-confirm-cancel');
+      var feedback = element('cloud-sync-delete-confirm-status');
+      input.value = '';
+      feedback.textContent = '';
+      confirm.disabled = true;
+      layer.hidden = false;
+      layer.querySelector('[role="dialog"]').focus();
+      return new Promise(function (resolve) {
+        function finish(value) {
+          layer.hidden = true;
+          input.value = '';
+          feedback.textContent = '';
+          input.oninput = null;
+          confirm.onclick = null;
+          cancel.onclick = null;
+          confirm.disabled = true;
+          var complete = resolve;
+          resolve = null;
+          complete(value);
+        }
+        input.oninput = function () {
+          confirm.disabled = input.value !== confirmationText;
+          feedback.textContent = '';
+        };
+        cancel.onclick = function () { finish(''); };
+        confirm.onclick = function () {
+          if (input.value !== confirmationText) {
+            confirm.disabled = true;
+            feedback.textContent = '请输入完整且完全一致的确认文字。';
+            return;
+          }
+          finish(confirmationText);
+        };
+      });
+    }
+    function selectDeleteAuth(method) {
+      var form = element('cloud-sync-delete-form');
+      var useRecovery = method === 'recoveryKey';
+      clearSecrets(form);
+      element('cloud-sync-delete-password').disabled = useRecovery;
+      element('cloud-sync-delete-recovery-key').disabled = !useRecovery;
+      element('cloud-sync-delete-password-field').hidden = useRecovery;
+      element('cloud-sync-delete-recovery-field').hidden = !useRecovery;
+    }
     function showOverwrite(preview, expectedSnapshotId, kind) {
       if (!state.acceptPreparedPreview(preview, expectedSnapshotId, kind)) {
         syncClient.cancelPull(preview);
@@ -1323,6 +1373,13 @@
         button.setAttribute('aria-label', (visible ? '显示' : '隐藏') + button.getAttribute('aria-label').replace(/^(显示|隐藏)/, ''));
       });
     });
+    element('cloud-sync-delete-auth-password').addEventListener('change', function (event) {
+      if (event.currentTarget.checked) selectDeleteAuth('password');
+    });
+    element('cloud-sync-delete-auth-recovery').addEventListener('change', function (event) {
+      if (event.currentTarget.checked) selectDeleteAuth('recoveryKey');
+    });
+    selectDeleteAuth(element('cloud-sync-delete-auth-recovery').checked ? 'recoveryKey' : 'password');
     element('cloud-sync-create-form').addEventListener('submit', function (event) {
       event.preventDefault();
       var form = event.currentTarget, input = values(form);
@@ -1424,11 +1481,22 @@
     });
     element('cloud-sync-delete-form').addEventListener('submit', function (event) {
       event.preventDefault();
-      var form = event.currentTarget, input = values(form), confirmation = input.confirmation;
-      delete input.confirmation;
-      input.confirmDeleteSpace = function () { return confirmation; };
+      var form = event.currentTarget, input = values(form), method = input.authMethod;
+      var hasPassword = typeof input.password === 'string' && input.password.length > 0;
+      var hasRecovery = typeof input.recoveryKey === 'string' && input.recoveryKey.length > 0;
+      delete input.authMethod;
+      if ((hasPassword ? 1 : 0) + (hasRecovery ? 1 : 0) !== 1 ||
+        (method === 'password' && !hasPassword) || (method === 'recoveryKey' && !hasRecovery) ||
+        (method !== 'password' && method !== 'recoveryKey')) {
+        clearSecrets(form);
+        status('请选择一种验证方式并填写对应验证凭据。', true);
+        return;
+      }
+      if (method === 'password') delete input.recoveryKey;
+      else delete input.password;
+      input.confirmDeleteSpace = showDeleteConfirmation;
       clearSecretsWhenSettled(form,
-        run('正在永久删除同步空间…', function () { return syncClient.deleteSpace(input); }, '同步空间已永久删除，本机个人进度仍保留。'));
+        run('正在验证永久删除凭据…', function () { return syncClient.deleteSpace(input); }, '同步空间已永久删除，本机个人进度仍保留。'));
     });
     element('cloud-sync-rollback-restore').addEventListener('click', function () {
       run('正在恢复覆盖前数据…', function () { return syncClient.recoverInterruptedRollback('restore'); },

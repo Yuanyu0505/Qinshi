@@ -726,8 +726,9 @@
               <button id="cloud-sync-forget" type="button" class="seg danger cloud-sync-action" data-cloud-action>忘记本设备</button>
               <form id="cloud-sync-delete-form" class="cloud-sync-inline-form">
                 <label>同步码<input name="syncCode" autocomplete="off" required></label>
-                <label>同步密码<span class="cloud-sync-secret"><input id="cloud-sync-delete-password" name="password" type="password" autocomplete="current-password" data-cloud-secret required><button type="button" class="link-btn" data-secret-target="cloud-sync-delete-password" aria-label="显示删除空间密码">显示</button></span></label>
-                <label>不可逆确认<input name="confirmation" autocomplete="off" placeholder="输入：永久删除同步空间" required></label>
+                <fieldset class="cloud-sync-auth-choice"><legend>验证方式</legend><label><input id="cloud-sync-delete-auth-password" name="authMethod" type="radio" value="password" checked required>同步密码</label><label><input id="cloud-sync-delete-auth-recovery" name="authMethod" type="radio" value="recoveryKey">恢复密钥</label></fieldset>
+                <label id="cloud-sync-delete-password-field">同步密码<span class="cloud-sync-secret"><input id="cloud-sync-delete-password" name="password" type="password" autocomplete="current-password" data-cloud-secret required><button type="button" class="link-btn" data-secret-target="cloud-sync-delete-password" aria-label="显示删除空间密码">显示</button></span></label>
+                <label id="cloud-sync-delete-recovery-field" hidden>恢复密钥<span class="cloud-sync-secret"><input id="cloud-sync-delete-recovery-key" name="recoveryKey" type="password" autocomplete="off" data-cloud-secret required disabled><button type="button" class="link-btn" data-secret-target="cloud-sync-delete-recovery-key" aria-label="显示删除空间恢复密钥">显示</button></span></label>
                 <button id="cloud-sync-delete-space" type="submit" class="seg danger cloud-sync-action" data-cloud-action>永久删除同步空间</button>
               </form>
             </div>
@@ -761,6 +762,16 @@
             <p id="cloud-sync-copy-status" class="settings-status" role="status" aria-live="polite"></p>
             <label><input id="cloud-sync-recovery-ack" type="checkbox">我已保存同步码和恢复密钥</label>
             <button id="cloud-sync-recovery-confirm" type="button" class="seg active" disabled>确认已保存并继续</button>
+          </section>
+        </div>
+
+        <div id="cloud-sync-delete-confirm-layer" class="cloud-sync-modal" hidden>
+          <section role="dialog" aria-modal="true" aria-labelledby="cloud-sync-delete-confirm-title" class="cloud-sync-dialog" tabindex="-1">
+            <h3 id="cloud-sync-delete-confirm-title">最终确认永久删除</h3>
+            <p>此操作将永久删除云端同步空间、全部设备绑定和云端快照，且不可恢复。本机个人进度和 JSON 备份不会被删除。</p>
+            <label>请输入“永久删除同步空间”<input id="cloud-sync-delete-confirm-text" autocomplete="off"></label>
+            <p id="cloud-sync-delete-confirm-status" class="settings-status" role="status" aria-live="polite"></p>
+            <div class="cloud-sync-actions"><button id="cloud-sync-delete-confirm-cancel" type="button" class="seg">取消</button><button id="cloud-sync-delete-confirm-submit" type="button" class="seg danger" disabled>确认永久删除</button></div>
           </section>
         </div>
       </section>

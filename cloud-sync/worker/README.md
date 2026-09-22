@@ -71,18 +71,28 @@ npx wrangler dev -c wrangler.test.jsonc
 
 覆盖同步的方向始终是 **来源设备 → 当前设备**：来源的整份快照覆盖发起同步的设备。覆盖前，当前设备数据会先成为当前设备最新的历史；每台设备最多保留最近 3 份历史，不按字段合并，也不自动猜测方向。
 
-完成流程后导出本地 D1，检查服务端只保存密文、摘要与必要元数据：
+完成流程后导出本地 D1，检查服务端只保存密文、摘要与必要元数据。先在已忽略的 `.wrangler/qin-cloud-sync-smoke-canaries.json` 中写入本次烟雾流程实际使用的五个一次性假 canary；只使用明显虚假的验收值，不要放入个人密码或其他真实凭据：
+
+```json
+{
+  "deviceName": "FAKE_SMOKE_DEVICE_NAME_本次唯一值",
+  "qinshiValue": "FAKE_SMOKE_qinshi_VALUE_本次唯一值",
+  "password": "FAKE_SMOKE_PASSWORD_本次唯一值",
+  "recoveryKey": "FAKE_SMOKE_RECOVERY_KEY_本次唯一值",
+  "deviceToken": "FAKE_SMOKE_DEVICE_TOKEN_本次唯一值"
+}
+```
+
+导出后运行仓库内的无依赖校验器：
 
 ```bash
 npx wrangler d1 export qin-cloud-sync-test --local -c wrangler.test.jsonc --output .wrangler/qin-cloud-sync-smoke.sql
-rg -n --fixed-strings "SMOKE_DEVICE_NAME" .wrangler/qin-cloud-sync-smoke.sql
-rg -n --fixed-strings "SMOKE_qinshi_VALUE" .wrangler/qin-cloud-sync-smoke.sql
-rg -n --fixed-strings "SMOKE_PASSWORD" .wrangler/qin-cloud-sync-smoke.sql
-rg -n --fixed-strings "SMOKE_RECOVERY_KEY" .wrangler/qin-cloud-sync-smoke.sql
-rg -n --fixed-strings "SMOKE_DEVICE_TOKEN" .wrangler/qin-cloud-sync-smoke.sql
+node scripts/check-smoke-export.mjs .wrangler/qin-cloud-sync-smoke.sql .wrangler/qin-cloud-sync-smoke-canaries.json
 ```
 
-五条 `rg` 命令都必须是零匹配。已知明文 **device name**、示例 **`qinshi_` value**、**password**、**recovery key** 和 **device token** 任一出现都视为失败，禁止继续部署。`.wrangler/` 已被忽略；检查完成后无需提交导出文件。
+脚本必须以状态码 0 完成并显示“未发现已知明文 canary”。单独对 SQL 文本执行 `rg` 不足以完成验收，因为 SQLite 会把 BLOB 导出为 `X'...hex...'`，而字段还可能包含 Base64 或 Base64URL 编码。校验器会检查原始 UTF-8 文本、解码后的十六进制 BLOB，以及文本和 BLOB 中的 Base64/Base64URL 内容。
+
+已知明文 **device name**、示例 **`qinshi_` value**、**password**、**recovery key** 和 **device token** 任一出现时，脚本会以非零状态退出，只报告安全分类和编码位置，不打印 canary 值；此时禁止继续部署。`.wrangler/` 已被忽略；检查完成后无需提交 SQL 导出或 canary 清单。
 
 ## 未来获得授权后的安全生产顺序
 

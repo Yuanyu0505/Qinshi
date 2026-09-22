@@ -2,8 +2,55 @@ const { test } = require("node:test");
 const assert = require("node:assert");
 const http = require("http");
 const fs = require("fs");
+const os = require("os");
 const path = require("path");
+const { spawnSync } = require("child_process");
 const { createServer, lanIPv4s } = require("./serve.js");
+
+function hasExplicitCloudProhibition(text, capability) {
+  const escaped = capability.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const directivePattern = /(?:禁止|不得|不允许|严禁|不可)(?:\s*(?:启用|使用|配置|创建))?|(?:允许|可以|可)(?:\s*(?:启用|使用|配置|创建))/g;
+  return text.split(/[\n。；;]+/).some((sentence) => {
+    const capabilityMatch = new RegExp(escaped, "i").exec(sentence);
+    if (!capabilityMatch) return false;
+    const directives = [...sentence.matchAll(directivePattern)];
+    const isNegative = (directive) => /^(?:禁止|不得|不允许|严禁|不可)/.test(directive);
+    if (directives.some((match) => !isNegative(match[0]))) return false;
+    const before = sentence.slice(0, capabilityMatch.index);
+    const after = sentence.slice(capabilityMatch.index + capabilityMatch[0].length);
+    const beforeDirectives = [...before.matchAll(directivePattern)];
+    const afterDirectives = [...after.matchAll(directivePattern)];
+    const directive = beforeDirectives.at(-1)?.[0] || afterDirectives[0]?.[0] || "";
+    return isNegative(directive);
+  });
+}
+
+function findForbiddenCloudConfig(content) {
+  const forbidden = [
+    "r2_buckets", "durable_objects", "queues", "triggers", "crons",
+    "usage_model", "plan", "paid", "add_ons", "addons", "billing",
+    "auto_purchase", "auto_charge", "auto_upgrade", "kv_namespaces",
+    "vectorize", "hyperdrive", "analytics_engine_datasets"
+  ];
+  return forbidden.filter((key) => {
+    const escaped = key.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const assignment = new RegExp(`(?:["']${escaped}["']|\\b${escaped}\\b)\\s*[:=]`, "i");
+    const table = new RegExp(`\\[\\[?\\s*${escaped}(?:\\.[^\\]]+)?\\s*\\]\\]?`, "i");
+    return assignment.test(content) || table.test(content);
+  });
+}
+
+function runSmokeExportVerifier(sql, manifest) {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "qin-smoke-export-"));
+  const sqlPath = path.join(tempDir, "export.sql");
+  const manifestPath = path.join(tempDir, "canaries.json");
+  const scriptPath = path.join(__dirname, "cloud-sync", "worker", "scripts", "check-smoke-export.mjs");
+  fs.writeFileSync(sqlPath, sql, "utf8");
+  fs.writeFileSync(manifestPath, JSON.stringify(manifest), "utf8");
+  const result = spawnSync(process.execPath, [scriptPath, sqlPath, manifestPath], { encoding: "utf8" });
+  fs.rmSync(tempDir, { recursive: true, force: true });
+  return { ...result, output: `${result.stdout || ""}${result.stderr || ""}` };
+}
 
 function withServer(fn) {
   return new Promise((resolve, reject) => {
@@ -184,8 +231,17 @@ test("云同步部署手册限定 Workers Free 与 D1 Free 并在免费额度耗
   assert.match(runbook, /Workers Free/);
   assert.match(runbook, /D1 Free/);
   for (const prohibited of ["R2", "Durable Objects", "scheduled triggers", "Workers Paid", "paid add-ons", "usage-based upgrades", "auto-purchase", "auto-charge"]) {
-    assert.match(runbook, new RegExp(prohibited.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i"), prohibited);
+    assert.equal(hasExplicitCloudProhibition(runbook, prohibited), true, `${prohibited} 必须处在明确禁止语义中`);
   }
+  const permissive = "允许启用 R2、Workers Paid 和 auto-charge。";
+  for (const prohibited of ["R2", "Workers Paid", "auto-charge"]) {
+    assert.equal(hasExplicitCloudProhibition(permissive, prohibited), false, `允许文案不得通过：${prohibited}`);
+  }
+  const misleadingPermissive = "禁止误判：这里允许启用 R2、Workers Paid 和 auto-charge。";
+  for (const prohibited of ["R2", "Workers Paid", "auto-charge"]) {
+    assert.equal(hasExplicitCloudProhibition(misleadingPermissive, prohibited), false, `带有无关“禁止”的允许文案不得通过：${prohibited}`);
+  }
+  assert.equal(hasExplicitCloudProhibition("禁止 R2，但随后允许启用 R2。", "R2"), false, "前后冲突的允许文案不得通过");
   assert.match(runbook, /免费额度[^\n]*(?:耗尽|用尽)[^\n]*(?:暂停|停止)[^\n]*云同步/);
   assert.match(runbook, /本地功能[^\n]*JSON[^\n]*备份[^\n]*(?:继续|仍然|不受影响)/);
   assert.match(runbook, /第三方[^\n]*(?:政策|条款|额度|定价)[^\n]*(?:变化|调整)/);
@@ -204,7 +260,8 @@ test("云同步部署手册固定本地命令、密文检查和安全发布顺�
     "npm ci",
     "npx wrangler d1 migrations apply qin-cloud-sync-test --local -c wrangler.test.jsonc",
     "npm test -- --max-workers=1 --no-isolate",
-    "npx wrangler dev -c wrangler.test.jsonc"
+    "npx wrangler dev -c wrangler.test.jsonc",
+    "node scripts/check-smoke-export.mjs .wrangler/qin-cloud-sync-smoke.sql .wrangler/qin-cloud-sync-smoke-canaries.json"
   ]) assert.ok(runbook.includes(command), command);
 
   const orderedStages = [
@@ -231,6 +288,110 @@ test("云同步部署手册固定本地命令、密文检查和安全发布顺�
   }
   assert.match(runbook, /来源设备[^\n]*→[^\n]*当前设备/);
   assert.match(runbook, /最近[^\n]*3[^\n]*(?:份|次)[^\n]*历史/);
+});
+
+test("云同步烟雾导出校验器识别原文、十六进制 BLOB、Base64 和 Base64URL", () => {
+  const canaries = {
+    deviceName: "FAKE_SMOKE_DEVICE_NAME_c7x",
+    qinshiValue: "FAKE_SMOKE_qinshi_VALUE_c7x",
+    password: "FAKE_SMOKE_PASSWORD_c7x",
+    recoveryKey: "FAKE_SMOKE_RECOVERY_KEY_࠾_c7x",
+    deviceToken: "FAKE_SMOKE_DEVICE_TOKEN_c7x"
+  };
+  const paddedBase64Url = (value) => {
+    const encoded = Buffer.from(value).toString("base64url");
+    return encoded + "=".repeat((4 - (encoded.length % 4)) % 4);
+  };
+  const cases = [
+    ["device-name", canaries.deviceName, `INSERT INTO devices VALUES ('${canaries.deviceName}');`, /raw/i],
+    ["qinshi-value", canaries.qinshiValue, `INSERT INTO chunks VALUES (X'${Buffer.from(canaries.qinshiValue).toString("hex").toUpperCase()}');`, /hex-blob/i],
+    ["password", canaries.password, `INSERT INTO secrets VALUES ('${Buffer.from(canaries.password).toString("base64")}');`, /base64/i],
+    ["recovery-key", canaries.recoveryKey, `INSERT INTO secrets VALUES ('${paddedBase64Url(canaries.recoveryKey)}');`, /base64url/i],
+    ["device-token", canaries.deviceToken, `INSERT INTO chunks VALUES (x'${Buffer.from(Buffer.from(canaries.deviceToken).toString("base64")).toString("hex")}');`, /hex-blob[^\n]*base64|base64[^\n]*hex-blob/i]
+  ];
+  for (const [label, secret, sql, location] of cases) {
+    const result = runSmokeExportVerifier(sql, canaries);
+    assert.notEqual(result.status, 0, `${label} 编码泄漏必须失败`);
+    assert.match(result.output, new RegExp(label, "i"), `${label} 应使用安全分类报告`);
+    assert.match(result.output, location, `${label} 应报告编码位置类型`);
+    assert.doesNotMatch(result.output, new RegExp(secret.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")), "不得打印 canary 值");
+  }
+
+  const embeddedBase64 = Buffer.from(canaries.password).toString("base64");
+  const embedded = runSmokeExportVerifier(
+    `INSERT INTO secrets VALUES ('aa${embeddedBase64}zz');`,
+    canaries
+  );
+  assert.notEqual(embedded.status, 0, "与其他 Base64 字符相邻时也不得漏检");
+  assert.match(embedded.output, /password[^\n]*base64/i);
+  assert.doesNotMatch(embedded.output, new RegExp(canaries.password));
+
+  const clean = runSmokeExportVerifier(
+    "BEGIN TRANSACTION;\nINSERT INTO snapshot_chunks VALUES (X'018FA4D2C197BEE0');\nCOMMIT;\n",
+    canaries
+  );
+  assert.equal(clean.status, 0, clean.output);
+  assert.match(clean.output, /未发现已知明文 canary/);
+  for (const secret of Object.values(canaries)) assert.doesNotMatch(clean.output, new RegExp(secret));
+});
+
+test("云同步烟雾导出校验器拒绝缺失参数、非法清单和畸形十六进制 BLOB", () => {
+  const scriptPath = path.join(__dirname, "cloud-sync", "worker", "scripts", "check-smoke-export.mjs");
+  const missing = spawnSync(process.execPath, [scriptPath], { encoding: "utf8" });
+  assert.notEqual(missing.status, 0);
+  assert.match(`${missing.stdout}${missing.stderr}`, /用法|usage/i);
+
+  const invalidManifest = runSmokeExportVerifier("BEGIN; COMMIT;", { deviceName: "ONLY_ONE_FAKE_VALUE" });
+  assert.notEqual(invalidManifest.status, 0);
+  assert.match(invalidManifest.output, /canary 清单无效/);
+  assert.doesNotMatch(invalidManifest.output, /ONLY_ONE_FAKE_VALUE/);
+
+  const validManifest = {
+    deviceName: "FAKE_A", qinshiValue: "FAKE_B", password: "FAKE_C",
+    recoveryKey: "FAKE_D", deviceToken: "FAKE_E"
+  };
+  const malformedBlob = runSmokeExportVerifier("INSERT INTO chunks VALUES (X'ABC');", validManifest);
+  assert.notEqual(malformedBlob.status, 0);
+  assert.match(malformedBlob.output, /SQL 十六进制 BLOB 无效/);
+
+  const shortManifest = {
+    deviceName: "!A", qinshiValue: "!B", password: "!C",
+    recoveryKey: "!D", deviceToken: "!E"
+  };
+  const shortBase64 = runSmokeExportVerifier("INSERT INTO secrets VALUES ('IUM=');", shortManifest);
+  assert.notEqual(shortBase64.status, 0, "校验器接受的短 canary 也必须检测其 Base64 表示");
+  assert.match(shortBase64.output, /password[^\n]*base64/i);
+});
+
+test("云同步提交的 Wrangler 配置不含额外云产品、定时触发或付费设置", () => {
+  const listed = spawnSync("git", ["ls-files", "-z", "--", "cloud-sync/worker/wrangler*"], {
+    cwd: __dirname,
+    encoding: "utf8"
+  });
+  assert.equal(listed.status, 0, listed.stderr);
+  const configs = listed.stdout.split("\0")
+    .filter((relative) => relative && /(?:\.jsonc|\.toml)(?:\.example)?$/i.test(relative))
+    .map((relative) => [relative, fs.readFileSync(path.join(__dirname, relative), "utf8")]);
+  assert.ok(configs.length >= 2, "应检查生产示例和本地测试配置");
+  for (const [name, content] of configs) {
+    assert.deepStrictEqual(findForbiddenCloudConfig(content), [], `${name} 只能绑定 D1 Free`);
+  }
+});
+
+test("云同步免费配置扫描会拒绝 JSONC、TOML 与付费设置变体", () => {
+  const forbiddenFixtures = [
+    ['{"r2_buckets": []}', "r2_buckets"],
+    ['durable_objects = { bindings = [] }', "durable_objects"],
+    ['[[queues.producers]]\nqueue = "sync"', "queues"],
+    ['[triggers]\ncrons = ["0 * * * *"]', "triggers"],
+    ['usage_model = "bundled"', "usage_model"],
+    ['plan = "paid"', "plan"],
+    ['{"auto_charge": true}', "auto_charge"]
+  ];
+  for (const [fixture, expected] of forbiddenFixtures) {
+    assert.ok(findForbiddenCloudConfig(fixture).includes(expected), `应拒绝 ${expected}`);
+  }
+  assert.deepStrictEqual(findForbiddenCloudConfig('{"d1_databases": [{"binding": "DB"}], "send_metrics": false}'), []);
 });
 
 test("云同步部署配置只提交零 UUID 并忽略本地生产配置", () => {

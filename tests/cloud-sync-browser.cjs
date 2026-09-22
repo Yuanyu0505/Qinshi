@@ -6,11 +6,50 @@ const { createServer } = require('../serve.js');
 
 const PASSWORD = 'browser-only-test-password';
 const LIMITS = { minimumReadVersion: '1.0.39', minimumWriteVersion: '1.0.39' };
-let browser, server, appUrl;
+const INTENDED_ROUTES = new Set([
+  'GET /v1/health', 'POST /v1/spaces', 'GET /v1/spaces/:code/parameters', 'POST /v1/spaces/:code/pair',
+  'POST /v1/spaces/:code/recover', 'GET /v1/devices', 'PATCH /v1/devices/:deviceId',
+  'DELETE /v1/devices/:deviceId', 'POST /v1/uploads', 'PUT /v1/uploads/:uploadId/chunks/:index',
+  'POST /v1/uploads/:uploadId/commit', 'GET /v1/snapshots/:snapshotId',
+  'GET /v1/snapshots/:snapshotId/chunks/:index', 'POST /v1/security/password',
+  'POST /v1/security/recovery-key', 'DELETE /v1/spaces/current', 'OPTIONS *'
+]);
+const SAFE_REQUEST_FIELDS = new Set(['method', 'pathname', 'contentType', 'hasVersion', 'hasIdempotency',
+  'hasValidAuth', 'requiresAuth', 'requiresIdempotency', 'expectsJson', 'expectsBinary', 'confirmation', 'authField']);
+const coveredRoutes = new Set();
+let browser, server, appUrl, appPort;
 let scenarioStubs = [];
 
 function digest(bytes) {
   return createHash('sha256').update(bytes).digest('base64url');
+}
+
+function uuidFor(sequence) {
+  return `00000000-0000-4000-8000-${Number(sequence).toString(16).padStart(12, '0')}`;
+}
+
+function validId(value) {
+  return typeof value === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(value);
+}
+
+function validBase64url(value, minimumBytes, maximumBytes = minimumBytes) {
+  if (typeof value !== 'string' || !/^[A-Za-z0-9_-]+$/.test(value)) return false;
+  let bytes;
+  try { bytes = Buffer.from(value.replace(/-/g, '+').replace(/_/g, '/'), 'base64'); } catch { return false; }
+  return bytes.length >= minimumBytes && bytes.length <= maximumBytes &&
+    bytes.toString('base64url') === value;
+}
+
+function normalizedPath(pathname) {
+  if (/^\/v1\/spaces\/[^/]+\/(parameters|pair|recover)$/.test(pathname)) {
+    return pathname.replace(/^\/v1\/spaces\/[^/]+\//, '/v1/spaces/:code/');
+  }
+  if (/^\/v1\/devices\/[^/]+$/.test(pathname)) return '/v1/devices/:deviceId';
+  if (/^\/v1\/uploads\/[^/]+\/chunks\/[^/]+$/.test(pathname)) return '/v1/uploads/:uploadId/chunks/:index';
+  if (/^\/v1\/uploads\/[^/]+\/commit$/.test(pathname)) return '/v1/uploads/:uploadId/commit';
+  if (/^\/v1\/snapshots\/[^/]+\/chunks\/[^/]+$/.test(pathname)) return '/v1/snapshots/:snapshotId/chunks/:index';
+  if (/^\/v1\/snapshots\/[^/]+$/.test(pathname)) return '/v1/snapshots/:snapshotId';
+  return pathname;
 }
 
 class CloudStub {
@@ -28,25 +67,37 @@ class CloudStub {
     this.tamperSnapshotId = null;
     this.failReplacementCommit = false;
     this.requests = [];
+    this.responses = [];
     this.violations = [];
     this.allowedOrigin = '';
   }
 
   responseHeaders(request, headers = {}) {
-    return { 'Access-Control-Allow-Origin': request.headers().origin || this.allowedOrigin,
-      'Vary': 'Origin', 'Access-Control-Expose-Headers': 'X-Chunk-SHA256', ...headers };
+    return { 'Access-Control-Allow-Origin': this.allowedOrigin, 'Access-Control-Expose-Headers': 'X-Chunk-SHA256',
+      'Cache-Control': 'no-store', 'Vary': 'Origin', ...headers };
+  }
+
+  fulfill(route, details) {
+    const headers = Object.fromEntries(Object.entries(details.headers || {}).map(([key, value]) => [key.toLowerCase(), value]));
+    this.responses.push({ method: route.request().method(), pathname: normalizedPath(new URL(route.request().url()).pathname),
+      status: details.status, allowOrigin: headers['access-control-allow-origin'] || '', vary: headers.vary || '',
+      expose: headers['access-control-expose-headers'] || '', allowMethods: headers['access-control-allow-methods'] || '',
+      allowHeaders: headers['access-control-allow-headers'] || '' });
+    return route.fulfill(details);
   }
 
   json(route, status, value, headers = {}) {
     const request = route.request();
-    return route.fulfill({ status, contentType: 'application/json; charset=utf-8',
+    return this.fulfill(route, { status, contentType: 'application/json; charset=utf-8',
       headers: this.responseHeaders(request, headers), body: JSON.stringify(value) });
   }
 
-  violation(route, reason, status = 400) {
+  violation(route, reason, status = 400, cors = true) {
     const request = route.request();
-    const safe = { method: request.method(), pathname: new URL(request.url()).pathname, reason };
+    const safe = { method: request.method(), pathname: normalizedPath(new URL(request.url()).pathname), reason };
     this.violations.push(safe);
+    if (!cors) return this.fulfill(route, { status, contentType: 'application/json; charset=utf-8',
+      headers: { 'Cache-Control': 'no-store', Vary: 'Origin' }, body: JSON.stringify({ error: { code: 'ORIGIN_NOT_ALLOWED' } }) });
     return this.json(route, status, { error: { code: status === 401 ? 'AUTH_FAILED' : 'INVALID_REQUEST' } });
   }
 
@@ -54,7 +105,7 @@ class CloudStub {
     const match = /^Device ([A-Za-z0-9_-]+)\.([A-Za-z0-9_-]+)$/.exec(request.headers().authorization || '');
     if (!match) return null;
     const device = this.devices.get(match[1]);
-    if (!device || device.deviceToken !== match[2] || !this.space || device.spaceId !== this.space.spaceId) return null;
+    if (!device || device.revoked || device.deviceToken !== match[2] || !this.space || device.spaceId !== this.space.spaceId) return null;
     return device;
   }
 
@@ -71,7 +122,21 @@ class CloudStub {
   validDevice(value) {
     return value && typeof value === 'object' && !Array.isArray(value) &&
       Object.keys(value).sort().join(',') === 'deviceId,deviceToken,encryptedName' &&
-      typeof value.deviceId === 'string' && typeof value.deviceToken === 'string' && value.encryptedName;
+      validId(value.deviceId) && validBase64url(value.deviceToken, 32) && this.validBlob(value.encryptedName, false);
+  }
+
+  validBlob(value, wrapped = true) {
+    return value && !Array.isArray(value) && typeof value === 'object' &&
+      Object.keys(value).sort().join(',') === 'algorithm,ciphertext,iv,version' && value.version === 1 &&
+      value.algorithm === 'AES-256-GCM' && validBase64url(value.iv, 12) &&
+      validBase64url(value.ciphertext, wrapped ? 48 : 16, wrapped ? 48 : 4096);
+  }
+
+  validKdf(value) {
+    return value && !Array.isArray(value) && typeof value === 'object' &&
+      Object.keys(value).sort().join(',') === 'hash,iterations,kdf,salt,version' && value.version === 1 &&
+      value.kdf === 'PBKDF2-HMAC-SHA-256' && value.hash === 'SHA-256' && value.iterations === 600000 &&
+      validBase64url(value.salt, 16);
   }
 
   validUpload(body) {
@@ -79,17 +144,55 @@ class CloudStub {
       'clientCreatedAt', 'dataHash', 'iv', 'ciphertextBytes', 'chunkCount', 'ciphertextDigest', 'encryptedSummary'];
     return body && Object.keys(body).sort().join(',') === fields.sort().join(',') &&
       ['upload', 'replace-before', 'replace-after', 'restore-before', 'restore-after'].includes(body.operation) &&
-      typeof body.snapshotId === 'string' && (body.sourceSnapshotId === null || typeof body.sourceSnapshotId === 'string') &&
+      validId(body.snapshotId) && (body.sourceSnapshotId === null || validId(body.sourceSnapshotId)) &&
       body.appVersion === LIMITS.minimumWriteVersion && body.formatVersion === 1 && body.schemaVersion === 1 &&
       ['identity', 'gzip'].includes(body.encoding) && typeof body.clientCreatedAt === 'string' &&
-      typeof body.dataHash === 'string' && typeof body.iv === 'string' && Number.isSafeInteger(body.ciphertextBytes) &&
-      body.ciphertextBytes >= 16 && Number.isSafeInteger(body.chunkCount) && body.chunkCount > 0 &&
-      body.chunkCount === Math.ceil(body.ciphertextBytes / (512 * 1024)) && typeof body.ciphertextDigest === 'string' &&
-      body.encryptedSummary && typeof body.encryptedSummary === 'object';
+      !Number.isNaN(Date.parse(body.clientCreatedAt)) && new Date(Date.parse(body.clientCreatedAt)).toISOString() ===
+        body.clientCreatedAt.replace(/(?<=:\d{2})Z$/, '.000Z') &&
+      validBase64url(body.dataHash, 32) && validBase64url(body.iv, 12) && Number.isSafeInteger(body.ciphertextBytes) &&
+      body.ciphertextBytes >= 16 && body.ciphertextBytes <= 10 * 1024 * 1024 && Number.isSafeInteger(body.chunkCount) &&
+      body.chunkCount === Math.ceil(body.ciphertextBytes / (512 * 1024)) && validBase64url(body.ciphertextDigest, 32) &&
+      body.operation.endsWith('-after') === (body.sourceSnapshotId !== null) && body.sourceSnapshotId !== body.snapshotId &&
+      this.validBlob(body.encryptedSummary, false);
   }
 
   assertClean() {
     assert.deepEqual(this.violations, [], 'Worker stub protocol violations must stay empty');
+    const known = new Set(Array.from(INTENDED_ROUTES, value => value.slice(value.indexOf(' ') + 1)));
+    for (const request of this.requests) {
+      assert.deepEqual(Object.keys(request).filter(key => !SAFE_REQUEST_FIELDS.has(key)), [], 'request observations must contain safe flags only');
+      assert.ok(request.method === 'OPTIONS' ? known.has(request.pathname) : INTENDED_ROUTES.has(`${request.method} ${request.pathname}`),
+        `unexpected Worker route ${request.method} ${request.pathname}`);
+      if (request.method !== 'OPTIONS') {
+        assert.equal(request.hasVersion, true, `${request.method} ${request.pathname} version`);
+        if (request.requiresAuth) assert.equal(request.hasValidAuth, true, `${request.method} ${request.pathname} auth`);
+        if (request.requiresIdempotency) assert.equal(request.hasIdempotency, true, `${request.method} ${request.pathname} idempotency`);
+        if (request.expectsJson) assert.match(request.contentType, /^application\/json(?:\s*;\s*charset=utf-8)?$/i);
+        if (request.expectsBinary) assert.equal(request.contentType, 'application/octet-stream');
+      }
+    }
+    for (const response of this.responses) {
+      assert.equal(response.allowOrigin, this.allowedOrigin, `${response.method} ${response.pathname} CORS origin`);
+      assert.equal(response.vary, 'Origin', `${response.method} ${response.pathname} Vary`);
+      assert.equal(response.expose, 'X-Chunk-SHA256', `${response.method} ${response.pathname} expose`);
+      if (response.method === 'OPTIONS') {
+        assert.equal(response.allowMethods, 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
+        assert.equal(response.allowHeaders, 'Authorization, Content-Type, X-Qin-App-Version, Idempotency-Key, X-Chunk-SHA256');
+      }
+    }
+  }
+
+  validateStoredUpload(upload, device) {
+    if (!upload || !this.validUpload(upload.body) || upload.deviceId !== device.deviceId || upload.spaceId !== device.spaceId ||
+      upload.chunks.length !== upload.body.chunkCount) return false;
+    let total = 0;
+    for (let index = 0; index < upload.body.chunkCount; index += 1) {
+      const chunk = upload.chunks[index];
+      const expected = index < upload.body.chunkCount - 1 ? 512 * 1024 : upload.body.ciphertextBytes - index * 512 * 1024;
+      if (!Buffer.isBuffer(chunk) || chunk.length !== expected || digest(chunk) !== upload.chunkDigests[index]) return false;
+      total += chunk.length;
+    }
+    return total === upload.body.ciphertextBytes && digest(Buffer.concat(upload.chunks)) === upload.body.ciphertextDigest;
   }
 
   metadata(upload, deviceId) {
@@ -120,10 +223,22 @@ class CloudStub {
     const method = request.method();
     if (this.offline) return route.abort('internetdisconnected');
     const headers = request.headers();
-    this.requests.push({ method, pathname, contentType: headers['content-type'] || '',
+    const safePath = normalizedPath(pathname);
+    const idempotent = (method === 'POST' && (pathname === '/v1/spaces' || /\/(?:pair|recover)$/.test(pathname) ||
+      pathname === '/v1/uploads' || /\/commit$/.test(pathname) || /^\/v1\/security\/(?:password|recovery-key)$/.test(pathname))) ||
+      (method === 'DELETE' && pathname === '/v1/spaces/current');
+    const needsAuth = /^\/v1\/devices(?:\/|$)/.test(pathname) || pathname === '/v1/uploads' ||
+      /^\/v1\/(?:uploads|snapshots)\//.test(pathname) || /^\/v1\/security\/(?:password|recovery-key)$/.test(pathname) ||
+      pathname === '/v1/spaces/current';
+    const device = this.authenticate(request);
+    const observation = { method, pathname: safePath, contentType: headers['content-type'] || '',
       hasVersion: headers['x-qin-app-version'] === LIMITS.minimumWriteVersion,
-      hasIdempotency: Boolean(headers['idempotency-key']) });
-    if (headers.origin !== this.allowedOrigin) return this.violation(route, 'origin-not-allowed', 403);
+      hasIdempotency: /^[A-Za-z0-9_-]{1,128}$/.test(headers['idempotency-key'] || ''),
+      hasValidAuth: Boolean(device), requiresAuth: needsAuth, requiresIdempotency: idempotent,
+      expectsJson: ['POST', 'PATCH', 'DELETE'].includes(method), expectsBinary: method === 'PUT' };
+    this.requests.push(observation);
+    coveredRoutes.add(method === 'OPTIONS' ? 'OPTIONS *' : `${method} ${safePath}`);
+    if (headers.origin !== this.allowedOrigin) return this.violation(route, 'origin-not-allowed', 403, false);
     if (method === 'OPTIONS') {
       const requestedMethod = headers['access-control-request-method'];
       const requestedHeaders = (headers['access-control-request-headers'] || '').toLowerCase().split(',').map(v => v.trim()).filter(Boolean);
@@ -131,7 +246,7 @@ class CloudStub {
       if (!['GET', 'POST', 'PUT', 'PATCH', 'DELETE'].includes(requestedMethod) || requestedHeaders.some(v => !allowed.includes(v))) {
         return this.violation(route, 'invalid-preflight', 403);
       }
-      return route.fulfill({ status: 204, headers: this.responseHeaders(request, {
+      return this.fulfill(route, { status: 204, headers: this.responseHeaders(request, {
         'Access-Control-Allow-Headers': 'Authorization, Content-Type, X-Qin-App-Version, Idempotency-Key, X-Chunk-SHA256',
         'Access-Control-Allow-Methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS' }) });
     }
@@ -144,11 +259,7 @@ class CloudStub {
     if (chunkWrite && (headers['content-type'] || '').toLowerCase() !== 'application/octet-stream') {
       return this.violation(route, 'invalid-chunk-content-type', 415);
     }
-    const idempotent = (method === 'POST' && (pathname === '/v1/spaces' || /\/pair$/.test(pathname) || pathname === '/v1/uploads' || /\/commit$/.test(pathname))) ||
-      (method === 'DELETE' && pathname === '/v1/spaces/current');
     if (idempotent && !/^[A-Za-z0-9_-]{1,128}$/.test(headers['idempotency-key'] || '')) return this.violation(route, 'missing-idempotency-key');
-    const device = this.authenticate(request);
-    const needsAuth = pathname === '/v1/devices' || pathname === '/v1/uploads' || /^\/v1\/(?:uploads|snapshots)\//.test(pathname) || pathname === '/v1/spaces/current';
     if (needsAuth && !device) return this.violation(route, 'invalid-device-auth', 401);
     if (device && this.revoked.has(device.deviceId)) {
       return this.json(route, 401, { error: { code: 'AUTH_FAILED' } });
@@ -159,8 +270,9 @@ class CloudStub {
       const body = this.body(request, ['syncCode', 'spaceId', 'kdf', 'authKey', 'passwordWrappedMaster',
         'recoveryAuthKey', 'recoveryWrappedMaster', 'device', 'appVersion']);
       if (!body || !this.validDevice(body.device) || body.appVersion !== LIMITS.minimumWriteVersion ||
-        typeof body.syncCode !== 'string' || typeof body.spaceId !== 'string' || typeof body.authKey !== 'string' ||
-        typeof body.recoveryAuthKey !== 'string' || !body.kdf || !body.passwordWrappedMaster || !body.recoveryWrappedMaster) {
+        typeof body.syncCode !== 'string' || body.syncCode.trim().replace(/[ -]/g, '').length < 26 || !validId(body.spaceId) ||
+        !validBase64url(body.authKey, 32) || !validBase64url(body.recoveryAuthKey, 32) || !this.validKdf(body.kdf) ||
+        !this.validBlob(body.passwordWrappedMaster) || !this.validBlob(body.recoveryWrappedMaster)) {
         return this.violation(route, 'invalid-create-body');
       }
       this.space = { syncCode: body.syncCode, spaceId: body.spaceId, kdf: body.kdf,
@@ -170,7 +282,7 @@ class CloudStub {
         spaceId: body.spaceId, encryptedName: body.device.encryptedName, revoked: false, revokedAt: null,
         createdAt: new Date(1700000000000).toISOString(), lastUsedAt: null, lastUploadedAt: null,
         latestSnapshot: null, historySnapshots: [] });
-      return this.json(route, 200, { spaceId: body.spaceId, deviceId: body.device.deviceId, ...LIMITS });
+      return this.json(route, 201, { spaceId: body.spaceId, deviceId: body.device.deviceId, ...LIMITS });
     }
 
     const parameters = /^\/v1\/spaces\/([^/]+)\/parameters$/.exec(pathname);
@@ -182,9 +294,9 @@ class CloudStub {
     const pair = /^\/v1\/spaces\/([^/]+)\/pair$/.exec(pathname);
     if (method === 'POST' && pair && this.space && pair[1] === this.space.syncCode) {
       const body = this.body(request, ['authKey', 'device', 'appVersion']);
-      if (!body || body.authKey !== this.space.authKey || body.appVersion !== LIMITS.minimumWriteVersion || !this.validDevice(body.device)) {
-        return this.violation(route, 'invalid-pair-body', 401);
-      }
+      if (!body || body.appVersion !== LIMITS.minimumWriteVersion || !validBase64url(body.authKey, 32) ||
+        !this.validDevice(body.device)) return this.violation(route, 'invalid-pair-body');
+      if (body.authKey !== this.space.authKey) return this.violation(route, 'invalid-pair-auth', 401);
       this.devices.set(body.device.deviceId, { deviceId: body.device.deviceId, deviceToken: body.device.deviceToken,
         spaceId: this.space.spaceId, encryptedName: body.device.encryptedName, revoked: false, revokedAt: null,
         createdAt: new Date(1700000001000).toISOString(), lastUsedAt: null, lastUploadedAt: null,
@@ -192,21 +304,85 @@ class CloudStub {
       return this.json(route, 200, { spaceId: this.space.spaceId, deviceId: body.device.deviceId, ...LIMITS });
     }
 
+    const recover = /^\/v1\/spaces\/([^/]+)\/recover$/.exec(pathname);
+    if (method === 'POST' && recover && this.space && recover[1] === this.space.syncCode) {
+      const body = this.body(request, ['recoveryAuthKey', 'newAuthKey', 'newPasswordWrappedMaster',
+        'newRecoveryAuthKey', 'newRecoveryWrappedMaster', 'device', 'appVersion']);
+      if (!body || body.appVersion !== LIMITS.minimumWriteVersion || !validBase64url(body.recoveryAuthKey, 32) ||
+        !validBase64url(body.newAuthKey, 32) || !validBase64url(body.newRecoveryAuthKey, 32) ||
+        !this.validBlob(body.newPasswordWrappedMaster) || !this.validBlob(body.newRecoveryWrappedMaster) ||
+        !this.validDevice(body.device)) return this.violation(route, 'invalid-recover-body');
+      if (body.recoveryAuthKey !== this.space.recoveryAuthKey) return this.violation(route, 'invalid-recover-auth', 401);
+      const revokedAt = new Date(1700000000000 + (++this.sequence * 1000)).toISOString();
+      this.devices.forEach(saved => { saved.revoked = true; saved.revokedAt = revokedAt; });
+      this.space.authKey = body.newAuthKey;
+      this.space.passwordWrappedMaster = body.newPasswordWrappedMaster;
+      this.space.recoveryAuthKey = body.newRecoveryAuthKey;
+      this.space.recoveryWrappedMaster = body.newRecoveryWrappedMaster;
+      this.devices.set(body.device.deviceId, { deviceId: body.device.deviceId, deviceToken: body.device.deviceToken,
+        spaceId: this.space.spaceId, encryptedName: body.device.encryptedName, revoked: false, revokedAt: null,
+        createdAt: revokedAt, lastUsedAt: null, lastUploadedAt: null, latestSnapshot: null, historySnapshots: [] });
+      return this.json(route, 200, { spaceId: this.space.spaceId, deviceId: body.device.deviceId, ...LIMITS });
+    }
+
     if (method === 'GET' && pathname === '/v1/devices') {
       return this.json(route, 200, { devices: Array.from(this.devices.values()).map(device => ({
-        deviceId: device.deviceId, encryptedName: device.encryptedName, revoked: device.revoked,
+        deviceId: device.deviceId, encryptedName: device.encryptedName, current: device.deviceId === this.authenticate(request).deviceId,
+        revoked: device.revoked,
         revokedAt: device.revokedAt, createdAt: device.createdAt, lastUsedAt: device.lastUsedAt,
         lastUploadedAt: device.lastUploadedAt, latestSnapshot: device.latestSnapshot,
         historySnapshots: device.historySnapshots
       })) });
     }
 
+    const deviceMutation = /^\/v1\/devices\/([^/]+)$/.exec(pathname);
+    if (deviceMutation && (method === 'PATCH' || method === 'DELETE')) {
+      const target = this.devices.get(deviceMutation[1]);
+      if (!target || target.spaceId !== device.spaceId) return this.json(route, 404, { error: { code: 'NOT_FOUND' } });
+      if (method === 'PATCH') {
+        const body = this.body(request, ['encryptedName']);
+        if (!body || !this.validBlob(body.encryptedName, false)) return this.violation(route, 'invalid-device-patch-body');
+        target.encryptedName = body.encryptedName;
+        return this.json(route, 200, { deviceId: target.deviceId, encryptedName: target.encryptedName });
+      }
+      const body = this.body(request, ['deleteSnapshots']);
+      if (!body || typeof body.deleteSnapshots !== 'boolean') return this.violation(route, 'invalid-device-delete-body');
+      target.revoked = true;
+      target.revokedAt = new Date(1700000000000 + (++this.sequence * 1000)).toISOString();
+      if (body.deleteSnapshots) {
+        for (const [id, saved] of this.snapshots) if (saved.metadata.deviceId === target.deviceId) this.snapshots.delete(id);
+        target.latestSnapshot = null; target.historySnapshots = [];
+      }
+      return this.fulfill(route, { status: 204, headers: this.responseHeaders(request) });
+    }
+
+    if (method === 'POST' && (pathname === '/v1/security/password' || pathname === '/v1/security/recovery-key')) {
+      const passwordChange = pathname.endsWith('/password');
+      const fields = passwordChange ? ['authKey', 'newAuthKey', 'newPasswordWrappedMaster', 'appVersion'] :
+        ['authKey', 'newRecoveryAuthKey', 'newRecoveryWrappedMaster', 'appVersion'];
+      const body = this.body(request, fields);
+      if (!body || body.appVersion !== LIMITS.minimumWriteVersion ||
+        !validBase64url(body.authKey, 32) ||
+        (passwordChange && (!validBase64url(body.newAuthKey, 32) || !this.validBlob(body.newPasswordWrappedMaster))) ||
+        (!passwordChange && (!validBase64url(body.newRecoveryAuthKey, 32) || body.newRecoveryAuthKey === this.space.recoveryAuthKey ||
+          !this.validBlob(body.newRecoveryWrappedMaster)))) return this.violation(route, 'invalid-security-body');
+      if (body.authKey !== this.space.authKey) return this.violation(route, 'invalid-security-auth', 401);
+      if (passwordChange) {
+        this.space.authKey = body.newAuthKey;
+        this.space.passwordWrappedMaster = body.newPasswordWrappedMaster;
+      } else {
+        this.space.recoveryAuthKey = body.newRecoveryAuthKey;
+        this.space.recoveryWrappedMaster = body.newRecoveryWrappedMaster;
+      }
+      return this.json(route, 200, { spaceId: this.space.spaceId, deviceId: device.deviceId, ...LIMITS });
+    }
+
     if (method === 'POST' && pathname === '/v1/uploads') {
       const body = request.postDataJSON();
       if (!this.validUpload(body)) return this.violation(route, 'invalid-upload-body');
-      const uploadId = 'upload-' + (++this.sequence);
-      this.uploads.set(uploadId, { uploadId, deviceId: device.deviceId, spaceId: device.spaceId, body, chunks: [] });
-      return this.json(route, 200, { uploadId, snapshotId: body.snapshotId, uploadedChunks: [],
+      const uploadId = uuidFor(++this.sequence);
+      this.uploads.set(uploadId, { uploadId, deviceId: device.deviceId, spaceId: device.spaceId, body, chunks: [], chunkDigests: [] });
+      return this.json(route, 201, { uploadId, snapshotId: body.snapshotId, uploadedChunks: [],
         expiresAt: new Date(Date.now() + 60000).toISOString() });
     }
     const chunkUpload = /^\/v1\/uploads\/([^/]+)\/chunks\/(\d+)$/.exec(pathname);
@@ -220,6 +396,7 @@ class CloudStub {
         return this.violation(route, 'invalid-upload-chunk');
       }
       upload.chunks[index] = Buffer.from(bytes);
+      upload.chunkDigests[index] = headers['x-chunk-sha256'];
       return this.json(route, 200, { chunkIndex: index });
     }
     const commit = /^\/v1\/uploads\/([^/]+)\/commit$/.exec(pathname);
@@ -228,19 +405,18 @@ class CloudStub {
       if (this.receipts.has(key)) return this.json(route, 200, this.receipts.get(key));
       const upload = this.uploads.get(commit[1]);
       const body = this.body(request, ['beforeUploadId', 'sourceSnapshotId']);
-      if (!upload || upload.deviceId !== device.deviceId || upload.spaceId !== device.spaceId || !body ||
-        upload.chunks.length !== upload.body.chunkCount || upload.chunks.some(chunk => !chunk) ||
-        digest(Buffer.concat(upload.chunks)) !== upload.body.ciphertextDigest || body.sourceSnapshotId !== upload.body.sourceSnapshotId) {
+      if (!body || !this.validateStoredUpload(upload, device) || body.sourceSnapshotId !== upload.body.sourceSnapshotId) {
         return this.violation(route, 'invalid-upload-commit');
+      }
+      const beforeUpload = body.beforeUploadId ? this.uploads.get(body.beforeUploadId) : null;
+      if ((upload.body.operation.endsWith('-after') && (!this.validateStoredUpload(beforeUpload, device) ||
+        beforeUpload.body.operation !== upload.body.operation.replace('-after', '-before') ||
+        beforeUpload.body.sourceSnapshotId !== null || beforeUpload.body.snapshotId === upload.body.snapshotId)) ||
+        (!upload.body.operation.endsWith('-after') && body.beforeUploadId !== null)) {
+        return this.violation(route, 'invalid-commit-reference');
       }
       if (this.failReplacementCommit && body.beforeUploadId) {
         return this.json(route, 500, { error: { code: 'INTERNAL_ERROR' } });
-      }
-      const beforeUpload = body.beforeUploadId ? this.uploads.get(body.beforeUploadId) : null;
-      if ((upload.body.operation.endsWith('-after') && (!beforeUpload || beforeUpload.deviceId !== device.deviceId ||
-        beforeUpload.body.operation !== upload.body.operation.replace('-after', '-before'))) ||
-        (!upload.body.operation.endsWith('-after') && body.beforeUploadId !== null)) {
-        return this.violation(route, 'invalid-commit-reference');
       }
       const latest = this.saveLatest(device, upload, beforeUpload);
       const receipt = { operationId: upload.uploadId, latestSnapshotId: latest.snapshotId,
@@ -264,34 +440,52 @@ class CloudStub {
       const original = saved.chunks[index];
       const bytes = this.tamperSnapshotId === snapshotChunk[1]
         ? Buffer.from(original.map((value, offset) => offset === 0 ? value ^ 1 : value)) : original;
-      return route.fulfill({ status: 200, contentType: 'application/octet-stream',
+      return this.fulfill(route, { status: 200, contentType: 'application/octet-stream',
         headers: this.responseHeaders(request, { 'X-Chunk-SHA256': digest(original) }), body: bytes });
     }
     if (method === 'DELETE' && pathname === '/v1/spaces/current') {
       const raw = request.postDataJSON();
       const authField = raw && Object.hasOwn(raw, 'authKey') ? 'authKey' : 'recoveryAuthKey';
       const body = this.body(request, [authField, 'confirmation', 'appVersion']);
-      if (!body || body.confirmation !== '永久删除同步空间' || body.appVersion !== LIMITS.minimumWriteVersion ||
-        !this.space || body[authField] !== this.space[authField]) return this.violation(route, 'invalid-delete-body', 401);
+      if (!body || body.confirmation !== '永久删除同步空间' || body.appVersion !== LIMITS.minimumWriteVersion) {
+        return this.violation(route, 'invalid-delete-body');
+      }
+      if (!this.space || body[authField] !== this.space[authField]) return this.violation(route, 'invalid-delete-auth', 401);
       this.requests[this.requests.length - 1].confirmation = body.confirmation;
       this.requests[this.requests.length - 1].authField = authField;
       this.space = null; this.devices.clear(); this.uploads.clear(); this.snapshots.clear(); this.receipts.clear();
-      return route.fulfill({ status: 204, headers: this.responseHeaders(request) });
+      return this.fulfill(route, { status: 204, headers: this.responseHeaders(request) });
     }
     return this.json(route, 404, { error: { code: 'NOT_FOUND' } });
   }
 }
 
 before(async () => {
-  server = createServer();
-  await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
-  appUrl = 'http://127.0.0.1:' + server.address().port;
+  for (let port = 8000; port <= 8010; port += 1) {
+    const candidate = createServer();
+    try {
+      await new Promise((resolve, reject) => {
+        candidate.once('error', reject);
+        candidate.listen(port, () => { candidate.removeListener('error', reject); resolve(); });
+      });
+      server = candidate; appPort = port; break;
+    } catch (error) {
+      if (!error || error.code !== 'EADDRINUSE') throw error;
+    }
+  }
+  if (!server) throw new Error('No permitted localhost port is available in the deterministic 8000-8010 range.');
+  appUrl = 'http://localhost:' + appPort;
   browser = await chromium.launch({ channel: 'msedge', headless: true });
 });
 
 after(async () => {
-  if (browser) await browser.close();
-  if (server) await new Promise(resolve => server.close(resolve));
+  try {
+    assert.deepEqual(Array.from(INTENDED_ROUTES).filter(route => !coveredRoutes.has(route)), [],
+      'every strict Worker route family must be covered');
+  } finally {
+    if (browser) await browser.close();
+    if (server) await new Promise(resolve => server.close(resolve));
+  }
 });
 
 afterEach(() => {
@@ -316,11 +510,220 @@ async function browserPage(stub, options = {}) {
   await page.goto(appUrl, { waitUntil: 'networkidle' });
   await page.evaluate(() => document.querySelector('.tab[data-partition="settings"]').click());
   await page.locator('#cloud-sync-panel').waitFor({ state: 'visible' });
-  return { context, page, setRemoteVersion(value) { remoteVersion = value; } };
+  return { context, page, stub, setRemoteVersion(value) { remoteVersion = value; } };
+}
+
+async function dispatchStub(stub, options) {
+  const method = options.method || 'GET';
+  const headers = Object.fromEntries(Object.entries({
+    origin: stub.allowedOrigin,
+    ...(method === 'OPTIONS' ? {} : { 'x-qin-app-version': LIMITS.minimumWriteVersion }),
+    ...(options.body === undefined ? {} : { 'content-type': 'application/json' }),
+    ...(options.headers || {})
+  }).map(([key, value]) => [key.toLowerCase(), value]));
+  const request = {
+    url: () => 'https://sync.test' + options.path,
+    method: () => method,
+    headers: () => headers,
+    postDataJSON: () => {
+      if (options.body === undefined) throw new Error('missing JSON body');
+      return structuredClone(options.body);
+    },
+    postDataBuffer: () => Buffer.from(options.bytes || [])
+  };
+  let result;
+  const route = {
+    request: () => request,
+    fulfill: async details => { result = details; return details; },
+    abort: async code => { result = { aborted: code }; return result; }
+  };
+  await stub.handle(route);
+  return result;
+}
+
+function authHeader(device) {
+  return { authorization: `Device ${device.deviceId}.${device.deviceToken}` };
+}
+
+function consumeExpectedViolation(stub, reason, status, expected) {
+  const violation = stub.violations.pop();
+  const request = stub.requests.pop();
+  const response = stub.responses.pop();
+  assert.deepEqual(violation && violation.reason, reason);
+  assert.equal(response && response.status, status);
+  if (expected) {
+    const pathname = normalizedPath(expected.path);
+    assert.deepEqual({ method: request && request.method, pathname: request && request.pathname },
+      { method: expected.method, pathname });
+    assert.deepEqual({ method: response && response.method, pathname: response && response.pathname },
+      { method: expected.method, pathname });
+  }
+  assert.deepEqual(violation && { method: violation.method, pathname: violation.pathname },
+    request && { method: request.method, pathname: request.pathname });
+  assert.deepEqual(Object.keys(request || {}).filter(key => !SAFE_REQUEST_FIELDS.has(key)), [],
+    'failed request observations must contain safe flags only');
+  assert.ok(request && !JSON.stringify(request).includes('authorization'));
+  return response;
+}
+
+async function exerciseStrictContractRoutes(stub) {
+  const original = Array.from(stub.devices.values())[0];
+  const originalAuth = authHeader(original);
+  const syncCodePath = encodeURIComponent(stub.space.syncCode);
+
+  const createValidationStub = new CloudStub();
+  createValidationStub.allowedOrigin = stub.allowedOrigin;
+  await dispatchStub(createValidationStub, { method: 'POST', path: '/v1/spaces', headers: {
+    'idempotency-key': 'strict-invalid-kdf'
+  }, body: {
+    syncCode: 'A'.repeat(26), spaceId: uuidFor(970), kdf: {}, authKey: stub.space.authKey,
+    passwordWrappedMaster: stub.space.passwordWrappedMaster, recoveryAuthKey: stub.space.recoveryAuthKey,
+    recoveryWrappedMaster: stub.space.recoveryWrappedMaster,
+    device: { deviceId: original.deviceId, deviceToken: original.deviceToken, encryptedName: original.encryptedName },
+    appVersion: LIMITS.minimumWriteVersion
+  } });
+  consumeExpectedViolation(createValidationStub, 'invalid-create-body', 400, { method: 'POST', path: '/v1/spaces' });
+
+  const forbidden = await dispatchStub(stub, { path: '/v1/health', headers: { origin: `http://127.0.0.1:${appPort}` } });
+  const forbiddenObservation = consumeExpectedViolation(stub, 'origin-not-allowed', 403, { method: 'GET', path: '/v1/health' });
+  assert.equal(forbiddenObservation.allowOrigin, '');
+  assert.equal(forbiddenObservation.expose, '');
+  assert.equal(forbiddenObservation.vary, 'Origin');
+
+  const preflight = await dispatchStub(stub, { method: 'OPTIONS', path: '/v1/uploads', headers: {
+    'access-control-request-method': 'POST',
+    'access-control-request-headers': 'authorization,content-type,x-qin-app-version,idempotency-key'
+  } });
+  assert.equal(preflight.status, 204);
+  assert.equal(preflight.headers['Access-Control-Allow-Origin'], stub.allowedOrigin);
+  assert.equal(preflight.headers.Vary, 'Origin');
+  assert.equal(preflight.headers['Access-Control-Expose-Headers'], 'X-Chunk-SHA256');
+
+  const missingKeyRoutes = [
+    ['POST', '/v1/spaces', {}, {}],
+    ['POST', `/v1/spaces/${syncCodePath}/pair`, {}, {}],
+    ['POST', `/v1/spaces/${syncCodePath}/recover`, {}, {}],
+    ['POST', '/v1/uploads', {}, originalAuth],
+    ['POST', `/v1/uploads/${uuidFor(900)}/commit`, {}, originalAuth],
+    ['POST', '/v1/security/password', {}, originalAuth],
+    ['POST', '/v1/security/recovery-key', {}, originalAuth],
+    ['DELETE', '/v1/spaces/current', {}, originalAuth]
+  ];
+  for (const [method, path, body, headers] of missingKeyRoutes) {
+    await dispatchStub(stub, { method, path, body, headers });
+    consumeExpectedViolation(stub, 'missing-idempotency-key', 400, { method, path: new URL('https://sync.test' + path).pathname });
+  }
+
+  const unknownFieldRoutes = [
+    ['POST', '/v1/spaces', 'invalid-create-body', { 'idempotency-key': 'unknown-create' }],
+    ['POST', `/v1/spaces/${syncCodePath}/pair`, 'invalid-pair-body', { 'idempotency-key': 'unknown-pair' }],
+    ['POST', `/v1/spaces/${syncCodePath}/recover`, 'invalid-recover-body', { 'idempotency-key': 'unknown-recover' }],
+    ['PATCH', `/v1/devices/${original.deviceId}`, 'invalid-device-patch-body', originalAuth],
+    ['DELETE', `/v1/devices/${original.deviceId}`, 'invalid-device-delete-body', originalAuth],
+    ['POST', '/v1/uploads', 'invalid-upload-body', { ...originalAuth, 'idempotency-key': 'unknown-upload' }],
+    ['POST', `/v1/uploads/${uuidFor(901)}/commit`, 'invalid-upload-commit', { ...originalAuth, 'idempotency-key': 'unknown-commit' }],
+    ['POST', '/v1/security/password', 'invalid-security-body', { ...originalAuth, 'idempotency-key': 'unknown-password' }],
+    ['POST', '/v1/security/recovery-key', 'invalid-security-body', { ...originalAuth, 'idempotency-key': 'unknown-recovery-key' }],
+    ['DELETE', '/v1/spaces/current', 'invalid-delete-body', { ...originalAuth, 'idempotency-key': 'unknown-delete' }]
+  ];
+  for (const [method, path, reason, headers] of unknownFieldRoutes) {
+    await dispatchStub(stub, { method, path, body: { unexpected: true }, headers });
+    consumeExpectedViolation(stub, reason, 400, { method, path: new URL('https://sync.test' + path).pathname });
+  }
+
+  await dispatchStub(stub, { method: 'PATCH', path: `/v1/devices/${original.deviceId}`,
+    body: { encryptedName: original.encryptedName }, headers: { authorization: `Device ${original.deviceId}.wrong-token` } });
+  consumeExpectedViolation(stub, 'invalid-device-auth', 401, { method: 'PATCH', path: `/v1/devices/${original.deviceId}` });
+
+  assert.equal(stub.validBlob(original.encryptedName, false), true, JSON.stringify({
+    fields: Object.keys(original.encryptedName).sort(), ivBytes: Buffer.from(original.encryptedName.iv, 'base64url').length,
+    ciphertextBytes: Buffer.from(original.encryptedName.ciphertext, 'base64url').length
+  }));
+  let response = await dispatchStub(stub, { method: 'PATCH', path: `/v1/devices/${original.deviceId}`,
+    body: { encryptedName: original.encryptedName }, headers: originalAuth });
+  assert.equal(response.status, 200, JSON.stringify(stub.violations.at(-1)));
+
+  await dispatchStub(stub, { method: 'PATCH', path: `/v1/devices/${original.deviceId}`,
+    body: { encryptedName: { ...original.encryptedName, iv: 'not-base64url' } }, headers: originalAuth });
+  consumeExpectedViolation(stub, 'invalid-device-patch-body', 400, { method: 'PATCH', path: `/v1/devices/${original.deviceId}` });
+
+  const nextAuth = digest(Buffer.from('strict-password-auth'));
+  response = await dispatchStub(stub, { method: 'POST', path: '/v1/security/password', headers: {
+    ...originalAuth, 'idempotency-key': 'strict-password-operation'
+  }, body: { authKey: stub.space.authKey, newAuthKey: nextAuth,
+    newPasswordWrappedMaster: stub.space.passwordWrappedMaster, appVersion: LIMITS.minimumWriteVersion } });
+  assert.equal(response.status, 200);
+
+  const nextRecovery = digest(Buffer.from('strict-recovery-auth'));
+  response = await dispatchStub(stub, { method: 'POST', path: '/v1/security/recovery-key', headers: {
+    ...originalAuth, 'idempotency-key': 'strict-recovery-operation'
+  }, body: { authKey: nextAuth, newRecoveryAuthKey: nextRecovery,
+    newRecoveryWrappedMaster: stub.space.recoveryWrappedMaster, appVersion: LIMITS.minimumWriteVersion } });
+  assert.equal(response.status, 200);
+
+  response = await dispatchStub(stub, { method: 'DELETE', path: `/v1/devices/${original.deviceId}`,
+    headers: originalAuth, body: { deleteSnapshots: false } });
+  assert.equal(response.status, 204);
+
+  const replacement = {
+    deviceId: uuidFor(950), deviceToken: digest(Buffer.from('strict-new-device-token')),
+    encryptedName: original.encryptedName
+  };
+  const recoveredAuth = digest(Buffer.from('strict-recovered-auth'));
+  const recoveredRecovery = digest(Buffer.from('strict-recovered-recovery'));
+  response = await dispatchStub(stub, { method: 'POST', path: `/v1/spaces/${syncCodePath}/recover`, headers: {
+    'idempotency-key': 'strict-recover-operation'
+  }, body: { recoveryAuthKey: nextRecovery, newAuthKey: recoveredAuth,
+    newPasswordWrappedMaster: stub.space.passwordWrappedMaster, newRecoveryAuthKey: recoveredRecovery,
+    newRecoveryWrappedMaster: stub.space.recoveryWrappedMaster, device: replacement, appVersion: LIMITS.minimumWriteVersion } });
+  assert.equal(response.status, 200);
+
+  await dispatchStub(stub, { method: 'POST', path: `/v1/spaces/${syncCodePath}/recover`, headers: {
+    'idempotency-key': 'strict-recover-unknown-field'
+  }, body: { recoveryAuthKey: recoveredRecovery, newAuthKey: recoveredAuth,
+    newPasswordWrappedMaster: stub.space.passwordWrappedMaster, newRecoveryAuthKey: nextRecovery,
+    newRecoveryWrappedMaster: stub.space.recoveryWrappedMaster, device: replacement,
+    appVersion: LIMITS.minimumWriteVersion, unexpected: true } });
+  consumeExpectedViolation(stub, 'invalid-recover-body', 400, { method: 'POST', path: `/v1/spaces/${stub.space.syncCode}/recover` });
+
+  const replacementDevice = stub.devices.get(replacement.deviceId);
+  const sourceSnapshotId = original.latestSnapshot.snapshotId;
+  const bytes = Buffer.from('0123456789abcdef');
+  const baseUpload = { appVersion: LIMITS.minimumWriteVersion, formatVersion: 1, schemaVersion: 1,
+    encoding: 'identity', clientCreatedAt: '2026-09-11T08:00:00.000Z', dataHash: digest(Buffer.from('strict-data')),
+    iv: 'A'.repeat(16), ciphertextBytes: bytes.length, chunkCount: 1, ciphertextDigest: digest(bytes),
+    encryptedSummary: original.encryptedName };
+  const beforeId = uuidFor(961), afterId = uuidFor(962);
+
+  await dispatchStub(stub, { method: 'POST', path: '/v1/uploads', headers: {
+    ...authHeader(replacementDevice), 'idempotency-key': 'strict-invalid-source-relation'
+  }, body: { ...baseUpload, operation: 'replace-after', snapshotId: uuidFor(965), sourceSnapshotId: null } });
+  consumeExpectedViolation(stub, 'invalid-upload-body', 400, { method: 'POST', path: '/v1/uploads' });
+
+  const beforeUpload = { uploadId: beforeId, deviceId: replacement.deviceId, spaceId: stub.space.spaceId,
+    body: { ...baseUpload, operation: 'replace-before', snapshotId: uuidFor(963), sourceSnapshotId: null },
+    chunks: [], chunkDigests: [] };
+  const afterUpload = { uploadId: afterId, deviceId: replacement.deviceId, spaceId: stub.space.spaceId,
+    body: { ...baseUpload, operation: 'replace-after', snapshotId: uuidFor(964), sourceSnapshotId },
+    chunks: [bytes], chunkDigests: [digest(bytes)] };
+  stub.uploads.set(beforeId, beforeUpload); stub.uploads.set(afterId, afterUpload);
+  const commitRequest = { method: 'POST', path: `/v1/uploads/${afterId}/commit`, headers: {
+    ...authHeader(replacementDevice), 'idempotency-key': 'strict-incomplete-before'
+  }, body: { beforeUploadId: beforeId, sourceSnapshotId } };
+  await dispatchStub(stub, commitRequest);
+  consumeExpectedViolation(stub, 'invalid-commit-reference', 400, { method: 'POST', path: `/v1/uploads/${afterId}/commit` });
+  assert.equal(stub.receipts.has('strict-incomplete-before'), false);
+
+  beforeUpload.chunks = [bytes]; beforeUpload.chunkDigests = [digest(Buffer.from('tampered-before'))];
+  commitRequest.headers['idempotency-key'] = 'strict-tampered-before';
+  await dispatchStub(stub, commitRequest);
+  consumeExpectedViolation(stub, 'invalid-commit-reference', 400, { method: 'POST', path: `/v1/uploads/${afterId}/commit` });
+  assert.equal(stub.receipts.has('strict-tampered-before'), false);
 }
 
 async function createSpace(session, deviceName = 'Windows 设备 1', localValue = 'source-progress', inspectRecovery) {
-  const { page } = session;
+  const { page, stub } = session;
+  const requestStart = stub.requests.length;
   await page.evaluate(value => localStorage.setItem('qinshi_browser_progress', value), localValue);
   await page.locator('#cloud-sync-create-device').fill(deviceName);
   await page.locator('#cloud-sync-create-password').fill(PASSWORD);
@@ -335,6 +738,14 @@ async function createSpace(session, deviceName = 'Windows 设备 1', localValue 
   await page.locator('#cloud-sync-recovery-confirm').click();
   await page.locator('#cloud-sync-status').filter({ hasText: '同步空间已创建' }).waitFor();
   await page.locator('#cloud-sync-paired').waitFor({ state: 'visible' });
+  const flow = stub.requests.slice(requestStart).filter(entry => entry.method !== 'OPTIONS');
+  const createIndex = flow.findIndex(entry => entry.method === 'POST' && entry.pathname === '/v1/spaces');
+  const uploadIndex = flow.findIndex(entry => entry.method === 'POST' && entry.pathname === '/v1/uploads');
+  const chunkIndex = flow.findIndex(entry => entry.method === 'PUT' && entry.pathname === '/v1/uploads/:uploadId/chunks/:index');
+  const commitIndex = flow.findIndex(entry => entry.method === 'POST' && entry.pathname === '/v1/uploads/:uploadId/commit');
+  assert.ok(createIndex >= 0 && createIndex < uploadIndex && uploadIndex < chunkIndex && chunkIndex < commitIndex,
+    'create must precede upload-create, chunk PUT and commit');
+  assert.equal(flow.filter(entry => entry.method === 'POST' && entry.pathname === '/v1/spaces').length, 1);
   return syncCode;
 }
 
@@ -391,13 +802,19 @@ async function assertModalClosed(page, layerSelector, restoredFocusId) {
 }
 
 async function joinSpace(session, syncCode, deviceName = '当前设备', localValue = 'target-progress') {
-  const { page } = session;
+  const { page, stub } = session;
+  const requestStart = stub.requests.length;
   await page.evaluate(value => localStorage.setItem('qinshi_browser_progress', value), localValue);
   await page.locator('#cloud-sync-join-code').fill(syncCode);
   await page.locator('#cloud-sync-join-device').fill(deviceName);
   await page.locator('#cloud-sync-join-password').fill(PASSWORD);
   await page.locator('#cloud-sync-join-form button[type="submit"]').click();
   await page.locator('#cloud-sync-status').filter({ hasText: '尚未上传或覆盖' }).waitFor();
+  const flow = stub.requests.slice(requestStart).filter(entry => entry.method !== 'OPTIONS');
+  const parametersIndex = flow.findIndex(entry => entry.method === 'GET' && entry.pathname === '/v1/spaces/:code/parameters');
+  const pairIndex = flow.findIndex(entry => entry.method === 'POST' && entry.pathname === '/v1/spaces/:code/pair');
+  assert.ok(parametersIndex >= 0 && parametersIndex < pairIndex, 'join must read parameters before pair');
+  assert.equal(flow.some(entry => entry.pathname === '/v1/uploads'), false, 'join must not upload');
 }
 
 async function pairedDevices(stub) {
@@ -437,6 +854,7 @@ test('1 创建空间展示一次性恢复凭据并在确认后上传首份快照
     assert.equal(creates.length, 1);
     assert.equal(creates[0].hasVersion, true);
     assert.equal(creates[0].hasIdempotency, true);
+    await exerciseStrictContractRoutes(stub);
   } finally { await session.context.close(); }
 });
 
@@ -584,6 +1002,7 @@ test('8 缺失或篡改的分块在替换前被拒绝', { timeout: 120000 }, asy
     await target.page.locator('#cloud-sync-confirm-check').check();
     await target.page.locator('#cloud-sync-confirm-overwrite').click();
     await target.page.locator('#cloud-sync-status').filter({ hasText: '替换前测试失败' }).waitFor();
+    await target.page.waitForFunction(() => window.__cloudSyncProbe.rollback === 1);
     assert.deepEqual(await target.page.evaluate(() => window.__cloudSyncProbe), { resume: 0, rollback: 1 });
     assert.equal(await target.page.locator('#cloud-sync-rollback').isVisible(), false);
     await target.page.reload({ waitUntil: 'networkidle' });
@@ -654,6 +1073,8 @@ test('11 云同步界面接入后 JSON 导出仍生成有效完整备份', { tim
     assert.equal(payload.formatVersion, 1);
     assert.equal(payload.data.qinshi_browser_progress, 'json-export-value');
     assert.equal(Object.hasOwn(payload.data, 'unmanaged-key'), false);
+    assert.deepEqual(stub.requests, []);
+    assert.deepEqual(stub.responses, []);
   } finally { await session.context.close(); }
 });
 

@@ -177,6 +177,97 @@ test("云同步设置页保留 JSON 备份并提供显式来源、确认、恢�
   assert.match(html, /aria-label="显示加入同步密码"/);
 });
 
+test("云同步部署手册限定 Workers Free 与 D1 Free 并在免费额度耗尽时暂停", () => {
+  const runbookPath = path.join(__dirname, "cloud-sync", "worker", "README.md");
+  assert.ok(fs.existsSync(runbookPath), "应提供云同步 Worker 免费部署手册");
+  const runbook = fs.readFileSync(runbookPath, "utf8");
+  assert.match(runbook, /Workers Free/);
+  assert.match(runbook, /D1 Free/);
+  for (const prohibited of ["R2", "Durable Objects", "scheduled triggers", "Workers Paid", "paid add-ons", "usage-based upgrades", "auto-purchase", "auto-charge"]) {
+    assert.match(runbook, new RegExp(prohibited.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i"), prohibited);
+  }
+  assert.match(runbook, /免费额度[^\n]*(?:耗尽|用尽)[^\n]*(?:暂停|停止)[^\n]*云同步/);
+  assert.match(runbook, /本地功能[^\n]*JSON[^\n]*备份[^\n]*(?:继续|仍然|不受影响)/);
+  assert.match(runbook, /第三方[^\n]*(?:政策|条款|额度|定价)[^\n]*(?:变化|调整)/);
+  assert.match(runbook, /Free[^\n]*(?:计划|套餐)[^\n]*(?:条件|前提)/);
+  assert.match(runbook, /只同步[^\n]*(?:加密的)?工具数据快照/);
+  assert.match(runbook, /PWA[^\n]*(?:更新|发布)[^\n]*(?:代码|功能)/);
+  assert.doesNotMatch(runbook, /(?:保证|承诺)[^\n]{0,20}(?:Cloudflare|第三方)[^\n]{0,20}(?:永久免费|永远免费)/);
+});
+
+test("云同步部署手册固定本地命令、密文检查和安全发布顺序", () => {
+  const runbookPath = path.join(__dirname, "cloud-sync", "worker", "README.md");
+  assert.ok(fs.existsSync(runbookPath), "应提供云同步 Worker 免费部署手册");
+  const runbook = fs.readFileSync(runbookPath, "utf8");
+  for (const command of [
+    "cd cloud-sync/worker",
+    "npm ci",
+    "npx wrangler d1 migrations apply qin-cloud-sync-test --local -c wrangler.test.jsonc",
+    "npm test -- --max-workers=1 --no-isolate",
+    "npx wrangler dev -c wrangler.test.jsonc"
+  ]) assert.ok(runbook.includes(command), command);
+
+  const orderedStages = [
+    "登录、whoami 与 Free 计划检查",
+    "创建 D1",
+    "生成忽略的本地配置",
+    "执行远端迁移",
+    "部署向后兼容 Worker",
+    "公网健康、CORS 与仅密文检查",
+    "后续配置 PWA API URL",
+    "最后提升最低写入版本"
+  ];
+  let previous = -1;
+  for (const stage of orderedStages) {
+    const current = runbook.indexOf(stage);
+    assert.ok(current > previous, `安全发布顺序缺少或错序：${stage}`);
+    previous = current;
+  }
+  for (const operation of ["health", "create", "pair", "upload", "source replacement", "keep 3 histories", "revoke", "recovery"]) {
+    assert.match(runbook, new RegExp(`\\b${operation.replace(/ /g, "\\s+")}\\b`, "i"), operation);
+  }
+  for (const plaintext of ["device name", "qinshi_", "password", "recovery key", "device token"]) {
+    assert.match(runbook, new RegExp(plaintext.replace(/ /g, "\\s+"), "i"), plaintext);
+  }
+  assert.match(runbook, /来源设备[^\n]*→[^\n]*当前设备/);
+  assert.match(runbook, /最近[^\n]*3[^\n]*(?:份|次)[^\n]*历史/);
+});
+
+test("云同步部署配置只提交零 UUID 并忽略本地生产配置", () => {
+  const example = fs.readFileSync(path.join(__dirname, "cloud-sync", "worker", "wrangler.jsonc.example"), "utf8");
+  const gitignore = fs.readFileSync(path.join(__dirname, ".gitignore"), "utf8");
+  assert.match(example, /"database_id"\s*:\s*"00000000-0000-0000-0000-000000000000"/);
+  assert.match(example, /intentionally non-deployable/i);
+  assert.match(gitignore, /^cloud-sync\/worker\/wrangler\.local\.jsonc$/m);
+
+  const checkedFiles = [
+    "README.md",
+    "cloud-sync/worker/README.md",
+    "cloud-sync/worker/wrangler.jsonc.example",
+    "cloud-sync/worker/wrangler.test.jsonc",
+    "js/cloud-sync-config.js"
+  ];
+  const zeroUuid = "00000000-0000-0000-0000-000000000000";
+  const uuidPattern = /\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b/ig;
+  for (const relative of checkedFiles) {
+    const absolute = path.join(__dirname, relative);
+    assert.ok(fs.existsSync(absolute), `${relative} 应存在`);
+    const uuids = (fs.readFileSync(absolute, "utf8").match(uuidPattern) || [])
+      .filter((value) => value.toLowerCase() !== zeroUuid);
+    assert.deepStrictEqual(uuids, [], `${relative} 不得提交真实 UUID`);
+  }
+});
+
+test("云同步部署前公共配置保持禁用且根说明指向免费手册", () => {
+  const config = fs.readFileSync(path.join(__dirname, "js", "cloud-sync-config.js"), "utf8");
+  const rootReadme = fs.readFileSync(path.join(__dirname, "README.md"), "utf8");
+  assert.match(config, /enabled:\s*false/);
+  assert.match(config, /apiBaseUrl:\s*""/);
+  assert.match(rootReadme, /cloud-sync\/worker\/README\.md/);
+  assert.match(rootReadme, /云同步只同步[^\n]*工具数据/);
+  assert.match(rootReadme, /工具代码[^\n]*PWA[^\n]*更新/);
+});
+
 test("首页提供合阵工作台及其数据、核心和界面脚本", async () => {
   await withServer(async (port) => {
     const page = await get(port, "/");

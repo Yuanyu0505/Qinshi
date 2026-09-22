@@ -195,6 +195,12 @@ class CloudStub {
     return total === upload.body.ciphertextBytes && digest(Buffer.concat(upload.chunks)) === upload.body.ciphertextDigest;
   }
 
+  validCommittedSource(snapshotId, spaceId) {
+    if (snapshotId === null) return true;
+    const source = this.snapshots.get(snapshotId);
+    return Boolean(source && source.spaceId === spaceId && source.role !== 'staged');
+  }
+
   metadata(upload, deviceId) {
     const { operation, ...body } = upload.body;
     return { ...body, deviceId, serverCreatedAt: new Date(1700000000000 + (++this.sequence * 1000)).toISOString() };
@@ -202,12 +208,16 @@ class CloudStub {
 
   saveLatest(device, upload, beforeUpload) {
     const latest = this.metadata(upload, device.deviceId);
-    this.snapshots.set(latest.snapshotId, { metadata: latest, chunks: upload.chunks.slice(), spaceId: device.spaceId });
+    this.snapshots.set(latest.snapshotId, { metadata: latest, chunks: upload.chunks.slice(),
+      spaceId: device.spaceId, role: 'latest' });
     if (beforeUpload) {
       const before = this.metadata(beforeUpload, device.deviceId);
-      this.snapshots.set(before.snapshotId, { metadata: before, chunks: beforeUpload.chunks.slice(), spaceId: device.spaceId });
+      this.snapshots.set(before.snapshotId, { metadata: before, chunks: beforeUpload.chunks.slice(),
+        spaceId: device.spaceId, role: 'history' });
       device.historySnapshots.unshift(before);
     } else if (device.latestSnapshot) {
+      const prior = this.snapshots.get(device.latestSnapshot.snapshotId);
+      if (prior) prior.role = 'history';
       device.historySnapshots.unshift(device.latestSnapshot);
     }
     device.historySnapshots = device.historySnapshots.slice(0, 3);
@@ -380,8 +390,13 @@ class CloudStub {
     if (method === 'POST' && pathname === '/v1/uploads') {
       const body = request.postDataJSON();
       if (!this.validUpload(body)) return this.violation(route, 'invalid-upload-body');
+      if (!this.validCommittedSource(body.sourceSnapshotId, device.spaceId)) {
+        return this.violation(route, 'invalid-upload-source');
+      }
       const uploadId = uuidFor(++this.sequence);
       this.uploads.set(uploadId, { uploadId, deviceId: device.deviceId, spaceId: device.spaceId, body, chunks: [], chunkDigests: [] });
+      this.snapshots.set(body.snapshotId, { metadata: { ...body, deviceId: device.deviceId }, chunks: [],
+        spaceId: device.spaceId, role: 'staged', uploadId });
       return this.json(route, 201, { uploadId, snapshotId: body.snapshotId, uploadedChunks: [],
         expiresAt: new Date(Date.now() + 60000).toISOString() });
     }
@@ -408,6 +423,9 @@ class CloudStub {
       if (!body || !this.validateStoredUpload(upload, device) || body.sourceSnapshotId !== upload.body.sourceSnapshotId) {
         return this.violation(route, 'invalid-upload-commit');
       }
+      if (!this.validCommittedSource(upload.body.sourceSnapshotId, upload.spaceId)) {
+        return this.violation(route, 'invalid-commit-source');
+      }
       const beforeUpload = body.beforeUploadId ? this.uploads.get(body.beforeUploadId) : null;
       if ((upload.body.operation.endsWith('-after') && (!this.validateStoredUpload(beforeUpload, device) ||
         beforeUpload.body.operation !== upload.body.operation.replace('-after', '-before') ||
@@ -429,14 +447,16 @@ class CloudStub {
     const snapshot = /^\/v1\/snapshots\/([^/]+)$/.exec(pathname);
     if (method === 'GET' && snapshot) {
       const saved = this.snapshots.get(snapshot[1]);
-      return saved && saved.spaceId === device.spaceId ? this.json(route, 200, saved.metadata) :
+      return saved && saved.spaceId === device.spaceId && saved.role !== 'staged' ? this.json(route, 200, saved.metadata) :
         this.json(route, 404, { error: { code: 'NOT_FOUND' } });
     }
     const snapshotChunk = /^\/v1\/snapshots\/([^/]+)\/chunks\/(\d+)$/.exec(pathname);
     if (method === 'GET' && snapshotChunk) {
       const saved = this.snapshots.get(snapshotChunk[1]);
       const index = Number(snapshotChunk[2]);
-      if (!saved || saved.spaceId !== device.spaceId || !saved.chunks[index]) return this.json(route, 404, { error: { code: 'NOT_FOUND' } });
+      if (!saved || saved.spaceId !== device.spaceId || saved.role === 'staged' || !saved.chunks[index]) {
+        return this.json(route, 404, { error: { code: 'NOT_FOUND' } });
+      }
       const original = saved.chunks[index];
       const bytes = this.tamperSnapshotId === snapshotChunk[1]
         ? Buffer.from(original.map((value, offset) => offset === 0 ? value ^ 1 : value)) : original;
@@ -695,6 +715,21 @@ async function exerciseStrictContractRoutes(stub) {
     encryptedSummary: original.encryptedName };
   const beforeId = uuidFor(961), afterId = uuidFor(962);
 
+  const missingSourceId = uuidFor(966);
+  const crossSpaceSourceId = uuidFor(967);
+  const stagedSourceId = uuidFor(968);
+  stub.snapshots.set(crossSpaceSourceId, { metadata: { snapshotId: crossSpaceSourceId }, chunks: [bytes],
+    spaceId: uuidFor(980), role: 'latest' });
+  stub.snapshots.set(stagedSourceId, { metadata: { snapshotId: stagedSourceId }, chunks: [bytes],
+    spaceId: stub.space.spaceId, role: 'staged' });
+  for (const [label, invalidSourceId] of [['missing', missingSourceId], ['cross-space', crossSpaceSourceId], ['staged', stagedSourceId]]) {
+    await dispatchStub(stub, { method: 'POST', path: '/v1/uploads', headers: {
+      ...authHeader(replacementDevice), 'idempotency-key': `strict-${label}-source-create`
+    }, body: { ...baseUpload, operation: 'replace-after', snapshotId: uuidFor(981 + label.length),
+      sourceSnapshotId: invalidSourceId } });
+    consumeExpectedViolation(stub, 'invalid-upload-source', 400, { method: 'POST', path: '/v1/uploads' });
+  }
+
   await dispatchStub(stub, { method: 'POST', path: '/v1/uploads', headers: {
     ...authHeader(replacementDevice), 'idempotency-key': 'strict-invalid-source-relation'
   }, body: { ...baseUpload, operation: 'replace-after', snapshotId: uuidFor(965), sourceSnapshotId: null } });
@@ -702,7 +737,7 @@ async function exerciseStrictContractRoutes(stub) {
 
   const beforeUpload = { uploadId: beforeId, deviceId: replacement.deviceId, spaceId: stub.space.spaceId,
     body: { ...baseUpload, operation: 'replace-before', snapshotId: uuidFor(963), sourceSnapshotId: null },
-    chunks: [], chunkDigests: [] };
+    chunks: [bytes], chunkDigests: [digest(bytes)] };
   const afterUpload = { uploadId: afterId, deviceId: replacement.deviceId, spaceId: stub.space.spaceId,
     body: { ...baseUpload, operation: 'replace-after', snapshotId: uuidFor(964), sourceSnapshotId },
     chunks: [bytes], chunkDigests: [digest(bytes)] };
@@ -710,6 +745,16 @@ async function exerciseStrictContractRoutes(stub) {
   const commitRequest = { method: 'POST', path: `/v1/uploads/${afterId}/commit`, headers: {
     ...authHeader(replacementDevice), 'idempotency-key': 'strict-incomplete-before'
   }, body: { beforeUploadId: beforeId, sourceSnapshotId } };
+
+  commitRequest.headers['idempotency-key'] = 'strict-mismatched-source';
+  commitRequest.body.sourceSnapshotId = uuidFor(969);
+  await dispatchStub(stub, commitRequest);
+  consumeExpectedViolation(stub, 'invalid-upload-commit', 400, { method: 'POST', path: `/v1/uploads/${afterId}/commit` });
+  assert.equal(stub.receipts.has('strict-mismatched-source'), false);
+
+  beforeUpload.chunks = []; beforeUpload.chunkDigests = [];
+  commitRequest.headers['idempotency-key'] = 'strict-incomplete-before';
+  commitRequest.body.sourceSnapshotId = sourceSnapshotId;
   await dispatchStub(stub, commitRequest);
   consumeExpectedViolation(stub, 'invalid-commit-reference', 400, { method: 'POST', path: `/v1/uploads/${afterId}/commit` });
   assert.equal(stub.receipts.has('strict-incomplete-before'), false);
@@ -719,6 +764,35 @@ async function exerciseStrictContractRoutes(stub) {
   await dispatchStub(stub, commitRequest);
   consumeExpectedViolation(stub, 'invalid-commit-reference', 400, { method: 'POST', path: `/v1/uploads/${afterId}/commit` });
   assert.equal(stub.receipts.has('strict-tampered-before'), false);
+
+  const deletingBeforeSnapshotId = uuidFor(971);
+  const deletingAfterSnapshotId = uuidFor(972);
+  const createStaged = async (body, operationKey) => {
+    const created = await dispatchStub(stub, { method: 'POST', path: '/v1/uploads', headers: {
+      ...authHeader(replacementDevice), 'idempotency-key': operationKey
+    }, body });
+    assert.equal(created.status, 201);
+    return JSON.parse(created.body).uploadId;
+  };
+  const putStagedChunk = async (uploadId) => {
+    const uploaded = await dispatchStub(stub, { method: 'PUT', path: `/v1/uploads/${uploadId}/chunks/0`, headers: {
+      ...authHeader(replacementDevice), 'content-type': 'application/octet-stream', 'x-chunk-sha256': digest(bytes)
+    }, bytes });
+    assert.equal(uploaded.status, 200);
+  };
+  const deletingBeforeId = await createStaged({ ...baseUpload, operation: 'replace-before',
+    snapshotId: deletingBeforeSnapshotId, sourceSnapshotId: null }, 'strict-delete-source-before-create');
+  const deletingAfterId = await createStaged({ ...baseUpload, operation: 'replace-after',
+    snapshotId: deletingAfterSnapshotId, sourceSnapshotId }, 'strict-delete-source-after-create');
+  await putStagedChunk(deletingBeforeId);
+  await putStagedChunk(deletingAfterId);
+  stub.snapshots.delete(sourceSnapshotId);
+  await dispatchStub(stub, { method: 'POST', path: `/v1/uploads/${deletingAfterId}/commit`, headers: {
+    ...authHeader(replacementDevice), 'idempotency-key': 'strict-deleted-source-commit'
+  }, body: { beforeUploadId: deletingBeforeId, sourceSnapshotId } });
+  consumeExpectedViolation(stub, 'invalid-commit-source', 400,
+    { method: 'POST', path: `/v1/uploads/${deletingAfterId}/commit` });
+  assert.equal(stub.receipts.has('strict-deleted-source-commit'), false);
 }
 
 async function createSpace(session, deviceName = 'Windows 设备 1', localValue = 'source-progress', inspectRecovery) {

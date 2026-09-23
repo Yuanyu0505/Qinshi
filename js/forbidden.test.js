@@ -5,6 +5,7 @@ const F = require("./forbidden.js");
 const current = DATA.occurrences.find(item => item.id === "2026-08-27_shadow_hunt");
 const wind = DATA.occurrences.find(item => item.id === "2026-09-17_wind_forest_fire_mountain");
 const windResolved = F.resolveTemplate(DATA, wind);
+const finalOccurrence = DATA.occurrences[DATA.occurrences.length - 1];
 
 assert.strictEqual(F.statusFor(current, "2026-08-27"), "current");
 assert.strictEqual(F.statusFor(current, "2026-08-31"), "history");
@@ -32,6 +33,12 @@ assert.deepStrictEqual(windResolved.equipmentFragmentRows, [
   ["月华战袍", "七海蛟龙甲"],
   ["白玉君子佩", "黄金牡丹"]
 ]);
+assert.strictEqual(DATA.meta.lastDate, "2026-11-04");
+assert.deepStrictEqual(
+  [finalOccurrence.id, finalOccurrence.start, finalOccurrence.end, finalOccurrence.templateId],
+  ["2026-11-02_white_snow", "2026-11-02", "2026-11-04", "white_snow"]
+);
+assert.strictEqual(DATA.occurrences.some(item => item.start > "2026-11-04"), false);
 
 assert.strictEqual(F.shouldToggleToken({ x: 10, y: 10 }, { x: 12, y: 13 }, ""), true);
 assert.strictEqual(F.shouldToggleToken({ x: 10, y: 10 }, { x: 25, y: 10 }, ""), false);

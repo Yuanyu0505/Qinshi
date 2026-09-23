@@ -13,8 +13,8 @@ OUT = WORKTREE_ROOT / "data" / "inscription.js"
 
 TIANS = ["天府", "天相", "天同", "天梁", "天机"]
 SOURCE_SHIELDS = ["天遁", "地遁", "人遁", "风遁", "云遁", "龙遁", "虎遁", "神遁", "鬼遁"]
-DISPLAY_SHIELDS = [name.replace("遁", "盾") for name in SOURCE_SHIELDS]
-EXCLUDED_NAMES = set(SOURCE_SHIELDS + DISPLAY_SHIELDS)
+DISPLAY_SHIELDS = SOURCE_SHIELDS
+EXCLUDED_NAMES = set(SOURCE_SHIELDS)
 
 
 def read_area(ws, start_row, end_row, quality, allowed_tians):

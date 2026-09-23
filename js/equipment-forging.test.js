@@ -4,11 +4,13 @@ const fs = require("node:fs");
 const path = require("node:path");
 const vm = require("node:vm");
 const EquipmentForging = require("./equipment-forging.js");
+const ContentUpdate = require("../data/2026-09-content-update.js");
 
 function loadForgingItems() {
   const context = { window: {} };
   const source = fs.readFileSync(path.join(__dirname, "..", "data", "forging.js"), "utf8");
   vm.runInNewContext(source, context);
+  ContentUpdate.apply(context.window);
   return context.window.FORGING_DATA.items;
 }
 
@@ -16,6 +18,7 @@ function loadEquipmentItems() {
   const context = { window: {} };
   const source = fs.readFileSync(path.join(__dirname, "..", "data", "special-equipment.js"), "utf8");
   vm.runInNewContext(source, context);
+  ContentUpdate.apply(context.window);
   return context.window.SPECIAL_EQUIPMENT_DATA.items;
 }
 
@@ -72,7 +75,9 @@ test("装备锻造跳转：所有已确认的非同名神兵使用明确对应�
     神兵吕览: "吕氏春秋",
     神兵冥史: "冥界史诗",
     神兵百家: "百家杂记",
-    神兵南华: "南华真经"
+    神兵南华: "南华真经",
+    神兵影虎: "影虎",
+    "神兵·影虎": "影虎"
   };
 
   Object.entries(expected).forEach(([name, target]) => {
@@ -195,6 +200,9 @@ test("个人进度目录：普通名、神兵名和唯一别名解析为同一�
   assert.strictEqual(EquipmentForging.resolveProgressFamily(catalog, "神兵月光"), "月光耳坠");
   assert.strictEqual(EquipmentForging.resolveProgressFamily(catalog, "月光"), "月光耳坠");
   assert.strictEqual(EquipmentForging.resolveProgressFamily(catalog, "神兵"), null);
+  assert.strictEqual(EquipmentForging.resolveProgressFamily(catalog, "影虎"), "影虎");
+  assert.strictEqual(EquipmentForging.resolveProgressFamily(catalog, "神兵影虎"), "影虎");
+  assert.strictEqual(EquipmentForging.resolveProgressFamily(catalog, "神兵·影虎"), "影虎");
 });
 
 test("锻造共享查询：神兵名和唯一简称统一为普通锻造装备族", () => {

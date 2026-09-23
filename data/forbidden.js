@@ -274,11 +274,17 @@
     occurrence("2026-10-01_shadow_hunt", "2026-10-01", "2026-10-04", "大", "shadow_hunt"),
     occurrence("2026-10-05_soul_gathering", "2026-10-05", "2026-10-07", "小", "soul_gathering"),
     occurrence("2026-10-08_song_dance", "2026-10-08", "2026-10-11", "大", "song_dance"),
-    occurrence("2026-10-12_yin_yang", "2026-10-12", "2026-10-14", "小", "yin_yang")
+    occurrence("2026-10-12_yin_yang", "2026-10-12", "2026-10-14", "小", "yin_yang"),
+    occurrence("2026-10-15_dragon_might", "2026-10-15", "2026-10-18", "大", "dragon_might"),
+    occurrence("2026-10-19_life_and_death", "2026-10-19", "2026-10-21", "小", "life_and_death"),
+    occurrence("2026-10-22_wind_forest_fire_mountain", "2026-10-22", "2026-10-25", "大", "wind_forest_fire_mountain"),
+    occurrence("2026-10-26_observe_the_depths", "2026-10-26", "2026-10-28", "小", "observe_the_depths"),
+    occurrence("2026-10-29_no_two_suns", "2026-10-29", "2026-11-01", "大", "no_two_suns"),
+    occurrence("2026-11-02_white_snow", "2026-11-02", "2026-11-04", "小", "white_snow")
   ];
 
   return {
-    meta: { year: 2026, firstDate: "2026-07-30", lastDate: "2026-10-14" },
+    meta: { year: 2026, firstDate: "2026-07-30", lastDate: "2026-11-04" },
     templates: templates,
     occurrences: occurrences,
     discipleAtlasTargets: discipleAtlasTargets

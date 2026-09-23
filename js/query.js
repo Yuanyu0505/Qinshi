@@ -17,14 +17,14 @@
   var BOOK_CATEGORIES = ["典籍", "神兵典籍"];
 
   function normalizeInput(s) {
-    return String(s == null ? "" : s).trim().toLowerCase();
+    return String(s == null ? "" : s).trim().toLowerCase().replace(/[·・]/g, "");
   }
 
   function matchSearch(item, query) {
     var q = normalizeInput(query);
     if (!q) return true;
-    return item.name.toLowerCase().indexOf(q) !== -1 ||
-           item.cat.toLowerCase().indexOf(q) !== -1;
+    return normalizeInput(item.name).indexOf(q) !== -1 ||
+           normalizeInput(item.cat).indexOf(q) !== -1;
   }
 
   /** 主属性筛选：main 为空/未提供表示不限 */

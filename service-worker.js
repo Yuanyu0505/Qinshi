@@ -1,7 +1,7 @@
 "use strict";
 
 const CACHE_PREFIX = "qinshi-site-";
-const CACHE_NAME = CACHE_PREFIX + "1.0.41";
+const CACHE_NAME = CACHE_PREFIX + "1.0.42";
 const PRECACHE_URLS = [
   "./",
   "./index.html",
@@ -19,6 +19,7 @@ const PRECACHE_URLS = [
   "./data/machine-beasts.js",
   "./data/battle-box-pill-pouch.js",
   "./data/zhulu.js",
+  "./data/2026-09-content-update.js",
   "./js/query.js",
   "./js/forging.js",
   "./js/drops.js",

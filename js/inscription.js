@@ -13,7 +13,7 @@
   ];
   var commonKeys = new Set();
   var TIANS = ["天府", "天相", "天同", "天梁", "天机"];
-  var SHIELDS = ["天盾", "地盾", "人盾", "神盾", "鬼盾", "龙盾", "虎盾", "风盾", "云盾"];
+  var SHIELDS = ["天遁", "地遁", "人遁", "神遁", "鬼遁", "龙遁", "虎遁", "风遁", "云遁"];
   var MAIN = {
     "天府": { "1": "攻+44300、防+22150", "2": "攻+75300、防+37650" },
     "天相": { "1": "内力+44300、攻击+22150", "2": "内力+75300、攻击+37650" },
@@ -24,15 +24,15 @@
   var COMMON_SUBS = ["闪避", "招架", "治疗效果"];
   var LEGACY_SUB_NAMES = { "防御": "防", "技能减免": "技免", "技伤减免": "技免" };
   var SUBS = {
-    "天盾": [{ n: "攻", x: true }, { n: "暴击伤害" }, { n: "技免" }, { n: "内力" }, { n: "追加伤害" }],
-    "地盾": [{ n: "PVP速" }, { n: "暴击" }, { n: "PVP免伤" }, { n: "技能穿透", x: true }, { n: "防" }],
-    "人盾": [{ n: "血", x: true }, { n: "抗暴击" }, { n: "PVP伤害" }, { n: "技能穿透" }, { n: "防" }],
-    "神盾": [{ n: "PVP速" }, { n: "攻", x: true }, { n: "PVP伤害", x: true }, { n: "技能穿透" }, { n: "内力" }],
-    "鬼盾": [{ n: "速", x: true }, { n: "血" }, { n: "护盾" }, { n: "暴击伤害" }, { n: "防" }],
-    "龙盾": [{ n: "PVP速", x: true }, { n: "血" }, { n: "暴击", x: true }, { n: "PVP伤害" }, { n: "技免" }],
-    "虎盾": [{ n: "血", x: true }, { n: "暴击伤害" }, { n: "抗暴击" }, { n: "内力", x: true }, { n: "追加伤害" }],
-    "风盾": [{ n: "攻" }, { n: "暴击" }, { n: "护盾" }, { n: "PVP免伤", x: true }, { n: "追加伤害" }],
-    "云盾": [{ n: "护盾", x: true }, { n: "抗暴击", x: true }, { n: "PVP免伤" }, { n: "技免", x: true }, { n: "防" }]
+    "天遁": [{ n: "攻", x: true }, { n: "暴击伤害" }, { n: "技免" }, { n: "内力" }, { n: "追加伤害" }],
+    "地遁": [{ n: "PVP速" }, { n: "暴击" }, { n: "PVP免伤" }, { n: "技能穿透", x: true }, { n: "防" }],
+    "人遁": [{ n: "血", x: true }, { n: "抗暴击" }, { n: "PVP伤害" }, { n: "技能穿透" }, { n: "防" }],
+    "神遁": [{ n: "PVP速" }, { n: "攻", x: true }, { n: "PVP伤害", x: true }, { n: "技能穿透" }, { n: "内力" }],
+    "鬼遁": [{ n: "速", x: true }, { n: "血" }, { n: "护盾" }, { n: "暴击伤害" }, { n: "防" }],
+    "龙遁": [{ n: "PVP速", x: true }, { n: "血" }, { n: "暴击", x: true }, { n: "PVP伤害" }, { n: "技免" }],
+    "虎遁": [{ n: "血", x: true }, { n: "暴击伤害" }, { n: "抗暴击" }, { n: "内力", x: true }, { n: "追加伤害" }],
+    "风遁": [{ n: "攻" }, { n: "暴击" }, { n: "护盾" }, { n: "PVP免伤", x: true }, { n: "追加伤害" }],
+    "云遁": [{ n: "护盾", x: true }, { n: "抗暴击", x: true }, { n: "PVP免伤" }, { n: "技免", x: true }, { n: "防" }]
   };
   SHIELDS.forEach(function (shield) {
     COMMON_SUBS.forEach(function (name) {
@@ -42,12 +42,12 @@
     });
   });
   var SHIELD_NOTES = {
-    "龙盾": "可洗3/4/5速度；可洗血属性，最多双血",
-    "鬼盾": "可洗3/4/5速度；可洗血属性，最多双血",
-    "神盾": "二星橙色铭文最多3+4速",
-    "地盾": "二星橙色铭文最多3+4速",
-    "人盾": "可洗血属性；可三血",
-    "虎盾": "可洗血属性；可三血"
+    "龙遁": "可洗3/4/5速度；可洗血属性，最多双血",
+    "鬼遁": "可洗3/4/5速度；可洗血属性，最多双血",
+    "神遁": "二星橙色铭文最多3+4速",
+    "地遁": "二星橙色铭文最多3+4速",
+    "人遁": "可洗血属性；可三血",
+    "虎遁": "可洗血属性；可三血"
   };
 
   var progress = loadProgress();
@@ -123,6 +123,7 @@
         var saved = parsed[key];
         if (!saved || !Array.isArray(saved.slots)) { delete parsed[key]; return; }
         saved.slots.forEach(function (slot) {
+          slot.shield = normalizeDunName(slot.shield);
           var values = Array.isArray(slot.subs) ? slot.subs.slice(0, 3) : [slot.sub || ""];
           while (values.length < 3) values.push("");
           slot.subs = values.map(function (value) { return normalizeAttrName(slot.shield, value); });
@@ -135,7 +136,12 @@
       return parsed;
     } catch (error) { return {}; }
   }
+  function normalizeDunName(value) {
+    var text = String(value || "");
+    return text.endsWith("盾") ? text.slice(0, -1) + "遁" : text;
+  }
   function normalizeAttrName(shield, value) {
+    shield = normalizeDunName(shield);
     value = String(value || "");
     var attrs = SUBS[shield] || [];
     var normalized = LEGACY_SUB_NAMES[value] || value;
@@ -401,7 +407,7 @@
   }
 
   function renderReference() {
-    el.reference.innerHTML = '<section class="ins-reference-block"><h3>天位主属性</h3><p class="mobile-scroll-hint" aria-hidden="true">左右滑动查看全部星级 →</p><div class="table-wrap mobile-scroll-region" tabindex="0" aria-label="天位主属性资料表，可左右滑动"><table class="ins-reference-table"><thead><tr><th>天位</th><th>' + starBadgeHtml("橙色", "1") + '</th><th>' + starBadgeHtml("橙色", "2") + '</th><th>紫色</th></tr></thead><tbody>' + TIANS.map(function (tian) { return '<tr><th>' + tian + '</th><td>' + MAIN[tian]["1"] + '</td><td>' + MAIN[tian]["2"] + '</td><td>暂不展示主属性</td></tr>'; }).join("") + '</tbody></table></div></section><section class="ins-reference-block"><h3>盾位副属性</h3><p class="mobile-scroll-hint" aria-hidden="true">左右滑动查看全部说明 →</p><div class="table-wrap mobile-scroll-region" tabindex="0" aria-label="盾位副属性资料表，可左右滑动"><table class="ins-reference-table"><thead><tr><th>盾位</th><th>可洗练副属性</th><th>备注</th></tr></thead><tbody>' + SHIELDS.map(function (shield) { return '<tr><th>' + shield + extremeNoteHtml(shield) + '</th><td><div class="ins-sub-list">' + SUBS[shield].map(subTagHtml).join("") + '</div></td><td class="ins-shield-note">' + (SHIELD_NOTES[shield] || "—") + '</td></tr>'; }).join("") + '</tbody></table></div><div class="muted-tip">“极致”表示该基础属性可同时出现在副属性1、副属性2、副属性3中，不是名为“3攻”或“3技能穿透”的单条属性。</div></section>';
+    el.reference.innerHTML = '<section class="ins-reference-block"><h3>天位主属性</h3><p class="mobile-scroll-hint" aria-hidden="true">左右滑动查看全部星级 →</p><div class="table-wrap mobile-scroll-region" tabindex="0" aria-label="天位主属性资料表，可左右滑动"><table class="ins-reference-table"><thead><tr><th>天位</th><th>' + starBadgeHtml("橙色", "1") + '</th><th>' + starBadgeHtml("橙色", "2") + '</th><th>紫色</th></tr></thead><tbody>' + TIANS.map(function (tian) { return '<tr><th>' + tian + '</th><td>' + MAIN[tian]["1"] + '</td><td>' + MAIN[tian]["2"] + '</td><td>暂不展示主属性</td></tr>'; }).join("") + '</tbody></table></div></section><section class="ins-reference-block"><h3>遁位副属性</h3><p class="mobile-scroll-hint" aria-hidden="true">左右滑动查看全部说明 →</p><div class="table-wrap mobile-scroll-region" tabindex="0" aria-label="遁位副属性资料表，可左右滑动"><table class="ins-reference-table"><thead><tr><th>遁位</th><th>可洗练副属性</th><th>备注</th></tr></thead><tbody>' + SHIELDS.map(function (shield) { return '<tr><th>' + shield + extremeNoteHtml(shield) + '</th><td><div class="ins-sub-list">' + SUBS[shield].map(subTagHtml).join("") + '</div></td><td class="ins-shield-note">' + (SHIELD_NOTES[shield] || "—") + '</td></tr>'; }).join("") + '</tbody></table></div><div class="muted-tip">“极致”表示该基础属性可同时出现在副属性1、副属性2、副属性3中，不是名为“3攻”或“3技能穿透”的单条属性。</div></section>';
   }
 
   document.addEventListener("DOMContentLoaded", init);

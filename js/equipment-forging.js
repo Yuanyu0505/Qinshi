@@ -47,7 +47,9 @@
     "神兵吕览": "吕氏春秋",
     "神兵冥史": "冥界史诗",
     "神兵百家": "百家杂记",
-    "神兵南华": "南华真经"
+    "神兵南华": "南华真经",
+    "神兵影虎": "影虎",
+    "神兵·影虎": "影虎"
   };
   var PROGRESS_VARIANT_EXCEPTIONS = {
     "地煞魔铠": "神兵魔铠",
@@ -170,7 +172,7 @@
   }
 
   function normalizeProgressKeyword(value) {
-    return String(value == null ? "" : value).trim().toLowerCase();
+    return String(value == null ? "" : value).trim().toLowerCase().replace(/[·・]/g, "");
   }
 
   function searchProgressEquipmentCatalog(catalog, keyword) {

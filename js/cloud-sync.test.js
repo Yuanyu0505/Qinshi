@@ -236,6 +236,31 @@ async function withCloudGlobals(config, callback) {
   }
 }
 
+async function withCloudLocation(location, callback) {
+  const saved = Object.getOwnPropertyDescriptor(globalThis, 'location');
+  Object.defineProperty(globalThis, 'location', { configurable: true, value: location });
+  try { return await callback(); }
+  finally {
+    if (saved) Object.defineProperty(globalThis, 'location', saved);
+    else delete globalThis.location;
+  }
+}
+
+test('cloud sync runtime accepts the online PWA and supported localhost addresses only', () => {
+  assert.equal(moduleApi.cloudSyncRuntimeSupport({ protocol: 'https:', origin: 'https://yuanyu0505.github.io',
+    hostname: 'yuanyu0505.github.io', port: '' }).supported, true);
+  assert.equal(moduleApi.cloudSyncRuntimeSupport({ protocol: 'http:', origin: 'http://localhost:8000',
+    hostname: 'localhost', port: '8000' }).supported, true);
+  assert.equal(moduleApi.cloudSyncRuntimeSupport({ protocol: 'http:', origin: 'http://localhost:8010',
+    hostname: 'localhost', port: '8010' }).supported, true);
+  assert.equal(moduleApi.cloudSyncRuntimeSupport({ protocol: 'file:', origin: 'null', hostname: '', port: '' }).code,
+    'LOCAL_FILE_UNSUPPORTED');
+  assert.equal(moduleApi.cloudSyncRuntimeSupport({ protocol: 'http:', origin: 'http://127.0.0.1:8000',
+    hostname: '127.0.0.1', port: '8000' }).code, 'LOCAL_ADDRESS_UNSUPPORTED');
+  assert.equal(moduleApi.cloudSyncRuntimeSupport({ protocol: 'https:', origin: 'https://foreign.example',
+    hostname: 'foreign.example', port: '' }).code, 'ORIGIN_UNSUPPORTED');
+});
+
 // Only browser persistence and network are substituted. Envelopes, crypto,
 // password KDFs, metadata authentication and orchestration run as production code.
 function harness(options = {}) {
@@ -1170,6 +1195,46 @@ test('settings UI with disabled config never calls the coordinator', async () =>
     await flushUI();
     assert.equal(calls, 0);
     assert.match(doc.getElementById('cloud-sync-status').textContent, /尚未配置/);
+  });
+});
+
+test('settings UI disables cloud actions and explains the one-time migration for direct local files', async () => {
+  await withCloudGlobals({ enabled: true, apiBaseUrl: 'https://sync.invalid' }, async () => {
+    await withCloudLocation({ protocol: 'file:', origin: 'null', hostname: '', port: '' }, async () => {
+      const { doc, panel } = createSettingsDom();
+      let calls = 0;
+      const client = new Proxy(uiClient(), { get(target, property) {
+        if (typeof target[property] === 'function') return (...args) => { calls += 1; return target[property](...args); };
+        return target[property];
+      } });
+      moduleApi.bindSettingsUI(client, doc);
+      await flushUI();
+      panel.querySelectorAll('[data-cloud-action]').forEach(button => assert.equal(button.disabled, true));
+      const notice = doc.getElementById('cloud-sync-config-notice');
+      assert.equal(notice.hidden, false);
+      assert.match(notice.textContent, /直接双击/);
+      assert.match(notice.textContent, /导出备份/);
+      assert.match(notice.textContent, /在线版|启动服务/);
+      doc.getElementById('cloud-sync-create-form').dispatch('submit');
+      await flushUI();
+      assert.equal(calls, 0);
+      assert.match(doc.getElementById('cloud-sync-status').textContent, /不支持云同步/);
+    });
+  });
+});
+
+test('settings UI explains that loopback IP must be replaced with localhost', async () => {
+  await withCloudGlobals({ enabled: true, apiBaseUrl: 'https://sync.invalid' }, async () => {
+    await withCloudLocation({ protocol: 'http:', origin: 'http://127.0.0.1:8000',
+      hostname: '127.0.0.1', port: '8000' }, async () => {
+      const { doc } = createSettingsDom();
+      moduleApi.bindSettingsUI(uiClient(), doc);
+      await flushUI();
+      const notice = doc.getElementById('cloud-sync-config-notice');
+      assert.equal(notice.hidden, false);
+      assert.match(notice.textContent, /127\.0\.0\.1/);
+      assert.match(notice.textContent, /localhost/);
+    });
   });
 });
 

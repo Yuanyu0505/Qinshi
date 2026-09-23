@@ -12,6 +12,35 @@
   var WRITE_LEASE_RENEW_INTERVAL_MS = 15000;
   var MIN_LOCAL_WRITE_WINDOW_MS = 30000;
 
+  function cloudSyncRuntimeSupport(location) {
+    // Node/injected test environments have no page origin. The HTTP boundary is
+    // validated separately there, so do not disable the coordinator itself.
+    if (!location || typeof location !== 'object') return Object.freeze({ supported: true, code: 'INJECTED' });
+    if (location.protocol === 'file:') return Object.freeze({
+      supported: false,
+      code: 'LOCAL_FILE_UNSUPPORTED',
+      message: '当前通过直接双击 index.html 打开，不支持云同步。请先导出备份，再使用在线版或双击“启动服务.bat”打开后导入一次；以后即可直接同步。'
+    });
+    if (location.protocol === 'http:' && location.hostname === '127.0.0.1') return Object.freeze({
+      supported: false,
+      code: 'LOCAL_ADDRESS_UNSUPPORTED',
+      message: '当前使用 127.0.0.1 打开，不支持云同步。请将地址中的 127.0.0.1 改为 localhost 后重试。'
+    });
+    var localPort = Number(location.port);
+    if (location.protocol === 'http:' && location.hostname === 'localhost' &&
+      Number.isInteger(localPort) && localPort >= 8000 && localPort <= 8010) {
+      return Object.freeze({ supported: true, code: 'LOCALHOST' });
+    }
+    if (location.protocol === 'https:' && location.origin === 'https://yuanyu0505.github.io') {
+      return Object.freeze({ supported: true, code: 'ONLINE_PWA' });
+    }
+    return Object.freeze({
+      supported: false,
+      code: 'ORIGIN_UNSUPPORTED',
+      message: '当前页面来源不支持云同步。请使用项目在线版或双击“启动服务.bat”打开。'
+    });
+  }
+
   function encode(bytes) {
     var binary = '';
     for (var i = 0; i < bytes.length; i += 32768) {
@@ -995,8 +1024,13 @@
     var panel = doc.getElementById('cloud-sync-panel');
     if (!panel) return null;
     var state = createSettingsState();
-    var configured = Boolean(root.QinshiCloudSyncConfig && root.QinshiCloudSyncConfig.enabled === true &&
+    var serviceConfigured = Boolean(root.QinshiCloudSyncConfig && root.QinshiCloudSyncConfig.enabled === true &&
       typeof root.QinshiCloudSyncConfig.apiBaseUrl === 'string' && /^https:\/\//.test(root.QinshiCloudSyncConfig.apiBaseUrl));
+    var runtimeSupport = cloudSyncRuntimeSupport(root.location);
+    var configured = serviceConfigured && runtimeSupport.supported;
+    var unavailableMessage = !serviceConfigured
+      ? '云同步服务尚未配置，本机数据和 JSON 备份不受影响。'
+      : runtimeSupport.message;
     var lastResult = '尚无同步操作';
     var replacing = false;
     var activeModal = null;
@@ -1254,7 +1288,7 @@
     }
     function run(progressText, action, successText, refreshAfter) {
       if (!configured) {
-        status('云同步服务尚未配置，本机数据和 JSON 备份不受影响。', true);
+        status(unavailableMessage, true);
         return Promise.resolve(false);
       }
       return state.withWriteLock(async function () {
@@ -1466,6 +1500,7 @@
       return Promise.resolve(root.confirm('确认撤销设备“' + detail.deviceName + '”？\n' + handling + '。'));
     };
     element('cloud-sync-config-notice').hidden = configured;
+    if (!configured) element('cloud-sync-config-notice').textContent = unavailableMessage;
     var detectedDeviceName = configured ? syncClient.detectDeviceName() : '';
     element('cloud-sync-create-device').value = detectedDeviceName;
     element('cloud-sync-join-device').value = detectedDeviceName;
@@ -1633,6 +1668,7 @@
 
   sync.createSync = createSync;
   sync.createSettingsState = createSettingsState;
+  sync.cloudSyncRuntimeSupport = cloudSyncRuntimeSupport;
   sync.bindSettingsUI = bindSettingsUI;
   if (root.document) bindSettingsUI(sync, root.document);
   return sync;

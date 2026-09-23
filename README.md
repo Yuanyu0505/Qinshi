@@ -46,7 +46,7 @@
 - 每次由用户明确选择“来源设备 → 当前设备”，用来源设备的完整快照覆盖当前设备；每台设备保留最近 3 份历史。
 - 工具代码和新增功能由 PWA 更新单独分发。同步开始前会先确认 PWA 版本满足要求，数据同步本身不会更新网页代码。
 - 云端后端限定使用 Workers Free 与 D1 Free。免费额度不可用时只暂停云同步，本地工具和 JSON 备份仍可使用；第三方计划、额度和定价可能变化，不承诺 Cloudflare 永远免费。
-- 生产 Worker 当前尚未启用。免费边界、本地验证、配置隔离和未来经授权后的安全部署顺序见 [`cloud-sync/worker/README.md`](cloud-sync/worker/README.md)。
+- 生产 Worker 已启用；公开配置仅包含 Worker HTTPS 地址，不包含任何密钥或账号凭据。免费边界、本地验证、配置隔离和安全发布顺序见 [`cloud-sync/worker/README.md`](cloud-sync/worker/README.md)。
 
 ## 查询功能
 

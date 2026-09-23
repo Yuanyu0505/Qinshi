@@ -649,6 +649,8 @@ test("云同步部署后公共配置启用 HTTPS workers.dev 端点且根说明�
   assert.match(rootReadme, /cloud-sync\/worker\/README\.md/);
   assert.match(rootReadme, /云同步只同步[^\n]*工具数据/);
   assert.match(rootReadme, /工具代码[^\n]*PWA[^\n]*更新/);
+  assert.match(rootReadme, /生产 Worker 已启用/);
+  assert.doesNotMatch(rootReadme, /生产 Worker 当前尚未启用/);
 });
 
 test("首页提供合阵工作台及其数据、核心和界面脚本", async () => {

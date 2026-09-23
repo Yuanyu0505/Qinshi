@@ -269,7 +269,7 @@ test("public auth failures, old versions and deleted snapshots remain distinguis
   }
 });
 
-test("disabled or unsafe base URL fails closed before fetch", async () => {
+test("disabled or unsafe base URL fails closed and deployed public config stays safe", async () => {
   const cases = [{ enabled: false }, { apiBaseUrl: "" }, { apiBaseUrl: "http://sync.example.test" },
     { apiBaseUrl: "https://user:password@sync.example.test" }, { apiBaseUrl: "https://sync.example.test/?token=secret" },
     { apiBaseUrl: "https://sync.example.test/#fragment" }, { enabled: "true" }];
@@ -280,8 +280,14 @@ test("disabled or unsafe base URL fails closed before fetch", async () => {
   }
   const context = {};
   vm.runInNewContext(fs.readFileSync(require.resolve("./cloud-sync-config.js"), "utf8"), context);
-  assert.equal(context.QinshiCloudSyncConfig.enabled, false);
-  assert.equal(context.QinshiCloudSyncConfig.apiBaseUrl, "");
+  const endpoint = new URL(context.QinshiCloudSyncConfig.apiBaseUrl);
+  assert.equal(context.QinshiCloudSyncConfig.enabled, true);
+  assert.equal(endpoint.protocol, "https:");
+  assert.match(endpoint.hostname, /\.workers\.dev$/);
+  assert.equal(endpoint.username, "");
+  assert.equal(endpoint.password, "");
+  assert.equal(endpoint.search, "");
+  assert.equal(endpoint.hash, "");
   assert.ok(Object.isFrozen(context.QinshiCloudSyncConfig));
 });
 

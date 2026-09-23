@@ -1,7 +1,7 @@
 "use strict";
 
 const CACHE_PREFIX = "qinshi-site-";
-const CACHE_NAME = CACHE_PREFIX + "1.0.39";
+const CACHE_NAME = CACHE_PREFIX + "1.0.40";
 const PRECACHE_URLS = [
   "./",
   "./index.html",
@@ -45,7 +45,13 @@ const PRECACHE_URLS = [
   "./js/equipment-forging.js",
   "./js/item-navigation.js",
   "./js/settings.js",
+  "./js/cloud-sync-config.js",
+  "./js/cloud-sync-core.js",
+  "./js/cloud-sync-crypto.js",
+  "./js/cloud-sync-storage.js",
+  "./js/cloud-sync-api.js",
   "./js/pwa.js",
+  "./js/cloud-sync.js",
   "./js/app.js",
   "./icons/app-icon-192.png",
   "./icons/app-icon-512.png",

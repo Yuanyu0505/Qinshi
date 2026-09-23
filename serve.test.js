@@ -232,12 +232,14 @@ test("云同步设置页包含完整手动流程且脚本依赖顺序正确", ()
 test("云同步脚本全部使用当前 PWA 版本并进入离线预缓存", () => {
   const html = fs.readFileSync(path.join(__dirname, "index.html"), "utf8");
   const serviceWorker = fs.readFileSync(path.join(__dirname, "service-worker.js"), "utf8");
+  const pagesWorkflow = fs.readFileSync(path.join(__dirname, ".github", "workflows", "pages.yml"), "utf8");
   const version = JSON.parse(fs.readFileSync(path.join(__dirname, "version.json"), "utf8")).version;
   const escapeRegex = value => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   for (const file of ["cloud-sync-config.js", "cloud-sync-core.js", "cloud-sync-crypto.js",
     "cloud-sync-storage.js", "cloud-sync-api.js", "cloud-sync.js"]) {
     assert.match(html, new RegExp(`js/${escapeRegex(file)}\\?v=${escapeRegex(version)}`));
     assert.match(serviceWorker, new RegExp(`\\./js/${escapeRegex(file)}`));
+    assert.match(pagesWorkflow, new RegExp(`js/${escapeRegex(file)}`));
   }
 });
 

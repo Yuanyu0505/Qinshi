@@ -90,7 +90,9 @@ npx wrangler d1 export qin-cloud-sync-test --local -c wrangler.test.jsonc --outp
 node scripts/check-smoke-export.mjs .wrangler/qin-cloud-sync-smoke.sql .wrangler/qin-cloud-sync-smoke-canaries.json
 ```
 
-脚本必须以状态码 0 完成并显示“未发现已知明文 canary”。单独对 SQL 文本执行 `rg` 不足以完成验收，因为 SQLite 会把 BLOB 导出为 `X'...hex...'`，而字段还可能包含 Base64 或 Base64URL 编码。校验器会检查原始 UTF-8 文本、解码后的十六进制 BLOB，以及文本和 BLOB 中的 Base64/Base64URL 内容。
+脚本必须以状态码 0 完成并显示“未发现已知明文 canary”。单独对 SQL 文本执行 `rg` 不足以完成验收，因为 SQLite 会把 BLOB 导出为 `X'...hex...'`，而字段还可能包含 Base64 或 Base64URL 编码。校验器会检查原始 UTF-8 文本、解码后的十六进制 BLOB，并严格解码文本和 BLOB 中的 Base64 与 Base64URL 候选；即使 canary 带有编码前后缀、出现字节对齐偏移或省略填充也会检查。
+
+校验器还会核对导出本身：空白文件、无关或错误数据库导出、缺少 `sync_spaces`／`devices`／`snapshot_chunks` 关键表，以及截断或不完整的 SQL 都会被拒绝并以非零状态退出。输入或候选超过防御性资源上限时同样失败关闭，不会把未完整检查的导出误报为安全。
 
 已知明文 **device name**、示例 **`qinshi_` value**、**password**、**recovery key** 和 **device token** 任一出现时，脚本会以非零状态退出，只报告安全分类和编码位置，不打印 canary 值；此时禁止继续部署。`.wrangler/` 已被忽略；检查完成后无需提交 SQL 导出或 canary 清单。
 

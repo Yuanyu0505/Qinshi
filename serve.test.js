@@ -52,6 +52,23 @@ function runSmokeExportVerifier(sql, manifest) {
   return { ...result, output: `${result.stdout || ""}${result.stderr || ""}` };
 }
 
+function completeSmokeSql(statement = "") {
+  return [
+    "BEGIN TRANSACTION;",
+    "CREATE TABLE sync_spaces (id TEXT PRIMARY KEY);",
+    "CREATE TABLE devices (id TEXT PRIMARY KEY, space_id TEXT);",
+    "CREATE TABLE snapshot_chunks (snapshot_id TEXT, chunk_index INTEGER, body BLOB);",
+    statement,
+    "COMMIT;",
+    ""
+  ].filter((line) => line !== "").join("\n");
+}
+
+function paddedBase64Url(value) {
+  const encoded = Buffer.from(value).toString("base64url");
+  return encoded + "=".repeat((4 - (encoded.length % 4)) % 4);
+}
+
 function withServer(fn) {
   return new Promise((resolve, reject) => {
     const server = createServer();
@@ -288,6 +305,8 @@ test("云同步部署手册固定本地命令、密文检查和安全发布顺�
   }
   assert.match(runbook, /来源设备[^\n]*→[^\n]*当前设备/);
   assert.match(runbook, /最近[^\n]*3[^\n]*(?:份|次)[^\n]*历史/);
+  assert.match(runbook, /解码[^\n]*Base64[^\n]*Base64URL[^\n]*前后缀/);
+  assert.match(runbook, /空白[^\n]*错误数据库[^\n]*(?:截断|不完整)[^\n]*(?:拒绝|失败)/);
 });
 
 test("云同步烟雾导出校验器识别原文、十六进制 BLOB、Base64 和 Base64URL", () => {
@@ -298,16 +317,12 @@ test("云同步烟雾导出校验器识别原文、十六进制 BLOB、Base64 �
     recoveryKey: "FAKE_SMOKE_RECOVERY_KEY_࠾_c7x",
     deviceToken: "FAKE_SMOKE_DEVICE_TOKEN_c7x"
   };
-  const paddedBase64Url = (value) => {
-    const encoded = Buffer.from(value).toString("base64url");
-    return encoded + "=".repeat((4 - (encoded.length % 4)) % 4);
-  };
   const cases = [
-    ["device-name", canaries.deviceName, `INSERT INTO devices VALUES ('${canaries.deviceName}');`, /raw/i],
-    ["qinshi-value", canaries.qinshiValue, `INSERT INTO chunks VALUES (X'${Buffer.from(canaries.qinshiValue).toString("hex").toUpperCase()}');`, /hex-blob/i],
-    ["password", canaries.password, `INSERT INTO secrets VALUES ('${Buffer.from(canaries.password).toString("base64")}');`, /base64/i],
-    ["recovery-key", canaries.recoveryKey, `INSERT INTO secrets VALUES ('${paddedBase64Url(canaries.recoveryKey)}');`, /base64url/i],
-    ["device-token", canaries.deviceToken, `INSERT INTO chunks VALUES (x'${Buffer.from(Buffer.from(canaries.deviceToken).toString("base64")).toString("hex")}');`, /hex-blob[^\n]*base64|base64[^\n]*hex-blob/i]
+    ["device-name", canaries.deviceName, completeSmokeSql(`INSERT INTO devices VALUES ('${canaries.deviceName}', NULL);`), /raw/i],
+    ["qinshi-value", canaries.qinshiValue, completeSmokeSql(`INSERT INTO snapshot_chunks VALUES ('s', 0, X'${Buffer.from(canaries.qinshiValue).toString("hex").toUpperCase()}');`), /hex-blob/i],
+    ["password", canaries.password, completeSmokeSql(`INSERT INTO devices VALUES ('${Buffer.from(canaries.password).toString("base64")}', NULL);`), /base64/i],
+    ["recovery-key", canaries.recoveryKey, completeSmokeSql(`INSERT INTO devices VALUES ('${paddedBase64Url(canaries.recoveryKey)}', NULL);`), /base64url/i],
+    ["device-token", canaries.deviceToken, completeSmokeSql(`INSERT INTO snapshot_chunks VALUES ('s', 0, x'${Buffer.from(Buffer.from(canaries.deviceToken).toString("base64")).toString("hex")}');`), /hex-blob[^\n]*base64|base64[^\n]*hex-blob/i]
   ];
   for (const [label, secret, sql, location] of cases) {
     const result = runSmokeExportVerifier(sql, canaries);
@@ -319,7 +334,7 @@ test("云同步烟雾导出校验器识别原文、十六进制 BLOB、Base64 �
 
   const embeddedBase64 = Buffer.from(canaries.password).toString("base64");
   const embedded = runSmokeExportVerifier(
-    `INSERT INTO secrets VALUES ('aa${embeddedBase64}zz');`,
+    completeSmokeSql(`INSERT INTO devices VALUES ('aa${embeddedBase64}zz', NULL);`),
     canaries
   );
   assert.notEqual(embedded.status, 0, "与其他 Base64 字符相邻时也不得漏检");
@@ -327,12 +342,112 @@ test("云同步烟雾导出校验器识别原文、十六进制 BLOB、Base64 �
   assert.doesNotMatch(embedded.output, new RegExp(canaries.password));
 
   const clean = runSmokeExportVerifier(
-    "BEGIN TRANSACTION;\nINSERT INTO snapshot_chunks VALUES (X'018FA4D2C197BEE0');\nCOMMIT;\n",
+    completeSmokeSql("INSERT INTO snapshot_chunks VALUES ('s', 0, X'018FA4D2C197BEE0');"),
     canaries
   );
   assert.equal(clean.status, 0, clean.output);
   assert.match(clean.output, /未发现已知明文 canary/);
   for (const secret of Object.values(canaries)) assert.doesNotMatch(clean.output, new RegExp(secret));
+});
+
+test("云同步烟雾导出校验器解码带前后缀的 Base64 与 Base64URL 候选", () => {
+  const canaries = {
+    deviceName: "FAKE_SMOKE_DEVICE_NAME_align",
+    qinshiValue: "FAKE_SMOKE_qinshi_VALUE_align",
+    password: "FAKE_SMOKE_PASSWORD_align",
+    recoveryKey: "FAKE_SMOKE_RECOVERY_KEY_align",
+    deviceToken: "FAKE_SMOKE_DEVICE_TOKEN_align"
+  };
+  const canaryBytes = Buffer.from(canaries.qinshiValue);
+  for (let prefixLength = 0; prefixLength < 3; prefixLength += 1) {
+    const prefix = Buffer.alloc(prefixLength, 0xfb);
+    let suffix = Buffer.from([0xff]);
+    if ((prefix.length + canaryBytes.length + suffix.length) % 3 === 0) suffix = Buffer.from([0xff, 0xfe]);
+    const payload = Buffer.concat([prefix, canaryBytes, suffix]);
+    const variants = [
+      ["base64", payload.toString("base64")],
+      ["base64-unpadded", payload.toString("base64").replace(/=+$/, "")],
+      ["base64url", payload.toString("base64url")],
+      ["base64url-padded", paddedBase64Url(payload)]
+    ];
+    for (const [kind, encoded] of variants) {
+      const raw = runSmokeExportVerifier(completeSmokeSql(`INSERT INTO devices VALUES ('${encoded}', NULL);`), canaries);
+      assert.notEqual(raw.status, 0, `${kind} 前缀偏移 ${prefixLength} 的候选必须解码检查`);
+      assert.match(raw.output, /qinshi-value[^\n]*base64/i);
+      assert.doesNotMatch(raw.output, new RegExp(canaries.qinshiValue));
+
+      const blob = runSmokeExportVerifier(
+        completeSmokeSql(`INSERT INTO snapshot_chunks VALUES ('s', 0, X'${Buffer.from(encoded).toString("hex")}');`),
+        canaries
+      );
+      assert.notEqual(blob.status, 0, `${kind} 前缀偏移 ${prefixLength} 的十六进制 BLOB 候选必须解码检查`);
+      assert.match(blob.output, /qinshi-value[^\n]*hex-blob\/base64/i);
+      assert.doesNotMatch(blob.output, new RegExp(canaries.qinshiValue));
+    }
+  }
+});
+
+test("云同步烟雾导出校验器拒绝错误、空白和不完整导出", () => {
+  const canaries = {
+    deviceName: "FAKE_EXPORT_DEVICE", qinshiValue: "FAKE_EXPORT_VALUE", password: "FAKE_EXPORT_PASSWORD",
+    recoveryKey: "FAKE_EXPORT_RECOVERY", deviceToken: "FAKE_EXPORT_TOKEN"
+  };
+  const invalidExports = [
+    ["空文件", ""],
+    ["空白文件", "  \r\n\t"],
+    ["无关 SQL", "BEGIN TRANSACTION; SELECT 1; COMMIT;"],
+    ["错误数据库", "BEGIN TRANSACTION; CREATE TABLE unrelated (id TEXT); COMMIT;"],
+    ["缺少 COMMIT", completeSmokeSql("INSERT INTO devices VALUES ('safe', NULL);").replace(/COMMIT;\s*$/, "")],
+    ["截断语句", completeSmokeSql().replace(/COMMIT;\s*$/, "INSERT INTO devices VALUES ('cut")],
+    ["未闭合十六进制 BLOB", completeSmokeSql().replace(/COMMIT;\s*$/, "INSERT INTO snapshot_chunks VALUES ('s', 0, X'AB")],
+    ["伪 Wrangler 导出", "PRAGMA defer_foreign_keys=TRUE; CREATE TABLE unrelated (id TEXT);"],
+    ["事务后仍有语句", [
+      "PRAGMA defer_foreign_keys=TRUE;",
+      "CREATE TABLE sync_spaces (id TEXT);",
+      "CREATE TABLE devices (id TEXT);",
+      "CREATE TABLE snapshot_chunks (id TEXT);",
+      "BEGIN TRANSACTION;",
+      "COMMIT;",
+      "SELECT 1;"
+    ].join("\n")]
+  ];
+  for (const [label, sql] of invalidExports) {
+    const result = runSmokeExportVerifier(sql, canaries);
+    assert.notEqual(result.status, 0, `${label} 必须失败关闭`);
+    assert.match(result.output, /SQL 导出无效/);
+    for (const canary of Object.values(canaries)) assert.doesNotMatch(result.output, new RegExp(canary));
+  }
+
+  const wranglerStyle = [
+    "PRAGMA defer_foreign_keys=TRUE;",
+    "CREATE TABLE sync_spaces (id TEXT PRIMARY KEY);",
+    "CREATE TABLE devices (id TEXT PRIMARY KEY);",
+    "CREATE TABLE snapshot_chunks (snapshot_id TEXT, body BLOB);",
+    "INSERT INTO snapshot_chunks VALUES ('s', X'018FA4D2C197BEE0');",
+    "CREATE INDEX idx_chunks ON snapshot_chunks(snapshot_id);",
+    ""
+  ].join("\n");
+  const valid = runSmokeExportVerifier(wranglerStyle, canaries);
+  assert.equal(valid.status, 0, valid.output);
+
+  const invalidUtf8 = runSmokeExportVerifier(Buffer.from([0xff, 0xfe, 0xfd]), canaries);
+  assert.notEqual(invalidUtf8.status, 0, "非法 UTF-8 导出必须失败关闭");
+  assert.match(invalidUtf8.output, /SQL 导出文件不是有效 UTF-8/);
+  for (const canary of Object.values(canaries)) assert.doesNotMatch(invalidUtf8.output, new RegExp(canary));
+});
+
+test("云同步烟雾导出校验器接受项目允许的最大快照分块导出", () => {
+  const canaries = {
+    deviceName: "FAKE_MAX_DEVICE", qinshiValue: "FAKE_MAX_VALUE", password: "FAKE_MAX_PASSWORD",
+    recoveryKey: "FAKE_MAX_RECOVERY", deviceToken: "FAKE_MAX_TOKEN"
+  };
+  const maxChunk = Buffer.allocUnsafe(512 * 1024);
+  for (let index = 0; index < maxChunk.length; index += 1) maxChunk[index] = (index * 131 + 17) & 0xff;
+  const result = runSmokeExportVerifier(
+    completeSmokeSql(`INSERT INTO snapshot_chunks VALUES ('s', 0, X'${maxChunk.toString("hex")}');`),
+    canaries
+  );
+  assert.equal(result.status, 0, result.output);
 });
 
 test("云同步烟雾导出校验器拒绝缺失参数、非法清单和畸形十六进制 BLOB", () => {
@@ -341,7 +456,7 @@ test("云同步烟雾导出校验器拒绝缺失参数、非法清单和畸形�
   assert.notEqual(missing.status, 0);
   assert.match(`${missing.stdout}${missing.stderr}`, /用法|usage/i);
 
-  const invalidManifest = runSmokeExportVerifier("BEGIN; COMMIT;", { deviceName: "ONLY_ONE_FAKE_VALUE" });
+  const invalidManifest = runSmokeExportVerifier(completeSmokeSql(), { deviceName: "ONLY_ONE_FAKE_VALUE" });
   assert.notEqual(invalidManifest.status, 0);
   assert.match(invalidManifest.output, /canary 清单无效/);
   assert.doesNotMatch(invalidManifest.output, /ONLY_ONE_FAKE_VALUE/);
@@ -350,7 +465,7 @@ test("云同步烟雾导出校验器拒绝缺失参数、非法清单和畸形�
     deviceName: "FAKE_A", qinshiValue: "FAKE_B", password: "FAKE_C",
     recoveryKey: "FAKE_D", deviceToken: "FAKE_E"
   };
-  const malformedBlob = runSmokeExportVerifier("INSERT INTO chunks VALUES (X'ABC');", validManifest);
+  const malformedBlob = runSmokeExportVerifier(completeSmokeSql("INSERT INTO snapshot_chunks VALUES ('s', 0, X'ABC');"), validManifest);
   assert.notEqual(malformedBlob.status, 0);
   assert.match(malformedBlob.output, /SQL 十六进制 BLOB 无效/);
 
@@ -358,7 +473,7 @@ test("云同步烟雾导出校验器拒绝缺失参数、非法清单和畸形�
     deviceName: "!A", qinshiValue: "!B", password: "!C",
     recoveryKey: "!D", deviceToken: "!E"
   };
-  const shortBase64 = runSmokeExportVerifier("INSERT INTO secrets VALUES ('IUM=');", shortManifest);
+  const shortBase64 = runSmokeExportVerifier(completeSmokeSql("INSERT INTO devices VALUES ('IUM=', NULL);"), shortManifest);
   assert.notEqual(shortBase64.status, 0, "校验器接受的短 canary 也必须检测其 Base64 表示");
   assert.match(shortBase64.output, /password[^\n]*base64/i);
 });

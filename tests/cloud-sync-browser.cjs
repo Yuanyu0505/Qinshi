@@ -5,7 +5,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
 const { createServer } = require('../serve.js');
 
 const PASSWORD = 'browser-only-test-password';
-const LIMITS = { minimumReadVersion: '1.0.40', minimumWriteVersion: '1.0.40' };
+const LIMITS = { minimumReadVersion: '1.0.41', minimumWriteVersion: '1.0.41' };
 const INTENDED_ROUTES = new Set([
   'GET /v1/health', 'POST /v1/spaces', 'GET /v1/spaces/:code/parameters', 'POST /v1/spaces/:code/pair',
   'POST /v1/spaces/:code/recover', 'GET /v1/devices', 'PATCH /v1/devices/:deviceId',
@@ -519,7 +519,7 @@ async function browserPage(stub, options = {}) {
   const context = await browser.newContext({ serviceWorkers: 'block', acceptDownloads: true,
     viewport: options.viewport || { width: 1280, height: 900 } });
   const page = await context.newPage();
-  let remoteVersion = '1.0.40';
+  let remoteVersion = '1.0.41';
   await page.route('**/js/cloud-sync-config.js*', route => route.fulfill({
     status: 200, contentType: 'text/javascript; charset=utf-8',
     body: 'window.QinshiCloudSyncConfig=Object.freeze({enabled:true,apiBaseUrl:"https://sync.test"});'
@@ -991,7 +991,7 @@ test('5 更新后按不可变快照继续并重新要求确认', { timeout: 1200
     await target.page.locator('#cloud-sync-status').filter({ hasText: '先完成版本检查或更新' }).waitFor();
     assert.deepEqual(await target.page.evaluate(() => JSON.parse(sessionStorage.getItem('qin-cloud-sync-pending'))),
       { type: 'pull', snapshotId: sourceId });
-    target.setRemoteVersion('1.0.40');
+    target.setRemoteVersion('1.0.41');
     await target.page.reload({ waitUntil: 'networkidle' });
     await target.page.evaluate(() => document.querySelector('.tab[data-partition="settings"]').click());
     await target.page.locator('#cloud-sync-confirm-layer').waitFor({ state: 'visible' });

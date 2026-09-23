@@ -36,7 +36,7 @@ if (!playwrightPath) {
       }
       let body = fs.readFileSync(filePath);
       if (['index.html', 'js/pwa.js', 'service-worker.js', 'version.json'].includes(relative)) {
-        body = Buffer.from(body.toString('utf8').replaceAll('1.0.40', servedVersion));
+        body = Buffer.from(body.toString('utf8').replaceAll('1.0.41', servedVersion));
       }
       if (['index.html', 'js/pwa.js', 'service-worker.js', 'version.json'].includes(relative)) {
         serverRequests.push({ relative, servedVersion });
@@ -72,7 +72,7 @@ if (!playwrightPath) {
       await page.waitForFunction(() => Boolean(navigator.serviceWorker.controller));
       assert.equal(await page.locator('#pwa-version').innerText(), '1.0.37');
 
-      servedVersion = '1.0.40';
+      servedVersion = '1.0.41';
       await page.evaluate(() => window.QinshiPWA.checkForUpdate());
       await page.locator('#pwa-update-notice').waitFor({ state: 'visible' });
       await page.locator('#pwa-apply-update').click();
@@ -92,8 +92,8 @@ if (!playwrightPath) {
           navigation: performance.getEntriesByType('navigation').map(entry => ({ name: entry.name, type: entry.type }))
         };
       });
-      assert.equal(updateState.version, '1.0.40', JSON.stringify({ updateState, serverRequests, browserResponses }));
-      assert.ok(serverRequests.some(item => item.relative === 'version.json' && item.servedVersion === '1.0.40'));
+      assert.equal(updateState.version, '1.0.41', JSON.stringify({ updateState, serverRequests, browserResponses }));
+      assert.ok(serverRequests.some(item => item.relative === 'version.json' && item.servedVersion === '1.0.41'));
 
       await page.evaluate(async () => {
         localStorage.setItem('pwa-browser-progress', 'keep-me');
@@ -109,7 +109,7 @@ if (!playwrightPath) {
         progress: localStorage.getItem('pwa-browser-progress'),
         caches: await caches.keys()
       }));
-      assert.equal(repairState.version, '1.0.40');
+      assert.equal(repairState.version, '1.0.41');
       assert.equal(repairState.progress, 'keep-me');
       assert.ok(repairState.caches.includes('unrelated-browser-cache'));
     } finally {

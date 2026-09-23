@@ -26,6 +26,7 @@
   const ZHULU = window.ZHULU;
   const ZHULU_UI = window.ZHULU_UI;
   const MACHINE_BEAST_UI = window.MACHINE_BEAST_UI;
+  const ACCOUNT_STORAGE = window.QinshiAccounts;
   const ATLAS_LEVELS_KEY = "qinshi_atlas_levels_v1";
   const ATLAS_TARGET_LEVEL_KEY = "qinshi_atlas_target_level_v1";
   const ATLAS_FAVORITES_KEY = "qinshi_atlas_favorites_v1";
@@ -1249,7 +1250,7 @@
 
   function loadAtlasLevels() {
     try {
-      const raw = localStorage.getItem(ATLAS_LEVELS_KEY);
+      const raw = ACCOUNT_STORAGE.getItem(ATLAS_LEVELS_KEY);
       const parsed = raw ? JSON.parse(raw) : {};
       return parsed && typeof parsed === "object" ? parsed : {};
     } catch (e) {
@@ -1259,7 +1260,7 @@
 
   function saveAtlasLevels() {
     try {
-      localStorage.setItem(ATLAS_LEVELS_KEY, JSON.stringify(atlasState.levels));
+      ACCOUNT_STORAGE.setItem(ATLAS_LEVELS_KEY, JSON.stringify(atlasState.levels));
     } catch (e) {
       // 忽略存储失败
     }
@@ -1288,7 +1289,7 @@
 
   function loadAtlasTargetLevel() {
     try {
-      return normalizeAtlasTargetLevel(localStorage.getItem(ATLAS_TARGET_LEVEL_KEY));
+      return normalizeAtlasTargetLevel(ACCOUNT_STORAGE.getItem(ATLAS_TARGET_LEVEL_KEY));
     } catch (e) {
       return defaultAtlasTargetLevel();
     }
@@ -1296,7 +1297,7 @@
 
   function saveAtlasTargetLevel() {
     try {
-      localStorage.setItem(ATLAS_TARGET_LEVEL_KEY, String(atlasState.targetLevel));
+      ACCOUNT_STORAGE.setItem(ATLAS_TARGET_LEVEL_KEY, String(atlasState.targetLevel));
     } catch (e) {
       // 忽略存储失败
     }
@@ -1304,7 +1305,7 @@
 
   function loadAtlasFavorites() {
     try {
-      const parsed = JSON.parse(localStorage.getItem(ATLAS_FAVORITES_KEY) || "[]");
+      const parsed = JSON.parse(ACCOUNT_STORAGE.getItem(ATLAS_FAVORITES_KEY) || "[]");
       if (!Array.isArray(parsed)) return [];
       return Array.from(new Set(parsed.map((id) => String(id || "").trim()).filter(Boolean)));
     } catch (e) {
@@ -1314,7 +1315,7 @@
 
   function loadEquipmentFavorites() {
     try {
-      const parsed = JSON.parse(localStorage.getItem(EQUIPMENT_FAVORITES_KEY) || "[]");
+      const parsed = JSON.parse(ACCOUNT_STORAGE.getItem(EQUIPMENT_FAVORITES_KEY) || "[]");
       if (!Array.isArray(parsed)) return [];
       return Array.from(new Set(parsed.map((id) => String(id || "").trim()).filter(Boolean)));
     } catch (e) {
@@ -1324,7 +1325,7 @@
 
   function saveEquipmentFavorites() {
     try {
-      localStorage.setItem(EQUIPMENT_FAVORITES_KEY, JSON.stringify(state.favorites));
+      ACCOUNT_STORAGE.setItem(EQUIPMENT_FAVORITES_KEY, JSON.stringify(state.favorites));
     } catch (e) {
       // 忽略存储失败
     }
@@ -1332,7 +1333,7 @@
 
   function saveAtlasFavorites() {
     try {
-      localStorage.setItem(ATLAS_FAVORITES_KEY, JSON.stringify(atlasState.favorites));
+      ACCOUNT_STORAGE.setItem(ATLAS_FAVORITES_KEY, JSON.stringify(atlasState.favorites));
     } catch (e) {
       // 忽略存储失败
     }
@@ -1340,7 +1341,7 @@
 
   function loadAtlasPins() {
     try {
-      const parsed = JSON.parse(localStorage.getItem(ATLAS_PINS_KEY) || "[]");
+      const parsed = JSON.parse(ACCOUNT_STORAGE.getItem(ATLAS_PINS_KEY) || "[]");
       if (!Array.isArray(parsed)) return [];
       return Array.from(new Set(parsed.map((id) => String(id || "").trim()).filter(Boolean)));
     } catch (e) {
@@ -1350,7 +1351,7 @@
 
   function saveAtlasPins() {
     try {
-      localStorage.setItem(ATLAS_PINS_KEY, JSON.stringify(atlasState.pins));
+      ACCOUNT_STORAGE.setItem(ATLAS_PINS_KEY, JSON.stringify(atlasState.pins));
     } catch (e) {
       // 忽略存储失败
     }
@@ -1358,7 +1359,7 @@
 
   function loadAtlasInventory() {
     try {
-      const parsed = JSON.parse(localStorage.getItem(ATLAS_INVENTORY_KEY) || "{}");
+      const parsed = JSON.parse(ACCOUNT_STORAGE.getItem(ATLAS_INVENTORY_KEY) || "{}");
       if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return {};
       return Object.keys(parsed).reduce((result, id) => {
         const cleanId = String(id || "").trim();
@@ -1372,7 +1373,7 @@
 
   function saveAtlasInventory() {
     try {
-      localStorage.setItem(ATLAS_INVENTORY_KEY, JSON.stringify(atlasState.inventory));
+      ACCOUNT_STORAGE.setItem(ATLAS_INVENTORY_KEY, JSON.stringify(atlasState.inventory));
     } catch (e) {
       // 忽略存储失败
     }
@@ -1770,7 +1771,7 @@
   function loadQuizItems() {
     var defaults = QUIZ_DATA && QUIZ_DATA.items ? QUIZ_DATA.items : [];
     var saved;
-    try { saved = JSON.parse(localStorage.getItem(QUIZ_STORE_KEY) || "null"); } catch (error) { saved = null; }
+    try { saved = JSON.parse(ACCOUNT_STORAGE.getItem(QUIZ_STORE_KEY) || "null"); } catch (error) { saved = null; }
     return QUIZ.mergeItems(defaults, saved);
   }
 
@@ -1867,7 +1868,7 @@
 
   function loadProgress() {
     try {
-      const raw = localStorage.getItem(PROG_STORE_KEY);
+      const raw = ACCOUNT_STORAGE.getItem(PROG_STORE_KEY);
       if (!raw) return [];
       const parsed = JSON.parse(raw);
       return PROG.normalizeProgressStore(parsed, progressEquipmentCatalog, FDATA.items).disciples;
@@ -1878,7 +1879,7 @@
 
   function saveProgress() {
     try {
-      localStorage.setItem(PROG_STORE_KEY, JSON.stringify({ version: 2, disciples: progState.disciples }));
+      ACCOUNT_STORAGE.setItem(PROG_STORE_KEY, JSON.stringify({ version: 2, disciples: progState.disciples }));
       el.progSaveTip.textContent = "已保存 " + new Date().toLocaleTimeString();
     } catch (e) {
       el.progSaveTip.textContent = "保存失败：浏览器本地存储不可用";

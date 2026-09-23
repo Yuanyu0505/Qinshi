@@ -36,7 +36,7 @@ jobs:
           cp js/ui-performance.js _site/js/
           cp js/cloud-sync-config.js js/cloud-sync-core.js js/cloud-sync-crypto.js js/cloud-sync-storage.js js/cloud-sync-api.js js/cloud-sync.js _site/js/
           cp -R css data images icons _site/
-          cp js/app.js js/atlas.js js/drops.js js/forging.js js/forbidden.js js/forbidden-ui.js js/inscription-performance.js js/inscription.js js/progress.js js/pwa.js js/query.js js/quiz.js js/settings.js js/tactics.js js/tactics-ui.js js/formations.js js/formations-ui.js js/machine-beasts.js js/machine-beast-school-planner.js js/machine-beasts-ui.js js/battle-box-pill-pouch.js js/battle-box-pill-pouch-ui.js js/equipment-compare.js js/equipment-forging.js js/item-navigation.js js/zhulu.js js/zhulu-ui.js _site/js/
+          cp js/app.js js/atlas.js js/drops.js js/forging.js js/forbidden.js js/forbidden-ui.js js/inscription-performance.js js/inscription.js js/progress.js js/pwa.js js/query.js js/quiz.js js/settings.js js/account-edit-lease.js js/account-profiles.js js/account-profiles-ui.js js/tactics.js js/tactics-ui.js js/formations.js js/formations-ui.js js/machine-beasts.js js/machine-beast-school-planner.js js/machine-beasts-ui.js js/battle-box-pill-pouch.js js/battle-box-pill-pouch-ui.js js/equipment-compare.js js/equipment-forging.js js/item-navigation.js js/zhulu.js js/zhulu-ui.js _site/js/
 
       - name: Upload GitHub Pages artifact
         uses: actions/upload-pages-artifact@v4

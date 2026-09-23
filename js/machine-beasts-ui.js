@@ -5,6 +5,7 @@
   var CORE = window.MACHINE_BEAST_CORE;
   var PLANNER = window.MACHINE_BEAST_SCHOOL_PLANNER;
   var PERFORMANCE = window.UI_PERFORMANCE;
+  var ACCOUNT_STORAGE = window.QinshiAccounts;
   var STORE_KEY = "qinshi_machine_beasts_progress_v1";
   var state = {
     mode: "progress",
@@ -90,7 +91,7 @@
   function loadProgress() {
     var raw = {};
     try {
-      raw = JSON.parse(localStorage.getItem(STORE_KEY) || "{}") || {};
+      raw = JSON.parse(ACCOUNT_STORAGE.getItem(STORE_KEY) || "{}") || {};
     } catch (error) {
       showError("机关兽个人进度读取失败，已使用空白数据。", error);
     }
@@ -102,7 +103,7 @@
 
   function saveProgress() {
     try {
-      localStorage.setItem(STORE_KEY, JSON.stringify({ beasts: state.beasts }));
+      ACCOUNT_STORAGE.setItem(STORE_KEY, JSON.stringify({ beasts: state.beasts }));
       return true;
     } catch (error) {
       showError("机关兽个人进度保存失败，请检查浏览器存储空间。", error);

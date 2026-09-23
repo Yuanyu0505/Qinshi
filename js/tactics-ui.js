@@ -4,6 +4,7 @@
   var DATA = window.TACTICS_DATA;
   var CORE = window.TACTICS;
   var PERFORMANCE = window.UI_PERFORMANCE;
+  var ACCOUNT_STORAGE = window.QinshiAccounts;
   var STORE_KEY = "qinshi_tactics_progress_v1";
   var COST_STORE_KEY = "qinshi_tactics_cost_calculator_v1";
   var state = {
@@ -133,7 +134,7 @@
   function loadProgress() {
     var parsed = {};
     try {
-      parsed = JSON.parse(localStorage.getItem(STORE_KEY) || "{}");
+      parsed = JSON.parse(ACCOUNT_STORAGE.getItem(STORE_KEY) || "{}");
     } catch (error) {
       parsed = {};
     }
@@ -152,7 +153,7 @@
     });
 
     try {
-      localStorage.setItem(STORE_KEY, JSON.stringify(stored));
+      ACCOUNT_STORAGE.setItem(STORE_KEY, JSON.stringify(stored));
       state.storageError = "";
       return true;
     } catch (error) {
@@ -164,7 +165,7 @@
   function loadCostState() {
     var parsed = {};
     try {
-      parsed = JSON.parse(localStorage.getItem(COST_STORE_KEY) || "{}");
+      parsed = JSON.parse(ACCOUNT_STORAGE.getItem(COST_STORE_KEY) || "{}");
     } catch (error) {
       parsed = {};
     }
@@ -173,7 +174,7 @@
 
   function saveCostState() {
     try {
-      localStorage.setItem(COST_STORE_KEY, JSON.stringify(state.cost));
+      ACCOUNT_STORAGE.setItem(COST_STORE_KEY, JSON.stringify(state.cost));
       state.costError = "";
       return true;
     } catch (error) {

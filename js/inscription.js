@@ -3,14 +3,9 @@
 
   var DATA = window.INSCRIPTION_DATA;
   var PERFORMANCE = window.INSCRIPTION_PERFORMANCE;
+  var ACCOUNT_STORAGE = window.QinshiAccounts;
   var STORE_KEY = "qinshi_inscription_progress_v2";
   var COMMON_STORE_KEY = "qinshi_inscription_common_v1";
-  var INITIAL_COMMON_NAMES = [
-    "神王道少羽", "神侠道天明", "神兰轩紫女", "神凤吟弄玉", "神天宗晓梦",
-    "神寒蝉吴旷", "神将威龙且", "神荼蘼田蜜", "神惊鲵田言", "神贯侯钟离昧",
-    "神赤霄刘季", "神逆天而行", "神极诣星魂", "神霸道田虎", "神森罗大司命",
-    "神渊虹盖聂", "神潜蛟韩信", "神鬼谷盖聂", "神鲨齿卫庄", "神黑龙天", "神逍遥子"
-  ];
   var commonKeys = new Set();
   var TIANS = ["天府", "天相", "天同", "天梁", "天机"];
   var SHIELDS = ["天遁", "地遁", "人遁", "神遁", "鬼遁", "龙遁", "虎遁", "风遁", "云遁"];
@@ -117,7 +112,7 @@
   }
   function loadProgress() {
     try {
-      var parsed = JSON.parse(localStorage.getItem(STORE_KEY) || "{}");
+      var parsed = JSON.parse(ACCOUNT_STORAGE.getItem(STORE_KEY) || "{}");
       if (!parsed || typeof parsed !== "object") return {};
       Object.keys(parsed).forEach(function (key) {
         var saved = parsed[key];
@@ -149,7 +144,7 @@
     withoutThree = LEGACY_SUB_NAMES[withoutThree] || withoutThree;
     return attrs.some(function (attr) { return attr.x && attr.n === withoutThree; }) ? withoutThree : normalized;
   }
-  function saveProgress() { localStorage.setItem(STORE_KEY, JSON.stringify(progress)); }
+  function saveProgress() { ACCOUNT_STORAGE.setItem(STORE_KEY, JSON.stringify(progress)); }
 
   function commonStatus(message) {
     if (!el.commonStatus) return;
@@ -158,7 +153,7 @@
   }
   function saveCommonDisciples(keys) {
     try {
-      localStorage.setItem(COMMON_STORE_KEY, JSON.stringify({ version: 1, keys: Array.from(keys) }));
+      ACCOUNT_STORAGE.setItem(COMMON_STORE_KEY, JSON.stringify({ version: 1, keys: Array.from(keys) }));
       commonStatus("");
       return true;
     } catch (error) {
@@ -168,11 +163,9 @@
   }
   function loadCommonDisciples() {
     try {
-      var raw = localStorage.getItem(COMMON_STORE_KEY);
+      var raw = ACCOUNT_STORAGE.getItem(COMMON_STORE_KEY);
       if (raw === null) {
-        commonKeys = new Set(DATA.items.filter(function (item) {
-          return item.quality === "红色神将" && INITIAL_COMMON_NAMES.indexOf(item.name) !== -1;
-        }).map(keyOf));
+        commonKeys = new Set();
         saveCommonDisciples(commonKeys);
         return;
       }

@@ -5,6 +5,7 @@
   var CORE = window.BATTLE_BOX_PILL_POUCH_CORE;
   var ATLAS_DATA = window.ATLAS_DATA;
   var EQUIPMENT_DATA = window.SPECIAL_EQUIPMENT_DATA;
+  var ACCOUNT_STORAGE = window.QinshiAccounts;
   var STORE_KEY = "qinshi_battle_box_pill_pouch_v1";
   var state = {
     mode: "progress",
@@ -76,7 +77,7 @@
   function loadState() {
     var raw = {};
     try {
-      raw = JSON.parse(localStorage.getItem(STORE_KEY) || "{}") || {};
+      raw = JSON.parse(ACCOUNT_STORAGE.getItem(STORE_KEY) || "{}") || {};
     } catch (error) {
       showError("战匣丹囊个人进度读取失败，已使用空白数据。", error);
     }
@@ -96,7 +97,7 @@
 
   function saveState() {
     try {
-      localStorage.setItem(STORE_KEY, JSON.stringify({
+      ACCOUNT_STORAGE.setItem(STORE_KEY, JSON.stringify({
         version: 1,
         account: state.account,
         disciples: state.disciples

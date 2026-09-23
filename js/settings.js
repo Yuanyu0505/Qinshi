@@ -2,8 +2,9 @@
   "use strict";
 
   var APP_NAME = "Qin";
-  var BACKUP_FORMAT_VERSION = 1;
+  var BACKUP_FORMAT_VERSION = 2;
   var STORAGE_PREFIX = "qinshi_";
+  var ACCOUNTS = window.QinshiAccountProfiles;
 
   function collectManagedData() {
     var data = {};
@@ -29,7 +30,7 @@
 
   function backupFileName(reason) {
     var stamp = new Date().toISOString().replace(/[:.]/g, "-");
-    var suffix = reason === "before-import" || reason === "before-cloud-sync" ? reason : "manual";
+    var suffix = /^[a-z0-9-]+$/.test(String(reason || "")) ? reason : "manual";
     return "Qin-backup-" + suffix + "-" + stamp + ".json";
   }
 
@@ -43,19 +44,19 @@
     link.click();
     link.remove();
     window.setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+    return true;
   }
 
   function downloadBackup(reason) {
-    downloadPayload(makePayload(reason), reason);
+    return downloadPayload(makePayload(reason), reason);
   }
 
   function validatePayload(payload) {
     if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
       throw new Error("备份文件不是有效对象。");
     }
-    if (payload.formatVersion !== BACKUP_FORMAT_VERSION) {
-      throw new Error("备份版本不受支持。");
-    }
+    if (payload.formatVersion === 1) return upgradeV1Data(payload.data);
+    if (payload.formatVersion !== BACKUP_FORMAT_VERSION) throw new Error("备份版本不受支持。");
     return validateManagedData(payload.data);
   }
 
@@ -68,7 +69,44 @@
         throw new Error("备份文件包含不允许的数据项。");
       }
     });
+    if (!Object.prototype.hasOwnProperty.call(data, ACCOUNTS.REGISTRY_KEY)) {
+      throw new Error("这是旧版单账号云快照，请先在来源设备更新工具并重新上传快照。");
+    }
+    var registry;
+    try { registry = ACCOUNTS.normalizeRegistry(JSON.parse(data[ACCOUNTS.REGISTRY_KEY])); }
+    catch (error) { throw new Error("账号注册表无效：" + error.message); }
+    var ids = new Set(registry.accounts.map(function (account) { return account.id; }));
+    Object.keys(data).forEach(function (key) {
+      if (key === ACCOUNTS.REGISTRY_KEY) return;
+      var parsed = ACCOUNTS.parsePhysicalKey(key);
+      if (!parsed || !ids.has(parsed.accountId) || parsed.logicalKey.indexOf(STORAGE_PREFIX) !== 0) {
+        throw new Error("备份文件包含未归属账号的数据项。");
+      }
+    });
     return data;
+  }
+
+  function upgradeV1Data(data) {
+    if (!data || typeof data !== "object" || Array.isArray(data)) throw new Error("备份文件缺少本机进度数据。");
+    var id = window.crypto && typeof window.crypto.randomUUID === "function"
+      ? window.crypto.randomUUID()
+      : "account-import-" + Date.now().toString(36);
+    var stamp = new Date().toISOString();
+    var registry = {
+      schemaVersion: 1,
+      primaryAccountId: id,
+      order: [id],
+      accounts: [{ id: id, name: "默认账号", server: "未填写", createdAt: stamp, updatedAt: stamp }]
+    };
+    var upgraded = {};
+    upgraded[ACCOUNTS.REGISTRY_KEY] = JSON.stringify(registry);
+    Object.keys(data).forEach(function (key) {
+      if (key.indexOf(STORAGE_PREFIX) !== 0 || typeof data[key] !== "string" || key === ACCOUNTS.REGISTRY_KEY || key.indexOf(ACCOUNTS.ACCOUNT_PREFIX) === 0) {
+        throw new Error("旧版备份包含不允许的数据项。");
+      }
+      upgraded[ACCOUNTS.physicalKey(id, key)] = data[key];
+    });
+    return validateManagedData(upgraded);
   }
 
   function clearManagedData() {
@@ -104,6 +142,7 @@
   }
 
   function restoreManagedData(previous) {
+    if (!previous || !Object.prototype.hasOwnProperty.call(previous, ACCOUNTS.REGISTRY_KEY)) previous = upgradeV1Data(previous);
     validateManagedData(previous);
     clearManagedData();
     Object.keys(previous).forEach(function (key) { localStorage.setItem(key, previous[key]); });
@@ -126,7 +165,7 @@
         setStatus("已取消导入。", false);
         return;
       }
-      downloadBackup("before-import");
+      if (!downloadBackup("before-import")) throw new Error("未能生成导入前备份。");
       replaceManagedData(data);
       setStatus("导入完成，正在重新载入页面…", false);
       window.setTimeout(function () { window.location.reload(); }, 500);
@@ -162,6 +201,8 @@
   window.QinshiSettings = {
     collectManagedData: collectManagedData,
     validateManagedData: validateManagedData,
+    validatePayload: validatePayload,
+    upgradeV1Data: upgradeV1Data,
     makePayload: makePayload,
     downloadPayload: downloadPayload,
     replaceManagedData: replaceManagedData,

@@ -3,6 +3,7 @@
 
   var STORE_KEY = "qinshi_forbidden_needs_v2";
   var LEGACY_STORE_KEY = "qinshi_forbidden_needs_v1";
+  var ACCOUNT_STORAGE = window.QinshiAccounts;
   var initialized = false;
   var data = null;
   var core = null;
@@ -81,7 +82,7 @@
 
   function parseStored(key) {
     try {
-      var value = localStorage.getItem(key);
+      var value = ACCOUNT_STORAGE.getItem(key);
       return value ? JSON.parse(value) : null;
     } catch (error) {
       return null;
@@ -94,7 +95,7 @@
 
   function saveNeeds() {
     try {
-      localStorage.setItem(STORE_KEY, JSON.stringify(state.needs));
+      ACCOUNT_STORAGE.setItem(STORE_KEY, JSON.stringify(state.needs));
     } catch (error) {
       showError("禁地需求未能保存到本机浏览器，本次页面内操作仍可继续。", true);
     }

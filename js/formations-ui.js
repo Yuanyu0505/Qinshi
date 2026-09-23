@@ -3,6 +3,7 @@
 
   var DATA = root.FORMATIONS_DATA;
   var CORE = root.FORMATIONS;
+  var ACCOUNT_STORAGE = root.QinshiAccounts;
   var STORE_KEY = "qinshi_formation_progress_v1";
   var initialized = false;
   var el = {};
@@ -58,7 +59,7 @@
   function loadStored() {
     var parsed = {};
     try {
-      parsed = JSON.parse(localStorage.getItem(STORE_KEY) || "{}");
+      parsed = JSON.parse(ACCOUNT_STORAGE.getItem(STORE_KEY) || "{}");
     } catch (error) {
       parsed = {};
     }
@@ -76,7 +77,7 @@
       if (Object.keys(progress.members).length || progress.mainId) cleaned[formation.id] = progress;
     });
     try {
-      localStorage.setItem(STORE_KEY, JSON.stringify(cleaned));
+      ACCOUNT_STORAGE.setItem(STORE_KEY, JSON.stringify(cleaned));
       state.stored = cleaned;
       state.storageError = "";
       return true;

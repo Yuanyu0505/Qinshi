@@ -8,15 +8,36 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Qin">
-<link rel="manifest" href="manifest.webmanifest?v=1.0.42">
-<link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png?v=1.0.42">
-<link rel="stylesheet" href="css/style.css?v=1.0.42">
+<link rel="manifest" href="manifest.webmanifest?v=1.0.43">
+<link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png?v=1.0.43">
+<link rel="stylesheet" href="css/style.css?v=1.0.43">
 </head>
 <body>
+<div id="account-init-overlay" class="account-init-overlay" hidden>
+  <form id="account-init-form" class="account-init-card">
+    <h2>创建第一个游戏账号</h2>
+    <p>不同游戏账号的数据将分别保存，切换时不会混合展示。</p>
+    <label>账号名称<input id="account-init-name" autocomplete="nickname" maxlength="40" required></label>
+    <label>服务器<input id="account-init-server" autocomplete="off" maxlength="40" required></label>
+    <button type="submit" class="seg active">创建并进入工具</button>
+    <p id="account-init-status" class="settings-status" role="status" aria-live="polite"></p>
+  </form>
+</div>
 <div class="wrap">
   <header class="top">
     <h1 id="page-title">图鉴</h1>
+    <div id="account-switcher" class="account-switcher">
+      <button id="account-switcher-toggle" type="button" class="account-switcher-toggle" aria-expanded="false" aria-controls="account-switcher-list">
+        <span id="account-switcher-label">未创建账号</span><span aria-hidden="true">▾</span>
+      </button>
+      <div id="account-switcher-list" class="account-switcher-list" hidden></div>
+    </div>
   </header>
+
+  <div id="account-readonly-banner" class="account-readonly-banner" role="status" hidden>
+    <span id="account-readonly-text">该账号正在其他标签页编辑，当前页面为只读模式。</span>
+    <button id="account-takeover" type="button" class="seg active">接管编辑权</button>
+  </div>
 
   <div id="pwa-update-notice" class="pwa-update-notice" role="status" hidden>
     <span>Qin 有新版本可用。</span>
@@ -628,7 +649,7 @@
         <div class="panel-title">应用与离线状态</div>
         <div class="settings-list">
           <div><span>应用名称</span><strong>Qin</strong></div>
-          <div><span>当前版本</span><strong id="pwa-version">1.0.42</strong></div>
+          <div><span>当前版本</span><strong id="pwa-version">1.0.43</strong></div>
           <div><span>运行状态</span><strong id="pwa-mode-status">正在检查…</strong></div>
         </div>
         <div class="settings-actions">
@@ -639,6 +660,30 @@
         <p class="muted-tip">“强制修复更新”仅清理本站旧离线缓存，不会删除个人进度。</p>
         <p id="pwa-install-help" class="muted-tip">Android 请使用浏览器菜单中的“安装应用”；iPhone/iPad 请在 Safari 中点击“分享”→“添加到主屏幕”。</p>
         <p id="pwa-status" class="settings-status" aria-live="polite"></p>
+      </section>
+
+      <section id="account-manager" class="panel settings-panel account-manager-panel">
+        <div class="panel-title">游戏账号管理</div>
+        <p class="settings-copy">最多保存 3 个账号。每个账号的个人进度、库存、收藏和勾选内容彼此隔离。</p>
+        <div id="account-manager-list" class="account-manager-list"></div>
+        <form id="account-editor" class="account-editor">
+          <input id="account-editor-id" type="hidden">
+          <label>账号名称<input id="account-editor-name" maxlength="40" autocomplete="nickname" required></label>
+          <label>服务器<input id="account-editor-server" maxlength="40" autocomplete="off" required></label>
+          <div class="settings-actions">
+            <button id="account-editor-save" type="submit" class="seg active">创建账号</button>
+            <button id="account-editor-cancel" type="button" class="seg" hidden>取消编辑</button>
+          </div>
+        </form>
+        <div class="settings-actions account-reorder-actions">
+          <button id="account-reorder-toggle" type="button" class="seg">调整账号顺序</button>
+        </div>
+        <div id="account-reorder-panel" class="account-reorder-panel" hidden>
+          <p class="muted-tip">主账号固定置顶。依次点击两个其他账号即可交换位置，完成后点击保存。</p>
+          <div id="account-reorder-list" class="account-reorder-list"></div>
+          <div class="settings-actions"><button id="account-reorder-save" type="button" class="seg active">保存顺序</button><button id="account-reorder-cancel" type="button" class="seg">取消</button></div>
+        </div>
+        <p id="account-manager-status" class="settings-status" role="status" aria-live="polite"></p>
       </section>
 
       <section id="cloud-sync-panel" class="panel settings-panel cloud-sync-panel" aria-labelledby="cloud-sync-title">
@@ -778,7 +823,7 @@
 
       <section class="panel settings-panel">
         <div class="panel-title">本机进度备份</div>
-        <p class="settings-copy">备份包含本机保存的图鉴等级、收藏、置顶与库存、橙装锻造进度、禁地本期需求、铭文进度、机关兽进度、兵法进度与计算设置、战匣丹囊进度、合阵个人进度及历史答题修订数据，不包含工具自带题库和查询数据。</p>
+        <p class="settings-copy">备份包含全部游戏账号、主账号和排序，以及每个账号的图鉴、锻造、禁地、铭文、机关兽、兵法、战匣丹囊、合阵和答题修订数据；不包含工具自带资料和云同步密码。</p>
         <div class="settings-actions">
           <button id="settings-export" type="button" class="seg active">导出备份</button>
           <button id="settings-import-trigger" type="button" class="seg">导入备份</button>
@@ -845,52 +890,55 @@
   </div>
 </div>
 
-<script src="data/tactics.js?v=1.0.42"></script>
-<script src="data/formations.js?v=1.0.42"></script>
-<script src="data/machine-beasts.js?v=1.0.42"></script>
-<script src="data/battle-box-pill-pouch.js?v=1.0.42"></script>
-<script src="data/special-equipment.js?v=1.0.42"></script>
-<script src="data/forging.js?v=1.0.42"></script>
-<script src="data/drops.js?v=1.0.42"></script>
-<script src="data/atlas.js?v=1.0.42"></script>
-<script src="data/forbidden.js?v=1.0.42"></script>
-<script src="data/quiz.js?v=1.0.42"></script>
-<script src="data/inscription.js?v=1.0.42"></script>
-<script src="data/zhulu.js?v=1.0.42"></script>
-<script src="data/2026-09-content-update.js?v=1.0.42"></script>
-<script src="js/tactics.js?v=1.0.42"></script>
-<script src="js/formations.js?v=1.0.42"></script>
-<script src="js/machine-beasts.js?v=1.0.42"></script>
-<script src="js/machine-beast-school-planner.js?v=1.0.42"></script>
-<script src="js/battle-box-pill-pouch.js?v=1.0.42"></script>
-<script src="js/query.js?v=1.0.42"></script>
-<script src="js/equipment-compare.js?v=1.0.42"></script>
-<script src="js/equipment-forging.js?v=1.0.42"></script>
-<script src="js/item-navigation.js?v=1.0.42"></script>
-<script src="js/forging.js?v=1.0.42"></script>
-<script src="js/drops.js?v=1.0.42"></script>
-<script src="js/progress.js?v=1.0.42"></script>
-<script src="js/atlas.js?v=1.0.42"></script>
-<script src="js/forbidden.js?v=1.0.42"></script>
-<script src="js/quiz.js?v=1.0.42"></script>
-<script src="js/ui-performance.js?v=1.0.42"></script>
-<script src="js/inscription-performance.js?v=1.0.42"></script>
-<script src="js/inscription.js?v=1.0.42"></script>
-<script src="js/zhulu.js?v=1.0.42"></script>
-<script src="js/settings.js?v=1.0.42"></script>
-<script src="js/cloud-sync-config.js?v=1.0.42"></script>
-<script src="js/cloud-sync-core.js?v=1.0.42"></script>
-<script src="js/cloud-sync-crypto.js?v=1.0.42"></script>
-<script src="js/cloud-sync-storage.js?v=1.0.42"></script>
-<script src="js/cloud-sync-api.js?v=1.0.42"></script>
-<script src="js/pwa.js?v=1.0.42"></script>
-<script src="js/cloud-sync.js?v=1.0.42"></script>
-<script src="js/tactics-ui.js?v=1.0.42"></script>
-<script src="js/formations-ui.js?v=1.0.42"></script>
-<script src="js/machine-beasts-ui.js?v=1.0.42"></script>
-<script src="js/battle-box-pill-pouch-ui.js?v=1.0.42"></script>
-<script src="js/forbidden-ui.js?v=1.0.42"></script>
-<script src="js/zhulu-ui.js?v=1.0.42"></script>
-<script src="js/app.js?v=1.0.42"></script>
+<script src="data/tactics.js?v=1.0.43"></script>
+<script src="data/formations.js?v=1.0.43"></script>
+<script src="data/machine-beasts.js?v=1.0.43"></script>
+<script src="data/battle-box-pill-pouch.js?v=1.0.43"></script>
+<script src="data/special-equipment.js?v=1.0.43"></script>
+<script src="data/forging.js?v=1.0.43"></script>
+<script src="data/drops.js?v=1.0.43"></script>
+<script src="data/atlas.js?v=1.0.43"></script>
+<script src="data/forbidden.js?v=1.0.43"></script>
+<script src="data/quiz.js?v=1.0.43"></script>
+<script src="data/inscription.js?v=1.0.43"></script>
+<script src="data/zhulu.js?v=1.0.43"></script>
+<script src="data/2026-09-content-update.js?v=1.0.43"></script>
+<script src="js/account-edit-lease.js?v=1.0.43"></script>
+<script src="js/account-profiles.js?v=1.0.43"></script>
+<script src="js/tactics.js?v=1.0.43"></script>
+<script src="js/formations.js?v=1.0.43"></script>
+<script src="js/machine-beasts.js?v=1.0.43"></script>
+<script src="js/machine-beast-school-planner.js?v=1.0.43"></script>
+<script src="js/battle-box-pill-pouch.js?v=1.0.43"></script>
+<script src="js/query.js?v=1.0.43"></script>
+<script src="js/equipment-compare.js?v=1.0.43"></script>
+<script src="js/equipment-forging.js?v=1.0.43"></script>
+<script src="js/item-navigation.js?v=1.0.43"></script>
+<script src="js/forging.js?v=1.0.43"></script>
+<script src="js/drops.js?v=1.0.43"></script>
+<script src="js/progress.js?v=1.0.43"></script>
+<script src="js/atlas.js?v=1.0.43"></script>
+<script src="js/forbidden.js?v=1.0.43"></script>
+<script src="js/quiz.js?v=1.0.43"></script>
+<script src="js/ui-performance.js?v=1.0.43"></script>
+<script src="js/inscription-performance.js?v=1.0.43"></script>
+<script src="js/inscription.js?v=1.0.43"></script>
+<script src="js/zhulu.js?v=1.0.43"></script>
+<script src="js/settings.js?v=1.0.43"></script>
+<script src="js/account-profiles-ui.js?v=1.0.43"></script>
+<script src="js/cloud-sync-config.js?v=1.0.43"></script>
+<script src="js/cloud-sync-core.js?v=1.0.43"></script>
+<script src="js/cloud-sync-crypto.js?v=1.0.43"></script>
+<script src="js/cloud-sync-storage.js?v=1.0.43"></script>
+<script src="js/cloud-sync-api.js?v=1.0.43"></script>
+<script src="js/pwa.js?v=1.0.43"></script>
+<script src="js/cloud-sync.js?v=1.0.43"></script>
+<script src="js/tactics-ui.js?v=1.0.43"></script>
+<script src="js/formations-ui.js?v=1.0.43"></script>
+<script src="js/machine-beasts-ui.js?v=1.0.43"></script>
+<script src="js/battle-box-pill-pouch-ui.js?v=1.0.43"></script>
+<script src="js/forbidden-ui.js?v=1.0.43"></script>
+<script src="js/zhulu-ui.js?v=1.0.43"></script>
+<script src="js/app.js?v=1.0.43"></script>
 </body>
 </html>

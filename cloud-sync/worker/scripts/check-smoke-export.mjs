@@ -19,6 +19,20 @@ const MAX_BASE64_CANDIDATES = 250000;
 const MAX_TOTAL_DECODED_CANDIDATE_BYTES = 256 * MIB;
 const MAX_SQL_STATEMENT_CHARS = 1 * MIB;
 const MAX_SQL_STATEMENTS = 1000000;
+const EXPORT_SENTINEL = "-- QIN_CLOUD_SYNC_SMOKE_EXPORT_COMPLETE_V1";
+const REQUIRED_TABLES = Object.freeze([
+  "sync_spaces", "devices", "snapshots", "snapshot_chunks", "upload_sessions", "auth_throttles",
+  "lifecycle_idempotency"
+]);
+const REQUIRED_INDEXES = Object.freeze([
+  ["idx_snapshots_device_role_time", "snapshots"],
+  ["idx_snapshots_one_latest", "snapshots"],
+  ["idx_upload_sessions_expiry", "upload_sessions"],
+  ["idx_lifecycle_idempotency_expiry", "lifecycle_idempotency"],
+  ["idx_upload_sessions_snapshot", "upload_sessions"],
+  ["idx_snapshots_device_history", "snapshots"]
+]);
+const REQUIRED_SMOKE_ROWS = Object.freeze(["sync_spaces", "devices", "snapshots", "snapshot_chunks"]);
 
 class InputError extends Error {}
 
@@ -90,9 +104,39 @@ function parseHexBlobs(sqlText) {
   return blobs;
 }
 
+function validateCompletionSentinel(sqlText) {
+  let count = 0;
+  let offset = 0;
+  while ((offset = sqlText.indexOf(EXPORT_SENTINEL, offset)) >= 0) {
+    count += 1;
+    offset += EXPORT_SENTINEL.length;
+  }
+  const lines = sqlText.split("\n");
+  let terminal = lines.length - 1;
+  while (terminal >= 0 && /^\s*$/.test(lines[terminal])) terminal -= 1;
+  const terminalLine = terminal >= 0 ? lines[terminal].replace(/\r$/, "") : "";
+  if (count !== 1 || terminalLine !== EXPORT_SENTINEL) {
+    throw new InputError("SQL 导出无效：缺少唯一的终止完成标记");
+  }
+  lines[terminal] = "";
+  return lines.join("\n");
+}
+
+function exactIdentifier(name) {
+  const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return `(?:"${escaped}"|\\x60${escaped}\\x60|\\[${escaped}\\]|${escaped})`;
+}
+
+function qualifiedIdentifier(name) {
+  const qualifier = "(?:\"[^\"]+\"|\\x60[^\\x60]+\\x60|\\[[^\\]]+\\]|[A-Za-z_][A-Za-z0-9_$]*)";
+  return `(?:${qualifier}\\s*\\.\\s*)?${exactIdentifier(name)}`;
+}
+
 function validateSqlExport(sqlText) {
   if (!sqlText.trim()) throw new InputError("SQL 导出无效：文件为空");
-  const requiredTables = new Set(["sync_spaces", "devices", "snapshot_chunks"]);
+  const requiredTables = new Set(REQUIRED_TABLES);
+  const requiredIndexes = new Map(REQUIRED_INDEXES);
+  const requiredRows = new Set(REQUIRED_SMOKE_ROWS);
   let state = "normal";
   let statement = "";
   let depth = 0;
@@ -124,9 +168,16 @@ function validateSqlExport(sqlText) {
     }
     if (/^(?:COMMIT|END)(?:\s+TRANSACTION)?$/i.test(value)) commitCount += 1;
     for (const table of [...requiredTables]) {
-      const escaped = table.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-      const create = new RegExp(`^CREATE\\s+TABLE\\s+(?:IF\\s+NOT\\s+EXISTS\\s+)?(?:[\"\\x60\\[]?${escaped}[\"\\x60\\]]?)\\s*\\(`, "i");
+      const create = new RegExp(`^CREATE\\s+TABLE\\s+(?:IF\\s+NOT\\s+EXISTS\\s+)?${qualifiedIdentifier(table)}\\s*\\(`, "i");
       if (create.test(value)) requiredTables.delete(table);
+    }
+    for (const [index, table] of [...requiredIndexes]) {
+      const create = new RegExp(`^CREATE\\s+(?:UNIQUE\\s+)?INDEX\\s+(?:IF\\s+NOT\\s+EXISTS\\s+)?${qualifiedIdentifier(index)}\\s+ON\\s+${qualifiedIdentifier(table)}\\s*\\(`, "i");
+      if (create.test(value)) requiredIndexes.delete(index);
+    }
+    for (const table of [...requiredRows]) {
+      const insert = new RegExp(`^INSERT\\s+(?:OR\\s+(?:ROLLBACK|ABORT|REPLACE|FAIL|IGNORE)\\s+)?INTO\\s+${qualifiedIdentifier(table)}(?:\\s*\\([^;]*?\\))?\\s+VALUES\\b`, "i");
+      if (insert.test(value)) requiredRows.delete(table);
     }
   }
 
@@ -170,6 +221,8 @@ function validateSqlExport(sqlText) {
   }
   if (depth !== 0 || statement.trim()) throw new InputError("SQL 导出无效：末尾语句不完整");
   if (requiredTables.size) throw new InputError("SQL 导出无效：缺少必要的数据表");
+  if (requiredIndexes.size) throw new InputError("SQL 导出无效：缺少当前结构索引");
+  if (requiredRows.size) throw new InputError("SQL 导出无效：缺少烟雾流程数据行");
   const wranglerPreamble = /^PRAGMA\s+defer_foreign_keys\s*=\s*(?:TRUE|1)$/i.test(firstStatement);
   const transactional = beginCount === 1 && commitCount === 1 &&
     (beginStatementPosition === 1 || (wranglerPreamble && beginStatementPosition === 2)) &&
@@ -261,11 +314,12 @@ function inspect(sqlBytes, sqlText, canaries, blobs) {
 
 function main(argv) {
   if (argv.length !== 2) throw new InputError(usage());
-  const { bytes: sqlBytes, text: sqlText } = readUtf8(argv[0], "SQL 导出", MAX_EXPORT_BYTES);
+  const { text: sqlText } = readUtf8(argv[0], "SQL 导出", MAX_EXPORT_BYTES);
   const canaries = readCanaries(argv[1]);
-  validateSqlExport(sqlText);
-  const blobs = parseHexBlobs(sqlText);
-  const findings = inspect(sqlBytes, sqlText, canaries, blobs);
+  const sqlBody = validateCompletionSentinel(sqlText);
+  validateSqlExport(sqlBody);
+  const blobs = parseHexBlobs(sqlBody);
+  const findings = inspect(Buffer.from(sqlBody, "utf8"), sqlBody, canaries, blobs);
   if (findings.length) {
     const unique = new Map(findings.map((finding) => [`${finding.label}\0${finding.kind}`, finding]));
     for (const finding of unique.values()) process.stderr.write(`发现禁止明文：${finding.label} [${finding.kind}]\n`);

@@ -83,16 +83,18 @@ npx wrangler dev -c wrangler.test.jsonc
 }
 ```
 
-导出后运行仓库内的无依赖校验器：
+使用 PowerShell 导出后运行仓库内的无依赖校验器。固定完成标记不含任何秘密，并且只能在 `wrangler d1 export` 成功退出后追加；导出失败会立即停止，不得为失败或残缺文件补写标记：
 
-```bash
+```powershell
 npx wrangler d1 export qin-cloud-sync-test --local -c wrangler.test.jsonc --output .wrangler/qin-cloud-sync-smoke.sql
+if ($LASTEXITCODE -ne 0) { throw "本地 D1 导出失败，未写入完成标记" }
+Add-Content -LiteralPath .wrangler/qin-cloud-sync-smoke.sql -Value "`r`n-- QIN_CLOUD_SYNC_SMOKE_EXPORT_COMPLETE_V1`r`n" -Encoding utf8 -NoNewline
 node scripts/check-smoke-export.mjs .wrangler/qin-cloud-sync-smoke.sql .wrangler/qin-cloud-sync-smoke-canaries.json
 ```
 
 脚本必须以状态码 0 完成并显示“未发现已知明文 canary”。单独对 SQL 文本执行 `rg` 不足以完成验收，因为 SQLite 会把 BLOB 导出为 `X'...hex...'`，而字段还可能包含 Base64 或 Base64URL 编码。校验器会检查原始 UTF-8 文本、解码后的十六进制 BLOB，并严格解码文本和 BLOB 中的 Base64 与 Base64URL 候选；即使 canary 带有编码前后缀、出现字节对齐偏移或省略填充也会检查。
 
-校验器还会核对导出本身：空白文件、无关或错误数据库导出、缺少 `sync_spaces`／`devices`／`snapshot_chunks` 关键表，以及截断或不完整的 SQL 都会被拒绝并以非零状态退出。输入或候选超过防御性资源上限时同样失败关闭，不会把未完整检查的导出误报为安全。
+校验器还会核对导出本身：固定完成标记必须唯一且是最后一个非空白行；当前迁移形成的全部关键表和索引（包括晚期迁移索引）必须齐全；烟雾流程必须留下真实数据行，覆盖 `sync_spaces`、`devices`、`snapshots`、`snapshot_chunks`。空白文件、只有结构没有烟雾数据的库、无关或错误数据库导出、成功导出但选错的未使用数据库，以及截断或不完整的 SQL 都会被拒绝并以非零状态退出。注释、字符串或 BLOB 里的伪表名、伪索引和伪 `INSERT` 不计作证据。输入或候选超过防御性资源上限时同样失败关闭，不会把未完整检查的导出误报为安全。
 
 已知明文 **device name**、示例 **`qinshi_` value**、**password**、**recovery key** 和 **device token** 任一出现时，脚本会以非零状态退出，只报告安全分类和编码位置，不打印 canary 值；此时禁止继续部署。`.wrangler/` 已被忽略；检查完成后无需提交 SQL 导出或 canary 清单。
 

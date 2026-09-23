@@ -52,14 +52,31 @@ function runSmokeExportVerifier(sql, manifest) {
   return { ...result, output: `${result.stdout || ""}${result.stderr || ""}` };
 }
 
-function completeSmokeSql(statement = "") {
+const SMOKE_EXPORT_SENTINEL = "-- QIN_CLOUD_SYNC_SMOKE_EXPORT_COMPLETE_V1";
+
+function completeSmokeSql(statement = "", { wrangler = false } = {}) {
   return [
-    "BEGIN TRANSACTION;",
+    wrangler ? "PRAGMA defer_foreign_keys=TRUE;" : "BEGIN TRANSACTION;",
     "CREATE TABLE sync_spaces (id TEXT PRIMARY KEY);",
     "CREATE TABLE devices (id TEXT PRIMARY KEY, space_id TEXT);",
+    "CREATE TABLE snapshots (id TEXT PRIMARY KEY, space_id TEXT, device_id TEXT);",
     "CREATE TABLE snapshot_chunks (snapshot_id TEXT, chunk_index INTEGER, body BLOB);",
+    "CREATE TABLE upload_sessions (id TEXT PRIMARY KEY, snapshot_id TEXT);",
+    "CREATE TABLE auth_throttles (locator_hash TEXT PRIMARY KEY);",
+    "CREATE TABLE lifecycle_idempotency (scope_hash TEXT, key_hash TEXT);",
+    "CREATE INDEX idx_snapshots_device_role_time ON snapshots(device_id);",
+    "CREATE UNIQUE INDEX idx_snapshots_one_latest ON snapshots(device_id);",
+    "CREATE INDEX idx_upload_sessions_expiry ON upload_sessions(snapshot_id);",
+    "CREATE INDEX idx_lifecycle_idempotency_expiry ON lifecycle_idempotency(scope_hash);",
+    "CREATE UNIQUE INDEX idx_upload_sessions_snapshot ON upload_sessions(snapshot_id);",
+    "CREATE INDEX idx_snapshots_device_history ON snapshots(device_id);",
+    "INSERT INTO sync_spaces VALUES ('space');",
+    "INSERT INTO devices VALUES ('device', 'space');",
+    "INSERT INTO snapshots VALUES ('snapshot', 'space', 'device');",
+    "INSERT INTO snapshot_chunks VALUES ('snapshot', 0, X'018FA4D2C197BEE0');",
     statement,
-    "COMMIT;",
+    wrangler ? "" : "COMMIT;",
+    SMOKE_EXPORT_SENTINEL,
     ""
   ].filter((line) => line !== "").join("\n");
 }
@@ -307,6 +324,29 @@ test("云同步部署手册固定本地命令、密文检查和安全发布顺�
   assert.match(runbook, /最近[^\n]*3[^\n]*(?:份|次)[^\n]*历史/);
   assert.match(runbook, /解码[^\n]*Base64[^\n]*Base64URL[^\n]*前后缀/);
   assert.match(runbook, /空白[^\n]*错误数据库[^\n]*(?:截断|不完整)[^\n]*(?:拒绝|失败)/);
+  assert.ok(runbook.includes(SMOKE_EXPORT_SENTINEL), "手册必须使用固定非秘密导出完成标记");
+  const exportCommand = runbook.indexOf("npx wrangler d1 export qin-cloud-sync-test --local");
+  const exitGuard = runbook.indexOf("if ($LASTEXITCODE -ne 0)", exportCommand);
+  const sentinelAppend = runbook.indexOf("Add-Content", exitGuard);
+  assert.ok(exportCommand >= 0 && exitGuard > exportCommand && sentinelAppend > exitGuard,
+    "只有本地导出成功后才能追加完成标记");
+  assert.match(runbook, /真实数据行[^\n]*sync_spaces[^\n]*devices[^\n]*snapshots[^\n]*snapshot_chunks/);
+});
+
+test("云同步导出命令失败时不会创建完成标记", () => {
+  const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "qin-smoke-export-failure-"));
+  const exportPath = path.join(tempDir, "failed.sql");
+  const shell = process.env.SystemRoot ? path.join(process.env.SystemRoot, "System32", "WindowsPowerShell", "v1.0", "powershell.exe") : "powershell.exe";
+  const script = [
+    `& cmd.exe /c exit 7`,
+    `if ($LASTEXITCODE -ne 0) { exit 0 }`,
+    `Add-Content -LiteralPath '${exportPath.replace(/'/g, "''")}' -Value '${SMOKE_EXPORT_SENTINEL}' -Encoding utf8`,
+    `exit 1`
+  ].join("; ");
+  const result = spawnSync(shell, ["-NoProfile", "-NonInteractive", "-Command", script], { encoding: "utf8" });
+  assert.equal(result.status, 0, `${result.stdout || ""}${result.stderr || ""}`);
+  assert.equal(fs.existsSync(exportPath), false, "失败导出不得产生带完成标记的文件");
+  fs.rmSync(tempDir, { recursive: true, force: true });
 });
 
 test("云同步烟雾导出校验器识别原文、十六进制 BLOB、Base64 和 Base64URL", () => {
@@ -395,12 +435,12 @@ test("云同步烟雾导出校验器拒绝错误、空白和不完整导出", ()
   const invalidExports = [
     ["空文件", ""],
     ["空白文件", "  \r\n\t"],
-    ["无关 SQL", "BEGIN TRANSACTION; SELECT 1; COMMIT;"],
-    ["错误数据库", "BEGIN TRANSACTION; CREATE TABLE unrelated (id TEXT); COMMIT;"],
-    ["缺少 COMMIT", completeSmokeSql("INSERT INTO devices VALUES ('safe', NULL);").replace(/COMMIT;\s*$/, "")],
-    ["截断语句", completeSmokeSql().replace(/COMMIT;\s*$/, "INSERT INTO devices VALUES ('cut")],
-    ["未闭合十六进制 BLOB", completeSmokeSql().replace(/COMMIT;\s*$/, "INSERT INTO snapshot_chunks VALUES ('s', 0, X'AB")],
-    ["伪 Wrangler 导出", "PRAGMA defer_foreign_keys=TRUE; CREATE TABLE unrelated (id TEXT);"],
+    ["无关 SQL", `BEGIN TRANSACTION; SELECT 1; COMMIT;\n${SMOKE_EXPORT_SENTINEL}`],
+    ["错误数据库", `BEGIN TRANSACTION; CREATE TABLE unrelated (id TEXT); COMMIT;\n${SMOKE_EXPORT_SENTINEL}`],
+    ["缺少 COMMIT", completeSmokeSql().replace(`COMMIT;\n${SMOKE_EXPORT_SENTINEL}`, SMOKE_EXPORT_SENTINEL)],
+    ["截断语句", completeSmokeSql().replace(`COMMIT;\n${SMOKE_EXPORT_SENTINEL}`, `INSERT INTO devices VALUES ('cut\n${SMOKE_EXPORT_SENTINEL}`)],
+    ["未闭合十六进制 BLOB", completeSmokeSql().replace(`COMMIT;\n${SMOKE_EXPORT_SENTINEL}`, `INSERT INTO snapshot_chunks VALUES ('s', 0, X'AB\n${SMOKE_EXPORT_SENTINEL}`)],
+    ["伪 Wrangler 导出", `PRAGMA defer_foreign_keys=TRUE; CREATE TABLE unrelated (id TEXT);\n${SMOKE_EXPORT_SENTINEL}`],
     ["事务后仍有语句", [
       "PRAGMA defer_foreign_keys=TRUE;",
       "CREATE TABLE sync_spaces (id TEXT);",
@@ -408,7 +448,8 @@ test("云同步烟雾导出校验器拒绝错误、空白和不完整导出", ()
       "CREATE TABLE snapshot_chunks (id TEXT);",
       "BEGIN TRANSACTION;",
       "COMMIT;",
-      "SELECT 1;"
+      "SELECT 1;",
+      SMOKE_EXPORT_SENTINEL
     ].join("\n")]
   ];
   for (const [label, sql] of invalidExports) {
@@ -418,15 +459,7 @@ test("云同步烟雾导出校验器拒绝错误、空白和不完整导出", ()
     for (const canary of Object.values(canaries)) assert.doesNotMatch(result.output, new RegExp(canary));
   }
 
-  const wranglerStyle = [
-    "PRAGMA defer_foreign_keys=TRUE;",
-    "CREATE TABLE sync_spaces (id TEXT PRIMARY KEY);",
-    "CREATE TABLE devices (id TEXT PRIMARY KEY);",
-    "CREATE TABLE snapshot_chunks (snapshot_id TEXT, body BLOB);",
-    "INSERT INTO snapshot_chunks VALUES ('s', X'018FA4D2C197BEE0');",
-    "CREATE INDEX idx_chunks ON snapshot_chunks(snapshot_id);",
-    ""
-  ].join("\n");
+  const wranglerStyle = completeSmokeSql("", { wrangler: true });
   const valid = runSmokeExportVerifier(wranglerStyle, canaries);
   assert.equal(valid.status, 0, valid.output);
 
@@ -434,6 +467,66 @@ test("云同步烟雾导出校验器拒绝错误、空白和不完整导出", ()
   assert.notEqual(invalidUtf8.status, 0, "非法 UTF-8 导出必须失败关闭");
   assert.match(invalidUtf8.output, /SQL 导出文件不是有效 UTF-8/);
   for (const canary of Object.values(canaries)) assert.doesNotMatch(invalidUtf8.output, new RegExp(canary));
+});
+
+test("云同步烟雾导出校验器要求当前完整结构、真实数据行和唯一终止标记", () => {
+  const canaries = {
+    deviceName: "FAKE_STRUCTURE_DEVICE", qinshiValue: "FAKE_STRUCTURE_VALUE", password: "FAKE_STRUCTURE_PASSWORD",
+    recoveryKey: "FAKE_STRUCTURE_RECOVERY", deviceToken: "FAKE_STRUCTURE_TOKEN"
+  };
+  const valid = completeSmokeSql();
+  assert.equal(runSmokeExportVerifier(valid, canaries).status, 0);
+  assert.equal(runSmokeExportVerifier(`${valid}\n \t`, canaries).status, 0,
+    "完成标记后的空白不改变其最后非空白行语义");
+
+  const qualified = valid
+    .replace(/^CREATE TABLE ([a-z_]+)/gmi, 'CREATE TABLE "main"."$1"')
+    .replace(/^CREATE (UNIQUE )?INDEX ([a-z_]+) ON ([a-z_]+)/gmi,
+      (_match, unique = "", index, table) => `CREATE ${unique}INDEX "main"."${index}" ON "main"."${table}"`)
+    .replace(/^INSERT INTO ([a-z_]+)/gmi, 'INSERT INTO "main"."$1"');
+  assert.equal(runSmokeExportVerifier(qualified, canaries).status, 0,
+    "Wrangler 使用引号和数据库限定标识符时仍应识别完整结构与数据行");
+
+  const invalidExports = [
+    ["仅结构无烟雾数据", valid.replace(/^INSERT INTO (?:sync_spaces|devices|snapshots|snapshot_chunks).*\r?\n/gm, "")],
+    ["仅三个早期表", [
+      "BEGIN TRANSACTION;",
+      "CREATE TABLE sync_spaces (id TEXT);",
+      "CREATE TABLE devices (id TEXT);",
+      "CREATE TABLE snapshot_chunks (id TEXT);",
+      "INSERT INTO sync_spaces VALUES ('s');",
+      "INSERT INTO devices VALUES ('d');",
+      "INSERT INTO snapshot_chunks VALUES ('x');",
+      "COMMIT;",
+      SMOKE_EXPORT_SENTINEL
+    ].join("\n")],
+    ["缺 sync_spaces 数据行", valid.replace(/^INSERT INTO sync_spaces.*\r?\n/m, "")],
+    ["缺 devices 数据行", valid.replace(/^INSERT INTO devices.*\r?\n/m, "")],
+    ["缺 snapshots 数据行", valid.replace(/^INSERT INTO snapshots.*\r?\n/m, "")],
+    ["缺 snapshot_chunks 数据行", valid.replace(/^INSERT INTO snapshot_chunks.*\r?\n/m, "")],
+    ["缺晚期迁移索引", valid.replace(/^CREATE INDEX idx_snapshots_device_history.*\r?\n/m, "")],
+    ["无完成标记", valid.replace(SMOKE_EXPORT_SENTINEL, "")],
+    ["重复完成标记", `${valid}\n${SMOKE_EXPORT_SENTINEL}`],
+    ["标记不是终止行", `${valid}\n-- trailing comment`],
+    ["标记嵌入内容", valid.replace(SMOKE_EXPORT_SENTINEL, `-- prefix ${SMOKE_EXPORT_SENTINEL} suffix`)],
+    ["完整语句边界截断", `${valid.slice(0, valid.indexOf("CREATE INDEX idx_snapshots_device_history"))}COMMIT;\n${SMOKE_EXPORT_SENTINEL}`]
+  ];
+  for (const [label, sql] of invalidExports) {
+    const result = runSmokeExportVerifier(sql, canaries);
+    assert.notEqual(result.status, 0, `${label} 必须失败关闭`);
+    assert.match(result.output, /SQL 导出无效/);
+    for (const canary of Object.values(canaries)) assert.doesNotMatch(result.output, new RegExp(canary));
+  }
+
+  const deceptiveEvidence = completeSmokeSql()
+    .replace(/^CREATE TABLE lifecycle_idempotency.*\r?\n/m, "-- CREATE TABLE lifecycle_idempotency (id TEXT);\n")
+    .replace(/^CREATE INDEX idx_snapshots_device_history.*\r?\n/m,
+      "INSERT INTO devices VALUES ('CREATE INDEX idx_snapshots_device_history ON snapshots(device_id)', 'space');\n")
+    .replace(/^INSERT INTO snapshots.*\r?\n/m,
+      `INSERT INTO snapshot_chunks VALUES ('snapshot', 1, X'${Buffer.from("INSERT INTO snapshots VALUES (1)").toString("hex")}');\n`);
+  const deceptive = runSmokeExportVerifier(deceptiveEvidence, canaries);
+  assert.notEqual(deceptive.status, 0, "注释、字符串和 BLOB 中的伪结构或伪数据不得计入证据");
+  assert.match(deceptive.output, /SQL 导出无效/);
 });
 
 test("云同步烟雾导出校验器接受项目允许的最大快照分块导出", () => {

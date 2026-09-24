@@ -155,6 +155,41 @@
     status.classList.toggle("error-text", Boolean(isError));
   }
 
+  function initSettingsNavigation() {
+    if (typeof document.querySelectorAll !== "function") return;
+    var tabs = Array.from(document.querySelectorAll("[data-settings-section]"));
+    var panels = Array.from(document.querySelectorAll("[data-settings-section-panel]"));
+    if (!tabs.length || !panels.length) return;
+
+    function activate(section, moveFocus) {
+      if (!tabs.some(function (tab) { return tab.dataset.settingsSection === section; })) section = "accounts";
+      tabs.forEach(function (tab) {
+        var active = tab.dataset.settingsSection === section;
+        tab.classList.toggle("active", active);
+        tab.setAttribute("aria-selected", String(active));
+        tab.tabIndex = active ? 0 : -1;
+        if (active && moveFocus) tab.focus();
+      });
+      panels.forEach(function (panel) { panel.hidden = panel.dataset.settingsSectionPanel !== section; });
+    }
+
+    tabs.forEach(function (tab, index) {
+      tab.addEventListener("click", function () { activate(tab.dataset.settingsSection, false); });
+      tab.addEventListener("keydown", function (event) {
+        var next = null;
+        if (event.key === "ArrowRight" || event.key === "ArrowDown") next = (index + 1) % tabs.length;
+        if (event.key === "ArrowLeft" || event.key === "ArrowUp") next = (index - 1 + tabs.length) % tabs.length;
+        if (event.key === "Home") next = 0;
+        if (event.key === "End") next = tabs.length - 1;
+        if (next === null) return;
+        event.preventDefault();
+        activate(tabs[next].dataset.settingsSection, true);
+      });
+    });
+    var selected = tabs.find(function (tab) { return tab.getAttribute("aria-selected") === "true"; });
+    activate(selected ? selected.dataset.settingsSection : "accounts", false);
+  }
+
   async function importBackup(file) {
     if (!file) return;
     setStatus("正在读取备份文件…", false);
@@ -175,6 +210,7 @@
   }
 
   function init() {
+    initSettingsNavigation();
     var exportButton = document.getElementById("settings-export");
     var importButton = document.getElementById("settings-import-trigger");
     var importFile = document.getElementById("settings-import-file");

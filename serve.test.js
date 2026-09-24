@@ -223,6 +223,24 @@ test("多账号档案提供全局切换、初始化、设置管理和正确脚�
   assert.match(css, /\.account-switcher-toggle\{[^}]*min-height:44px/);
 });
 
+test("设置页按账号、同步、备份和应用划分为四个独立子分区", () => {
+  const html = fs.readFileSync(path.join(__dirname, "index.html"), "utf8");
+  const css = fs.readFileSync(path.join(__dirname, "css", "style.css"), "utf8");
+  const settings = fs.readFileSync(path.join(__dirname, "js", "settings.js"), "utf8");
+  for (const section of ["accounts", "sync", "backup", "app"]) {
+    assert.match(html, new RegExp(`data-settings-section="${section}"`));
+    assert.match(html, new RegExp(`data-settings-section-panel="${section}"`));
+  }
+  assert.match(html, /data-settings-section="accounts"[^>]*aria-selected="true"/);
+  assert.match(html, /data-settings-section-panel="sync"[^>]*hidden/);
+  assert.match(html, /data-settings-section-panel="backup"[^>]*hidden/);
+  assert.match(html, /data-settings-section-panel="app"[^>]*hidden/);
+  assert.match(settings, /initSettingsNavigation/);
+  assert.match(settings, /data-settings-section-panel/);
+  assert.match(css, /\.settings-section-nav/);
+  assert.match(css, /@media \(max-width:767px\)[\s\S]*?\.settings-section-nav[\s\S]*?grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
+});
+
 test("个人数据模块不再直接读写 localStorage", () => {
   ["app.js", "battle-box-pill-pouch-ui.js", "forbidden-ui.js", "inscription.js", "formations-ui.js", "tactics-ui.js", "machine-beasts-ui.js"].forEach(file => {
     const source = fs.readFileSync(path.join(__dirname, "js", file), "utf8");

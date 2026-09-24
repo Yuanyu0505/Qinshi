@@ -645,7 +645,22 @@
     </section>
 
     <section id="partition-settings" hidden>
-      <section class="panel settings-panel">
+      <nav class="settings-section-nav" aria-label="设置分类" role="tablist">
+        <button id="settings-tab-accounts" type="button" role="tab" class="settings-section-tab active" data-settings-section="accounts" aria-controls="account-manager" aria-selected="true">
+          <strong>账号管理</strong><span>账号与个人数据</span>
+        </button>
+        <button id="settings-tab-sync" type="button" role="tab" class="settings-section-tab" data-settings-section="sync" aria-controls="cloud-sync-panel" aria-selected="false" tabindex="-1">
+          <strong>跨设备同步</strong><span>设备快照与恢复</span>
+        </button>
+        <button id="settings-tab-backup" type="button" role="tab" class="settings-section-tab" data-settings-section="backup" aria-controls="settings-section-backup" aria-selected="false" tabindex="-1">
+          <strong>备份与恢复</strong><span>本机文件导入导出</span>
+        </button>
+        <button id="settings-tab-app" type="button" role="tab" class="settings-section-tab" data-settings-section="app" aria-controls="settings-section-app" aria-selected="false" tabindex="-1">
+          <strong>应用与更新</strong><span>版本、安装与修复</span>
+        </button>
+      </nav>
+
+      <section id="settings-section-app" class="panel settings-panel settings-section-panel" data-settings-section-panel="app" role="tabpanel" aria-labelledby="settings-tab-app" hidden>
         <div class="panel-title">应用与离线状态</div>
         <div class="settings-list">
           <div><span>应用名称</span><strong>Qin</strong></div>
@@ -662,7 +677,7 @@
         <p id="pwa-status" class="settings-status" aria-live="polite"></p>
       </section>
 
-      <section id="account-manager" class="panel settings-panel account-manager-panel">
+      <section id="account-manager" class="panel settings-panel account-manager-panel settings-section-panel" data-settings-section-panel="accounts" role="tabpanel" aria-labelledby="settings-tab-accounts">
         <div class="panel-title">游戏账号管理</div>
         <p class="settings-copy">最多保存 3 个账号。每个账号的个人进度、库存、收藏和勾选内容彼此隔离。</p>
         <div id="account-manager-list" class="account-manager-list"></div>
@@ -686,7 +701,7 @@
         <p id="account-manager-status" class="settings-status" role="status" aria-live="polite"></p>
       </section>
 
-      <section id="cloud-sync-panel" class="panel settings-panel cloud-sync-panel" aria-labelledby="cloud-sync-title">
+      <section id="cloud-sync-panel" class="panel settings-panel cloud-sync-panel settings-section-panel" data-settings-section-panel="sync" role="tabpanel" aria-labelledby="settings-tab-sync" hidden>
         <div id="cloud-sync-title" class="panel-title">跨设备数据同步</div>
         <p class="settings-copy">手动选择一台来源设备，用它的全部工具数据覆盖当前设备；不会自动合并。</p>
         <p class="muted-tip">工具版本由 PWA 更新；本面板只同步工具内保存的数据。同步开始前会先检查并更新工具版本。</p>
@@ -821,7 +836,7 @@
         </div>
       </section>
 
-      <section class="panel settings-panel">
+      <section id="settings-section-backup" class="panel settings-panel settings-section-panel" data-settings-section-panel="backup" role="tabpanel" aria-labelledby="settings-tab-backup" hidden>
         <div class="panel-title">本机进度备份</div>
         <p class="settings-copy">备份包含全部游戏账号、主账号和排序，以及每个账号的图鉴、锻造、禁地、铭文、机关兽、兵法、战匣丹囊、合阵和答题修订数据；不包含工具自带资料和云同步密码。</p>
         <div class="settings-actions">

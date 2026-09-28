@@ -27,6 +27,19 @@ test("wooden man alley partition is wired in navigation and script order", () =>
   assert.match(app, /"wooden-man-alley": document\.getElementById\("partition-wooden-man-alley"\)/);
 });
 
+test("wooden man alley has responsive board and result cards", () => {
+  const css = fs.readFileSync(path.join(__dirname, "css", "style.css"), "utf8");
+  const ui = fs.readFileSync(path.join(__dirname, "js", "wooden-man-alley-ui.js"), "utf8");
+  assert.match(css, /#partition-wooden-man-alley \.wooden-board\s*\{[\s\S]*?grid-template-columns:\s*repeat\(var\(--wooden-board-size\),\s*minmax\(0,\s*1fr\)\)/);
+  assert.match(css, /#partition-wooden-man-alley \.wooden-cell\s*\{[\s\S]*?aspect-ratio:\s*1/);
+  assert.match(css, /#partition-wooden-man-alley button[\s\S]*?min-height:\s*44px/);
+  assert.match(css, /@media \(max-width:\s*767px\)[\s\S]*?#partition-wooden-man-alley \.wooden-resource-grid[\s\S]*?grid-template-columns:\s*1fr/);
+  assert.match(css, /@media \(min-width:\s*768px\)[\s\S]*?#partition-wooden-man-alley \.wooden-board-layout[\s\S]*?grid-template-columns/);
+  assert.match(ui, /data-wooden-advanced/);
+  assert.match(ui, /wooden-stage-card/);
+  assert.match(ui, /秘匣内容暂未明确/);
+});
+
 function hasExplicitCloudProhibition(text, capability) {
   const escaped = capability.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const directivePattern = /(?:禁止|不得|不允许|严禁|不可)(?:\s*(?:启用|使用|配置|创建))?|(?:允许|可以|可)(?:\s*(?:启用|使用|配置|创建))/g;

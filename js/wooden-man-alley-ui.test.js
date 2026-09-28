@@ -93,3 +93,33 @@ test("captures and restores subpage view state", () => {
   control.restoreView(snapshot);
   assert.strictEqual(control.state.mode, "reference");
 });
+
+test("calculator defaults to conservative and excludes purchasable packages", () => {
+  const control = controller();
+  assert.strictEqual(control.state.calculatorDraft.calculator.risk, "conservative");
+  assert.strictEqual(control.state.calculatorDraft.calculator.includePurchasablePackages, false);
+});
+
+test("calculator supports forward and reverse directions without saving", () => {
+  const store = fakeStore();
+  const control = controller({ store });
+  control.updateCalculator("targetFloor", 75);
+  let result = control.calculate();
+  assert.strictEqual(result.targetFloor, 75);
+  assert.ok(Object.hasOwn(result.demand, "expected"));
+  assert.ok(Object.hasOwn(result.demand, "conservative"));
+  assert.ok(Object.hasOwn(result.demand, "worst"));
+  control.updateCalculator("direction", "reachable");
+  result = control.calculate();
+  assert.ok(Object.hasOwn(result, "completedFloor"));
+  assert.strictEqual(store.getItem(UI.STORE_KEY), null);
+});
+
+test("calculator updates stage tool restrictions", () => {
+  const control = controller();
+  control.updateStageLimit("floor-1-50", "crossQi", "allowed", false);
+  control.updateStageLimit("floor-1-50", "crossQi", "max", 3);
+  const limit = control.state.calculatorDraft.calculator.stageLimits["floor-1-50"].crossQi;
+  assert.strictEqual(limit.allowed, false);
+  assert.strictEqual(limit.max, 3);
+});

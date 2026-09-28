@@ -26,6 +26,7 @@
   const ZHULU = window.ZHULU;
   const ZHULU_UI = window.ZHULU_UI;
   const MACHINE_BEAST_UI = window.MACHINE_BEAST_UI;
+  const WOODEN_MAN_ALLEY_UI = window.WOODEN_MAN_ALLEY_UI;
   const ACCOUNT_STORAGE = window.QinshiAccounts;
   const ATLAS_LEVELS_KEY = "qinshi_atlas_levels_v1";
   const ATLAS_TARGET_LEVEL_KEY = "qinshi_atlas_target_level_v1";
@@ -45,6 +46,7 @@
     "machine-beasts": "机关兽",
     tactics: "兵法",
     "battle-box-pill-pouch": "战匣丹囊",
+    "wooden-man-alley": "木人巷",
     formations: "合阵",
     quiz: "答题",
     loulan: "楼兰棋阵",
@@ -500,6 +502,7 @@
     if (partition === "drops") return captureDropView();
     if (partition === "forbidden" && window.FORBIDDEN_UI) return window.FORBIDDEN_UI.captureView();
     if (partition === "machine-beasts" && MACHINE_BEAST_UI) return MACHINE_BEAST_UI.captureView();
+    if (partition === "wooden-man-alley" && WOODEN_MAN_ALLEY_UI) return WOODEN_MAN_ALLEY_UI.captureView();
     if (partition === "zhulu" && ZHULU_UI) return ZHULU_UI.captureView();
     return {};
   }
@@ -520,6 +523,8 @@
       return;
     } else if (partition === "machine-beasts" && MACHINE_BEAST_UI) {
       MACHINE_BEAST_UI.restoreView(view);
+    } else if (partition === "wooden-man-alley" && WOODEN_MAN_ALLEY_UI) {
+      WOODEN_MAN_ALLEY_UI.restoreView(view);
     } else if (partition === "zhulu" && ZHULU_UI) {
       ZHULU_UI.restoreView(view);
     }
@@ -1078,7 +1083,7 @@
     const mobileMoreLayer = document.getElementById("mobile-more-layer");
     const mobileMoreClose = document.getElementById("mobile-more-close");
     const appShell = document.querySelector(".app-shell");
-    const secondaryPartitions = ["forbidden", "inscription", "machine-beasts", "tactics", "battle-box-pill-pouch", "formations", "loulan", "zhulu", "quiz", "settings"];
+    const secondaryPartitions = ["forbidden", "inscription", "machine-beasts", "tactics", "battle-box-pill-pouch", "wooden-man-alley", "formations", "loulan", "zhulu", "quiz", "settings"];
     const partitionScrollPositions = Object.create(null);
     let activePartition = "atlas";
     let mobileMoreRestoreTarget = null;
@@ -1094,6 +1099,7 @@
       "machine-beasts": document.getElementById("partition-machine-beasts"),
       tactics: document.getElementById("partition-tactics"),
       "battle-box-pill-pouch": document.getElementById("partition-battle-box-pill-pouch"),
+      "wooden-man-alley": document.getElementById("partition-wooden-man-alley"),
       formations: document.getElementById("partition-formations"),
       zhulu: document.getElementById("partition-zhulu"),
       settings: document.getElementById("partition-settings")

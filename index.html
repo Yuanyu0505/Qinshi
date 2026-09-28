@@ -55,6 +55,7 @@
       <button type="button" class="tab mobile-secondary" data-partition="machine-beasts">机关兽</button>
       <button type="button" class="tab mobile-secondary" data-partition="tactics">兵法</button>
       <button type="button" class="tab mobile-secondary" data-partition="battle-box-pill-pouch">战匣丹囊</button>
+      <button type="button" class="tab mobile-secondary" data-partition="wooden-man-alley">木人巷</button>
       <button type="button" class="tab mobile-secondary" data-partition="formations">合阵</button>
       <button type="button" class="tab mobile-secondary" data-partition="loulan">楼兰棋阵</button>
       <button type="button" class="tab mobile-secondary" data-partition="zhulu">逐鹿</button>
@@ -404,6 +405,18 @@
       </section>
       <section id="battle-pouch-calculator" hidden></section>
       <section id="battle-pouch-reference" hidden></section>
+    </section>
+
+    <section id="partition-wooden-man-alley" hidden>
+      <div id="wooden-man-modes" class="segs wooden-man-modes" aria-label="木人巷页面">
+        <button type="button" class="seg active" data-wooden-mode="progress">个人进度</button>
+        <button type="button" class="seg" data-wooden-mode="calculator">目标计算</button>
+        <button type="button" class="seg" data-wooden-mode="reference">资料图表</button>
+      </div>
+      <div id="wooden-man-error" class="error" role="alert" hidden></div>
+      <section id="wooden-man-progress"></section>
+      <section id="wooden-man-calculator" hidden></section>
+      <section id="wooden-man-reference" hidden></section>
     </section>
 
     <section id="partition-formations" hidden>
@@ -896,6 +909,7 @@
       <button type="button" data-partition="machine-beasts">机关兽</button>
       <button type="button" data-partition="tactics">兵法</button>
       <button type="button" data-partition="battle-box-pill-pouch">战匣丹囊</button>
+      <button type="button" data-partition="wooden-man-alley">木人巷</button>
       <button type="button" data-partition="formations">合阵</button>
       <button type="button" data-partition="loulan">楼兰棋阵</button>
       <button type="button" data-partition="zhulu">逐鹿</button>
@@ -920,6 +934,9 @@
 <script src="data/2026-09-content-update.js?v=1.0.44"></script>
 <script src="js/account-edit-lease.js?v=1.0.44"></script>
 <script src="js/account-profiles.js?v=1.0.44"></script>
+<script src="data/wooden-man-alley.js?v=1.0.44"></script>
+<script src="js/wooden-man-alley.js?v=1.0.44"></script>
+<script src="js/wooden-man-alley-planner.js?v=1.0.44"></script>
 <script src="js/tactics.js?v=1.0.44"></script>
 <script src="js/formations.js?v=1.0.44"></script>
 <script src="js/machine-beasts.js?v=1.0.44"></script>
@@ -954,6 +971,7 @@
 <script src="js/battle-box-pill-pouch-ui.js?v=1.0.44"></script>
 <script src="js/forbidden-ui.js?v=1.0.44"></script>
 <script src="js/zhulu-ui.js?v=1.0.44"></script>
+<script src="js/wooden-man-alley-ui.js?v=1.0.44"></script>
 <script src="js/app.js?v=1.0.44"></script>
 </body>
 </html>

@@ -7,6 +7,26 @@ const path = require("path");
 const { spawnSync } = require("child_process");
 const { createServer, lanIPv4s } = require("./serve.js");
 
+test("wooden man alley partition is wired in navigation and script order", () => {
+  const html = fs.readFileSync(path.join(__dirname, "index.html"), "utf8");
+  const app = fs.readFileSync(path.join(__dirname, "js", "app.js"), "utf8");
+  assert.match(html, /data-partition="battle-box-pill-pouch">战匣丹囊<\/button>[\s\S]*?data-partition="wooden-man-alley">木人巷<\/button>[\s\S]*?data-partition="formations">合阵<\/button>/);
+  assert.match(html, /id="partition-wooden-man-alley"/);
+  assert.match(html, /data-wooden-mode="progress">个人进度/);
+  assert.match(html, /data-wooden-mode="calculator">目标计算/);
+  assert.match(html, /data-wooden-mode="reference">资料图表/);
+  const accountIndex = html.indexOf('js/account-profiles.js');
+  const dataIndex = html.indexOf('data/wooden-man-alley.js');
+  const coreIndex = html.indexOf('js/wooden-man-alley.js');
+  const plannerIndex = html.indexOf('js/wooden-man-alley-planner.js');
+  const uiIndex = html.indexOf('js/wooden-man-alley-ui.js');
+  const appIndex = html.indexOf('js/app.js');
+  assert.ok(accountIndex < dataIndex && dataIndex < coreIndex && coreIndex < plannerIndex && plannerIndex < uiIndex && uiIndex < appIndex);
+  assert.match(app, /"wooden-man-alley": "木人巷"/);
+  assert.match(app, /secondaryPartitions = \[[^\]]*"wooden-man-alley"/);
+  assert.match(app, /"wooden-man-alley": document\.getElementById\("partition-wooden-man-alley"\)/);
+});
+
 function hasExplicitCloudProhibition(text, capability) {
   const escaped = capability.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const directivePattern = /(?:禁止|不得|不允许|严禁|不可)(?:\s*(?:启用|使用|配置|创建))?|(?:允许|可以|可)(?:\s*(?:启用|使用|配置|创建))/g;

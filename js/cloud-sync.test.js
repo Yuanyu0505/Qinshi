@@ -4,6 +4,17 @@ const { webcrypto, randomUUID, createHash } = require('node:crypto');
 const moduleApi = require('./cloud-sync.js');
 const cryptoModule = require('./cloud-sync-crypto.js');
 const coreModule = require('./cloud-sync-core.js');
+const fs = require('node:fs');
+const path = require('node:path');
+
+test('cloud snapshots collect every account-scoped wooden man key through managed storage', () => {
+  const syncSource = fs.readFileSync(path.join(__dirname, 'cloud-sync.js'), 'utf8');
+  const settingsSource = fs.readFileSync(path.join(__dirname, 'settings.js'), 'utf8');
+  assert.match(syncSource, /collectManagedData\(\)/);
+  assert.match(settingsSource, /STORAGE_PREFIX\s*=\s*["']qinshi_["']/);
+  assert.match(settingsSource, /key\.indexOf\(STORAGE_PREFIX\)\s*===\s*0/);
+  assert.doesNotMatch(settingsSource, /wooden_man_alley.*allowlist/i);
+});
 
 const limits = { minimumReadVersion: '1.0.39', minimumWriteVersion: '1.0.39' };
 const password = 'test-only long password';

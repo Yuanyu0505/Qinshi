@@ -53,6 +53,22 @@ test("相同逻辑键在不同账号命名空间中完全隔离", () => {
   assert.equal(h.api.getItem("qinshi_progress"), "B-data");
 });
 
+test("木人巷数据随账号快照导出恢复且不会串号", () => {
+  const h = harness();
+  const a = h.api.createAccount({ name: "A", server: "一区" });
+  const b = h.api.createAccount({ name: "B", server: "二区" });
+  h.api.bindAccount(a.id);
+  h.api.setItem("qinshi_wooden_man_alley_progress_v1", '{"currentFloor":75}');
+  const snapshot = h.api.listAccountData(a.id);
+  assert.equal(snapshot.qinshi_wooden_man_alley_progress_v1, '{"currentFloor":75}');
+  h.api.bindAccount(b.id);
+  assert.equal(h.api.getItem("qinshi_wooden_man_alley_progress_v1"), null);
+  h.api.replaceAccountData(b.id, snapshot);
+  assert.equal(h.api.getItem("qinshi_wooden_man_alley_progress_v1"), '{"currentFloor":75}');
+  h.api.bindAccount(a.id);
+  assert.equal(h.api.getItem("qinshi_wooden_man_alley_progress_v1"), '{"currentFloor":75}');
+});
+
 test("主账号固定置顶且其余账号按保存顺序交换", () => {
   const h = harness();
   const a = h.api.createAccount({ name: "A", server: "一区" });

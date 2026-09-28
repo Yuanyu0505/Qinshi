@@ -39,7 +39,7 @@ test("normalizes corrupt progress safely", () => {
   assert.strictEqual(normalized.resources.woodSword, 0);
   assert.strictEqual(normalized.resources.ironSword, 4);
   assert.strictEqual(normalized.resources.ingots, 1000);
-  assert.strictEqual(normalized.packages.small.price, 0);
+  assert.strictEqual(normalized.packages.small.price, 68);
   assert.strictEqual(normalized.packages.small.swords, 31);
   assert.strictEqual(normalized.packages.value.swords, 40);
   assert.strictEqual(normalized.calculator.risk, "worst");
@@ -54,9 +54,18 @@ test("clamps package purchase counts", () => {
     }
   }, DATA);
   assert.strictEqual(normalized.packages.small.purchased, 1);
-  assert.strictEqual(normalized.packages.value.limit, 0);
-  assert.strictEqual(normalized.packages.value.purchased, 0);
+  assert.strictEqual(normalized.packages.value.limit, 1);
+  assert.strictEqual(normalized.packages.value.purchased, 1);
   assert.strictEqual(normalized.packages.pioneer.limit, 1);
+});
+
+test("missing package values fall back without creating free swords", () => {
+  const normalized = CORE.normalizeProgress({
+    packages: { small: { price: null, swords: "", mysteryBoxes: undefined } }
+  }, DATA);
+  assert.strictEqual(normalized.packages.small.price, 68);
+  assert.strictEqual(normalized.packages.small.swords, 30);
+  assert.strictEqual(normalized.packages.small.mysteryBoxes, 3);
 });
 
 test("advances and resets a completed floor", () => {

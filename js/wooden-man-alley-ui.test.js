@@ -85,6 +85,29 @@ test("calculator drafts do not persist until explicit save", () => {
   assert.strictEqual(JSON.parse(store.getItem(UI.STORE_KEY)).currentFloor, 12);
 });
 
+test("personal progress changes refresh an untouched calculator draft", () => {
+  const control = controller();
+  control.setResource("woodSword", 27);
+  control.setMode("calculator");
+  assert.strictEqual(control.state.calculatorDraft.resources.woodSword, 27);
+});
+
+test("stale edited calculator draft cannot overwrite newer personal progress", () => {
+  const control = controller();
+  control.setCalculatorResource("woodSword", 99);
+  control.setResource("woodSword", 7);
+  assert.strictEqual(control.saveCalculatorProgress(), false);
+  assert.strictEqual(control.state.progress.resources.woodSword, 7);
+  assert.match(control.state.error, /重新读取/);
+});
+
+test("invalid package input preserves the previous valid value", () => {
+  const control = controller();
+  assert.strictEqual(control.setPackageField("small", "price", ""), false);
+  assert.strictEqual(control.state.progress.packages.small.price, 68);
+  assert.match(control.state.error, /有效的非负整数/);
+});
+
 test("captures and restores subpage view state", () => {
   const control = controller();
   control.setMode("reference");

@@ -28,9 +28,20 @@
       progress: core.normalizeProgress({}, data),
       calculatorDraft: null,
       calculatorResult: null,
+      calculatorDirty: false,
+      calculatorSourceRevision: 0,
+      progressRevision: 0,
       undo: [],
       error: ""
     };
+
+    function syncCalculatorFromProgress() {
+      state.calculatorDraft = clone(state.progress);
+      state.calculatorResult = null;
+      state.calculatorDirty = false;
+      state.calculatorSourceRevision = state.progressRevision;
+      return state.calculatorDraft;
+    }
 
     function load() {
       var raw = null;
@@ -41,7 +52,8 @@
         state.progress = core.normalizeProgress({}, data);
         state.error = "木人巷个人进度读取失败，已使用空白数据。";
       }
-      state.calculatorDraft = clone(state.progress);
+      state.progressRevision += 1;
+      syncCalculatorFromProgress();
       return state.progress;
     }
 
@@ -50,6 +62,8 @@
         if (!store || !store.setItem) throw new Error("账号存储不可用");
         var saved = store.setItem(STORE_KEY, JSON.stringify(state.progress));
         if (saved === false) throw new Error("当前账号为只读状态");
+        state.progressRevision += 1;
+        if (!state.calculatorDirty) syncCalculatorFromProgress();
         state.error = "";
         return true;
       } catch (error) {
@@ -129,7 +143,13 @@
 
     function setPackageField(id, field, value) {
       if (!state.progress.packages[id] || ["price", "swords", "mysteryBoxes", "limit", "purchased"].indexOf(field) === -1) return false;
-      state.progress.packages[id][field] = core.nonNegativeInteger(value);
+      var text = String(value == null ? "" : value).trim();
+      var number = Number(text);
+      if (text === "" || !Number.isFinite(number) || number < 0) {
+        state.error = "礼包设置必须填写有效的非负整数。";
+        return false;
+      }
+      state.progress.packages[id][field] = Math.floor(number);
       state.progress.packages[id] = core.normalizePackages((function () {
         var source = {}; source[id] = state.progress.packages[id]; return source;
       })(), { defaultPackages: data.defaultPackages.filter(function (item) { return item.id === id; }) })[id];
@@ -139,22 +159,26 @@
     function clearEvent() {
       if (!confirmAction("清空当前账号的全部木人巷数据？此操作无法撤销。")) return false;
       state.progress = core.normalizeProgress({}, data);
-      state.calculatorDraft = clone(state.progress);
-      state.calculatorResult = null;
+      state.calculatorDirty = false;
       state.undo = [];
       return save();
     }
 
     function setMode(mode) {
-      if (["progress", "calculator", "reference"].indexOf(mode) !== -1) state.mode = mode;
+      if (["progress", "calculator", "reference"].indexOf(mode) !== -1) {
+        if (mode === "calculator" && !state.calculatorDirty) syncCalculatorFromProgress();
+        state.mode = mode;
+      }
       return state.mode;
     }
 
-    function setCalculatorDraft(draft) { state.calculatorDraft = core.normalizeProgress(draft, data); }
+    function setCalculatorDraft(draft) {
+      state.calculatorDraft = core.normalizeProgress(draft, data);
+      state.calculatorDirty = true;
+      state.calculatorSourceRevision = state.progressRevision;
+    }
     function reloadCalculator() {
-      state.calculatorDraft = clone(state.progress);
-      state.calculatorResult = null;
-      return state.calculatorDraft;
+      return syncCalculatorFromProgress();
     }
     function updateCalculator(field, value) {
       var calculator = state.calculatorDraft.calculator;
@@ -163,12 +187,14 @@
       else if (field === "risk" && ["expected", "conservative", "worst"].indexOf(value) !== -1) calculator.risk = value;
       else if (field === "includePurchasablePackages") calculator.includePurchasablePackages = Boolean(value);
       state.calculatorResult = null;
+      state.calculatorDirty = true;
       return calculator;
     }
     function setCalculatorResource(key, value) {
       if (data.resourceKeys.indexOf(key) === -1) return false;
       state.calculatorDraft.resources[key] = core.nonNegativeInteger(value);
       state.calculatorResult = null;
+      state.calculatorDirty = true;
       return true;
     }
     function updateStageLimit(tierId, toolId, field, value) {
@@ -177,6 +203,7 @@
       if (field === "allowed") limits[tierId][toolId].allowed = Boolean(value);
       if (field === "max") limits[tierId][toolId].max = value === "" || value === null ? null : core.nonNegativeInteger(value);
       state.calculatorResult = null;
+      state.calculatorDirty = true;
       return true;
     }
     function calculate() {
@@ -196,8 +223,13 @@
       return state.calculatorResult;
     }
     function saveCalculatorProgress() {
+      if (state.calculatorSourceRevision !== state.progressRevision) {
+        state.error = "个人进度已更新，请先从个人进度重新读取后再保存。";
+        return false;
+      }
       if (!confirmAction("使用计算器中的数据覆盖当前账号木人巷个人进度？")) return false;
       state.progress = core.normalizeProgress(state.calculatorDraft, data);
+      state.calculatorDirty = false;
       return save();
     }
     function accountLabel() {

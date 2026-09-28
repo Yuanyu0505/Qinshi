@@ -9,7 +9,9 @@
 
   function nonNegativeInteger(value, fallback) {
     var number = Number(value);
-    if (!Number.isFinite(number) || number < 0) return fallback === undefined ? 0 : fallback;
+    if (value === "" || value === null || value === undefined || !Number.isFinite(number) || number < 0) {
+      return fallback === undefined ? 0 : fallback;
+    }
     return Math.floor(number);
   }
 

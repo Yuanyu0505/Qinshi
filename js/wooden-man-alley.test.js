@@ -80,3 +80,70 @@ test("remaining days tolerates invalid dates", () => {
   assert.strictEqual(CORE.remainingDays("invalid", new Date("2026-09-28T00:00:00+08:00")), null);
   assert.strictEqual(CORE.remainingDays("2026-09-30", new Date("2026-09-28T12:00:00+08:00")), 2);
 });
+
+test("board analysis evaluates an empty board", () => {
+  const result = CORE.analyzeCurrentBoard({
+    floor: 1,
+    openedCells: [],
+    resources: { woodSword: 10, horizontalQi: 1, verticalQi: 1, crossQi: 1 }
+  }, DATA);
+  assert.strictEqual(result.remaining, 9);
+  assert.strictEqual(result.pureSwordExpected, 5);
+  const firstRow = result.actions.find(action => action.toolId === "horizontalQi" && action.position.row === 0);
+  assert.deepStrictEqual(firstRow.affectedCells, [0, 1, 2]);
+  assert.strictEqual(firstRow.hitProbability, 1 / 3);
+});
+
+test("action recommendation uses the strongest asymmetric coverage", () => {
+  const openedCells = [0, 1, 2, 3, 5, 6, 7, 8, 10, 11, 12, 13, 15, 16, 17, 18];
+  const result = CORE.analyzeCurrentBoard({
+    floor: 131,
+    openedCells,
+    resources: { horizontalQi: 2, verticalQi: 2, crossQi: 2 }
+  }, DATA);
+  const cross = result.actions.filter(action => action.toolId === "crossQi")[0];
+  assert.ok(cross.affectedCells.length >= 1);
+  assert.strictEqual(result.recommendation.toolId, "crossQi");
+  assert.strictEqual(result.recommendation.position.row, 4);
+  assert.strictEqual(result.recommendation.position.column, 4);
+});
+
+test("board analysis caps bomb coverage and completes a nearly cleared board", () => {
+  const opened = Array.from({ length: 34 }, (_, index) => index);
+  const result = CORE.analyzeCurrentBoard({
+    floor: 331,
+    openedCells: opened,
+    resources: { bomb: 1, ironSword: 4, woodSword: 2 }
+  }, DATA);
+  const bomb = result.actions.find(action => action.toolId === "bomb");
+  const iron = result.actions.find(action => action.toolId === "ironSword");
+  assert.strictEqual(bomb.affectedCells.length, 2);
+  assert.strictEqual(bomb.hitProbability, 1);
+  assert.strictEqual(iron.hitProbability, 1);
+});
+
+test("board analysis excludes unavailable or disabled tools", () => {
+  const result = CORE.analyzeCurrentBoard({
+    floor: 51,
+    openedCells: [],
+    resources: { woodSword: 1, ironSword: 1, horizontalQi: 1, mirror: 1 },
+    allowedTools: { horizontalQi: false }
+  }, DATA);
+  assert.ok(result.actions.some(action => action.toolId === "woodSword"));
+  assert.ok(result.actions.some(action => action.toolId === "mirror"));
+  assert.ok(!result.actions.some(action => action.toolId === "ironSword"));
+  assert.ok(!result.actions.some(action => action.toolId === "horizontalQi"));
+});
+
+test("action recommendation is deterministic", () => {
+  const input = {
+    floor: 1,
+    openedCells: [4],
+    resources: { horizontalQi: 1, verticalQi: 1 },
+    allowedTools: {}
+  };
+  const first = CORE.analyzeCurrentBoard(input, DATA).recommendation;
+  const second = CORE.analyzeCurrentBoard(input, DATA).recommendation;
+  assert.deepStrictEqual(first, second);
+  assert.strictEqual(first.position.row === 0 || first.position.column === 0, true);
+});

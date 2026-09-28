@@ -1,7 +1,7 @@
 "use strict";
 
 const CACHE_PREFIX = "qinshi-site-";
-const CACHE_NAME = CACHE_PREFIX + "1.0.45";
+const CACHE_NAME = CACHE_PREFIX + "1.0.46";
 const PRECACHE_URLS = [
   "./",
   "./index.html",

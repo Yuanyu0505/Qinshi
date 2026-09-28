@@ -2395,19 +2395,34 @@ test('recovery suspended after renewal rejects an expired lease before local wri
 
 test('recovery uses real transactional settings replacement so a failed key restores the prior local map', async () => {
   const h = await pullHarness();
-  const values = new Map([['qinshi_a', 'before'], ['qinshi_keep', 'kept'], ['external', 'untouched']]);
+  const accounts = require('./account-profiles.js');
+  const accountId = 'transaction-test';
+  const registry = {
+    schemaVersion: 1,
+    primaryAccountId: accountId,
+    order: [accountId],
+    accounts: [{ id: accountId, name: '测试账号', server: '一区', createdAt: time, updatedAt: time }]
+  };
+  const beforeKey = accounts.physicalKey(accountId, 'qinshi_a');
+  const keepKey = accounts.physicalKey(accountId, 'qinshi_keep');
+  const badKey = accounts.physicalKey(accountId, 'qinshi_bad');
+  const values = new Map([[accounts.REGISTRY_KEY, JSON.stringify(registry)], [beforeKey, 'before'], [keepKey, 'kept'], ['external', 'untouched']]);
   const before = Object.fromEntries(values);
   const localStorage = {
     get length() { return values.size; },
     key(index) { return Array.from(values.keys())[index] || null; },
     getItem(key) { return values.get(key) ?? null; },
-    setItem(key, value) { if (key === 'qinshi_bad') throw new Error('key write failed'); values.set(key, value); },
+    setItem(key, value) { if (key === badKey) throw new Error('key write failed'); values.set(key, value); },
     removeItem(key) { values.delete(key); }
   };
-  const context = { localStorage, document: { addEventListener() {}, getElementById() { return null; } }, window: {} };
+  const context = { localStorage, document: { addEventListener() {}, getElementById() { return null; } }, window: { QinshiAccountProfiles: accounts } };
   require('node:vm').runInNewContext(require('node:fs').readFileSync(require('node:path').join(__dirname, 'settings.js'), 'utf8'), context);
   h.deps.settings = context.window.QinshiSettings;
-  h.state.rollback = { ownerId: randomUUID(), createdAt: time, data: { qinshi_a: 'replacement', qinshi_bad: 'fails' } };
+  h.state.rollback = { ownerId: randomUUID(), createdAt: time, data: {
+    [accounts.REGISTRY_KEY]: JSON.stringify(registry),
+    [beforeKey]: 'replacement',
+    [badKey]: 'fails'
+  } };
   await assert.rejects(h.sync.recoverInterruptedRollback('restore'), /key write failed/);
   assert.deepEqual(Object.fromEntries(values), before);
   assert.equal(typeof h.state.rollback.recoveryActionId, 'string');

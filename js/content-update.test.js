@@ -50,7 +50,7 @@ test("九月增量资料：神兵影虎只录入红金副属性", () => {
 
 test("九月增量资料：影虎锻造链完整", () => {
   const item = loadData().FORGING_DATA.items.find((entry) => entry.name === "影虎");
-  assert.deepStrictEqual(item.stages.map((stage) => stage.tokens.map((token) => token.n || "—")), [
+  assert.deepStrictEqual(JSON.parse(JSON.stringify(item.stages.map((stage) => stage.tokens.map((token) => token.n || "—")))), [
     ["号钟琴"], ["乱神"], ["水寒"], ["凌虚", "木剑"], ["庄子"], ["影虎"],
     ["—"], ["巨阙"], ["太阿"], ["寒蝉"], ["影虎"]
   ]);

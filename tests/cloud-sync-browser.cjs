@@ -3,9 +3,11 @@ const assert = require('node:assert/strict');
 const { createHash } = require('node:crypto');
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
 const { createServer } = require('../serve.js');
+const { currentAppVersion, openApp } = require('./browser-test-helpers.cjs');
 
 const PASSWORD = 'browser-only-test-password';
-const LIMITS = { minimumReadVersion: '1.0.41', minimumWriteVersion: '1.0.41' };
+const APP_VERSION = currentAppVersion();
+const LIMITS = { minimumReadVersion: APP_VERSION, minimumWriteVersion: APP_VERSION };
 const INTENDED_ROUTES = new Set([
   'GET /v1/health', 'POST /v1/spaces', 'GET /v1/spaces/:code/parameters', 'POST /v1/spaces/:code/pair',
   'POST /v1/spaces/:code/recover', 'GET /v1/devices', 'PATCH /v1/devices/:deviceId',
@@ -519,7 +521,7 @@ async function browserPage(stub, options = {}) {
   const context = await browser.newContext({ serviceWorkers: 'block', acceptDownloads: true,
     viewport: options.viewport || { width: 1280, height: 900 } });
   const page = await context.newPage();
-  let remoteVersion = '1.0.41';
+  let remoteVersion = currentAppVersion();
   await page.route('**/js/cloud-sync-config.js*', route => route.fulfill({
     status: 200, contentType: 'text/javascript; charset=utf-8',
     body: 'window.QinshiCloudSyncConfig=Object.freeze({enabled:true,apiBaseUrl:"https://sync.test"});'
@@ -527,8 +529,9 @@ async function browserPage(stub, options = {}) {
   await page.route('**/version.json*', route => route.fulfill({ status: 200,
     contentType: 'application/json; charset=utf-8', body: JSON.stringify({ version: remoteVersion }) }));
   await page.route('https://sync.test/**', route => stub.handle(route));
-  await page.goto(appUrl, { waitUntil: 'networkidle' });
+  await openApp(page, appUrl);
   await page.evaluate(() => document.querySelector('.tab[data-partition="settings"]').click());
+  await page.locator('#settings-tab-sync').click();
   await page.locator('#cloud-sync-panel').waitFor({ state: 'visible' });
   return { context, page, stub, setRemoteVersion(value) { remoteVersion = value; } };
 }
@@ -798,7 +801,7 @@ async function exerciseStrictContractRoutes(stub) {
 async function createSpace(session, deviceName = 'Windows 设备 1', localValue = 'source-progress', inspectRecovery) {
   const { page, stub } = session;
   const requestStart = stub.requests.length;
-  await page.evaluate(value => localStorage.setItem('qinshi_browser_progress', value), localValue);
+  await page.evaluate(value => window.QinshiAccounts.setItem('qinshi_browser_progress', value), localValue);
   await page.locator('#cloud-sync-create-device').fill(deviceName);
   await page.locator('#cloud-sync-create-password').fill(PASSWORD);
   await page.locator('#cloud-sync-create-confirm').fill(PASSWORD);
@@ -878,7 +881,7 @@ async function assertModalClosed(page, layerSelector, restoredFocusId) {
 async function joinSpace(session, syncCode, deviceName = '当前设备', localValue = 'target-progress') {
   const { page, stub } = session;
   const requestStart = stub.requests.length;
-  await page.evaluate(value => localStorage.setItem('qinshi_browser_progress', value), localValue);
+  await page.evaluate(value => window.QinshiAccounts.setItem('qinshi_browser_progress', value), localValue);
   await page.locator('#cloud-sync-join-code').fill(syncCode);
   await page.locator('#cloud-sync-join-device').fill(deviceName);
   await page.locator('#cloud-sync-join-password').fill(PASSWORD);
@@ -939,7 +942,7 @@ test('2 加入空间只绑定设备，不上传也不覆盖本机数据', { time
   const target = await browserPage(stub);
   try {
     await joinSpace(target, code);
-    assert.equal(await target.page.evaluate(() => localStorage.getItem('qinshi_browser_progress')), 'target-progress');
+    assert.equal(await target.page.evaluate(() => window.QinshiAccounts.getItem('qinshi_browser_progress')), 'target-progress');
     assert.equal(Array.from(stub.devices.values()).filter(device => device.latestSnapshot).length, 1);
   } finally { await target.context.close(); await source.context.close(); }
 });
@@ -975,7 +978,7 @@ test('4 明确选择来源后显示完整方向并用来源覆盖当前设备', 
     const download = await downloadPromise;
     assert.match(download.suggestedFilename(), /^Qin-backup-before-cloud-sync-/);
     await navigationPromise;
-    assert.equal(await target.page.evaluate(() => localStorage.getItem('qinshi_browser_progress')), 'source-progress');
+    assert.equal(await target.page.evaluate(() => window.QinshiAccounts.getItem('qinshi_browser_progress')), 'source-progress');
   } finally { await target.context.close(); await source.context.close(); }
 });
 
@@ -991,9 +994,12 @@ test('5 更新后按不可变快照继续并重新要求确认', { timeout: 1200
     await target.page.locator('#cloud-sync-status').filter({ hasText: '先完成版本检查或更新' }).waitFor();
     assert.deepEqual(await target.page.evaluate(() => JSON.parse(sessionStorage.getItem('qin-cloud-sync-pending'))),
       { type: 'pull', snapshotId: sourceId });
-    target.setRemoteVersion('1.0.41');
+    target.setRemoteVersion(APP_VERSION);
     await target.page.reload({ waitUntil: 'networkidle' });
-    await target.page.evaluate(() => document.querySelector('.tab[data-partition="settings"]').click());
+    await target.page.evaluate(() => {
+      document.querySelector('.tab[data-partition="settings"]').click();
+      document.querySelector('#settings-tab-sync').click();
+    });
     await target.page.locator('#cloud-sync-confirm-layer').waitFor({ state: 'visible' });
     assert.equal(await target.page.locator('#cloud-sync-direction').innerText(), 'Windows 设备 1 → 当前设备');
     assert.equal(await target.page.locator('#cloud-sync-confirm-check').isChecked(), false);
@@ -1007,10 +1013,10 @@ test('6 离线失败保留配对和本机数据并显示可操作提示', { time
   try {
     await createSpace(session);
     stub.offline = true;
-    await session.page.evaluate(() => localStorage.setItem('qinshi_browser_progress', 'offline-local'));
+    await session.page.evaluate(() => window.QinshiAccounts.setItem('qinshi_browser_progress', 'offline-local'));
     await session.page.locator('#cloud-sync-upload').click();
     await session.page.locator('#cloud-sync-status').filter({ hasText: '网络不可用' }).waitFor({ timeout: 10000 });
-    assert.equal(await session.page.evaluate(() => localStorage.getItem('qinshi_browser_progress')), 'offline-local');
+    assert.equal(await session.page.evaluate(() => window.QinshiAccounts.getItem('qinshi_browser_progress')), 'offline-local');
     assert.ok(await session.page.evaluate(() => window.QinshiCloudSyncStorage.loadPairing()));
   } finally { stub.offline = false; await session.context.close(); }
 });
@@ -1029,7 +1035,7 @@ test('7 令牌撤销只条件清理旧配对，保留进度、待办和回滚证
     stub.revoked.add(pairing.deviceId);
     await session.page.locator('#cloud-sync-refresh').click();
     await session.page.locator('#cloud-sync-status').filter({ hasText: '配对已失效或被撤销' }).waitFor();
-    assert.equal(await session.page.evaluate(() => localStorage.getItem('qinshi_browser_progress')), 'source-progress');
+    assert.equal(await session.page.evaluate(() => window.QinshiAccounts.getItem('qinshi_browser_progress')), 'source-progress');
     assert.deepEqual(await session.page.evaluate(() => JSON.parse(sessionStorage.getItem('qin-cloud-sync-pending'))),
       { type: 'upload', snapshotId: 'pending-browser' });
     assert.ok(await readRollback(session.page));
@@ -1047,7 +1053,7 @@ test('7 令牌撤销只条件清理旧配对，保留进度、待办和回滚证
     noRollbackStub.revoked.add(pairing.deviceId);
     await noRollback.page.locator('#cloud-sync-refresh').click();
     await noRollback.page.locator('#cloud-sync-status').filter({ hasText: '配对已失效或被撤销' }).waitFor();
-    assert.equal(await noRollback.page.evaluate(() => localStorage.getItem('qinshi_browser_progress')), 'no-rollback-local');
+    assert.equal(await noRollback.page.evaluate(() => window.QinshiAccounts.getItem('qinshi_browser_progress')), 'no-rollback-local');
     assert.deepEqual(await noRollback.page.evaluate(() => JSON.parse(sessionStorage.getItem('qin-cloud-sync-pending'))),
       { type: 'upload', snapshotId: 'pending-no-rollback' });
     assert.equal(await noRollback.page.evaluate(() => window.QinshiCloudSyncStorage.loadPairing()), null);
@@ -1081,13 +1087,14 @@ test('8 缺失或篡改的分块在替换前被拒绝', { timeout: 120000 }, asy
     assert.equal(await target.page.locator('#cloud-sync-rollback').isVisible(), false);
     await target.page.reload({ waitUntil: 'networkidle' });
     await target.page.evaluate(() => document.querySelector('.tab[data-partition="settings"]').click());
+    await target.page.locator('#settings-tab-sync').click();
     await target.page.locator('#cloud-sync-panel').waitFor({ state: 'visible' });
     stub.tamperSnapshotId = snapshotId;
     const card = target.page.locator('#cloud-sync-source-list .cloud-sync-source-card', { hasText: 'Windows 设备 1' }).first();
     await card.locator('input[type="radio"]').check();
     await target.page.locator('#cloud-sync-prepare').click();
     await target.page.locator('#cloud-sync-status').filter({ hasText: '校验' }).waitFor();
-    assert.equal(await target.page.evaluate(() => localStorage.getItem('qinshi_browser_progress')), 'target-progress');
+    assert.equal(await target.page.evaluate(() => window.QinshiAccounts.getItem('qinshi_browser_progress')), 'target-progress');
     assert.equal(await readRollback(target.page), null);
     stub.tamperSnapshotId = null;
     stub.snapshots.get(snapshotId).chunks[0] = null;
@@ -1095,7 +1102,7 @@ test('8 缺失或篡改的分块在替换前被拒绝', { timeout: 120000 }, asy
       .first().locator('input[type="radio"]').check();
     await target.page.locator('#cloud-sync-prepare').click();
     await target.page.locator('#cloud-sync-status').filter({ hasText: '删除或不可用' }).waitFor();
-    assert.equal(await target.page.evaluate(() => localStorage.getItem('qinshi_browser_progress')), 'target-progress');
+    assert.equal(await target.page.evaluate(() => window.QinshiAccounts.getItem('qinshi_browser_progress')), 'target-progress');
     assert.equal(await readRollback(target.page), null);
   } finally { await target.context.close(); await source.context.close(); }
 });
@@ -1112,7 +1119,7 @@ test('9 云端提交失败后恢复原数据并保留可见回滚恢复入口', 
     await downloadPromise;
     await target.page.locator('#cloud-sync-rollback').waitFor({ state: 'visible' });
     assert.match(await target.page.locator('#cloud-sync-status').innerText(), /服务暂时异常/);
-    assert.equal(await target.page.evaluate(() => localStorage.getItem('qinshi_browser_progress')), 'target-progress');
+    assert.equal(await target.page.evaluate(() => window.QinshiAccounts.getItem('qinshi_browser_progress')), 'target-progress');
     assert.ok(await readRollback(target.page));
     assert.equal(await target.page.locator('#cloud-sync-rollback').isVisible(), true);
   } finally { await target.context.close(); await source.context.close(); }
@@ -1126,8 +1133,9 @@ test('10 忘记本设备只清除云配对并保留本机进度和 JSON 备份�
     session.page.once('dialog', dialog => dialog.accept());
     await session.page.locator('#cloud-sync-forget').click();
     await session.page.locator('#cloud-sync-unbound').waitFor({ state: 'visible' });
-    assert.equal(await session.page.evaluate(() => localStorage.getItem('qinshi_browser_progress')), 'source-progress');
+    assert.equal(await session.page.evaluate(() => window.QinshiAccounts.getItem('qinshi_browser_progress')), 'source-progress');
     assert.equal(await session.page.evaluate(() => window.QinshiCloudSyncStorage.loadPairing()), null);
+    await session.page.locator('#settings-tab-backup').click();
     assert.equal(await session.page.locator('#settings-export').isVisible(), true);
   } finally { await session.context.close(); }
 });
@@ -1137,15 +1145,19 @@ test('11 云同步界面接入后 JSON 导出仍生成有效完整备份', { tim
   const session = await browserPage(stub);
   try {
     await session.page.evaluate(() => {
-      localStorage.setItem('qinshi_browser_progress', 'json-export-value');
+      window.QinshiAccounts.setItem('qinshi_browser_progress', 'json-export-value');
       localStorage.setItem('unmanaged-key', 'must-not-export');
     });
+    await session.page.locator('#settings-tab-backup').click();
     const downloadPromise = session.page.waitForEvent('download');
     await session.page.locator('#settings-export').click();
     const download = await downloadPromise;
     const payload = JSON.parse(await require('node:fs/promises').readFile(await download.path(), 'utf8'));
-    assert.equal(payload.formatVersion, 1);
-    assert.equal(payload.data.qinshi_browser_progress, 'json-export-value');
+    assert.equal(payload.formatVersion, 2);
+    const registry = JSON.parse(payload.data.qinshi_accounts_v1);
+    const physicalKey = `qinshi_account_v1:${registry.primaryAccountId}:${encodeURIComponent('qinshi_browser_progress')}`;
+    assert.equal(payload.data[physicalKey], 'json-export-value');
+    assert.equal(Object.hasOwn(payload.data, 'qinshi_browser_progress'), false);
     assert.equal(Object.hasOwn(payload.data, 'unmanaged-key'), false);
     assert.deepEqual(stub.requests, []);
     assert.deepEqual(stub.responses, []);
@@ -1181,7 +1193,8 @@ test('12 永久删除使用独立确认弹层，取消安全且成功删除只�
     await session.page.locator('#cloud-sync-unbound').waitFor({ state: 'visible' });
     assert.equal(stub.space, null);
     assert.equal(await session.page.evaluate(() => window.QinshiCloudSyncStorage.loadPairing()), null);
-    assert.equal(await session.page.evaluate(() => localStorage.getItem('qinshi_browser_progress')), 'source-progress');
+    assert.equal(await session.page.evaluate(() => window.QinshiAccounts.getItem('qinshi_browser_progress')), 'source-progress');
+    await session.page.locator('#settings-tab-backup').click();
     assert.equal(await session.page.locator('#settings-export').isVisible(), true);
     const deletes = stub.requests.filter(entry => entry.method === 'DELETE' && entry.pathname === '/v1/spaces/current');
     assert.equal(deletes.length, 1);

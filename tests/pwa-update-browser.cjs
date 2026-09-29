@@ -3,9 +3,12 @@ const fs = require('node:fs');
 const http = require('node:http');
 const path = require('node:path');
 const test = require('node:test');
+const { currentAppVersion, previousPatchVersion, ensureTestAccount } = require('./browser-test-helpers.cjs');
 
 const playwrightPath = process.env.PLAYWRIGHT_MODULE;
 const ROOT = path.resolve(__dirname, '..');
+const CURRENT_VERSION = currentAppVersion();
+const PREVIOUS_VERSION = previousPatchVersion(CURRENT_VERSION);
 
 function contentType(filePath) {
   if (filePath.endsWith('.html')) return 'text/html; charset=utf-8';
@@ -24,7 +27,7 @@ if (!playwrightPath) {
   const { chromium } = require(playwrightPath);
 
   test('已安装旧版能在当前页面发现、应用并切换到新版', async () => {
-    let servedVersion = '1.0.37';
+    let servedVersion = PREVIOUS_VERSION;
     const serverRequests = [];
     const server = http.createServer((request, response) => {
       const pathname = decodeURIComponent(new URL(request.url, 'http://127.0.0.1').pathname);
@@ -36,7 +39,7 @@ if (!playwrightPath) {
       }
       let body = fs.readFileSync(filePath);
       if (['index.html', 'js/pwa.js', 'service-worker.js', 'version.json'].includes(relative)) {
-        body = Buffer.from(body.toString('utf8').replaceAll('1.0.41', servedVersion));
+        body = Buffer.from(body.toString('utf8').replaceAll(CURRENT_VERSION, servedVersion));
       }
       if (['index.html', 'js/pwa.js', 'service-worker.js', 'version.json'].includes(relative)) {
         serverRequests.push({ relative, servedVersion });
@@ -67,12 +70,13 @@ if (!playwrightPath) {
         });
       });
       await page.goto(`http://127.0.0.1:${address.port}/`, { waitUntil: 'networkidle' });
+      await ensureTestAccount(page);
       await page.evaluate(() => navigator.serviceWorker.ready);
       await page.reload({ waitUntil: 'networkidle' });
       await page.waitForFunction(() => Boolean(navigator.serviceWorker.controller));
-      assert.equal(await page.locator('#pwa-version').innerText(), '1.0.37');
+      assert.equal(await page.locator('#pwa-version').innerText(), PREVIOUS_VERSION);
 
-      servedVersion = '1.0.41';
+      servedVersion = CURRENT_VERSION;
       await page.evaluate(() => window.QinshiPWA.checkForUpdate());
       await page.locator('#pwa-update-notice').waitFor({ state: 'visible' });
       await page.locator('#pwa-apply-update').click();
@@ -92,8 +96,8 @@ if (!playwrightPath) {
           navigation: performance.getEntriesByType('navigation').map(entry => ({ name: entry.name, type: entry.type }))
         };
       });
-      assert.equal(updateState.version, '1.0.41', JSON.stringify({ updateState, serverRequests, browserResponses }));
-      assert.ok(serverRequests.some(item => item.relative === 'version.json' && item.servedVersion === '1.0.41'));
+      assert.equal(updateState.version, CURRENT_VERSION, JSON.stringify({ updateState, serverRequests, browserResponses }));
+      assert.ok(serverRequests.some(item => item.relative === 'version.json' && item.servedVersion === CURRENT_VERSION));
 
       await page.evaluate(async () => {
         localStorage.setItem('pwa-browser-progress', 'keep-me');
@@ -109,7 +113,7 @@ if (!playwrightPath) {
         progress: localStorage.getItem('pwa-browser-progress'),
         caches: await caches.keys()
       }));
-      assert.equal(repairState.version, '1.0.41');
+      assert.equal(repairState.version, CURRENT_VERSION);
       assert.equal(repairState.progress, 'keep-me');
       assert.ok(repairState.caches.includes('unrelated-browser-cache'));
     } finally {

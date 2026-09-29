@@ -8,11 +8,12 @@ const http = require("http");
 const fs = require("fs");
 const path = require("path");
 const os = require("os");
+const zlib = require("zlib");
 const { exec } = require("child_process");
 
 const ROOT = __dirname;
-const PORT_START = 8000;
-const PORT_END = 8010;
+// Keep this origin exclusive to Qin; mail automation uses 127.0.0.1:8765.
+const PORT = 8000;
 
 const MIME = {
   ".html": "text/html; charset=utf-8",
@@ -21,17 +22,36 @@ const MIME = {
   ".json": "application/json; charset=utf-8",
   ".webmanifest": "application/manifest+json; charset=utf-8",
   ".png": "image/png",
+  ".jpg": "image/jpeg",
+  ".jpeg": "image/jpeg",
+  ".webp": "image/webp",
   ".svg": "image/svg+xml",
   ".ico": "image/x-icon",
+  ".woff2": "font/woff2",
   ".txt": "text/plain; charset=utf-8"
 };
 
+const COMPRESSIBLE = new Set([".html", ".js", ".css", ".json", ".webmanifest", ".svg", ".txt"]);
+
+function cacheControl(rel, versioned) {
+  if (rel === "service-worker.js" || rel === "version.json") return "no-store";
+  if (rel === "index.html" || rel === "manifest.webmanifest") return "no-cache";
+  if (versioned) return "public, max-age=31536000, immutable";
+  return "public, max-age=3600";
+}
+
 function createServer() {
   return http.createServer((req, res) => {
-    let urlPath;
+    let parsedUrl;
     try {
-      urlPath = decodeURIComponent(new URL(req.url, "http://localhost").pathname);
+      parsedUrl = new URL(req.url, "http://localhost");
     } catch (e) {
+      res.writeHead(400, { "Content-Type": "text/plain; charset=utf-8" }).end("Bad Request");
+      return;
+    }
+    let urlPath;
+    try { urlPath = decodeURIComponent(parsedUrl.pathname); }
+    catch (e) {
       res.writeHead(400, { "Content-Type": "text/plain; charset=utf-8" }).end("Bad Request");
       return;
     }
@@ -47,8 +67,22 @@ function createServer() {
         return;
       }
       const ext = path.extname(filePath).toLowerCase();
-      res.writeHead(200, { "Content-Type": MIME[ext] || "application/octet-stream" });
-      fs.createReadStream(filePath).pipe(res);
+      const acceptsGzip = /\bgzip\b/i.test(String(req.headers["accept-encoding"] || ""));
+      const useGzip = acceptsGzip && COMPRESSIBLE.has(ext) && st.size >= 1024;
+      const headers = {
+        "Content-Type": MIME[ext] || "application/octet-stream",
+        "Cache-Control": cacheControl(rel, parsedUrl.searchParams.has("v")),
+        "X-Content-Type-Options": "nosniff"
+      };
+      if (COMPRESSIBLE.has(ext)) headers.Vary = "Accept-Encoding";
+      if (useGzip) headers["Content-Encoding"] = "gzip";
+      else headers["Content-Length"] = st.size;
+      res.writeHead(200, headers);
+      if (req.method === "HEAD") { res.end(); return; }
+      const stream = fs.createReadStream(filePath);
+      stream.on("error", () => { if (!res.destroyed) res.destroy(); });
+      if (useGzip) stream.pipe(zlib.createGzip({ level: zlib.constants.Z_BEST_SPEED })).pipe(res);
+      else stream.pipe(res);
     });
   });
 }
@@ -73,33 +107,26 @@ function lanIPv4s() {
 
 function startServer(onReady) {
   const server = createServer();
-  let port = PORT_START;
-  const attempt = () => {
-    server.once("error", (err) => {
-      if (err.code === "EADDRINUSE" && port < PORT_END) {
-        port += 1;
-        server.close();
-        attempt();
-      } else {
-        console.error(`端口 ${port} 启动失败：${err.message}`);
-        if (onReady) onReady(null);
-      }
-    });
-    server.listen(port, () => {
-      console.log("==========================================");
-      console.log("  秦时 · 特殊属性装备 本地服务已启动");
-      console.log(`  电脑访问：http://localhost:${port}/`);
-      for (const ip of lanIPv4s()) {
-        console.log(`  手机访问：http://${ip}:${port}/`);
-      }
-      console.log("  手机与电脑需连接同一 Wi-Fi");
-      console.log("  按 Ctrl+C 停止服务");
-      console.log("==========================================");
-      if (process.platform === "win32") exec(`start http://localhost:${port}/`, () => {});
-      if (onReady) onReady(port, server);
-    });
-  };
-  attempt();
+  const port = PORT;
+  server.once("error", (err) => {
+    console.error(`秦时专用端口 ${port} 启动失败：${err.message}`);
+    console.error("不会切换端口或打开网页。请关闭重复启动的秦时服务，或检查占用该端口的程序。");
+    if (onReady) onReady(null);
+    else process.exitCode = 1;
+  });
+  server.listen(port, () => {
+    console.log("==========================================");
+    console.log("  秦时 · 特殊属性装备 本地服务已启动");
+    console.log(`  电脑访问：http://localhost:${port}/`);
+    for (const ip of lanIPv4s()) {
+      console.log(`  手机访问：http://${ip}:${port}/`);
+    }
+    console.log("  手机与电脑需连接同一 Wi-Fi");
+    console.log("  按 Ctrl+C 停止服务");
+    console.log("==========================================");
+    if (process.platform === "win32") exec(`start http://localhost:${port}/`, () => {});
+    if (onReady) onReady(port, server);
+  });
   return server;
 }
 

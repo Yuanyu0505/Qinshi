@@ -13,13 +13,13 @@
 ## Global Constraints
 
 - Navigation label is exactly “木人巷”; desktop order is after “战匣丹囊” and before “合阵”; mobile placement is under “更多”.
-- Floors are limited to 1–500; 331–500 remains 6×6 with 36 wooden men and uses the 231–330 auxiliary-item costs.
+- Floors are limited to 1–500; 331–500 uses a 7×7 board with 49 wooden men while retaining the 231–330 auxiliary-item costs.
 - Default risk level is conservative: sum remaining expected demand, multiply once by 1.20, then ceil once.
 - Mystery-box contents are unknown; store and display mystery-box counts but never convert them into swords or planning value.
 - Do not implement automatic sword production, daily goals, activity history, or unused-item refunds.
 - All editable progress, inventory, package templates and package purchase counts are isolated by the current game account through `QinshiAccounts`.
 - The calculator never mutates saved progress unless the user explicitly confirms “保存回个人进度”.
-- Desktop, tablet and mobile layouts must remain readable; a 6×6 board must not cause horizontal page scrolling.
+- Desktop, tablet and mobile layouts must remain readable; the maximum 7×7 board must not cause horizontal page scrolling.
 - Project policy: write verification tests but do not run tests, lint, builds or manual acceptance as the AI; list commands and expected results for the user.
 - Preserve unrelated dirty files in the main checkout and commit only task-owned paths.
 
@@ -89,7 +89,7 @@ git commit -m "feat: add wooden man alley rules"
 
 - [ ] **Step 1: Write failing board-analysis tests**
 
-Cover an empty 3×3 board, an asymmetric 5×5 board, a nearly completed 6×6 board, unavailable tools, bomb coverage capped by remaining cells, iron-sword immediate completion, mirror/wood-sword equivalence, and deterministic tie-breaking from top-to-bottom then left-to-right.
+Cover an empty 3×3 board, an asymmetric 5×5 board, a nearly completed 7×7 board, unavailable tools, bomb coverage capped by remaining cells, iron-sword immediate completion, mirror/wood-sword equivalence, and deterministic tie-breaking from top-to-bottom then left-to-right.
 
 - [ ] **Step 2: Provide the user verification command**
 
@@ -261,7 +261,7 @@ Render tier rules, tool effects/costs, shortcut rewards, editable package defaul
 
 - [ ] **Step 6: Implement responsive styles**
 
-Use partition-scoped CSS. Keep the 6×6 board within its container through CSS grid and aspect ratio; convert wide results to cards at mobile breakpoints and use existing tablet/mobile breakpoints where possible.
+Use partition-scoped CSS. Keep the maximum 7×7 board within its container through CSS grid and aspect ratio; convert wide results to cards at mobile breakpoints and use existing tablet/mobile breakpoints where possible.
 
 - [ ] **Step 7: Provide the passing verification commands**
 
@@ -326,7 +326,7 @@ node --test js/wooden-man-alley.test.js js/wooden-man-alley-planner.test.js js/w
 node --test js/account-profiles.test.js js/cloud-sync.test.js serve.test.js
 ```
 
-Manual acceptance focus: desktop navigation, mobile “更多”, 3×3 through 6×6 boards, account switching, current-floor completion, forward/reverse calculations, package opt-in, offline reload and update from an older installed PWA. Expected: user reports all checks passed; the AI does not claim or perform them.
+Manual acceptance focus: desktop navigation, mobile “更多”, 3×3 through 7×7 boards, account switching, current-floor completion, forward/reverse calculations, package opt-in, offline reload and update from an older installed PWA. Expected: user reports all checks passed; the AI does not claim or perform them.
 
 - [ ] **Step 7: Commit the release changes**
 

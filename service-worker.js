@@ -1,7 +1,7 @@
 "use strict";
 
 const CACHE_PREFIX = "qinshi-site-";
-const CACHE_NAME = CACHE_PREFIX + "1.0.46";
+const CACHE_NAME = CACHE_PREFIX + "1.0.47";
 const PRECACHE_URLS = [
   "./",
   "./index.html",
@@ -84,11 +84,40 @@ const PRECACHE_URLS = [
   "./images/棋阵/棋阵(11).png"
 ];
 
+function wait(milliseconds) {
+  return new Promise(function (resolve) { setTimeout(resolve, milliseconds); });
+}
+
+function cacheOne(cache, url, attempts) {
+  var remaining = attempts || 3;
+  function attempt() {
+    return fetch(new Request(url, { cache: "reload" })).then(function (response) {
+      if (!response || !response.ok) throw new Error("预缓存失败：" + url);
+      return cache.put(url, response);
+    }).catch(function (error) {
+      remaining -= 1;
+      if (remaining <= 0) throw error;
+      return wait((4 - remaining) * 250).then(attempt);
+    });
+  }
+  return attempt();
+}
+
+function precacheInBatches(cache, urls, concurrency) {
+  var next = 0;
+  var workerCount = Math.min(concurrency || 6, urls.length);
+  function worker() {
+    var index = next;
+    next += 1;
+    if (index >= urls.length) return Promise.resolve();
+    return cacheOne(cache, urls[index], 3).then(worker);
+  }
+  return Promise.all(Array.from({ length: workerCount }, worker));
+}
+
 self.addEventListener("install", function (event) {
   event.waitUntil(caches.open(CACHE_NAME).then(function (cache) {
-    return cache.addAll(PRECACHE_URLS.map(function (url) {
-      return new Request(url, { cache: "reload" });
-    }));
+    return precacheInBatches(cache, PRECACHE_URLS, 6);
   }));
 });
 

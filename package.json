@@ -1,0 +1,8 @@
+{
+  "name": "qinshi-tool",
+  "private": true,
+  "scripts": {
+    "test": "node tools/run-tests.cjs unit",
+    "test:browser": "node tools/run-tests.cjs browser"
+  }
+}

@@ -4,6 +4,7 @@ const path = require('node:path');
 const os = require('node:os');
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
 const { createServer } = require('../serve.js');
+const { openApp } = require('./browser-test-helpers.cjs');
 
 let browser, server, url;
 
@@ -21,7 +22,7 @@ after(async () => {
 
 async function mobilePage(partition, width = 390, height = 844) {
   const page = await browser.newPage({ viewport: { width, height }, serviceWorkers: 'block' });
-  await page.goto(url, { waitUntil: 'networkidle' });
+  await openApp(page, url);
   await page.evaluate(name => document.querySelector('.tab[data-partition="' + name + '"]').click(), partition);
   return page;
 }
@@ -46,6 +47,20 @@ async function assertMinTapTargets(page, selector, minimum, label) {
       label + ' 触控区域不足：' + JSON.stringify(box));
   }
 }
+
+test('390 宽度木人巷331层展示完整7×7棋盘且不横向溢出', async () => {
+  const page = await mobilePage('wooden-man-alley');
+  try {
+    const floor = page.locator('[data-wooden-floor]');
+    page.once('dialog', dialog => dialog.accept());
+    await floor.fill('331');
+    await floor.dispatchEvent('change');
+    assert.equal(await page.locator('.wooden-board').getAttribute('style'), '--wooden-board-size:7');
+    assert.equal(await page.locator('.wooden-board .wooden-cell').count(), 49);
+    assert.match(await page.locator('.wooden-board-actions').innerText(), /已击破 0 \/ 49/);
+    await assertNoPageOverflow(page, '木人巷7×7棋盘 / 390');
+  } finally { await page.close(); }
+});
 
 test('390 宽度装备筛选完整显示副属性，页面无横向溢出', async () => {
   const page = await mobilePage('equipment');
@@ -142,13 +157,16 @@ for (const width of [390, 768, 1024]) {
   test(width + ' 宽度云同步面板单列、可换行且触控尺寸充足', async () => {
     const page = await mobilePage('settings', width, width === 390 ? 844 : width === 768 ? 1024 : 1366);
     try {
+      await page.locator('#settings-tab-sync').click();
       const panel = page.locator('#cloud-sync-panel');
       assert.equal(await panel.isVisible(), true);
       assert.equal(await panel.locator('.cloud-sync-form-grid').evaluate(node => getComputedStyle(node).gridTemplateColumns.split(' ').length), 1);
       assert.equal(await panel.locator('.cloud-sync-device-grid').first().evaluate(node => getComputedStyle(node).gridTemplateColumns.split(' ').length), 1);
       await assertMinTapTargets(page, '#cloud-sync-panel [data-cloud-action]:visible, #cloud-sync-panel input:visible, #cloud-sync-panel select:visible',
         44, '云同步 / ' + width);
+      await page.locator('#settings-tab-backup').click();
       await assertMinTapTargets(page, '#settings-export:visible, #settings-import-trigger:visible', 44, 'JSON 备份 / ' + width);
+      await page.locator('#settings-tab-sync').click();
       await assertNoPageOverflow(page, '云同步 / ' + width);
 
       await page.locator('#cloud-sync-unbound').evaluate(node => { node.hidden = true; });
@@ -191,13 +209,16 @@ for (const width of [390, 768, 1024]) {
 test('1440 宽度云同步保留双列桌面布局、居中弹层和明确危险色', async () => {
   const page = await mobilePage('settings', 1440, 1000);
   try {
+    await page.locator('#settings-tab-sync').click();
     const panel = page.locator('#cloud-sync-panel');
     assert.equal(await panel.locator('.cloud-sync-form-grid').evaluate(node => getComputedStyle(node).gridTemplateColumns.split(' ').length), 2);
     await page.locator('#cloud-sync-paired').evaluate(node => { node.hidden = false; });
     assert.equal(await panel.locator('.cloud-sync-device-grid').first().evaluate(node => getComputedStyle(node).gridTemplateColumns.split(' ').length), 2);
     await assertNoPageOverflow(page, '云同步 / 1440');
+    await page.locator('#settings-tab-backup').click();
     assert.equal(await page.locator('#settings-export').isVisible(), true);
     assert.equal(await page.locator('#settings-import-trigger').isVisible(), true);
+    await page.locator('#settings-tab-sync').click();
 
     const ordinary = page.locator('#cloud-sync-create-form button[type="submit"]');
     const destructive = page.locator('#cloud-sync-reset-password-action');

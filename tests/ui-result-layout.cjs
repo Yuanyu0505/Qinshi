@@ -3,6 +3,7 @@ const { test, before, after } = require('node:test');
 const assert = require('node:assert/strict');
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
 const { createServer } = require('../serve.js');
+const { openApp, setAccountJson } = require('./browser-test-helpers.cjs');
 let browser, server, url;
 
 before(async () => {
@@ -18,10 +19,11 @@ after(async () => {
 
 async function openPage(partition, width = 1440, progress) {
   const page = await browser.newPage({ viewport: { width, height: 900 }, serviceWorkers: 'block' });
-  if (progress) await page.addInitScript(value => {
-    localStorage.setItem('qinshi_tactics_progress_v1', JSON.stringify({ wind: value }));
-  }, progress);
-  await page.goto(url, { waitUntil: 'networkidle' });
+  await openApp(page, url);
+  if (progress) {
+    await setAccountJson(page, 'qinshi_tactics_progress_v1', { wind: progress });
+    await page.reload({ waitUntil: 'networkidle' });
+  }
   await page.evaluate(name => document.querySelector('.tab[data-partition="' + name + '"]').click(), partition);
   return page;
 }

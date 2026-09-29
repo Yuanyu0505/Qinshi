@@ -10,7 +10,7 @@ test("resolves every floor boundary", () => {
     [51, 4, 16, 2, 1], [130, 4, 16, 2, 1],
     [131, 5, 25, 3, 2], [230, 5, 25, 3, 2],
     [231, 6, 36, 4, 2], [330, 6, 36, 4, 2],
-    [331, 6, 36, 4, 2], [500, 6, 36, 4, 2]
+    [331, 7, 49, 4, 2], [500, 7, 49, 4, 2]
   ];
   cases.forEach(([floor, size, cells, iron, qi]) => {
     const tier = CORE.tierForFloor(floor, DATA);
@@ -118,7 +118,7 @@ test("action recommendation uses the strongest asymmetric coverage", () => {
 });
 
 test("board analysis caps bomb coverage and completes a nearly cleared board", () => {
-  const opened = Array.from({ length: 34 }, (_, index) => index);
+  const opened = Array.from({ length: 47 }, (_, index) => index);
   const result = CORE.analyzeCurrentBoard({
     floor: 331,
     openedCells: opened,

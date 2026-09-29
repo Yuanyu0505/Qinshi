@@ -3,6 +3,7 @@ const { test, before, after } = require('node:test');
 const assert = require('node:assert/strict');
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
 const { createServer } = require('../serve.js');
+const { openApp } = require('./browser-test-helpers.cjs');
 let browser, server, url;
 before(async () => {
   server = createServer();
@@ -13,7 +14,7 @@ before(async () => {
 after(async () => { if (browser) await browser.close(); if (server) await new Promise(r => server.close(r)); });
 async function pageFor(part, width = 900) {
   const page = await browser.newPage({ viewport: { width, height: 900 }, serviceWorkers: 'block' });
-  await page.goto(url, { waitUntil: 'networkidle' });
+  await openApp(page, url);
   await page.evaluate(p => document.querySelector('.tab[data-partition="' + p + '"]').click(), part);
   return page;
 }
@@ -21,7 +22,7 @@ async function pageFor(part, width = 900) {
 test('大型隐藏分区仅在首次进入时渲染', async () => {
   const page = await browser.newPage({ viewport: { width: 900, height: 900 }, serviceWorkers: 'block' });
   try {
-    await page.goto(url, { waitUntil: 'networkidle' });
+    await openApp(page, url);
     const targets = [
       ['forging', '#forging-summary'],
       ['inscription', '#ins-progress-list'],
@@ -179,7 +180,7 @@ test('战匣丹囊调整等级保留编辑输入与其他弟子节点', async ()
   const page = await pageFor('battle-box-pill-pouch');
   try {
     await page.evaluate(() => {
-      localStorage.setItem('qinshi_battle_box_pill_pouch_v1', JSON.stringify({ account: { playerLevel: 54 },
+      window.QinshiAccounts.setItem('qinshi_battle_box_pill_pouch_v1', JSON.stringify({ account: { playerLevel: 54 },
         disciples: ['甲', '乙'].map((name, i) => BATTLE_BOX_PILL_POUCH_CORE.normalizeDisciple({ id: 'audit-' + i, name, sourceType: 'custom' }, BATTLE_BOX_PILL_POUCH_DATA)) }));
     });
     await page.reload({ waitUntil: 'networkidle' });
@@ -193,14 +194,14 @@ test('战匣丹囊调整等级保留编辑输入与其他弟子节点', async ()
     });
     assert.equal(await page.evaluate(() => window.editField.isConnected && window.otherDisciple.isConnected), true);
     await page.locator('[data-battle-pouch-action="save-edit"]').click();
-    assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('qinshi_battle_box_pill_pouch_v1')).disciples[0].battle.currentLevel), 21);
+    assert.equal(await page.evaluate(() => JSON.parse(window.QinshiAccounts.getItem('qinshi_battle_box_pill_pouch_v1')).disciples[0].battle.currentLevel), 21);
   } finally { await page.close(); }
 });
 
 for (const width of [390, 900, 1440]) test('战匣丹囊批量选择独立切换并保留目标与顺序 / ' + width, async () => {
   const page = await pageFor('battle-box-pill-pouch', width);
   try {
-    await page.evaluate(() => localStorage.setItem('qinshi_battle_box_pill_pouch_v1', JSON.stringify({
+    await page.evaluate(() => window.QinshiAccounts.setItem('qinshi_battle_box_pill_pouch_v1', JSON.stringify({
       account: { playerLevel: 54 }, disciples: ['甲', '乙'].map((name, i) => ({
         id: 'bulk-' + i, name, sourceType: 'custom',
         battle: { currentLevel: 0, targetLevel: 1 }, pouch: { currentLevel: 0, targetLevel: 1 }
@@ -252,7 +253,7 @@ for (const width of [390, 900, 1440]) test('战匣丹囊批量选择独立切换
 for (const width of [390, 1440]) test('战匣丹囊结果状态与资料当前等级、上限突出显示 / ' + width, async () => {
   const page = await pageFor('battle-box-pill-pouch', width);
   try {
-    await page.evaluate(() => localStorage.setItem('qinshi_battle_box_pill_pouch_v1', JSON.stringify({
+    await page.evaluate(() => window.QinshiAccounts.setItem('qinshi_battle_box_pill_pouch_v1', JSON.stringify({
       account: { playerLevel: 54, inventory: { pearls: 0, shells: 0 } },
       disciples: [{ id: 'highlight', name: '提示测试', sourceType: 'custom',
         battle: { currentLevel: 42, targetLevel: 42 }, pouch: { currentLevel: 0, targetLevel: 1 } }]
@@ -295,7 +296,7 @@ test('战匣丹囊空名单与未解锁分区不允许批量勾选', async () =>
   try {
     await page.locator('[data-battle-pouch-mode="calculator"]').click();
     assert.deepEqual(await page.locator('[data-calc-toggle-all]').evaluateAll(nodes => nodes.map(n => n.disabled)), [true, true, true]);
-    await page.evaluate(() => localStorage.setItem('qinshi_battle_box_pill_pouch_v1', JSON.stringify({
+    await page.evaluate(() => window.QinshiAccounts.setItem('qinshi_battle_box_pill_pouch_v1', JSON.stringify({
       account: { playerLevel: 45 }, disciples: [{ id: 'locked', name: '未解锁弟子', sourceType: 'custom' }]
     })));
     await page.reload({ waitUntil: 'networkidle' });
@@ -309,7 +310,7 @@ test('战匣丹囊空名单与未解锁分区不允许批量勾选', async () =>
 test('战匣装备先输入再匹配，不使用原生列表，并保留自由输入', async () => {
   const page = await pageFor('battle-box-pill-pouch');
   try {
-    await page.evaluate(() => localStorage.setItem('qinshi_battle_box_pill_pouch_v1', JSON.stringify({
+    await page.evaluate(() => window.QinshiAccounts.setItem('qinshi_battle_box_pill_pouch_v1', JSON.stringify({
       account: { playerLevel: 54 }, disciples: [BATTLE_BOX_PILL_POUCH_CORE.normalizeDisciple(
         { id: 'equipment-search', name: '搜索测试弟子', sourceType: 'custom' }, BATTLE_BOX_PILL_POUCH_DATA)]
     })));
@@ -341,7 +342,7 @@ test('战匣装备先输入再匹配，不使用原生列表，并保留自由�
     assert.equal(await quality.inputValue(), 'red');
     assert.equal(await page.locator('.battle-pouch-slot-title span').first().innerText(), '+15级上限');
     await page.locator('[data-battle-pouch-action="save-edit"]').click();
-    const emptyNameSlot = await page.evaluate(() => JSON.parse(localStorage.getItem('qinshi_battle_box_pill_pouch_v1'))
+    const emptyNameSlot = await page.evaluate(() => JSON.parse(window.QinshiAccounts.getItem('qinshi_battle_box_pill_pouch_v1'))
       .disciples[0].battle.slots[0]);
     assert.equal(emptyNameSlot.itemName, '');
     assert.equal(emptyNameSlot.quality, 'red');
@@ -350,7 +351,7 @@ test('战匣装备先输入再匹配，不使用原生列表，并保留自由�
     assert.equal(await choices.count(), 0);
     await field.press('Tab');
     await page.locator('[data-battle-pouch-action="save-edit"]').click();
-    assert.equal(await page.evaluate(() => JSON.parse(localStorage.getItem('qinshi_battle_box_pill_pouch_v1'))
+    assert.equal(await page.evaluate(() => JSON.parse(window.QinshiAccounts.getItem('qinshi_battle_box_pill_pouch_v1'))
       .disciples[0].battle.slots[0].itemName), '自定义测试装备');
   } finally { await page.close(); }
 });

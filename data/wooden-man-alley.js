@@ -22,7 +22,7 @@
       { id: "floor-51-130", from: 51, to: 130, boardSize: 4, cellCount: 16, toolCosts: { ironSword: 2, horizontalQi: 1, verticalQi: 1, crossQi: 1 } },
       { id: "floor-131-230", from: 131, to: 230, boardSize: 5, cellCount: 25, toolCosts: { ironSword: 3, horizontalQi: 2, verticalQi: 2, crossQi: 2 } },
       { id: "floor-231-330", from: 231, to: 330, boardSize: 6, cellCount: 36, toolCosts: { ironSword: 4, horizontalQi: 2, verticalQi: 2, crossQi: 2 } },
-      { id: "floor-331-500", from: 331, to: 500, boardSize: 6, cellCount: 36, toolCosts: { ironSword: 4, horizontalQi: 2, verticalQi: 2, crossQi: 2 } }
+      { id: "floor-331-500", from: 331, to: 500, boardSize: 7, cellCount: 49, toolCosts: { ironSword: 4, horizontalQi: 2, verticalQi: 2, crossQi: 2 } }
     ],
     tools: [
       { id: "woodSword", name: "木剑", effect: "击破1个木人", preserveRank: 0 },

@@ -41,7 +41,7 @@ test("wooden man alley has responsive board and result cards", () => {
   assert.match(ui, /秘匣内容暂未明确/);
 });
 
-test("PWA 1.0.47 includes every wooden man alley runtime asset", () => {
+test("PWA 1.0.48 includes every wooden man alley runtime asset", () => {
   const html = fs.readFileSync(path.join(__dirname, "index.html"), "utf8");
   const worker = fs.readFileSync(path.join(__dirname, "service-worker.js"), "utf8");
   const workflow = fs.readFileSync(path.join(__dirname, ".github", "workflows", "pages.yml"), "utf8");
@@ -54,7 +54,7 @@ test("PWA 1.0.47 includes every wooden man alley runtime asset", () => {
   assert.match(workflow, /cp -R css data images icons _site\//);
   assert.match(worker, /CACHE_NAME = CACHE_PREFIX \+ "1\.0\.47"/);
   assert.match(fs.readFileSync(path.join(__dirname, "js", "pwa.js"), "utf8"), /APP_VERSION = "1\.0\.47"/);
-  assert.strictEqual(JSON.parse(fs.readFileSync(path.join(__dirname, "version.json"), "utf8")).version, "1.0.47");
+  assert.strictEqual(JSON.parse(fs.readFileSync(path.join(__dirname, "version.json"), "utf8")).version, "1.0.48");
 });
 
 function hasExplicitCloudProhibition(text, capability) {
@@ -196,7 +196,7 @@ test("首页外部脚本全部延后执行并保持声明顺序", () => {
 
 test("本地服务为版本资源、更新文件和图片设置正确响应头", async () => {
   await withServer(async (port) => {
-    const versioned = await get(port, "/css/style.css", "/css/style.css?v=1.0.47");
+    const versioned = await get(port, "/css/style.css", "/css/style.css?v=1.0.48");
     const version = await get(port, "/version.json");
     const worker = await get(port, "/service-worker.js");
     const image = await get(port, "/images/qin-ink-landscape.webp");
@@ -270,7 +270,7 @@ test("首页提供逐鹿分区及数据、核心和界面脚本", async () => {
   });
 });
 
-test("PWA 1.0.47 离线缓存包含逐鹿、统一导航和禁地资源", () => {
+test("PWA 1.0.48 离线缓存包含逐鹿、统一导航和禁地资源", () => {
   const worker = fs.readFileSync(path.join(__dirname, "service-worker.js"), "utf8");
   const pwa = fs.readFileSync(path.join(__dirname, "js", "pwa.js"), "utf8");
   const manifest = JSON.parse(fs.readFileSync(path.join(__dirname, "manifest.webmanifest"), "utf8"));
@@ -1361,7 +1361,7 @@ test("锻造个人进度提供可取消保存的弟子顺序调整界面", async
   });
 });
 
-test("PWA 1.0.47 发布响应式禁地、统一导航、逐鹿资料与既有完整资源", async () => {
+test("PWA 1.0.48 发布响应式禁地、统一导航、逐鹿资料与既有完整资源", async () => {
   const pagesWorkflow = fs.readFileSync(path.join(__dirname, ".github", "workflows", "pages.yml"), "utf8");
   assert.match(pagesWorkflow, /js\/tactics\.js/);
   assert.match(pagesWorkflow, /js\/tactics-ui\.js/);
@@ -1423,7 +1423,7 @@ test("PWA 1.0.47 发布响应式禁地、统一导航、逐鹿资料与既有完
     assert.match(pwa.body, /APP_VERSION\s*=\s*"1\.0\.47"/);
     assert.match(index.body, /id="pwa-repair-update"/);
     assert.match(pwa.body, /addEventListener\("online", checkForUpdateSilently\)/);
-    assert.equal(JSON.parse(version.body).version, "1.0.47");
+    assert.equal(JSON.parse(version.body).version, "1.0.48");
     assert.match(worker.body, /"\.\/data\/tactics\.js"/);
     assert.match(worker.body, /"\.\/js\/tactics\.js"/);
     assert.match(worker.body, /"\.\/js\/tactics-ui\.js"/);
@@ -1541,8 +1541,8 @@ test("铭文性能协调器先于页面逻辑加载并加入离线资源", async
   await withServer(async (port) => {
     const page = await get(port, "/");
     const helper = await get(port, "/js/inscription-performance.js");
-    const helperScript = '<script defer src="js/inscription-performance.js?v=1.0.47"></script>';
-    const pageScript = '<script defer src="js/inscription.js?v=1.0.47"></script>';
+    const helperScript = '<script defer src="js/inscription-performance.js?v=1.0.48"></script>';
+    const pageScript = '<script defer src="js/inscription.js?v=1.0.48"></script>';
     assert.strictEqual(helper.status, 200);
     assert.match(helper.headers["content-type"], /javascript/);
     assert.ok(page.body.indexOf(helperScript) >= 0, "首页应加载铭文性能协调器");

@@ -287,7 +287,7 @@
     var cells = "";
     for (var index = 0; index < tier.cellCount; index += 1) {
       cells += '<button type="button" class="wooden-cell' + (opened[index] ? " is-opened" : "") + '" data-wooden-cell="' + index + '" aria-pressed="' + String(Boolean(opened[index])) + '">' +
-        (opened[index] ? '<span aria-hidden="true">✓</span><span class="sr-only">已击破</span>' : '<span aria-hidden="true">木</span><span class="sr-only">未击破</span>') + '</button>';
+        (opened[index] ? '<span aria-hidden="true">✓</span><span class="sr-only">已击破</span>' : '<span>未击破</span>') + '</button>';
     }
     return '<div class="wooden-board" style="--wooden-board-size:' + tier.boardSize + '" aria-label="第' + progress.currentFloor + '层木人棋盘">' + cells + '</div>';
   }

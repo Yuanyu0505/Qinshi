@@ -192,7 +192,7 @@ window.ATLAS_DATA = {
       }
     ],
     "maxLevel": 20,
-    "defaultTargetLevel": 19
+    "defaultTargetLevel": 20
   },
   "items": [
     {

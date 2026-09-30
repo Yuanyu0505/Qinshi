@@ -157,7 +157,7 @@ def build_data(path, out_path):
             "counts": dict(counts),
             "upgradeStages": upgrade_stages,
             "maxLevel": max_level,
-            "defaultTargetLevel": min(max(item["level"] for item in items), max_level),
+            "defaultTargetLevel": max_level,
         },
         "items": items,
     }

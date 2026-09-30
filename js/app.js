@@ -1255,12 +1255,13 @@
   }
 
   function loadAtlasLevels() {
+    const defaults = Object.fromEntries((ATLAS_DATA && ATLAS_DATA.items || []).map((item) => [item.id, 0]));
     try {
       const raw = ACCOUNT_STORAGE.getItem(ATLAS_LEVELS_KEY);
       const parsed = raw ? JSON.parse(raw) : {};
-      return parsed && typeof parsed === "object" ? parsed : {};
+      return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? { ...defaults, ...parsed } : defaults;
     } catch (e) {
-      return {};
+      return defaults;
     }
   }
 
@@ -1277,7 +1278,7 @@
   }
 
   function defaultAtlasTargetLevel() {
-    const raw = Number(ATLAS_DATA && ATLAS_DATA.meta && ATLAS_DATA.meta.defaultTargetLevel) || 19;
+    const raw = Number(ATLAS_DATA && ATLAS_DATA.meta && ATLAS_DATA.meta.defaultTargetLevel) || 20;
     return Math.max(1, Math.min(raw, atlasMaxLevel()));
   }
 

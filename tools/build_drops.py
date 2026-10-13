@@ -16,6 +16,12 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DEFAULT_XLSX = os.path.join(ROOT, "秦时相关（更新贯侯钟离昧）20260618.xlsx")
 OUT_JS = os.path.join(ROOT, "data", "drops.js")
 
+# 普通关卡额外掉落；保留原有关卡奖励，且重复生成时不重复追加。
+EXTRA_NORMAL_DROPS = [
+    {"chapter": 43, "stage": 10, "item": "机关蝙蝠碎片"},
+    {"chapter": 41, "stage": 10, "item": "八爪铁蜈蚣碎片"},
+]
+
 CHAPTER_RE = re.compile(r"(\d+)")
 CHAPTER_CN_RE = re.compile(r"第(\d+)章")
 
@@ -74,6 +80,16 @@ def parse_sheet(path):
         k = cell_text(rows[r - 1][10])
         if j.isdigit() and k:
             reward.append({"chapter": int(j), "item": k})
+    for entry in normal:
+        if entry["chapter"] == 15 and entry["stage"] == 10 and entry["item"] == "机关蛇":
+            entry["item"] = "机关蛇碎片"
+        elif entry["chapter"] == 12 and entry["stage"] == 10 and entry["item"] == "破土七郎":
+            entry["item"] = "破土七郎碎片"
+    for extra in EXTRA_NORMAL_DROPS:
+        if extra not in normal:
+            matches = [i for i, entry in enumerate(normal)
+                       if entry["chapter"] == extra["chapter"] and entry["stage"] == extra["stage"]]
+            normal.insert(matches[-1] + 1 if matches else len(normal), dict(extra))
     return {"normal": normal, "hero": hero, "reward": reward}
 
 

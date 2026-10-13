@@ -13,7 +13,7 @@ class TestDrops(unittest.TestCase):
         cls.data = parse_sheet(XLSX)
 
     def test_counts(self):
-        self.assertEqual(len(self.data["normal"]), 197)
+        self.assertEqual(len(self.data["normal"]), 199)
         self.assertEqual(len(self.data["hero"]), 128)
         self.assertEqual(len(self.data["reward"]), 55)
 

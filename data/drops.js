@@ -5,7 +5,7 @@ window.DROP_DATA = {
     "sourceSheet": "章节掉落新版",
     "version": "20260618",
     "generatedAt": "2026-08-07",
-    "totalNormal": 197,
+    "totalNormal": 199,
     "totalHero": 128,
     "totalReward": 56
   },
@@ -277,6 +277,11 @@ window.DROP_DATA = {
     },
     {
       "chapter": 43,
+      "stage": 10,
+      "item": "机关蝙蝠碎片"
+    },
+    {
+      "chapter": 43,
       "stage": 9,
       "item": "灭魂"
     },
@@ -314,6 +319,11 @@ window.DROP_DATA = {
       "chapter": 41,
       "stage": 10,
       "item": "高级招募券"
+    },
+    {
+      "chapter": 41,
+      "stage": 10,
+      "item": "八爪铁蜈蚣碎片"
     },
     {
       "chapter": 41,
@@ -818,7 +828,7 @@ window.DROP_DATA = {
     {
       "chapter": 15,
       "stage": 10,
-      "item": "机关蛇"
+      "item": "机关蛇碎片"
     },
     {
       "chapter": 15,
@@ -863,7 +873,7 @@ window.DROP_DATA = {
     {
       "chapter": 12,
       "stage": 10,
-      "item": "破土七郎"
+      "item": "破土七郎碎片"
     },
     {
       "chapter": 12,

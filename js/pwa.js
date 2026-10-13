@@ -1,7 +1,7 @@
 (function () {
   "use strict";
 
-  var APP_VERSION = "1.0.48";
+  var APP_VERSION = "1.0.49";
   var VERSION_URL = "./version.json";
   var UPDATE_CHECK_INTERVAL = 30 * 60 * 1000;
   var RETRY_DELAYS = [0, 500, 1500];

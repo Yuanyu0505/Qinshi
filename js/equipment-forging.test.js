@@ -91,6 +91,21 @@ test("装备锻造跳转：没有锻造资料的装备不生成跳转目标", ()
   assert.strictEqual(EquipmentForging.resolveForgeTarget("不存在的装备", forgingItems), null);
 });
 
+test("十月装备：名称归一不依赖配方存在，锻造跳转仍要求真实配方", () => {
+  const pairs = [
+    ["神兵夜阑灯", "夜阑灯"], ["神兵橘裳", "映月橘裳"],
+    ["神兵泷星", "泷星"], ["神兵幻音", "幻音天章"]
+  ];
+  pairs.forEach(([name, normalName]) => {
+    assert.strictEqual(EquipmentForging.normalizeEquipmentName(name), normalName);
+    assert.strictEqual(EquipmentForging.resolveForgeTarget(name, []), null);
+    assert.strictEqual(EquipmentForging.buildForgeNavigation(name, []), null);
+    assert.strictEqual(EquipmentForging.resolveForgeTarget(name, [{ name: normalName }]), normalName);
+    assert.strictEqual(EquipmentForging.resolveEquipmentTarget(normalName, [{ name: normalName }, { name }], []).name, name);
+  });
+  assert.strictEqual(EquipmentForging.normalizeEquipmentName("神兵鬼谷子"), "神兵鬼谷子");
+});
+
 test("装备锻造跳转：生成查询页主锻造模式导航状态", () => {
   assert.deepStrictEqual(
     EquipmentForging.buildForgeNavigation("神兵墨眉", forgingItems),

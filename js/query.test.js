@@ -107,6 +107,48 @@ test("matchMain：主属性精确匹配，不限通过", () => {
   assert.strictEqual(Q.matchMain(fixture[7], "血"), false);
 });
 
+const tieredMainBook = {
+  id: "b-tiered-main", cat: "典籍", name: "春秋", main: "攻、内力", mainKey: "攻",
+  mainByTier: { "红金": "血、内力" },
+  tiers: { "红色": [{ t: "速", v: 145 }], "红金": [{ t: "速", v: 148 }] }
+};
+
+test("主属性：品质覆盖不会被原 mainKey 遮蔽，具体品质缺资料不命中", () => {
+  assert.strictEqual(Q.mainForTier(tieredMainBook, "红色"), "攻、内力");
+  assert.strictEqual(Q.mainForTier(tieredMainBook, "红金"), "血、内力");
+  assert.strictEqual(Q.matchMain(tieredMainBook, "攻", "红色"), true);
+  assert.strictEqual(Q.matchMain(tieredMainBook, "血", "红色"), false);
+  assert.strictEqual(Q.matchMain(tieredMainBook, "血", "红金"), true);
+  assert.strictEqual(Q.matchMain(tieredMainBook, "攻", "红金"), false);
+  assert.strictEqual(Q.matchMain(tieredMainBook, "攻", "橙金"), false);
+  assert.strictEqual(Q.matchMain(fixture[6], "防", "红色"), false);
+});
+
+test("主属性：最高值模式兼容旧调用并匹配有效品质的任一主属性", () => {
+  assert.strictEqual(Q.matchMain(tieredMainBook, "攻"), true);
+  assert.strictEqual(Q.matchMain(tieredMainBook, "血", "max"), true);
+  assert.strictEqual(Q.matchMain(tieredMainBook, "防", "max"), false);
+  assert.strictEqual(Q.matchMain({ main: "攻、内力" }, "攻"), true);
+  const absentOverride = {
+    main: "攻、内力", mainKey: "攻", mainByTier: { "红金": "血、内力" },
+    tiers: { "红色": [{ t: "速", v: 145 }] }
+  };
+  assert.strictEqual(Q.matchMain(absentOverride, "血", "max"), false);
+});
+
+test("主属性显示：最高值注明品质差异，具体品质显示实际主属性", () => {
+  assert.strictEqual(Q.mainDisplay(tieredMainBook, "max"), "红金：血、内力；其他品质：攻、内力");
+  assert.strictEqual(Q.mainDisplay(tieredMainBook, "红色"), "攻、内力");
+  assert.strictEqual(Q.mainDisplay(tieredMainBook, "红金"), "血、内力");
+  assert.strictEqual(Q.mainDisplay(fixture[7], "max"), "攻、内力");
+});
+
+test("queryItems：把数值来源传入主属性筛选", () => {
+  assert.deepStrictEqual(Q.queryItems([tieredMainBook], { main: "血", valueSource: "红金" }).map(item => item.name), ["春秋"]);
+  assert.deepStrictEqual(Q.queryItems([tieredMainBook], { main: "攻", valueSource: "红金" }), []);
+  assert.deepStrictEqual(Q.queryItems([tieredMainBook], { main: "血", valueSource: "红色" }), []);
+});
+
 test("matchCategory：未选择分类时包含全部装备", () => {
   assert.strictEqual(Q.matchCategory(fixture[0], null), true);
   assert.strictEqual(Q.matchCategory(fixture[7], null), true);
@@ -190,6 +232,46 @@ test("sortToken：典籍按档次最高阶累计值排序", () => {
   assert.strictEqual(Q.sortValue(fixture[7], "暴击", "红金"), 41);
   assert.strictEqual(Q.sortToken(fixture[7], "暴击", "红金").raw, "41%暴击");
   assert.strictEqual(Q.sortToken(fixture[8], "攻", "红金"), null);
+});
+
+test("cumulativeBookStages：累计快照优先且不重复累加、不跨品质借用", () => {
+  const book = {
+    bookGroup: "初始橙色典籍",
+    stages: { "红金": [{ stage: 15, tokens: [{ t: "速", v: 999 }] }] },
+    stageSnapshots: {
+      "红色": [{ stage: 15, tokens: [{ t: "速", v: 145 }] }],
+      "红金": [
+        { stage: 0, tokens: [{ t: "速", v: 148 }] },
+        { stage: 15, tokens: [{ t: "速", v: 148 }, { t: "攻防血", v: 46, matches: ["攻", "防", "血", "攻防血"] }] }
+      ]
+    }
+  };
+  const stages = Q.cumulativeBookStages(book, "红金");
+  assert.deepStrictEqual(stages.map(stage => stage.tokens.find(token => token.t === "速").v), [148, 148]);
+  assert.strictEqual(Q.finalBookStage(book, "红色").tokens[0].v, 145);
+  assert.strictEqual(Q.finalBookStage(book, "橙金"), null);
+  stages[1].tokens[1].matches.push("内力");
+  stages[0].tokens[0].v = 0;
+  assert.strictEqual(book.stageSnapshots["红金"][0].tokens[0].v, 148);
+  assert.deepStrictEqual(book.stageSnapshots["红金"][1].tokens[1].matches, ["攻", "防", "血", "攻防血"]);
+});
+
+test("queryItems：只有累计快照的典籍仍能按最高累计值筛选排序", () => {
+  const books = [
+    { id: "snapshot-1", cat: "典籍", name: "快照典籍", main: "攻、内力", bookGroup: "初始橙色典籍",
+      stageSnapshots: {
+        "红色": [{ stage: 15, tokens: [{ t: "速", v: 145 }] }],
+        "红金": [{ stage: 15, tokens: [{ t: "速", v: 148 }] }]
+      } },
+    { id: "legacy-1", cat: "典籍", name: "增量典籍", main: "攻、内力", bookGroup: "初始橙色典籍",
+      tiers: { "红金": [{ t: "速", v: 140 }] },
+      stages: { "红金": [{ stage: 0, tokens: [{ t: "速", v: 140 }] }] } }
+  ];
+  assert.strictEqual(Q.sortValue(books[0], "速", "max"), 148);
+  assert.strictEqual(Q.sortValue(books[0], "速", "红色"), 145);
+  assert.strictEqual(Q.sortValue(books[0], "速", "橙金"), null);
+  assert.strictEqual(Q.matchMain(books[0], "攻", "红金"), true);
+  assert.deepStrictEqual(Q.queryItems(books, { filters: ["速"], valueSource: "max" }).map(item => item.name), ["快照典籍", "增量典籍"]);
 });
 
 test("queryItems：未选择分类时按全部分类顺序返回", () => {

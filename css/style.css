@@ -1318,6 +1318,12 @@ td.name { font-weight: 600; white-space: nowrap; }
 #partition-equipment .book-tier-summary {
   display: contents;
 }
+#partition-equipment .book-stage-unknown {
+  grid-column: 1 / -1;
+  min-width: 0;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
 #partition-equipment .book-tier-summary-label {
   grid-column: 1;
   grid-row: 1;

@@ -24,12 +24,70 @@
     var q = normalizeInput(query);
     if (!q) return true;
     return normalizeInput(item.name).indexOf(q) !== -1 ||
-           normalizeInput(item.cat).indexOf(q) !== -1;
+           normalizeInput(item.cat).indexOf(q) !== -1 ||
+           (Array.isArray(item.searchAliases) && item.searchAliases.some(function (name) {
+             return normalizeInput(name).indexOf(q) !== -1;
+           }));
   }
 
-  /** 主属性筛选：main 为空/未提供表示不限 */
-  function matchMain(item, main) {
-    return main == null || main === "" || (item.mainKey || item.main) === main;
+  function mainForTier(item, tier) {
+    if (!item) return "";
+    var overrides = item.mainByTier || {};
+    return Object.prototype.hasOwnProperty.call(overrides, tier) ? overrides[tier] : item.main || "";
+  }
+
+  function hasTierData(item, tier) {
+    return [item.tiers, item.stages, item.stageSnapshots].some(function (source) {
+      return source && Array.isArray(source[tier]) && source[tier].length > 0;
+    });
+  }
+
+  function availableTierNames(item) {
+    var names = [];
+    [item.tiers, item.stages, item.stageSnapshots].forEach(function (source) {
+      Object.keys(source || {}).forEach(function (tier) {
+        if (names.indexOf(tier) === -1 && hasTierData(item, tier)) names.push(tier);
+      });
+    });
+    return names;
+  }
+
+  function mainKeyForTier(item, tier) {
+    var overrides = item.mainByTier || {};
+    if (!Object.prototype.hasOwnProperty.call(overrides, tier) && item.mainKey) return item.mainKey;
+    return String(mainForTier(item, tier)).split(/[、，,]/)[0].trim();
+  }
+
+  function mainDisplay(item, valueSource) {
+    if (valueSource && valueSource !== "max") return mainForTier(item, valueSource);
+    var base = item.main || "";
+    if (!item.mainByTier) return base;
+    var groups = [];
+    var hasBase = false;
+    availableTierNames(item).forEach(function (tier) {
+      var value = mainForTier(item, tier);
+      if (value === base) {
+        hasBase = true;
+        return;
+      }
+      var group = groups.find(function (entry) { return entry.value === value; });
+      if (group) group.tiers.push(tier);
+      else groups.push({ value: value, tiers: [tier] });
+    });
+    if (!groups.length) return base;
+    var labels = groups.map(function (group) { return group.tiers.join("、") + "：" + group.value; });
+    if (hasBase) labels.push("其他品质：" + base);
+    return labels.join("；");
+  }
+
+  /** 主属性筛选：main 为空/未提供表示不限；省略品质时兼容最高值模式。 */
+  function matchMain(item, main, valueSource) {
+    if (main == null || main === "") return true;
+    if (valueSource && valueSource !== "max") {
+      return hasTierData(item, valueSource) && mainKeyForTier(item, valueSource) === main;
+    }
+    if (!item.mainByTier) return mainKeyForTier(item) === main;
+    return availableTierNames(item).some(function (tier) { return mainKeyForTier(item, tier) === main; });
   }
 
   /** 分类筛选：null/undefined 表示全部，空字符串表示“除典籍外” */
@@ -66,7 +124,12 @@
         if (tokenMatches(tokens[j], attr)) return true;
       }
     }
-    return false;
+    var snapshots = item.stageSnapshots || {};
+    return Object.keys(snapshots).some(function (tier) {
+      return snapshots[tier].some(function (stage) {
+        return (stage.tokens || []).some(function (token) { return tokenMatches(token, attr); });
+      });
+    });
   }
 
   function matchFilters(item, filters) {
@@ -93,6 +156,8 @@
    * 仅数值词条参与累计，首次出现的词条顺序和复合属性 matches 会被保留。
    */
   function cumulativeBookStages(item, tier) {
+    var snapshots = item && item.stageSnapshots && item.stageSnapshots[tier];
+    if (Array.isArray(snapshots) && snapshots.length) return JSON.parse(JSON.stringify(snapshots));
     var source = item && item.stages && item.stages[tier] || [];
     var totals = Object.create(null);
     var order = [];
@@ -122,14 +187,17 @@
   function sortToken(item, attr, valueSource) {
     if (item.bookGroup) {
       var stageTiers = item.stages || {};
-      var bookTierNames = valueSource === "max" ? Object.keys(stageTiers) : [valueSource];
+      var snapshotTiers = item.stageSnapshots || {};
+      var bookTierNames = valueSource === "max" ? Object.keys(stageTiers).concat(Object.keys(snapshotTiers)).filter(function (tier, index, names) {
+        return names.indexOf(tier) === index;
+      }) : [valueSource];
       var bookBest = null;
       for (var bookTierIndex = 0; bookTierIndex < bookTierNames.length; bookTierIndex++) {
         var finalStage = finalBookStage(item, bookTierNames[bookTierIndex]);
         var finalTokens = finalStage ? finalStage.tokens : [];
         for (var bookTokenIndex = 0; bookTokenIndex < finalTokens.length; bookTokenIndex++) {
           var bookToken = finalTokens[bookTokenIndex];
-          if (tokenMatches(bookToken, attr) && (bookBest === null || bookToken.v > bookBest.v)) {
+          if (tokenMatches(bookToken, attr) && typeof bookToken.v === "number" && (bookBest === null || bookToken.v > bookBest.v)) {
             bookBest = bookToken;
           }
         }
@@ -174,7 +242,7 @@
 
     var result = [];
     for (var i = 0; i < items.length; i++) {
-      if (matchSearch(items[i], search) && matchCategory(items[i], category) && matchMain(items[i], main) && matchFilters(items[i], filters)) {
+      if (matchSearch(items[i], search) && matchCategory(items[i], category) && matchMain(items[i], main, valueSource) && matchFilters(items[i], filters)) {
         result.push(items[i]);
       }
     }
@@ -204,6 +272,8 @@
     matchSearch: matchSearch,
     matchCategory: matchCategory,
     nextEquipmentCategoryState: nextEquipmentCategoryState,
+    mainForTier: mainForTier,
+    mainDisplay: mainDisplay,
     matchMain: matchMain,
     hasSubAttr: hasSubAttr,
     tokenMatches: tokenMatches,

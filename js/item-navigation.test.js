@@ -56,6 +56,22 @@ test("名称模型：无锻造资料装备仍使用原名形成导航物品", ()
   });
 });
 
+test("名称模型：十月新神兵没有配方仍使用普通名形成装备族", () => {
+  const pairs = [
+    ["神兵夜阑灯", "夜阑灯"], ["神兵橘裳", "映月橘裳"],
+    ["神兵泷星", "泷星"], ["神兵幻音", "幻音天章"]
+  ];
+  pairs.forEach(([name, normalName]) => {
+    const items = [{ name: normalName }, { name }];
+    assert.deepStrictEqual(ItemNavigation.resolveItem(name, items, []), {
+      clickedName: name, forgeKey: normalName, equipmentName: name, familyKey: normalName
+    });
+    assert.deepStrictEqual(ItemNavigation.resolveItem(normalName, items, []), {
+      clickedName: normalName, forgeKey: normalName, equipmentName: name, familyKey: normalName
+    });
+  });
+});
+
 test("操作菜单：四类来源返回确认后的动作和统一文案", () => {
   assert.deepStrictEqual(ItemNavigation.actionsForSource("equipment"), [
     { id: "atlas", label: "前往图鉴分区查询" },

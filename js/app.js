@@ -2918,11 +2918,15 @@
 
   function bookTierSummaryHtml(item, tier) {
     const finalStage = Q.finalBookStage(item, tier);
-    if (!finalStage) return '<span class="tier-none">—</span>';
-    return `<div class="book-tier-summary"><span class="book-tier-summary-label">${finalStage.stage}阶累计</span><span class="book-stage-values">${tokenHtml(finalStage.tokens, "")}</span></div>`;
+    if (!finalStage) return `<span class="tier-none">${item.stageDetailsIncomplete ? "暂无资料" : "—"}</span>`;
+    const label = item.summaryLabels && item.summaryLabels[tier] || `${finalStage.stage}阶累计`;
+    return `<div class="book-tier-summary"><span class="book-tier-summary-label">${escapeHtml(label)}</span><span class="book-stage-values">${tokenHtml(finalStage.tokens, "")}</span></div>`;
   }
 
   function bookTierDetailsHtml(item, tier) {
+    if (item.stageDetailsIncomplete && Q.finalBookStage(item, tier)) {
+      return '<span class="muted-tip book-stage-unknown">中间阶段暂无资料</span>';
+    }
     const stages = item.stages && item.stages[tier];
     if (!Array.isArray(stages) || !stages.length) return "";
     return `<button type="button" class="book-detail-toggle" data-book-id="${escapeHtml(item.id)}" data-tier="${escapeHtml(tier)}" aria-controls="book-detail-popover" aria-expanded="false">进阶详情</button>`;
@@ -2936,7 +2940,7 @@
     const tiers = item.bookGroup === "初始紫色典籍"
       ? ["紫色"].concat(Q.TIER_ORDER)
       : Q.TIER_ORDER.slice();
-    return tiers.filter((tier) => Array.isArray(item.stages && item.stages[tier]) && item.stages[tier].length);
+    return tiers.filter((tier) => item.stageDetailsIncomplete || Q.finalBookStage(item, tier));
   }
 
   function bookCardTiersHtml(item) {
@@ -2974,7 +2978,7 @@
       return `<tr>
       <td class="equipment-category-cell"><span class="cat">${item.cat}</span></td>
       <td class="name equipment-name-cell">${equipmentResultNameHtml(item)}</td>
-      ${state.showMain ? `<td class="main equipment-main-cell">${escapeHtml(item.main)}</td>` : ""}
+      ${state.showMain ? `<td class="main equipment-main-cell">${escapeHtml(Q.mainDisplay(item, state.valueSource))}</td>` : ""}
       ${tiers.map((tier) => `<td class="equipment-tier-cell${item.bookGroup ? " book-tier-cell" : ""}">${item.bookGroup ? bookTierHtml(item, tier) : tokenHtml(item.tiers[tier])}</td>`).join("")}
       ${hasFilter ? `<td class="badge equipment-sort-cell">${sortBadge(item)}</td>` : ""}
       <td class="equipment-compare-action">${equipmentCompareActionHtml(item)}</td>
@@ -3023,7 +3027,7 @@
           ${equipmentResultNameHtml(item)}
           ${badge ? `<span class="badge">${badge}</span>` : ""}
         </div>
-        ${state.showMain ? `<div class="card-main">主属性：<b>${escapeHtml(item.main)}</b></div>` : ""}
+        ${state.showMain ? `<div class="card-main">主属性：<b>${escapeHtml(Q.mainDisplay(item, state.valueSource))}</b></div>` : ""}
         ${tierHtml}
         <div class="equipment-compare-card-action">${equipmentCompareActionHtml(item)}</div>
       </div>`;

@@ -59,7 +59,7 @@
   function resolveItem(clickedName, equipmentItems, forgingItems) {
     var name = normalize(clickedName);
     if (!name) return null;
-    var forgeKey = equipmentForging.resolveForgeTarget(name, forgingItems) || name;
+    var forgeKey = equipmentForging.resolveForgeTarget(name, forgingItems) || equipmentForging.normalizeEquipmentName(name);
     var equipment = null;
     if (name === "鬼谷子" || name === "神兵鬼谷子") {
       equipment = findEquipment(name, equipmentItems);

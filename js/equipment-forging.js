@@ -22,6 +22,7 @@
     "神兵新渊": "重铸渊虹",
     "神兵凌霄衣": "升雪凌霄衣",
     "神兵醉梦": "醉梦罗裳",
+    "神兵橘裳": "映月橘裳",
     "神兵万象": "万象法袍",
     "神兵幽兰": "幽兰素裳",
     "神兵蛟龙甲": "七海蛟龙甲",
@@ -48,6 +49,7 @@
     "神兵冥史": "冥界史诗",
     "神兵百家": "百家杂记",
     "神兵南华": "南华真经",
+    "神兵幻音": "幻音天章",
     "神兵影虎": "影虎",
     "神兵·影虎": "影虎"
   };
@@ -57,6 +59,12 @@
     "寒霜挂坠": "神兵寒霜",
     "百家杂记": "神兵百家"
   };
+
+  function normalizeEquipmentName(name) {
+    var sourceName = String(name == null ? "" : name).trim();
+    if (FORGE_NAME_ALIASES[sourceName]) return FORGE_NAME_ALIASES[sourceName];
+    return sourceName.indexOf("神兵") === 0 && sourceName !== "神兵鬼谷子" ? sourceName.slice(2) : sourceName;
+  }
 
   function resolveForgeTarget(name, forgingItems) {
     var sourceName = String(name == null ? "" : name).trim();
@@ -84,13 +92,13 @@
   }
 
   function resolveEquipmentTarget(forgeName, equipmentItems, forgingItems) {
-    var targetName = String(forgeName == null ? "" : forgeName).trim();
-    if (!targetName || !Array.isArray(equipmentItems) || !Array.isArray(forgingItems)) return null;
+    var targetName = normalizeEquipmentName(forgeName);
+    if (!targetName || !Array.isArray(equipmentItems)) return null;
     if (targetName === "鬼谷子" || targetName === "神兵鬼谷子") {
       return equipmentItems.find(function (item) { return item.name === targetName; }) || null;
     }
     var candidates = equipmentItems.filter(function (item) {
-      return resolveForgeTarget(item.name, forgingItems) === targetName;
+      return normalizeEquipmentName(item.name) === targetName;
     });
     return candidates.find(function (item) { return item.name.indexOf("神兵") === 0; }) ||
       candidates.find(function (item) { return item.name === targetName; }) ||
@@ -273,6 +281,7 @@
 
   return {
     FORGE_NAME_ALIASES: FORGE_NAME_ALIASES,
+    normalizeEquipmentName: normalizeEquipmentName,
     resolveForgeTarget: resolveForgeTarget,
     buildForgeNavigation: buildForgeNavigation,
     resolveEquipmentTarget: resolveEquipmentTarget,

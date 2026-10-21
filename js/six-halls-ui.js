@@ -19,7 +19,6 @@
   var modes = ["progress", "planner", "reference"];
   var contexts = [];
 
-  function clone(value) { return JSON.parse(JSON.stringify(value)); }
   function escapeHtml(value) {
     return String(value == null ? "" : value)
       .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
@@ -81,6 +80,27 @@
         else delete state.targetErrors[hall.id];
       });
     }
+    function readProgress() {
+      var raw = store && typeof store.getItem === "function" ? store.getItem(core.STORE_KEY || STORE_KEY) : null;
+      if (raw === null || raw === undefined) return core.normalizeProgress({}, data);
+      var parsed = JSON.parse(raw);
+      if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) throw new Error("Invalid progress data");
+      return core.normalizeProgress(parsed, data);
+    }
+    function protectReadFailure() {
+      state.loadError = "六堂个人进度读取失败，原存储未被改写；为保护数据已暂停进度编辑与规划计算。请到设置恢复备份后刷新页面，升级资料仍可查看。";
+    }
+    function refreshProgress() {
+      try {
+        state.progress = readProgress();
+        state.loadError = "";
+        state.accessError = "";
+        updateTargetErrors();
+      } catch (error) {
+        protectReadFailure();
+      }
+      refreshError();
+    }
     function load() {
       state.progress = core.normalizeProgress({}, data);
       state.plan = core.defaultPlan(data);
@@ -91,14 +111,9 @@
       state.accessError = "";
       try {
         accountId = currentAccountId();
-        var raw = store && typeof store.getItem === "function" ? store.getItem(core.STORE_KEY || STORE_KEY) : null;
-        if (raw !== null && raw !== undefined) {
-          var parsed = JSON.parse(raw);
-          if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) throw new Error("Invalid progress data");
-          state.progress = core.normalizeProgress(parsed, data);
-        }
+        state.progress = readProgress();
       } catch (error) {
-        state.loadError = "六堂个人进度读取失败，原存储未被改写；为保护数据已暂停进度编辑与规划计算。请到设置恢复备份后刷新页面，升级资料仍可查看。";
+        protectReadFailure();
       }
       refreshError();
       notify("load");
@@ -135,7 +150,14 @@
         state.accessError = "当前账号为只读状态，进度未保存；仍可按已保存的进度进行临时升级规划。";
         refreshError(); notify("error"); return false;
       }
-      var candidate = clone(state.progress);
+      var candidate;
+      try {
+        // A lease handoff can leave this page behind the account's latest saved snapshot.
+        candidate = readProgress();
+      } catch (error) {
+        protectReadFailure();
+        refreshError(); notify("error"); return false;
+      }
       if (sharedField) candidate[field] = parsed.value;
       else candidate.halls[hallId][field] = parsed.value;
       try {
@@ -191,7 +213,13 @@
     }
     load();
     if (store && typeof store.subscribeAccess === "function") {
-      unsubscribeAccess = store.subscribeAccess(function () { ensureAccount(); notify("access"); });
+      unsubscribeAccess = store.subscribeAccess(function (access) {
+        ensureAccount();
+        if (access && access.accountId !== accountId) return;
+        // Refresh persisted values only: same-account lease events must keep the planning draft.
+        refreshProgress();
+        notify("access");
+      });
     }
     return {
       state: state, setProgress: setProgress, toggleHall: toggleHall, setTarget: setTarget,

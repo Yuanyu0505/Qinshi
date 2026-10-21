@@ -10,6 +10,7 @@ const STORE_KEY = 'qinshi_six_halls_progress_v1';
 function memoryStore() {
   let active = 'a';
   const values = { a: {}, b: {} };
+  const accessListeners = new Set();
   const store = {
     readOnly: false,
     readFailure: false,
@@ -18,6 +19,13 @@ function memoryStore() {
     beforeWrite: null,
     currentAccount: () => ({ id: active, name: active === 'a' ? '主号' : '小号', server: '测试服' }),
     isReadOnly: () => store.readOnly,
+    subscribeAccess(listener) {
+      accessListeners.add(listener);
+      return () => accessListeners.delete(listener);
+    },
+    signalAccess(id = active) {
+      accessListeners.forEach(listener => listener({ accountId: id, writable: !store.readOnly }));
+    },
     getItem(key) {
       if (store.readFailure) throw new Error('Storage access denied');
       return values[active][key] ?? null;
@@ -336,4 +344,107 @@ test('empty stored strings and non-object JSON cannot masquerade as a new accoun
     assert.equal(store.getItem(STORE_KEY), raw);
     assert.equal(store.writes, 0);
   }
+});
+
+test('saving one field rebases on the latest persisted progress instead of a stale page snapshot', () => {
+  const store = memoryStore();
+  const control = controller(store);
+  control.setProgress('herbs', 1000);
+  const latest = JSON.parse(store.getItem(STORE_KEY));
+  latest.herbs = 2000;
+  latest.halls.chiyou = { level: 20, tokens: 333 };
+  store.seed('a', JSON.stringify(latest));
+  assert.equal(control.setProgress('level', 30, 'kuiwei'), true);
+  const saved = JSON.parse(store.getItem(STORE_KEY));
+  assert.equal(saved.herbs, 2000);
+  assert.deepEqual(saved.halls.chiyou, { level: 20, tokens: 333 });
+  assert.equal(saved.halls.kuiwei.level, 30);
+  assert.deepEqual(control.state.progress, saved);
+});
+
+test('same-account access refresh loads new progress without clearing the selected target or subview', () => {
+  const store = memoryStore();
+  const control = controller(store);
+  control.setProgress('herbs', 1000);
+  control.toggleHall('kuiwei', true);
+  control.setTarget('kuiwei', 30);
+  control.setMode('planner');
+  const latest = JSON.parse(store.getItem(STORE_KEY));
+  latest.herbs = 2000;
+  latest.halls.kuiwei = { level: 31, tokens: 88 };
+  store.seed('a', JSON.stringify(latest));
+  const writes = store.writes;
+  store.signalAccess();
+  assert.equal(control.state.progress.herbs, 2000);
+  assert.deepEqual(control.state.progress.halls.kuiwei, { level: 31, tokens: 88 });
+  assert.deepEqual(control.state.plan.selected, ['kuiwei']);
+  assert.equal(control.state.plan.targets.kuiwei, 30);
+  assert.equal(control.state.mode, 'planner');
+  assert.equal(control.calculate().valid, false, 'a retained target below the new current level must be revalidated');
+  assert.equal(store.writes, writes);
+});
+
+test('lease heartbeat notifications preserve invalid input feedback and memory-only planning', () => {
+  const store = memoryStore();
+  const control = controller(store);
+  control.setProgress('herbs', 1000);
+  control.toggleHall('kuiwei', true);
+  control.setTarget('kuiwei', 40);
+  control.setMode('planner');
+  control.setProgress('herbs', 'bad');
+  const original = store.getItem(STORE_KEY);
+  const writes = store.writes;
+  store.signalAccess();
+  store.signalAccess();
+  assert.equal(control.state.mode, 'planner');
+  assert.deepEqual(control.state.plan.selected, ['kuiwei']);
+  assert.equal(control.state.plan.targets.kuiwei, 40);
+  assert.ok(control.state.fieldErrors.herbs);
+  assert.equal(control.calculate().valid, false);
+  assert.equal(store.getItem(STORE_KEY), original);
+  assert.equal(store.writes, writes);
+});
+
+test('a fresh storage read failure at save time cannot overwrite previously saved progress', () => {
+  const store = memoryStore();
+  const control = controller(store);
+  control.setProgress('herbs', 1000);
+  const previous = control.state.progress;
+  const raw = store.getItem(STORE_KEY);
+  const writes = store.writes;
+  store.readFailure = true;
+  assert.equal(control.setProgress('level', 30, 'kuiwei'), false);
+  assert.strictEqual(control.state.progress, previous);
+  assert.equal(store.raw.a[STORE_KEY], raw);
+  assert.equal(store.writes, writes);
+  assert.ok(control.state.loadError);
+  control.toggleHall('kuiwei', true);
+  assert.equal(control.calculate().valid, false);
+});
+
+test('JSON damaged after the initial load is protected before applying a single-field save', () => {
+  const store = memoryStore();
+  const control = controller(store);
+  control.setProgress('herbs', 1000);
+  const damaged = '{"version":1,"herbs":2000,';
+  store.seed('a', damaged);
+  const writes = store.writes;
+  assert.equal(control.setProgress('level', 30, 'kuiwei'), false);
+  assert.equal(store.getItem(STORE_KEY), damaged);
+  assert.equal(store.writes, writes);
+  assert.ok(control.state.loadError);
+});
+
+test('access notifications for another account never reset the active account draft', () => {
+  const store = memoryStore();
+  const control = controller(store);
+  control.toggleHall('kuiwei', true);
+  control.setTarget('kuiwei', 30);
+  control.setMode('planner');
+  store.readFailure = true;
+  store.signalAccess('b');
+  assert.equal(control.state.loadError, '');
+  assert.equal(control.state.mode, 'planner');
+  assert.deepEqual(control.state.plan.selected, ['kuiwei']);
+  assert.equal(control.state.plan.targets.kuiwei, 30);
 });

@@ -6276,6 +6276,8 @@ tbody tr:hover {
 header.top{display:flex;align-items:center;justify-content:space-between;gap:16px}
 .account-switcher{position:relative;min-width:min(320px,45vw)}
 .account-switcher-toggle{width:100%;min-height:44px;display:flex;align-items:center;justify-content:space-between;gap:12px;border:1px solid #8a6120;border-radius:8px;background:#17110b;color:#f2d58a;padding:9px 12px;font:inherit;font-weight:700;cursor:pointer}
+.account-switcher-toggle #account-switcher-label{flex:1;min-width:0;overflow-wrap:anywhere;text-align:left}
+.account-switcher-toggle > [aria-hidden="true"]{flex:0 0 auto}
 .account-switcher-list{position:absolute;z-index:120;top:calc(100% + 8px);right:0;width:100%;min-width:280px;padding:8px;border:1px solid #9f722a;border-radius:10px;background:#16100b;box-shadow:0 14px 34px #000c}
 .account-switcher-list[hidden],.account-readonly-banner[hidden],.account-init-overlay[hidden],.account-reorder-panel[hidden]{display:none!important}
 .account-switch-option{display:block;width:100%;min-height:44px;margin:4px 0;border:1px solid #594019;border-radius:7px;background:#100c08;color:#e9dcc7;text-align:left;padding:9px 11px;cursor:pointer}

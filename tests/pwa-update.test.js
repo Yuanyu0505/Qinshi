@@ -3,6 +3,10 @@ const fs = require('node:fs');
 const path = require('node:path');
 const test = require('node:test');
 const vm = require('node:vm');
+const CURRENT_VERSION = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'version.json'), 'utf8')).version;
+const versionParts = CURRENT_VERSION.split('.').map(Number);
+const NEXT_VERSION = [versionParts[0], versionParts[1], versionParts[2] + 1].join('.');
+const FUTURE_PATCH_VERSION = [versionParts[0], versionParts[1], versionParts[2] + 100].join('.');
 
 function createElement() {
   const listeners = new Map();
@@ -74,7 +78,7 @@ async function loadPwa(registration, options = {}) {
   };
   const fetchImpl = options.fetch || (async () => ({
     ok: true,
-    async json() { return { version: '1.0.50' }; }
+    async json() { return { version: CURRENT_VERSION }; }
   }));
   const context = {
     console,
@@ -134,7 +138,7 @@ function idleRegistration(overrides = {}) {
   return { waiting: null, installing: null, addEventListener() {}, async update() {}, ...overrides };
 }
 
-const currentLimits = { minimumReadVersion: '1.0.50', minimumWriteVersion: '1.0.50' };
+const currentLimits = { minimumReadVersion: CURRENT_VERSION, minimumWriteVersion: CURRENT_VERSION };
 
 test('同步预检重新读取无缓存版本信标，当前版本满足读写要求时放行', async () => {
   let updates = 0;
@@ -150,9 +154,9 @@ test('同步预检重新读取无缓存版本信标，当前版本满足读写�
 });
 
 for (const requirement of [
-  { name: '公网版本', remote: '1.0.51', limits: currentLimits },
-  { name: 'Worker 最低读版本', remote: '1.0.50', limits: { ...currentLimits, minimumReadVersion: '1.0.51' } },
-  { name: 'Worker 最低写版本', remote: '1.0.50', limits: { ...currentLimits, minimumWriteVersion: '1.0.100' } }
+  { name: '公网版本', remote: NEXT_VERSION, limits: currentLimits },
+  { name: 'Worker 最低读版本', remote: CURRENT_VERSION, limits: { ...currentLimits, minimumReadVersion: NEXT_VERSION } },
+  { name: 'Worker 最低写版本', remote: CURRENT_VERSION, limits: { ...currentLimits, minimumWriteVersion: FUTURE_PATCH_VERSION } }
 ]) {
   test(`同步预检在${requirement.name}要求更新时阻断，且不能自动应用或删除待恢复操作`, async () => {
     const messages = [];
@@ -197,7 +201,7 @@ test('同步预检离线时重试三次后阻断，不误报必须更新或触�
   const loaded = await loadPwa(idleRegistration(), {
     fetch: async () => {
       if (offline) throw new Error('offline');
-      return { ok: true, async json() { return { version: '1.0.50' }; } };
+      return { ok: true, async json() { return { version: CURRENT_VERSION }; } };
     }
   });
   offline = true;
@@ -232,7 +236,7 @@ test('无效公网版本不能放行同步', async () => {
 test('已确定必须更新但 Service Worker 更新失败时仍保留 updateRequired', async () => {
   let attempts = 0;
   const loaded = await loadPwa(idleRegistration({ async update() { attempts += 1; throw new Error('offline'); } }));
-  const result = await loaded.api.ensureCurrentForSync({ ...currentLimits, minimumWriteVersion: '1.0.51' });
+  const result = await loaded.api.ensureCurrentForSync({ ...currentLimits, minimumWriteVersion: NEXT_VERSION });
   assert.equal(result.ready, false);
   assert.equal(result.updateRequired, true);
   assert.equal(attempts, 3);

@@ -520,6 +520,11 @@ async function browserPage(stub, options = {}) {
   stub.allowedOrigin = appUrl;
   const context = await browser.newContext({ serviceWorkers: 'block', acceptDownloads: true,
     viewport: options.viewport || { width: 1280, height: 900 } });
+  await context.route('**/*', route => {
+    const origin = new URL(route.request().url()).origin;
+    return origin === appUrl || origin === 'https://sync.test'
+      ? route.continue() : route.abort('blockedbyclient');
+  });
   const page = await context.newPage();
   let remoteVersion = currentAppVersion();
   await page.route('**/js/cloud-sync-config.js*', route => route.fulfill({
@@ -1204,4 +1209,63 @@ test('12 永久删除使用独立确认弹层，取消安全且成功删除只�
       confirmation: '永久删除同步空间', authField: 'authKey'
     });
   } finally { await session.context.close(); }
+});
+
+test('13 六堂进度经加密分块同步完整覆盖接收设备，并可在页面中恢复', { timeout: 120000 }, async () => {
+  const stub = new CloudStub();
+  const source = await browserPage(stub);
+  let target;
+  const key = 'qinshi_six_halls_progress_v1';
+  const ids = ['kuiwei', 'chiyou', 'lieshan', 'siyue', 'gonggong', 'shennong'];
+  const sourceProgress = {
+    version: 1, playerLevel: 89, herbs: 4321,
+    halls: Object.fromEntries(ids.map((id, index) => [id, { level: index * 9, tokens: 101 + index }]))
+  };
+  try {
+    await source.page.evaluate(({ key, progress }) => window.QinshiAccounts.setItem(key, JSON.stringify(progress)),
+      { key, progress: sourceProgress });
+    const syncCode = await createSpace(source);
+    target = await browserPage(stub);
+    await target.page.evaluate(({ key, ids }) => window.QinshiAccounts.setItem(key, JSON.stringify({
+      version: 1, playerLevel: 1, herbs: 7,
+      halls: Object.fromEntries(ids.map(id => [id, { level: 0, tokens: 0 }]))
+    })), { key, ids });
+    await joinSpace(target, syncCode);
+    assert.equal(await target.page.evaluate(key => JSON.parse(window.QinshiAccounts.getItem(key)).herbs, key), 7,
+      'joining must not overwrite six-halls progress');
+    const targetBefore = await target.page.evaluate(key => ({
+      physicalKey: window.QinshiAccountProfiles.physicalKey(window.QinshiAccounts.currentAccount().id, key),
+      progress: JSON.parse(window.QinshiAccounts.getItem(key))
+    }), key);
+    await selectSourceAndOpenConfirmation(target.page);
+    await target.page.locator('#cloud-sync-confirm-check').check();
+    const downloadPromise = target.page.waitForEvent('download');
+    const navigationPromise = target.page.waitForNavigation({ waitUntil: 'domcontentloaded' });
+    await target.page.locator('#cloud-sync-confirm-overwrite').click();
+    const download = await downloadPromise;
+    assert.match(download.suggestedFilename(), /^Qin-backup-before-cloud-sync-/);
+    const backupChunks = [];
+    for await (const chunk of await download.createReadStream()) backupChunks.push(chunk);
+    const backupPayload = JSON.parse(Buffer.concat(backupChunks).toString('utf8'));
+    assert.deepEqual(JSON.parse(backupPayload.data[targetBefore.physicalKey]), targetBefore.progress,
+      'the downloaded pre-overwrite backup must retain the receiving device six-halls data');
+    await navigationPromise;
+    assert.deepEqual(await target.page.evaluate(key => JSON.parse(window.QinshiAccounts.getItem(key)), key), sourceProgress);
+    await target.page.locator('.tab[data-partition="six-halls"]').click();
+    await target.page.locator('[data-six-halls-progress="herbs"]').waitFor({ state: 'visible' });
+    assert.equal(await target.page.locator('[data-six-halls-progress="herbs"]').inputValue(), '4321');
+    for (const [index, id] of ids.entries()) {
+      assert.equal(await target.page.locator('[data-six-halls-progress="level"][data-hall-id="' + id + '"]').inputValue(), String(index * 9));
+      assert.equal(await target.page.locator('[data-six-halls-progress="tokens"][data-hall-id="' + id + '"]').inputValue(), String(101 + index));
+    }
+    await target.page.locator('[data-six-halls-mode="planner"]').click();
+    assert.equal(await target.page.locator('[data-six-halls-select="kuiwei"]').isChecked(), false);
+    assert.equal(await target.page.locator('[data-six-halls-target="kuiwei"]').inputValue(), '50');
+    assert.deepEqual(await source.page.evaluate(key => JSON.parse(window.QinshiAccounts.getItem(key)), key), sourceProgress);
+    assert.ok(stub.requests.some(request => request.method === 'PUT' && request.pathname === '/v1/uploads/:uploadId/chunks/:index'));
+    assert.ok(stub.requests.some(request => request.method === 'GET' && request.pathname === '/v1/snapshots/:snapshotId/chunks/:index'));
+  } finally {
+    if (target) await target.context.close();
+    await source.context.close();
+  }
 });

@@ -319,22 +319,43 @@ for (const invalidText of ['-', 'e']) {
   });
 }
 
-test('390: forty-character English account and server names wrap without page overflow', async () => {
-  const page = await newPage();
-  try {
-    const name = 'A'.repeat(40);
-    const serverName = 'S'.repeat(40);
-    await page.evaluate(({ name, serverName }) => {
-      const store = window.QinshiAccounts;
-      store.updateAccount(store.currentAccount().id, { name, server: serverName });
-    }, { name, serverName });
-    await page.reload();
-    await openSixHalls(page);
-    assert.equal(await page.locator('#six-halls-account').innerText(), name + ' · ' + serverName);
-    await noOverflow(page, '390 / forty-character account and server names / progress');
-    for (const value of ['planner', 'reference']) {
-      await mode(page, value);
-      await noOverflow(page, '390 / forty-character account and server names / ' + value);
-    }
-  } finally { await page.close(); }
-});
+for (const width of [320, 390, 768, 1024, 1440]) {
+  test(width + ': forty-character English account and server names wrap without page overflow', async () => {
+    const page = await newPage(width);
+    try {
+      const name = 'A'.repeat(40);
+      const serverName = 'S'.repeat(40);
+      await page.evaluate(({ name, serverName }) => {
+        const store = window.QinshiAccounts;
+        store.updateAccount(store.currentAccount().id, { name, server: serverName });
+      }, { name, serverName });
+      await page.reload();
+      await openSixHalls(page);
+      assert.equal(await page.locator('#six-halls-account').innerText(), name + ' · ' + serverName);
+      assert.equal(await page.locator('#account-switcher-label').innerText(), name + ' · ' + serverName + ' · 主账号');
+      await noOverflow(page, width + ' / forty-character account and server names / progress');
+      for (const value of ['planner', 'reference']) {
+        await mode(page, value);
+        await noOverflow(page, width + ' / forty-character account and server names / ' + value);
+      }
+      const switcher = await page.locator('#account-switcher-toggle').evaluate(button => {
+        const label = button.querySelector('#account-switcher-label');
+        const arrow = button.querySelector('[aria-hidden="true"]');
+        const buttonBox = button.getBoundingClientRect();
+        const labelBox = label.getBoundingClientRect();
+        const arrowBox = arrow.getBoundingClientRect();
+        return {
+          buttonLeft: buttonBox.left, buttonRight: buttonBox.right,
+          labelLeft: labelBox.left, labelRight: labelBox.right,
+          labelWidth: label.clientWidth, labelScrollWidth: label.scrollWidth,
+          arrowLeft: arrowBox.left, arrowRight: arrowBox.right, arrowWidth: arrowBox.width
+        };
+      });
+      assert.ok(switcher.labelScrollWidth <= switcher.labelWidth,
+        width + ': account label text must wrap without clipping ' + JSON.stringify(switcher));
+      assert.ok(switcher.labelLeft >= switcher.buttonLeft && switcher.labelRight <= switcher.arrowLeft &&
+        switcher.arrowWidth > 0 && switcher.arrowRight <= switcher.buttonRight,
+      width + ': account label and arrow must stay inside the button without overlapping ' + JSON.stringify(switcher));
+    } finally { await page.close(); }
+  });
+}

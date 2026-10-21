@@ -18,6 +18,67 @@ function versionedScriptPattern(asset) {
   return new RegExp(escapeRegex(`<script defer src="${asset}?v=${APP_VERSION}"></script>`));
 }
 
+test("六堂在桌面和手机更多导航中紧随合阵、先于楼兰棋阵", () => {
+  const html = fs.readFileSync(path.join(__dirname, "index.html"), "utf8");
+  const app = fs.readFileSync(path.join(__dirname, "js", "app.js"), "utf8");
+  const desktop = html.match(/<nav class="tabs"[\s\S]*?<\/nav>/);
+  const mobile = html.match(/<div class="mobile-more-grid">[\s\S]*?<\/div>/);
+  assert.ok(desktop);
+  assert.ok(mobile);
+  [desktop[0], mobile[0]].forEach(fragment => {
+    const order = [...fragment.matchAll(/data-partition="([^"]+)"/g)].map(match => match[1]);
+    const index = order.indexOf("six-halls");
+    assert.ok(index > 0);
+    assert.deepStrictEqual(order.slice(index - 1, index + 2), ["formations", "six-halls", "loulan"]);
+  });
+  assert.match(app, /"six-halls": "六堂"/);
+  assert.match(app, /secondaryPartitions = \[[^\]]*"formations", "six-halls", "loulan"/);
+  assert.match(app, /"six-halls": document\.getElementById\("partition-six-halls"\)/);
+});
+
+test("六堂预留空分区并按账号、资料、核心、界面顺序接入懒模块", () => {
+  const html = fs.readFileSync(path.join(__dirname, "index.html"), "utf8");
+  const app = fs.readFileSync(path.join(__dirname, "js", "app.js"), "utf8");
+  assert.match(html, /<section id="partition-six-halls" hidden>\s*<\/section>/);
+  const scripts = [...html.matchAll(/<script defer src="([^"]+)"><\/script>/g)].map(match => match[1].split("?")[0]);
+  const ordered = ["data/six-halls.js", "js/six-halls.js", "js/six-halls-ui.js", "js/app.js"];
+  let previous = -1;
+  ordered.forEach(asset => {
+    const index = scripts.indexOf(asset);
+    assert.ok(index > previous, `${asset} 必须按依赖顺序加载`);
+    assert.strictEqual(scripts.filter(script => script === asset).length, 1, asset);
+    assert.match(html, versionedScriptPattern(asset));
+    previous = index;
+  });
+  ["js/account-edit-lease.js", "js/account-profiles.js", "js/ui-performance.js"].forEach(asset => {
+    const index = scripts.indexOf(asset);
+    assert.ok(index >= 0 && index < scripts.indexOf("js/six-halls-ui.js"), `${asset} 必须先于六堂界面加载`);
+  });
+  assert.doesNotMatch(app, /SIX_HALLS_UI\.init\(/);
+});
+
+test(`PWA ${APP_VERSION} 精确发布六堂资料、核心、界面和独立样式`, () => {
+  const html = fs.readFileSync(path.join(__dirname, "index.html"), "utf8");
+  const worker = fs.readFileSync(path.join(__dirname, "service-worker.js"), "utf8");
+  const pwa = fs.readFileSync(path.join(__dirname, "js", "pwa.js"), "utf8");
+  const workflow = fs.readFileSync(path.join(__dirname, ".github", "workflows", "pages.yml"), "utf8");
+  const precache = worker.match(/const PRECACHE_URLS = \[([\s\S]*?)\n\];/);
+  assert.ok(precache);
+  const urls = [...precache[1].matchAll(/"([^"]+)"/g)].map(match => match[1]);
+  ["data/six-halls.js", "js/six-halls.js", "js/six-halls-ui.js", "css/six-halls.css"].forEach(asset => {
+    assert.strictEqual(urls.filter(url => url === `./${asset}`).length, 1, `${asset} 必须恰好预缓存一次`);
+    if (asset.startsWith("js/")) assert.match(workflow, new RegExp(`cp [^\n]*${escapeRegex(asset)}[^\n]*_site/js/`));
+  });
+  assert.match(workflow, /cp -R css data images icons _site\//);
+  assert.match(html, new RegExp(escapeRegex(`<link rel="stylesheet" href="css/six-halls.css?v=${APP_VERSION}">`)));
+  const versionedAssets = [...html.matchAll(/(?:src|href)="[^"]+\?v=([^"&]+)"/g)];
+  assert.ok(versionedAssets.length > 0);
+  versionedAssets.forEach(match => assert.strictEqual(match[1], APP_VERSION, match[0]));
+  assert.match(html, new RegExp(`id="pwa-version">${APP_VERSION_PATTERN}</strong>`));
+  assert.match(worker, new RegExp(`CACHE_NAME = CACHE_PREFIX \\+ "${APP_VERSION_PATTERN}";`));
+  assert.match(pwa, new RegExp(`APP_VERSION = "${APP_VERSION_PATTERN}";`));
+});
+
 test("wooden man alley partition is wired in navigation and script order", () => {
   const html = fs.readFileSync(path.join(__dirname, "index.html"), "utf8");
   const app = fs.readFileSync(path.join(__dirname, "js", "app.js"), "utf8");
@@ -938,12 +999,12 @@ test("机关兽三个页面提供搜索、流派切换、命中高亮和移动�
   assert.match(css, /@media \(max-width: 1024px\)[\s\S]*?#partition-machine-beasts \.machine-search-bar/);
 });
 
-test("全端导航使用确认后的十个分区顺序", async () => {
+test("全端导航使用当前完整分区顺序", async () => {
   await withServer(async (port) => {
     const page = await get(port, "/");
     const nav = page.body.match(/<nav class="tabs"[\s\S]*?<\/nav>/);
     assert.ok(nav);
-    const order = ["atlas", "forging", "drops", "equipment", "inscription", "machine-beasts", "tactics", "formations", "loulan", "quiz"];
+    const order = ["atlas", "forging", "drops", "equipment", "forbidden", "inscription", "machine-beasts", "tactics", "battle-box-pill-pouch", "wooden-man-alley", "formations", "six-halls", "loulan", "zhulu", "quiz", "settings"];
     let cursor = -1;
     order.forEach(partition => {
       const next = nav[0].indexOf('data-partition="' + partition + '"');

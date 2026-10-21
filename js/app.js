@@ -48,6 +48,7 @@
     "battle-box-pill-pouch": "战匣丹囊",
     "wooden-man-alley": "木人巷",
     formations: "合阵",
+    "six-halls": "六堂",
     quiz: "答题",
     loulan: "楼兰棋阵",
     zhulu: "逐鹿",
@@ -1083,7 +1084,7 @@
     const mobileMoreLayer = document.getElementById("mobile-more-layer");
     const mobileMoreClose = document.getElementById("mobile-more-close");
     const appShell = document.querySelector(".app-shell");
-    const secondaryPartitions = ["forbidden", "inscription", "machine-beasts", "tactics", "battle-box-pill-pouch", "wooden-man-alley", "formations", "loulan", "zhulu", "quiz", "settings"];
+    const secondaryPartitions = ["forbidden", "inscription", "machine-beasts", "tactics", "battle-box-pill-pouch", "wooden-man-alley", "formations", "six-halls", "loulan", "zhulu", "quiz", "settings"];
     const partitionScrollPositions = Object.create(null);
     let activePartition = "atlas";
     let mobileMoreRestoreTarget = null;
@@ -1101,6 +1102,7 @@
       "battle-box-pill-pouch": document.getElementById("partition-battle-box-pill-pouch"),
       "wooden-man-alley": document.getElementById("partition-wooden-man-alley"),
       formations: document.getElementById("partition-formations"),
+      "six-halls": document.getElementById("partition-six-halls"),
       zhulu: document.getElementById("partition-zhulu"),
       settings: document.getElementById("partition-settings")
     };

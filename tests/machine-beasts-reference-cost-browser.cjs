@@ -391,7 +391,7 @@ for (const width of [360, 1100]) {
     assert.equal(await guide.locator('h2').textContent(), '机关兽研发材料参考（用图纸版）');
     assert.match(await guide.textContent(), /单只机关兽.*研发等级.*非.*流派阶数/);
     assert.match(await guide.textContent(), /图片参考.*不参与计算.*取整/);
-    assert.deepEqual(await guide.locator('thead th').allTextContents(), ['材料', '10级', '15级', '20级', '25级']);
+    assert.deepEqual(await guide.locator('thead th').allTextContents(), ['材料', '10级（蓝色）', '15级（紫色）', '20级（一代橙色）', '25级（二代橙色）']);
     assert.equal(await guide.locator('tbody tr').count(), 13);
     assert.deepEqual(await guide.locator('[data-blueprint-guide-plan] > *').allTextContents(), ['投入方案', '270只2阶＋4只0阶', '16只6阶', '9只7阶＋1只6阶＋2只0阶', '13只7阶＋1只6阶＋2只0阶']);
     assert.deepEqual(await guide.locator('[data-blueprint-guide-resource]').evaluateAll(rows => rows.map(row => Array.from(row.children, cell => cell.textContent))), [

@@ -668,10 +668,11 @@
   function blueprintGuideReference() {
     var guide = DATA.blueprintGuide;
     if (!guide) return '';
+    var levelNotes = { 10: '（蓝色）', 15: '（紫色）', 20: '（一代橙色）', 25: '（二代橙色）' };
     return '<section class="panel machine-blueprint-guide" data-machine-blueprint-guide><h2>机关兽研发材料参考（用图纸版）</h2>' +
       '<p class="muted-tip">表头为单只机关兽的研发等级，非霸道／非攻机关术流派阶数。仅作图片参考，不参与计算，不改变现有取整规则；—（资料未提供）表示原资料缺失，不视为0。</p>' +
       '<div class="machine-blueprint-guide-scroll" tabindex="0" role="region" aria-label="机关兽研发材料参考表，可横向滚动"><table class="machine-blueprint-guide-table"><thead><tr><th scope="col">材料</th>' + guide.levels.map(function (level) {
-        return '<th scope="col">' + escapeHtml(level) + '级</th>';
+        return '<th scope="col">' + escapeHtml(level) + '级' + escapeHtml(levelNotes[level] || '') + '</th>';
       }).join('') + '</tr></thead><tbody><tr data-blueprint-guide-plan><th scope="row">投入方案</th>' + guide.plans.map(function (plan) {
         return '<td>' + escapeHtml(plan) + '</td>';
       }).join('') + '</tr>' + guide.resources.map(function (resource) {

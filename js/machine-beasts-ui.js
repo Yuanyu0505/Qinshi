@@ -181,7 +181,7 @@
     var cost = CORE.calculateReferenceCost(DATA, requirements, state.referenceCostDraft);
     var blueprints = cost.blueprints;
     var beastYuan = cost.beasts.reduce(function (total, beast) { return total + (beast.yuan === null ? 0 : beast.yuan); }, 0);
-    return '<h3>参考成本（元宝）</h3><div class="machine-reference-cost-breakdown"><span>神图需求 <b>' + formatNumber(blueprints.required) + '</b></span>' +
+    return '<h3>参考成本（元宝）</h3><div class="machine-reference-cost-breakdown" tabindex="0" role="region" aria-label="参考成本明细，可横向滚动"><span>神图需求 <b>' + formatNumber(blueprints.required) + '</b></span>' +
       '<span>使用已有 <b data-reference-blueprint-stock>' + formatNumber(blueprints.usedStock) + '</b></span><span>神图缺口 <b data-reference-blueprint-missing>' + formatNumber(blueprints.missing) + '</b></span>' +
       '<span>神图费用 <b>' + formatNumber(blueprints.yuan) + '</b>（单价 ' + formatNumber(blueprints.unitPrice) + '）</span><span>机关兽已知费用 <b>' + formatNumber(beastYuan) + '</b></span></div>' +
       (cost.beasts.length ? '<ul class="machine-reference-cost-beasts">' + cost.beasts.map(function (beast) {
@@ -658,13 +658,31 @@
 
   function materialReference() {
     return '<section class="panel" data-machine-material-sources><h2>材料获取与设计图关卡查询</h2><div class="machine-reference-grid machine-material-source-grid">' + (DATA.materialSources || []).map(function (material) {
-      return '<article class="machine-reference-card"><h3>' + escapeHtml(material.name) + '</h3><p>获取来源：' + escapeHtml((material.sources || []).join('、')) + '</p>' +
-        (material.stages && material.stages.length ? '<p class="machine-material-stages">掉落关卡：' + material.stages.map(function (stage) { return '<span>' + escapeHtml(stage) + '</span>'; }).join('、') + '</p>' : '') + '</article>';
-    }).join('') + '</div><p class="muted-tip">关卡编号为来源查询说明，未变更现有掉落资料。</p><p class="machine-treasurebox-note">' + escapeHtml((DATA.referenceCostRules || {}).treasureBoxNote || '') + '</p></section>';
+      var description = material.stages && material.stages.length ? '<p class="machine-material-stages">主线关卡' + material.stages.map(function (stage) {
+        return '<span>' + escapeHtml(stage) + '</span>';
+      }).join('、') + '掉落</p>' : '<p>' + escapeHtml((material.sources || []).join('、')) + '</p>';
+      return '<article class="machine-reference-card"><h3>' + escapeHtml(material.name) + '</h3>' + description + '</article>';
+    }).join('') + '</div><p class="machine-treasurebox-note">' + escapeHtml((DATA.referenceCostRules || {}).treasureBoxNote || '') + '</p></section>';
+  }
+
+  function blueprintGuideReference() {
+    var guide = DATA.blueprintGuide;
+    if (!guide) return '';
+    return '<section class="panel machine-blueprint-guide" data-machine-blueprint-guide><h2>机关兽研发材料参考（用图纸版）</h2>' +
+      '<p class="muted-tip">表头为单只机关兽的研发等级，非霸道／非攻机关术流派阶数。仅作图片参考，不参与计算，不改变现有取整规则；—（资料未提供）表示原资料缺失，不视为0。</p>' +
+      '<div class="machine-blueprint-guide-scroll" tabindex="0" role="region" aria-label="机关兽研发材料参考表，可横向滚动"><table class="machine-blueprint-guide-table"><thead><tr><th scope="col">材料</th>' + guide.levels.map(function (level) {
+        return '<th scope="col">' + escapeHtml(level) + '级</th>';
+      }).join('') + '</tr></thead><tbody><tr data-blueprint-guide-plan><th scope="row">投入方案</th>' + guide.plans.map(function (plan) {
+        return '<td>' + escapeHtml(plan) + '</td>';
+      }).join('') + '</tr>' + guide.resources.map(function (resource) {
+        return '<tr data-blueprint-guide-resource><th scope="row">' + escapeHtml(resource.name) + '</th>' + resource.values.map(function (value) {
+          return '<td' + (value === null ? ' class="machine-blueprint-guide-missing"' : '') + '>' + (value === null ? '—（资料未提供）' : escapeHtml(value)) + '</td>';
+        }).join('') + '</tr>';
+      }).join('') + '</tbody></table></div></section>';
   }
 
   function renderReference() {
-    el.referenceContent.innerHTML = beastReference() + materialReference() + schoolReference() + thresholdReference() + researchReference();
+    el.referenceContent.innerHTML = beastReference() + materialReference() + blueprintGuideReference() + schoolReference() + thresholdReference() + researchReference();
     rendered.reference = true;
   }
 

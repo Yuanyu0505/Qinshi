@@ -2297,7 +2297,7 @@ figcaption { color: var(--muted); font-size: 13px; margin-top: 8px; }
 #partition-machine-beasts .machine-calculator-actions { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 10px; }
 #partition-machine-beasts .machine-calculator-panel { margin-bottom: 0; }
 #partition-machine-beasts .machine-calculator-top { grid-template-columns: minmax(0, 1.4fr) repeat(4, minmax(0, 1fr)); }
-#partition-machine-beasts .machine-result { border-color: var(--gold-dim); box-shadow: inset 4px 0 0 var(--gold); }
+#partition-machine-beasts .machine-result { min-width: 0; border-color: var(--gold-dim); box-shadow: inset 4px 0 0 var(--gold); }
 #partition-machine-beasts .machine-result.is-error { border-color: #b54b42; box-shadow: inset 4px 0 0 #ff5f57; }
 #partition-machine-beasts .machine-result-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
 #partition-machine-beasts .machine-result-head span { color: var(--muted); font-size: 12px; }
@@ -2366,7 +2366,7 @@ figcaption { color: var(--muted); font-size: 13px; margin-top: 8px; }
 #partition-machine-beasts .machine-school-beast-fields { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 100px) minmax(0, 1fr); gap: 7px; margin-top: 8px; }
 #partition-machine-beasts .machine-school-beast-fields label { display: grid; align-content: start; gap: 4px; color: var(--muted); font-size: 11px; }
 #partition-machine-beasts .machine-school-beast-fields b { padding: 8px 0; color: var(--gold); }
-#partition-machine-beasts #machine-beast-calculator-result:not([hidden]) { display: grid; gap: 10px; margin-bottom: 10px; }
+#partition-machine-beasts #machine-beast-calculator-result:not([hidden]) { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; margin-bottom: 10px; }
 #partition-machine-beasts .machine-school-plan { margin-bottom: 0; }
 #partition-machine-beasts .machine-school-plan-summary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 7px; }
 #partition-machine-beasts .machine-school-plan-summary > div { display: grid; gap: 2px; min-width: 0; padding: 8px 9px; background: var(--bg2); border: 1px solid var(--line); border-radius: 7px; }
@@ -2438,10 +2438,11 @@ figcaption { color: var(--muted); font-size: 13px; margin-top: 8px; }
 #partition-machine-beasts .machine-reference-beast-prices summary { margin-bottom: 9px; color: var(--gold-dim); cursor: pointer; overflow-wrap: anywhere; }
 #partition-machine-beasts .machine-reference-cost-panel { min-width: 0; margin-top: 12px; padding: 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg2); }
 #partition-machine-beasts .machine-reference-cost-panel h3 { margin: 0 0 8px; color: var(--gold); font-size: 16px; }
-#partition-machine-beasts .machine-reference-cost-breakdown { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 160px), 1fr)); gap: 7px; }
-#partition-machine-beasts .machine-reference-cost-breakdown span { min-width: 0; color: var(--muted); }
-#partition-machine-beasts .machine-reference-cost-breakdown b,
-#partition-machine-beasts .machine-reference-cost-total b { color: var(--gold); }
+#partition-machine-beasts .machine-reference-cost-breakdown { display: flex; flex-wrap: wrap; gap: 7px 16px; max-width: 100%; overflow-x: auto; }
+#partition-machine-beasts .machine-reference-cost-breakdown:focus-visible { outline: 2px solid var(--gold-dim); outline-offset: 2px; }
+#partition-machine-beasts .machine-reference-cost-breakdown > span { flex: 0 0 auto; color: var(--muted); white-space: nowrap; overflow-wrap: normal; word-break: normal; }
+#partition-machine-beasts .machine-reference-cost-breakdown b { color: var(--gold); }
+#partition-machine-beasts .machine-reference-cost-total b[data-reference-cost-total] { color: #ff6b63; }
 #partition-machine-beasts .machine-reference-cost-total { font-weight: 700; }
 #partition-machine-beasts .machine-reference-cost-beasts { margin: 9px 0; padding-left: 20px; }
 #partition-machine-beasts .machine-reference-cost-beasts li + li { margin-top: 5px; }
@@ -2459,10 +2460,21 @@ figcaption { color: var(--muted); font-size: 13px; margin-top: 8px; }
 #partition-machine-beasts .machine-material-source-grid p { margin: 7px 0 0; }
 #partition-machine-beasts .machine-material-stages span { display: inline-block; }
 #partition-machine-beasts .machine-treasurebox-note { color: var(--gold-dim); overflow-wrap: anywhere; }
+#partition-machine-beasts #machine-beast-reference-content { min-width: 0; }
+#partition-machine-beasts .machine-blueprint-guide { min-width: 0; max-width: 100%; }
+#partition-machine-beasts .machine-blueprint-guide-scroll { min-width: 0; max-width: 100%; overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; }
+#partition-machine-beasts .machine-blueprint-guide-scroll:focus-visible { outline: 2px solid var(--gold-dim); outline-offset: 2px; }
+#partition-machine-beasts .machine-blueprint-guide-table { width: 100%; min-width: 880px; border-collapse: collapse; background: var(--bg2); }
+#partition-machine-beasts .machine-blueprint-guide-table th,
+#partition-machine-beasts .machine-blueprint-guide-table td { padding: 10px 12px; border-bottom: 1px solid var(--line); text-align: center; white-space: nowrap; }
+#partition-machine-beasts .machine-blueprint-guide-table th { color: var(--gold-dim); }
+#partition-machine-beasts .machine-blueprint-guide-table thead { background: rgba(180, 138, 60, .1); }
+#partition-machine-beasts .machine-blueprint-guide-table th:first-child { text-align: left; }
+#partition-machine-beasts .machine-blueprint-guide-table tbody tr:last-child > * { border-bottom: 0; }
+#partition-machine-beasts .machine-blueprint-guide-missing { color: var(--muted); }
 
 @media (max-width: 600px) {
   #partition-machine-beasts .machine-reference-cost-grid,
-  #partition-machine-beasts .machine-reference-cost-breakdown,
   #partition-machine-beasts .machine-material-source-grid { grid-template-columns: minmax(0, 1fr); }
   #partition-machine-beasts .machine-reference-cost-settings { padding: 10px; }
   #partition-machine-beasts .machine-reference-cost-grid label,

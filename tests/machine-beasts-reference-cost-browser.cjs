@@ -65,6 +65,7 @@ async function calculateFixedSingle(page) {
   assert.equal(await panel.locator('[data-reference-cost-total]').textContent(), '28,329');
   assert.match(await panel.textContent(), /神图费用 13,440/);
   assert.match(await panel.locator('.machine-reference-cost-beasts').textContent(), /缺少碎片 67.*费用 14,889/);
+  await assertReferenceCostPresentation(page);
 }
 
 async function calculateFixedSchool(page) {
@@ -100,7 +101,48 @@ async function calculateFixedSchool(page) {
     '机关白虎：缺少碎片 67，折算 1.675只，贡献 40,200÷2.7，费用 14,889',
     '机关朱雀：缺少碎片 32，折算 0.8只，贡献 19,200÷2.7，费用 7,112'
   ]);
+  await assertReferenceCostPresentation(page);
   return result;
+}
+
+async function assertReferenceCostPresentation(page) {
+  const totals = await page.locator('[data-reference-cost-total]').evaluateAll(nodes => nodes.map(node => getComputedStyle(node).color));
+  assert.ok(totals.length > 0, 'complete plans must expose a reference total');
+  assert.deepEqual(totals, totals.map(() => 'rgb(255, 107, 99)'));
+  const breakdowns = await page.locator('.machine-reference-cost-breakdown').evaluateAll(nodes => nodes.map(node => {
+    const style = getComputedStyle(node);
+    return {
+      display: style.display,
+      wrap: style.flexWrap,
+      items: Array.from(node.children, item => {
+        const range = document.createRange();
+        range.selectNodeContents(item);
+        const rects = Array.from(range.getClientRects());
+        const box = item.getBoundingClientRect();
+        const parent = node.getBoundingClientRect();
+        return {
+          text: item.textContent,
+          whiteSpace: getComputedStyle(item).whiteSpace,
+          lineTops: rects.map(rect => Math.round(rect.top)),
+          inside: box.left >= parent.left - 1 && box.right <= parent.right + 1,
+          numberColors: Array.from(item.querySelectorAll('b'), value => getComputedStyle(value).color)
+        };
+      })
+    };
+  }));
+  for (const breakdown of breakdowns) {
+    assert.equal(breakdown.display, 'flex');
+    assert.equal(breakdown.wrap, 'wrap');
+    assert.equal(breakdown.items.length, 5);
+    assert.match(breakdown.items[3].text, /^神图费用 .+（单价 .+）$/);
+    for (const item of breakdown.items) {
+      assert.equal(item.whiteSpace, 'nowrap', item.text);
+      assert.ok(item.inside, item.text + ' must stay inside its cost panel');
+      assert.ok(Math.max(...item.lineTops) - Math.min(...item.lineTops) <= 3, item.text + ' must occupy one line');
+      assert.ok(item.numberColors.every(color => color !== 'rgb(255, 107, 99)'), 'only totals are red');
+    }
+  }
+  assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth), true);
 }
 
 async function assertVisibleWithoutOverflow(page, selector) {
@@ -143,7 +185,7 @@ test('real multi-beast school fees update without rerunning or changing the chos
   assert.equal(await page.evaluate(() => window.__schoolSolveCount), 0);
 }));
 
-for (const width of [360, 768]) {
+for (const width of [360, 390, 768, 1100]) {
   test(width + 'px expanded prices and real single/school results remain visible without overflow', async () => scenario(async page => {
     await page.locator('.machine-reference-beast-prices summary').click();
     await assertVisibleWithoutOverflow(page, '.machine-reference-beast-prices');
@@ -157,6 +199,58 @@ for (const width of [360, 768]) {
     await assertVisibleWithoutOverflow(page, '.machine-school-plan-beast:last-child');
   }, width));
 }
+
+test('360px long valid blueprint prices stay on one line in a keyboard-accessible local scroller', async () => scenario(async page => {
+  await calculateFixedSingle(page);
+  await page.locator('[data-reference-cost-field="awakeningBlueprintPrice"]').fill('123456789012345');
+  const breakdown = page.locator('[data-reference-cost-panel="single"] .machine-reference-cost-breakdown');
+  assert.equal(await page.locator('[data-reference-cost-total]').count(), 1, 'a finite nonnegative long price must remain valid');
+  assert.equal(await breakdown.getAttribute('tabindex'), '0');
+  assert.equal(await breakdown.getAttribute('role'), 'region');
+  assert.equal(await breakdown.getAttribute('aria-label'), '参考成本明细，可横向滚动');
+  await breakdown.focus();
+  assert.equal(await breakdown.evaluate(node => document.activeElement === node), true);
+  const dimensions = await breakdown.evaluate(node => {
+    const box = node.getBoundingClientRect();
+    const fee = node.children[3];
+    const range = document.createRange();
+    range.selectNodeContents(fee);
+    const style = getComputedStyle(node);
+    return {
+      overflow: style.overflowX,
+      wrap: style.flexWrap,
+      scroll: node.scrollWidth,
+      client: node.clientWidth,
+      itemWidth: fee.getBoundingClientRect().width,
+      whiteSpace: getComputedStyle(fee).whiteSpace,
+      lineTops: Array.from(range.getClientRects(), rect => Math.round(rect.top)),
+      insideViewport: box.left >= -1 && box.right <= document.documentElement.clientWidth + 1,
+      pageFits: document.documentElement.scrollWidth <= document.documentElement.clientWidth
+    };
+  });
+  assert.equal(dimensions.overflow, 'auto');
+  assert.equal(dimensions.wrap, 'wrap');
+  assert.equal(dimensions.whiteSpace, 'nowrap');
+  assert.ok(Math.max(...dimensions.lineTops) - Math.min(...dimensions.lineTops) <= 3, 'the complete fee including its unit price must occupy one line');
+  assert.ok(dimensions.itemWidth > dimensions.client, 'the fixture must exercise an item wider than the panel');
+  assert.ok(dimensions.scroll > dimensions.client, 'overflow must be confined to the cost breakdown');
+  assert.equal(dimensions.insideViewport, true);
+  assert.equal(dimensions.pageFits, true);
+  const end = await breakdown.evaluate(node => {
+    node.scrollLeft = node.scrollWidth;
+    return {
+      left: node.scrollLeft,
+      max: node.scrollWidth - node.clientWidth,
+      feeRight: node.children[3].getBoundingClientRect().right,
+      right: node.getBoundingClientRect().right,
+      pageFits: document.documentElement.scrollWidth <= document.documentElement.clientWidth
+    };
+  });
+  assert.ok(end.left > 0, 'the local scroller must move');
+  assert.ok(Math.abs(end.left - end.max) <= 1, 'the local scroller must reach its end');
+  assert.ok(end.feeRight <= end.right + 1, 'the end of the long fee must be accessible');
+  assert.equal(end.pageFits, true);
+}, 360));
 
 test('editing stock and price updates the cached single cost without rerunning or detaching inputs', async () => scenario(async page => {
   await calculateSingle(page);
@@ -196,6 +290,7 @@ test('invalid stock or price replaces old totals and missing manual prices are n
   await page.locator('[data-machine-action="calculate"]').click();
   assert.match(await page.locator('[data-reference-cost-panel="single"]').textContent(), /未设置.*机关飞翼|机关飞翼.*未设置/);
   assert.equal(await page.locator('[data-reference-cost-total]').count(), 0);
+  assert.notEqual(await page.locator('[data-reference-cost-panel="single"] .machine-reference-cost-error b').evaluate(node => getComputedStyle(node).color), 'rgb(255, 107, 99)');
   await page.locator('.machine-reference-beast-prices summary').click();
   await page.locator('[data-reference-beast-price="mechanical-wing"]').fill('0');
   assert.equal(await page.locator('[data-reference-cost-total]').count(), 1);
@@ -215,10 +310,12 @@ test('each school alternative deducts the same stock once from its own aggregate
   assert.deepEqual(await page.locator('[data-reference-blueprint-stock]').allTextContents(), ['10', '10']);
   assert.deepEqual(await page.locator('[data-reference-blueprint-missing]').allTextContents(), ['15', '20']);
   assert.deepEqual(await page.locator('[data-reference-cost-total]').allTextContents(), ['1,050', '1,400']);
+  await assertReferenceCostPresentation(page);
   assert.equal((await getAccountJson(page, KEY)).referenceCost.awakeningBlueprintStock, 10);
   await page.locator('[data-reference-cost-field="useAwakeningBlueprintStock"]').uncheck();
   assert.deepEqual(await page.locator('[data-reference-blueprint-stock]').allTextContents(), ['0', '0']);
   assert.deepEqual(await page.locator('[data-reference-cost-total]').allTextContents(), ['1,750', '2,100']);
+  await assertReferenceCostPresentation(page);
 }));
 
 for (const failure of ['false', 'throw']) {
@@ -272,6 +369,11 @@ test('material sources and source search are readable without narrow-screen over
   await page.locator('[data-machine-beast-mode="reference"]').click();
   assert.match(await page.locator('[data-machine-material-sources]').textContent(), /青铜螺栓设计图[\s\S]*53-9/);
   assert.match(await page.locator('[data-machine-material-sources]').textContent(), /幻音宝盒[\s\S]*不参与计算/);
+  const sources = page.locator('[data-machine-material-sources]');
+  assert.doesNotMatch(await sources.textContent(), /获取来源：|关卡掉落|掉落关卡：|关卡编号为来源查询说明，未变更现有掉落资料。/);
+  assert.deepEqual(await sources.locator('.machine-reference-card').filter({ has: page.getByRole('heading', { name: '铅块', exact: true }) }).locator('p').allTextContents(), ['好友副本、聚宝盆']);
+  assert.deepEqual(await sources.locator('.machine-reference-card').filter({ has: page.getByRole('heading', { name: '青铜螺栓设计图', exact: true }) }).locator('p').allTextContents(), ['主线关卡53-9、35-10、24-10、11-10掉落']);
+  await assertVisibleWithoutOverflow(page, '[data-machine-material-sources]');
   const search = page.locator('[data-machine-search="reference"]');
   assert.match(await search.getAttribute('placeholder'), /来源/);
   await search.fill('尚同墨方');
@@ -281,6 +383,42 @@ test('material sources and source search are readable without narrow-screen over
   await page.locator('[data-machine-beast-mode="calculator"]').click();
   assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth), true);
 }, 360));
+
+for (const width of [360, 1100]) {
+  test(width + 'px blueprint guide preserves all source figures and confines horizontal scrolling', async () => scenario(async page => {
+    await page.locator('[data-machine-beast-mode="reference"]').click();
+    const guide = page.locator('[data-machine-blueprint-guide]');
+    assert.equal(await guide.locator('h2').textContent(), '机关兽研发材料参考（用图纸版）');
+    assert.match(await guide.textContent(), /单只机关兽.*研发等级.*非.*流派阶数/);
+    assert.match(await guide.textContent(), /图片参考.*不参与计算.*取整/);
+    assert.deepEqual(await guide.locator('thead th').allTextContents(), ['材料', '10级', '15级', '20级', '25级']);
+    assert.equal(await guide.locator('tbody tr').count(), 13);
+    assert.deepEqual(await guide.locator('[data-blueprint-guide-plan] > *').allTextContents(), ['投入方案', '270只2阶＋4只0阶', '16只6阶', '9只7阶＋1只6阶＋2只0阶', '13只7阶＋1只6阶＋2只0阶']);
+    assert.deepEqual(await guide.locator('[data-blueprint-guide-resource]').evaluateAll(rows => rows.map(row => Array.from(row.children, cell => cell.textContent))), [
+      ['青铜螺栓设计图', '540', '224', '212', '300'],
+      ['精钢底座设计图', '—（资料未提供）', '288', '234', '330'],
+      ['精钢管设计图', '—（资料未提供）', '240', '231', '327'],
+      ['玄铁外壳设计图', '—（资料未提供）', '240', '240', '340'],
+      ['玄铁关节设计图', '—（资料未提供）', '160', '235', '335'],
+      ['玄铁箱设计图', '—（资料未提供）', '80', '50', '70'],
+      ['铅块', '5400', '4592', '4625', '6553'],
+      ['青铜', '7290', '3648', '3225', '4557'],
+      ['精钢', '—（资料未提供）', '1648', '1507', '2131'],
+      ['玄铁', '—（资料未提供）', '992', '908', '1284'],
+      ['觉醒神图', '636', '1123', '1673', '2275'],
+      ['机关破片', '3178', '5611', '8362', '11372']
+    ]);
+    await assertVisibleWithoutOverflow(page, '[data-machine-blueprint-guide]');
+    const dimensions = await guide.locator('.machine-blueprint-guide-scroll').evaluate(node => ({
+      overflow: getComputedStyle(node).overflowX, scroll: node.scrollWidth, client: node.clientWidth
+    }));
+    assert.equal(dimensions.overflow, 'auto');
+    if (width === 360) assert.ok(dimensions.scroll > dimensions.client, 'the table should scroll inside its own container');
+    await guide.locator('.machine-blueprint-guide-scroll').evaluate(node => { node.scrollLeft = node.scrollWidth; });
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth), true);
+    assert.equal(await page.locator('[data-machine-material-sources]').evaluate(node => node.nextElementSibling.hasAttribute('data-machine-blueprint-guide')), true);
+  }, width));
+}
 
 test('account switching keeps reference prices and stock isolated under the existing account key', async () => scenario(async page => {
   const firstId = await page.evaluate(() => window.QinshiAccounts.currentAccount().id);

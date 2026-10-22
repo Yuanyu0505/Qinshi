@@ -3,6 +3,27 @@ const assert = require("node:assert/strict");
 
 const DATA = require("../data/machine-beasts.js");
 
+test("blueprint guide: preserve reference plans, resource quantities and missing cells exactly", () => {
+  assert.deepEqual(DATA.blueprintGuide, {
+    levels: [10, 15, 20, 25],
+    plans: ["270只2阶＋4只0阶", "16只6阶", "9只7阶＋1只6阶＋2只0阶", "13只7阶＋1只6阶＋2只0阶"],
+    resources: [
+      { name: "青铜螺栓设计图", values: [540, 224, 212, 300] },
+      { name: "精钢底座设计图", values: [null, 288, 234, 330] },
+      { name: "精钢管设计图", values: [null, 240, 231, 327] },
+      { name: "玄铁外壳设计图", values: [null, 240, 240, 340] },
+      { name: "玄铁关节设计图", values: [null, 160, 235, 335] },
+      { name: "玄铁箱设计图", values: [null, 80, 50, 70] },
+      { name: "铅块", values: [5400, 4592, 4625, 6553] },
+      { name: "青铜", values: [7290, 3648, 3225, 4557] },
+      { name: "精钢", values: [null, 1648, 1507, 2131] },
+      { name: "玄铁", values: [null, 992, 908, 1284] },
+      { name: "觉醒神图", values: [636, 1123, 1673, 2275] },
+      { name: "机关破片", values: [3178, 5611, 8362, 11372] }
+    ]
+  });
+});
+
 test("beast sources: all 27 beasts expose their exact acquisition channels", () => {
   const expected = {
     "mechanical-bear": ["聚宝盆"],

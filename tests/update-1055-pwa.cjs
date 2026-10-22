@@ -1,4 +1,4 @@
-// Real historical release -> working release, using an isolated local origin only.
+// Fixed historical 1.0.54 -> 1.0.55 regression, using an isolated local origin only.
 // node --test --test-concurrency=1 tests/update-1055-pwa.cjs
 const assert = require('node:assert/strict');
 const { execFileSync } = require('node:child_process');
@@ -11,6 +11,7 @@ const { ensureTestAccount, getAccountItem, getAccountJson } = require('./browser
 
 const ROOT = path.resolve(__dirname, '..');
 const OLD_COMMIT = 'a875bdb';
+const NEW_COMMIT = '8f0d9c7';
 const OLD_VERSION = '1.0.54';
 const NEW_VERSION = '1.0.55';
 const KEY = 'qinshi_machine_beasts_progress_v1';
@@ -29,7 +30,9 @@ function releaseSnapshots() {
     old.set(relative, execFileSync('git', [
       '-c', 'safe.directory=C:/Users/pghyl/Desktop/deepseek', 'show', `${OLD_COMMIT}:${relative}`
     ], { cwd: ROOT, maxBuffer: 16 * 1024 * 1024 }));
-    current.set(relative, fs.readFileSync(path.join(ROOT, relative)));
+    current.set(relative, execFileSync('git', [
+      '-c', 'safe.directory=C:/Users/pghyl/Desktop/deepseek', 'show', `${NEW_COMMIT}:${relative}`
+    ], { cwd: ROOT, maxBuffer: 16 * 1024 * 1024 }));
   }
   assert.equal(JSON.parse(old.get('version.json').toString('utf8')).version, OLD_VERSION);
   assert.equal(JSON.parse(current.get('version.json').toString('utf8')).version, NEW_VERSION);

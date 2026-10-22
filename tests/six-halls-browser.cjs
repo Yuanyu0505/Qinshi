@@ -84,6 +84,10 @@ for (const width of [390, 900, 1440]) {
       assert.equal(await page.locator(PARTITION + ' [data-six-halls-progress]').count(), 0,
         'hidden six-halls section should not eagerly create its form');
       await openSixHalls(page);
+      assert.equal(await page.locator(PARTITION + ' .six-halls-heading, ' + PARTITION + ' .six-halls-eyebrow').count(), 0,
+        'six-halls should not render the removed in-page title strip');
+      assert.equal(await page.locator(PARTITION + ' [data-six-halls-mode]').count(), 3,
+        'all three six-halls views must remain available');
       assert.equal(await page.locator('[data-six-halls-progress="level"]').count(), 6);
       await edit(page, 'playerLevel', 89);
       await edit(page, 'herbs', 1000);

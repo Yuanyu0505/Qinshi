@@ -257,8 +257,7 @@
           return '<button type="button" class="seg" data-six-halls-quick="' + level + '" data-hall-id="' + hall.id + '">' + level + '级</button>';
         }).join("") + '</div></article>';
     }).join("");
-    context.partition.innerHTML = '<div class="six-halls-heading"><div><p class="six-halls-eyebrow">SIX HALLS</p><h2>六堂</h2></div><p class="six-halls-muted">真实进度按账号保存，升级规划只在本页临时保留。</p></div>' +
-      '<nav class="six-halls-modes" aria-label="六堂子页">' + [["progress", "个人进度"], ["planner", "升级规划"], ["reference", "升级资料"]].map(function (entry) {
+    context.partition.innerHTML = '<nav class="six-halls-modes" aria-label="六堂子页">' + [["progress", "个人进度"], ["planner", "升级规划"], ["reference", "升级资料"]].map(function (entry) {
         return '<button type="button" class="seg" data-six-halls-mode="' + entry[0] + '" aria-controls="six-halls-' + entry[0] + '">' + entry[1] + '</button>';
       }).join("") + '</nav>' +
       '<p id="six-halls-readonly" class="six-halls-notice" role="status" hidden>当前账号为只读状态，个人进度不能保存；仍可调整临时规划。</p>' +

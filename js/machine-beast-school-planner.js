@@ -210,14 +210,15 @@
       leftValues.push(-left.totals.milestoneCount);
       rightValues.push(-right.totals.milestoneCount);
     }
+    // Per-beast rounded display yuan must not break equal-contribution stable ties.
     leftValues = leftValues.concat([
       left.totals.overflowResearch, left.totals.fragments,
-      numericResource(left.totals.contribution), numericResource(left.totals.yuan),
+      numericResource(left.totals.contribution),
       left.totals.awakeningBlueprints, left.totals.organPieces
     ]);
     rightValues = rightValues.concat([
       right.totals.overflowResearch, right.totals.fragments,
-      numericResource(right.totals.contribution), numericResource(right.totals.yuan),
+      numericResource(right.totals.contribution),
       right.totals.awakeningBlueprints, right.totals.organPieces
     ]);
     for (var index = 0; index < leftValues.length; index += 1) {

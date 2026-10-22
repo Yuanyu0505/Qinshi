@@ -2296,7 +2296,7 @@ figcaption { color: var(--muted); font-size: 13px; margin-top: 8px; }
 #partition-machine-beasts .machine-editor-actions,
 #partition-machine-beasts .machine-calculator-actions { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 10px; }
 #partition-machine-beasts .machine-calculator-panel { margin-bottom: 0; }
-#partition-machine-beasts .machine-calculator-top { grid-template-columns: 1.4fr repeat(4, minmax(0, 1fr)); }
+#partition-machine-beasts .machine-calculator-top { grid-template-columns: minmax(0, 1.4fr) repeat(4, minmax(0, 1fr)); }
 #partition-machine-beasts .machine-result { border-color: var(--gold-dim); box-shadow: inset 4px 0 0 var(--gold); }
 #partition-machine-beasts .machine-result.is-error { border-color: #b54b42; box-shadow: inset 4px 0 0 #ff5f57; }
 #partition-machine-beasts .machine-result-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
@@ -2331,7 +2331,7 @@ figcaption { color: var(--muted); font-size: 13px; margin-top: 8px; }
 #partition-machine-beasts .machine-school-options input,
 #partition-machine-beasts .machine-school-beast-control header input,
 #partition-machine-beasts .machine-owned-inventory-row > input { width: auto; min-height: 0; accent-color: var(--red); }
-#partition-machine-beasts .machine-owned-inventory-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 7px; margin-top: 8px; }
+#partition-machine-beasts .machine-owned-inventory-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr)); gap: 7px; margin-top: 8px; }
 #partition-machine-beasts .machine-owned-inventory-row { display: grid; grid-template-columns: auto minmax(82px, 1fr) auto minmax(100px, .7fr); align-items: center; gap: 7px; padding: 7px 8px; background: var(--bg2); border: 1px solid var(--line); border-radius: 7px; }
 #partition-machine-beasts .machine-owned-inventory-row > label { display: grid; grid-template-columns: auto minmax(54px, 1fr); align-items: center; gap: 5px; color: var(--muted); font-size: 11px; }
 #partition-machine-beasts .machine-owned-inventory-row input[type="number"] { padding: 6px 7px; }
@@ -2363,7 +2363,7 @@ figcaption { color: var(--muted); font-size: 13px; margin-top: 8px; }
 #partition-machine-beasts .machine-quality-badge.machine-quality-blue { background: #256ba1; border-color: #4f9bd9; }
 #partition-machine-beasts .machine-quality-badge.machine-quality-purple { background: #5f237f; border-color: #8f3fc1; }
 #partition-machine-beasts .machine-quality-badge.machine-quality-orange { background: #c76518; border-color: #ff963d; }
-#partition-machine-beasts .machine-school-beast-fields { display: grid; grid-template-columns: 1fr 100px 1fr; gap: 7px; margin-top: 8px; }
+#partition-machine-beasts .machine-school-beast-fields { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 100px) minmax(0, 1fr); gap: 7px; margin-top: 8px; }
 #partition-machine-beasts .machine-school-beast-fields label { display: grid; align-content: start; gap: 4px; color: var(--muted); font-size: 11px; }
 #partition-machine-beasts .machine-school-beast-fields b { padding: 8px 0; color: var(--gold); }
 #partition-machine-beasts #machine-beast-calculator-result:not([hidden]) { display: grid; gap: 10px; margin-bottom: 10px; }
@@ -2424,6 +2424,51 @@ figcaption { color: var(--muted); font-size: 13px; margin-top: 8px; }
 #partition-machine-beasts input:focus-visible,
 #partition-machine-beasts select:focus-visible,
 #partition-machine-beasts summary:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+
+/* Shared account-scoped reference estimates; settings never drive the optimizer. */
+#partition-machine-beasts .machine-reference-cost-settings { min-width: 0; margin-top: 12px; }
+#partition-machine-beasts .machine-reference-cost-settings h2 { margin-bottom: 10px; color: var(--gold); font-size: 18px; }
+#partition-machine-beasts .machine-reference-cost-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 210px), 1fr)); gap: 9px; }
+#partition-machine-beasts .machine-reference-cost-grid > label { display: grid; align-content: start; gap: 5px; min-width: 0; color: var(--muted); }
+#partition-machine-beasts .machine-reference-cost-grid input,
+#partition-machine-beasts .machine-reference-cost-grid select { box-sizing: border-box; width: 100%; min-width: 0; }
+#partition-machine-beasts .machine-reference-cost-grid .machine-reference-cost-check { display: flex; align-items: center; align-self: center; gap: 7px; color: var(--text); }
+#partition-machine-beasts .machine-reference-cost-check input { flex: 0 0 auto; width: auto; min-height: 0; accent-color: var(--red); }
+#partition-machine-beasts .machine-reference-beast-prices { margin-top: 12px; }
+#partition-machine-beasts .machine-reference-beast-prices summary { margin-bottom: 9px; color: var(--gold-dim); cursor: pointer; overflow-wrap: anywhere; }
+#partition-machine-beasts .machine-reference-cost-panel { min-width: 0; margin-top: 12px; padding: 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg2); }
+#partition-machine-beasts .machine-reference-cost-panel h3 { margin: 0 0 8px; color: var(--gold); font-size: 16px; }
+#partition-machine-beasts .machine-reference-cost-breakdown { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 160px), 1fr)); gap: 7px; }
+#partition-machine-beasts .machine-reference-cost-breakdown span { min-width: 0; color: var(--muted); }
+#partition-machine-beasts .machine-reference-cost-breakdown b,
+#partition-machine-beasts .machine-reference-cost-total b { color: var(--gold); }
+#partition-machine-beasts .machine-reference-cost-total { font-weight: 700; }
+#partition-machine-beasts .machine-reference-cost-beasts { margin: 9px 0; padding-left: 20px; }
+#partition-machine-beasts .machine-reference-cost-beasts li + li { margin-top: 5px; }
+#partition-machine-beasts .machine-reference-cost-error { color: #ffb0a8; }
+#partition-machine-beasts .machine-reference-cost-save-status,
+#partition-machine-beasts .machine-beast-source { margin: 8px 0; color: var(--muted); font-size: 12px; }
+#partition-machine-beasts .machine-reference-cost-panel,
+#partition-machine-beasts .machine-reference-cost-settings,
+#partition-machine-beasts .machine-beast-source,
+#partition-machine-beasts .machine-inventory-summary,
+#partition-machine-beasts .machine-owned-inventory-row > span,
+#partition-machine-beasts .machine-material-source-grid { overflow-wrap: anywhere; }
+#partition-machine-beasts .machine-material-source-grid { grid-template-columns: repeat(auto-fit, minmax(min(100%, 230px), 1fr)); }
+#partition-machine-beasts .machine-material-source-grid h3 { color: var(--gold-dim); font-size: 15px; }
+#partition-machine-beasts .machine-material-source-grid p { margin: 7px 0 0; }
+#partition-machine-beasts .machine-material-stages span { display: inline-block; }
+#partition-machine-beasts .machine-treasurebox-note { color: var(--gold-dim); overflow-wrap: anywhere; }
+
+@media (max-width: 600px) {
+  #partition-machine-beasts .machine-reference-cost-grid,
+  #partition-machine-beasts .machine-reference-cost-breakdown,
+  #partition-machine-beasts .machine-material-source-grid { grid-template-columns: minmax(0, 1fr); }
+  #partition-machine-beasts .machine-reference-cost-settings { padding: 10px; }
+  #partition-machine-beasts .machine-reference-cost-grid label,
+  #partition-machine-beasts .machine-new-rank-mode label,
+  #partition-machine-beasts .machine-new-rank-mode > span { min-width: 0; white-space: normal; overflow-wrap: anywhere; }
+}
 
 /* 禁地 */
 #partition-forbidden { min-width: 0; }
@@ -2816,9 +2861,9 @@ figcaption { color: var(--muted); font-size: 13px; margin-top: 8px; }
   #partition-formations .formation-position-tabs { display: flex; flex-wrap: wrap; }
   #partition-formations .formation-member-grid { grid-template-columns: 1fr; }
   #partition-formations .formation-recommend-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  #partition-machine-beasts .machine-beast-list { grid-template-columns: 1fr; }
+  #partition-machine-beasts .machine-beast-list { grid-template-columns: minmax(0, 1fr); }
   #partition-machine-beasts .machine-beast-summary { grid-template-columns: 110px 140px minmax(0, 1fr); }
-  #partition-machine-beasts .machine-school-beast-controls { grid-template-columns: 1fr; }
+  #partition-machine-beasts .machine-school-beast-controls { grid-template-columns: minmax(0, 1fr); }
   #partition-machine-beasts .machine-school-plan-summary { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   #partition-forbidden .forbidden-featured-grid { grid-template-columns: 1fr; }
   #partition-forbidden .forbidden-reward-grid { grid-template-columns: 1fr; }
@@ -2992,7 +3037,7 @@ figcaption { color: var(--muted); font-size: 13px; margin-top: 8px; }
   }
   #partition-machine-beasts .machine-school-head,
   #partition-machine-beasts .machine-effect-grid,
-  #partition-machine-beasts .machine-result-columns { grid-template-columns: 1fr; }
+  #partition-machine-beasts .machine-result-columns { grid-template-columns: minmax(0, 1fr); }
   #partition-machine-beasts .machine-editor-grid,
   #partition-machine-beasts .machine-calculator-top,
   #partition-machine-beasts .machine-result-metrics,
@@ -3357,7 +3402,7 @@ figcaption { color: var(--muted); font-size: 13px; margin-top: 8px; }
   #partition-formations .formation-section-head { align-items: flex-start; }
   #partition-machine-beasts .machine-beast-modes { display: flex; width: 100%; }
   #partition-machine-beasts .machine-beast-modes .seg { flex: 1; padding-left: 7px; padding-right: 7px; }
-  #partition-machine-beasts .machine-search-bar { grid-template-columns: 1fr; gap: 5px; padding: 9px; }
+  #partition-machine-beasts .machine-search-bar { grid-template-columns: minmax(0, 1fr); gap: 5px; padding: 9px; }
   #partition-machine-beasts .machine-school-switcher { gap: 5px; }
   #partition-machine-beasts .machine-school-switcher .seg { min-width: 0; padding-left: 6px; padding-right: 6px; }
   #partition-machine-beasts .machine-school { padding: 10px; }
@@ -3367,14 +3412,14 @@ figcaption { color: var(--muted); font-size: 13px; margin-top: 8px; }
   #partition-machine-beasts .machine-editor-grid,
   #partition-machine-beasts .machine-calculator-top,
   #partition-machine-beasts .machine-result-metrics,
-  #partition-machine-beasts .machine-result-columns { grid-template-columns: 1fr; }
+  #partition-machine-beasts .machine-result-columns { grid-template-columns: minmax(0, 1fr); }
   #partition-machine-beasts .machine-calculator-modes { display: flex; width: 100%; }
   #partition-machine-beasts .machine-calculator-modes .seg { flex: 1; }
   #partition-machine-beasts .machine-school-calculator-grid,
   #partition-machine-beasts .machine-school-beast-controls,
-  #partition-machine-beasts .machine-school-beast-fields { grid-template-columns: 1fr; }
+  #partition-machine-beasts .machine-school-beast-fields { grid-template-columns: minmax(0, 1fr); }
   #partition-machine-beasts .machine-school-plan-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  #partition-machine-beasts .machine-school-options { display: grid; grid-template-columns: 1fr; gap: 8px; }
+  #partition-machine-beasts .machine-school-options { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; }
   #partition-machine-beasts .machine-new-rank-mode {
     gap: 6px 10px;
     padding: 8px 9px;
@@ -3390,7 +3435,7 @@ figcaption { color: var(--muted); font-size: 13px; margin-top: 8px; }
   #partition-machine-beasts .machine-school-beast-control header,
   #partition-machine-beasts .machine-owned-head,
   #partition-machine-beasts .machine-school-plan-beast > header { align-items: flex-start; flex-direction: column; }
-  #partition-machine-beasts .machine-owned-inventory-grid { grid-template-columns: 1fr; }
+  #partition-machine-beasts .machine-owned-inventory-grid { grid-template-columns: minmax(0, 1fr); }
   #partition-machine-beasts .machine-owned-inventory-row { grid-template-columns: auto minmax(0, 1fr) auto; }
   #partition-machine-beasts .machine-owned-inventory-row > label { grid-column: 2 / -1; grid-template-columns: auto minmax(70px, 1fr); }
   #partition-machine-beasts .machine-effect-head { display: grid; gap: 3px; }
@@ -3398,12 +3443,12 @@ figcaption { color: var(--muted); font-size: 13px; margin-top: 8px; }
   #partition-machine-beasts .machine-effect-card dl > div { grid-template-columns: 72px minmax(0, 1fr); }
   #partition-machine-beasts .machine-beast-head { align-items: flex-start; }
   #partition-machine-beasts .machine-beast-head > div { align-items: flex-start; flex-wrap: wrap; }
-  #partition-machine-beasts .machine-beast-summary { grid-template-columns: 1fr; }
+  #partition-machine-beasts .machine-beast-summary { grid-template-columns: minmax(0, 1fr); }
   #partition-machine-beasts .machine-rank-inputs { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  #partition-machine-beasts .machine-inline-control { grid-template-columns: 1fr; }
+  #partition-machine-beasts .machine-inline-control { grid-template-columns: minmax(0, 1fr); }
   #partition-machine-beasts .machine-no-exchange { grid-column: auto; }
   #partition-machine-beasts .machine-reference-grid,
-  #partition-machine-beasts .machine-effect-reference-list { grid-template-columns: 1fr; }
+  #partition-machine-beasts .machine-effect-reference-list { grid-template-columns: minmax(0, 1fr); }
   #partition-machine-beasts .machine-reference-card header { display: grid; gap: 5px; }
   #partition-machine-beasts .machine-reference-card header > span:last-child { text-align: left; }
   #partition-forbidden .forbidden-control-row { display: grid; grid-template-columns: 1fr; gap: 9px; }

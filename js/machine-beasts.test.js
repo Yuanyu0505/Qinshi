@@ -50,6 +50,20 @@ test("searchBeasts: matches name, tier, school and research effects without chan
   assert.deepStrictEqual(CORE.searchBeasts(DATA, ""), DATA.beasts);
 });
 
+test("searchBeasts: includes all acquisition sources and preserves source order", () => {
+  const data = {
+    ...DATA,
+    beasts: [
+      { ...DATA.beasts[0], sources: ["尚同墨方", "活动兑换"] },
+      { ...DATA.beasts[1], sources: ["尚同墨方"] },
+      { ...DATA.beasts[2], sources: undefined }
+    ]
+  };
+  assert.deepStrictEqual(CORE.searchBeasts(data, " 尚同 墨方 ").map(beast => beast.id),
+    [DATA.beasts[0].id, DATA.beasts[1].id]);
+  assert.deepStrictEqual(CORE.searchBeasts(data, "活动兑换").map(beast => beast.id), [DATA.beasts[0].id]);
+});
+
 test("machine beast data: quality limits and corrected orange-five records", () => {
   const byName = Object.fromEntries(DATA.beasts.map(item => [item.name, item]));
   assert.deepStrictEqual(
@@ -73,7 +87,7 @@ test("machine beast data: research tables preserve spreadsheet values", () => {
   assert.deepStrictEqual(DATA.resourceRules, {
     blueprintDivisor: 500,
     organPieceDivisor: 100,
-    yuanPerContribution: 0.5
+    yuanPerContribution: 1 / 2.7
   });
 });
 
@@ -276,10 +290,27 @@ test("investment optimizer: contribution tiers and no-exchange tiers are explici
   const orangeResult = CORE.calculateInvestmentPlan(DATA, orangeThree, CORE.normalizeBeastProgress(orangeThree, {}, DATA), { targetLevel: 1 });
   assert.strictEqual(orangeResult.exchange.available, true);
   assert.strictEqual(orangeResult.exchange.contribution, orangeResult.shortage.fragments * 800);
-  assert.strictEqual(orangeResult.exchange.yuan, Math.ceil(orangeResult.exchange.contribution * 0.5));
+  assert.strictEqual(orangeResult.exchange.yuan, Math.ceil(orangeResult.exchange.contribution / 2.7));
   const orangeFiveResult = CORE.calculateInvestmentPlan(DATA, orangeFive, CORE.normalizeBeastProgress(orangeFive, {}, DATA), { targetLevel: 1 });
   assert.strictEqual(orangeFiveResult.exchange.available, false);
   assert.ok(orangeFiveResult.shortage.fragments > 0);
+});
+
+test("investment optimizer: directly divides contribution at whole-yuan boundaries", () => {
+  const beast = DATA.beasts.find(item => item.tier === "橙一");
+  const data = {
+    ...DATA,
+    resourceRules: { ...DATA.resourceRules, yuanPerContribution: 0.5 },
+    referenceCostRules: { ...DATA.referenceCostRules, contributionPerYuan: 2.7 }
+  };
+  const result = CORE.calculateInvestmentPlan(data, beast, { fragments: 13 }, { targetLevel: 1 });
+  assert.strictEqual(result.shortage.fragments, 27);
+  assert.strictEqual(result.exchange.contribution, 16200);
+  assert.strictEqual(result.exchange.yuan, 6000);
+  const reference = CORE.calculateReferenceCost(data, {
+    beasts: [{ beastId: beast.id, fragments: 27 }]
+  });
+  assert.strictEqual(reference.beasts[0].yuan, 6000);
 });
 
 test("investment optimizer: completed targets produce a zero-cost plan", () => {
@@ -333,6 +364,76 @@ test("school planner: milestone plan only improves milestones for the same inves
   assert.strictEqual(milestone.totals.investedCount, free.totals.investedCount);
   assert.strictEqual(milestone.totals.newInvestedCount, free.totals.newInvestedCount);
   assert.ok(milestone.totals.milestoneCount > free.totals.milestoneCount);
+});
+
+test("school planner: rounded display yuan preserves stable ties in free and milestone plans", () => {
+  const progress = {
+    "mechanical-white-tiger": { research: 750000, fragments: 13 },
+    "mechanical-vermilion-bird": { research: 750000, fragments: 8 },
+    "mechanical-bronze-man": { research: 168800 }
+  };
+  // B (white tiger 20 / vermilion bird 19) costs 22001 displayed yuan;
+  // A costs 22000 with equal contribution and other optimization metrics.
+  // The original stable key starts with the vermilion bird ID and chooses B.
+  const exchangeCases = [
+    ["mechanical-white-tiger", 19, 27, 16200, 6000],
+    ["mechanical-vermilion-bird", 20, 72, 43200, 16000],
+    ["mechanical-white-tiger", 20, 67, 40200, 14889],
+    ["mechanical-vermilion-bird", 19, 32, 19200, 7112]
+  ];
+  exchangeCases.forEach(([beastId, targetLevel, fragments, contribution, yuan]) => {
+    const beast = DATA.beasts.find(item => item.id === beastId);
+    const direct = CORE.calculateInvestmentPlan(DATA, beast, progress[beastId], {
+      targetLevel,
+      useOwnedInventory: false,
+      newRankMode: "zero"
+    });
+    assert.strictEqual(direct.valid, true);
+    assert.strictEqual(direct.shortage.fragments, fragments);
+    assert.deepStrictEqual(direct.exchange, { available: true, contribution, yuan });
+  });
+
+  const result = PLANNER.calculateSchoolPlans(DATA, "nonAttack", progress, {
+    targetStage: 1,
+    participatingBeastIds: ["mechanical-white-tiger", "mechanical-vermilion-bird"],
+    useOwnedInventory: false,
+    newRankMode: "zero"
+  });
+  assert.strictEqual(result.valid, true);
+  assert.strictEqual(result.current.totalLevel, 42);
+  assert.strictEqual(result.target.totalLevel, 45);
+  // Merging is observable evidence that both comparator modes chose the same B.
+  assert.strictEqual(result.plans.length, 1);
+  const plan = result.plans[0];
+  assert.strictEqual(plan.kind, "merged");
+  assert.deepStrictEqual(plan.totals, {
+    investedCount: 3,
+    ownedInvestedCount: 0,
+    newInvestedCount: 3,
+    milestoneCount: 1,
+    overflowResearch: 36600,
+    awakeningBlueprints: 288,
+    organPieces: 1440,
+    fragments: 99,
+    contribution: 59400,
+    yuan: 22001,
+    projectedTotalLevel: 45
+  });
+  assert.deepStrictEqual(plan.beasts.map(detail => ({
+    beastId: detail.beastId,
+    endLevel: detail.endLevel,
+    investedCount: detail.investedCount,
+    resources: detail.resources
+  })), [
+    {
+      beastId: "mechanical-white-tiger", endLevel: 20, investedCount: 2,
+      resources: { awakeningBlueprints: 192, organPieces: 960, fragments: 67, contribution: 40200, yuan: 14889 }
+    },
+    {
+      beastId: "mechanical-vermilion-bird", endLevel: 19, investedCount: 1,
+      resources: { awakeningBlueprints: 96, organPieces: 480, fragments: 32, contribution: 19200, yuan: 7112 }
+    }
+  ]);
 });
 
 test("school planner: an achieved target returns one merged zero-cost plan", () => {

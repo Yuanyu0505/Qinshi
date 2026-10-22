@@ -993,7 +993,7 @@ test("机关兽三个页面提供搜索、流派切换、命中高亮和移动�
   assert.match(ui, /schoolSwitcher\("reference-beasts"/);
   assert.match(ui, /schoolSwitcher\("reference-stages"/);
   assert.match(ui, /machine-search-match/);
-  assert.match(ui, /renderReference\(\)[\s\S]*?beastReference\(\)\s*\+\s*schoolReference\(\)\s*\+\s*thresholdReference\(\)\s*\+\s*researchReference\(\)/);
+  assert.match(ui, /renderReference\(\)[\s\S]*?beastReference\(\)\s*\+\s*materialReference\(\)\s*\+\s*schoolReference\(\)\s*\+\s*thresholdReference\(\)\s*\+\s*researchReference\(\)/);
   assert.match(css, /#partition-machine-beasts \.machine-search-bar/);
   assert.match(css, /#partition-machine-beasts \.machine-search-match/);
   assert.match(css, /@media \(max-width: 1024px\)[\s\S]*?#partition-machine-beasts \.machine-search-bar/);

@@ -53,10 +53,133 @@
     data.schools.forEach(function (school) { schools[school.id] = school.name; });
     return data.beasts.filter(function (beast) {
       var effectText = (beast.effects || []).map(function (effect) { return effect.text; }).join(" ");
-      var searchable = [beast.name, beast.tier, schools[beast.schoolId] || "", effectText]
+      var sourceText = (beast.sources || []).join(" ");
+      var searchable = [beast.name, beast.tier, schools[beast.schoolId] || "", effectText, sourceText]
         .map(normalizeSearch).join(" ");
       return searchable.indexOf(keyword) !== -1;
     });
+  }
+
+  function referenceNumber(value, fallback) {
+    if (typeof value !== "number" && typeof value !== "string") return fallback;
+    if (typeof value === "string" && !value.trim()) return fallback;
+    var number = Number(value);
+    return Number.isFinite(number) && number >= 0 ? number : fallback;
+  }
+
+  function contributionPerYuan(data) {
+    var rules = data && data.referenceCostRules || {};
+    return referenceNumber(rules.contributionPerYuan, 2.7) || 2.7;
+  }
+
+  function decimalFraction(value) {
+    var parts = String(value).toLowerCase().split("e");
+    var decimal = parts[0].split(".");
+    var fractionDigits = decimal[1] || "";
+    var scale = fractionDigits.length - Number(parts[1] || 0);
+    var numerator = BigInt(decimal[0] + fractionDigits);
+    var denominator = BigInt(1);
+    if (scale > 0) denominator = BigInt(10) ** BigInt(scale);
+    else if (scale < 0) numerator *= BigInt(10) ** BigInt(-scale);
+    return [numerator, denominator];
+  }
+
+  // Round the original decimal factors, not an already-rounded binary product.
+  // Exact remainders preserve genuine fractions, including fractions below an epsilon.
+  function ceilReferenceYuan(factors, divisor) {
+    var numerator = BigInt(1);
+    var denominator = BigInt(1);
+    factors.forEach(function (factor) {
+      var fraction = decimalFraction(factor);
+      numerator *= fraction[0];
+      denominator *= fraction[1];
+    });
+    var divisorFraction = decimalFraction(divisor);
+    numerator *= divisorFraction[1];
+    denominator *= divisorFraction[0];
+    return Number((numerator + denominator - BigInt(1)) / denominator);
+  }
+
+  function normalizeReferenceCostSettings(data, raw) {
+    var source = raw && typeof raw === "object" ? raw : {};
+    var rules = data && data.referenceCostRules || {};
+    var sourcePrices = source.beastPrices && typeof source.beastPrices === "object" ? source.beastPrices : {};
+    var prices = {};
+    var defaultBlueprintPrice = referenceNumber(rules.blueprintPrice, 70);
+    var defaultOrangeFivePrice = referenceNumber(rules.orangeFiveBodyPrice, 45000);
+    (data && data.beasts || []).forEach(function (beast) {
+      if (referenceNumber(beast.contributionPerFragment, null) !== null) return;
+      prices[beast.id] = Object.prototype.hasOwnProperty.call(sourcePrices, beast.id) ?
+        referenceNumber(sourcePrices[beast.id], null) : (beast.tier === "橙五" ? defaultOrangeFivePrice : null);
+    });
+    return {
+      awakeningBlueprintStock: Math.floor(referenceNumber(source.awakeningBlueprintStock, 0)),
+      useAwakeningBlueprintStock: source.useAwakeningBlueprintStock !== false,
+      awakeningBlueprintPrice: Object.prototype.hasOwnProperty.call(source, "awakeningBlueprintPrice") ?
+        referenceNumber(source.awakeningBlueprintPrice, null) : defaultBlueprintPrice,
+      beastPrices: prices
+    };
+  }
+
+  function calculateReferenceCost(data, requirements, rawSettings) {
+    var settings = normalizeReferenceCostSettings(data, rawSettings);
+    var requested = requirements && typeof requirements === "object" ? requirements : {};
+    var contributionRatePerYuan = contributionPerYuan(data);
+    var required = Math.floor(referenceNumber(requested.awakeningBlueprints, 0));
+    var usedStock = settings.useAwakeningBlueprintStock ? Math.min(required, settings.awakeningBlueprintStock) : 0;
+    var missing = required - usedStock;
+    var blueprintYuan = !missing ? 0 : (settings.awakeningBlueprintPrice === null ? null :
+      ceilReferenceYuan([missing, settings.awakeningBlueprintPrice], 1));
+    var knownYuan = blueprintYuan === null ? 0 : blueprintYuan;
+    var complete = blueprintYuan !== null;
+    var missingPrices = [];
+    var merged = new Map();
+    (Array.isArray(requested.beasts) ? requested.beasts : []).forEach(function (entry) {
+      var item = entry && typeof entry === "object" ? entry : {};
+      var beastId = String(item.beastId == null ? "unknown-beast" : item.beastId);
+      var fragments = Math.floor(referenceNumber(item.fragments, 0));
+      merged.set(beastId, (merged.get(beastId) || 0) + fragments);
+    });
+    var beasts = [];
+    merged.forEach(function (fragments, beastId) {
+      var beast = (data && data.beasts || []).find(function (item) { return item.id === beastId; });
+      var beastName = beast ? beast.name : beastId;
+      var fragmentsPerBody = beast ? referenceNumber(beast.fragmentsPerBody, 0) : 0;
+      var bodyEquivalent = fragmentsPerBody > 0 ? fragments / fragmentsPerBody : null;
+      var contributionRate = beast ? referenceNumber(beast.contributionPerFragment, null) : null;
+      var contribution = contributionRate === null ? null : fragments * contributionRate;
+      var unitPrice = beast && contributionRate === null ? settings.beastPrices[beastId] : null;
+      var yuan = 0;
+      if (fragments > 0) {
+        if (contribution !== null) yuan = Math.ceil(contribution / contributionRatePerYuan);
+        else yuan = unitPrice !== null && unitPrice !== undefined && bodyEquivalent !== null ?
+          ceilReferenceYuan([fragments, unitPrice], fragmentsPerBody) : null;
+      }
+      if (yuan === null) {
+        complete = false;
+        missingPrices.push({ beastId: beastId, beastName: beastName });
+      } else knownYuan += yuan;
+      beasts.push({
+        beastId: beastId,
+        beastName: beastName,
+        fragments: fragments,
+        bodyEquivalent: bodyEquivalent,
+        unitPrice: unitPrice === undefined ? null : unitPrice,
+        contribution: contribution,
+        yuan: yuan
+      });
+    });
+    return {
+      complete: complete,
+      totalYuan: complete ? knownYuan : null,
+      knownYuan: knownYuan,
+      blueprints: {
+        required: required, usedStock: usedStock, missing: missing,
+        unitPrice: settings.awakeningBlueprintPrice, yuan: blueprintYuan
+      },
+      beasts: beasts,
+      missingPrices: missingPrices
+    };
   }
 
   function emptyInventory(data) {
@@ -393,7 +516,7 @@
       overflow: Math.max(0, state.research - deficit),
       missingFragments: missingFragments,
       contribution: contribution === null ? Number.MAX_SAFE_INTEGER : contribution,
-      yuan: contribution === null ? Number.MAX_SAFE_INTEGER : Math.ceil(contribution * data.resourceRules.yuanPerContribution),
+      yuan: contribution === null ? Number.MAX_SAFE_INTEGER : Math.ceil(contribution / contributionPerYuan(data)),
       awakeningBlueprints: state.awakeningBlueprints,
       organPieces: state.organPieces,
       stable: stateKey(state)
@@ -555,7 +678,7 @@
       exchange: {
         available: contributionAvailable,
         contribution: contribution,
-        yuan: contributionAvailable ? Math.ceil(contribution * data.resourceRules.yuanPerContribution) : null
+        yuan: contributionAvailable ? Math.ceil(contribution / contributionPerYuan(data)) : null
       }
     };
   }
@@ -585,6 +708,8 @@
     nextEffectLevel: nextEffectLevel,
     activeBeastEffect: activeBeastEffect,
     searchBeasts: searchBeasts,
+    normalizeReferenceCostSettings: normalizeReferenceCostSettings,
+    calculateReferenceCost: calculateReferenceCost,
     normalizeBeastProgress: normalizeBeastProgress,
     schoolSnapshot: schoolSnapshot,
     researchFor: researchFor,

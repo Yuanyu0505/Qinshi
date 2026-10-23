@@ -62,6 +62,23 @@ test('first load leaves account storage untouched and defaults to unknown player
   assert.equal(store.writes, 0);
 });
 
+test('unchanged persisted progress skips writes but rechecks current storage and editing rights', () => {
+  const store = memoryStore();
+  const control = controller(store);
+  assert.equal(control.setProgress('herbs', '1000'), true);
+  assert.equal(store.writes, 1);
+  assert.equal(control.setProgress('herbs', '01000'), true);
+  assert.equal(store.writes, 1);
+  const external = JSON.parse(store.getItem(STORE_KEY));
+  external.herbs = 7;
+  store.seed('a', JSON.stringify(external));
+  assert.equal(control.setProgress('herbs', '1000'), true);
+  assert.equal(store.writes, 2);
+  store.readOnly = true;
+  assert.equal(control.setProgress('herbs', '1000'), false);
+  assert.match(control.state.error, /只读/);
+});
+
 test('successful writes persist real progress before replacing the visible state', () => {
   const store = memoryStore();
   const control = controller(store);

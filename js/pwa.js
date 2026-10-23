@@ -1,7 +1,7 @@
 (function () {
   "use strict";
 
-  var APP_VERSION = "1.0.57";
+  var APP_VERSION = "1.0.58";
   var VERSION_URL = "./version.json";
   var UPDATE_CHECK_INTERVAL = 30 * 60 * 1000;
   var RETRY_DELAYS = [0, 500, 1500];
@@ -12,6 +12,7 @@
   var reloadAfterUpdate = false;
   var updateCheckPromise = null;
   var watchedInstallingWorker = null;
+  var galleryStatusPromise = null;
 
   function byId(id) { return document.getElementById(id); }
 
@@ -29,6 +30,36 @@
   function setModeStatus(message) {
     var mode = byId("pwa-mode-status");
     if (mode) mode.textContent = message;
+  }
+
+  function refreshGalleryStatus() {
+    if (galleryStatusPromise) return galleryStatusPromise;
+    var detail = byId("pwa-gallery-status");
+    var worker = registration && registration.active;
+    if (!worker) return Promise.resolve(false);
+    if (detail) detail.textContent = "图库仍在准备，核心工具已可离线使用。";
+    setModeStatus(isStandalone() ? "已安装 · 核心可离线" : "网页模式 · 核心可离线");
+    if (typeof MessageChannel !== "function") return Promise.resolve(false);
+    galleryStatusPromise = new Promise(function (resolve) {
+      var channel = new MessageChannel();
+      var timer = setTimeout(function () { finish(null); }, 15000);
+      var settled = false;
+      function finish(state) {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timer);
+        channel.port1.close();
+        channel.port2.close();
+        var ready = Boolean(state && state.status === "ready" && state.cached === state.total && state.total > 0);
+        if (detail) detail.textContent = ready ? "楼兰棋阵完整图库已准备离线使用。" : "图库尚未完整缓存；联网后将自动重试，也可重新进入楼兰棋阵重试。";
+        if (ready) setModeStatus(isStandalone() ? "已安装 · 可离线使用" : "网页模式 · 可离线使用");
+        resolve(ready);
+      }
+      channel.port1.onmessage = function (event) { finish(event.data); };
+      try { worker.postMessage({ type: "PRECACHE_GALLERY" }, [channel.port2]); }
+      catch (_) { finish(null); }
+    }).then(function (ready) { galleryStatusPromise = null; return ready; });
+    return galleryStatusPromise;
   }
 
   function showUpdate(worker) {
@@ -228,8 +259,8 @@
       watchRegistration(nextRegistration);
       return navigator.serviceWorker.ready;
     }).then(function () {
-      setModeStatus(isStandalone() ? "已安装 · 可离线使用" : "网页模式 · 可离线使用");
-      if (!waitingWorker) setStatus("全部工具资源已准备离线使用。", false);
+      if (!waitingWorker) setStatus("核心工具资源已准备离线使用。", false);
+      refreshGalleryStatus();
       return checkForUpdateSilently();
     }).catch(function (error) {
       setModeStatus("离线缓存未启用");
@@ -299,8 +330,9 @@
     window.addEventListener("appinstalled", function () {
       deferredInstallPrompt = null;
       if (installButton) installButton.hidden = true;
-      setModeStatus("已安装 · 可离线使用");
+      setModeStatus("已安装");
       setStatus("Qin 已安装到设备。", false);
+      refreshGalleryStatus();
     });
     if (installButton) {
       installButton.addEventListener("click", function () {
@@ -333,7 +365,10 @@
         reloadAfterUpdate = false;
         window.location.reload();
       });
-      window.addEventListener("online", checkForUpdateSilently);
+      window.addEventListener("online", function () { checkForUpdateSilently(); refreshGalleryStatus(); });
+      document.addEventListener("qinshi:partitionchange", function (event) {
+        if (event.detail && event.detail.name === "loulan") refreshGalleryStatus();
+      });
       document.addEventListener("visibilitychange", function () {
         if (!document.hidden) checkForUpdateSilently();
       });

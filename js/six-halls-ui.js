@@ -158,11 +158,12 @@
         protectReadFailure();
         refreshError(); notify("error"); return false;
       }
+      var unchanged = sharedField ? candidate[field] === parsed.value : candidate.halls[hallId][field] === parsed.value;
       if (sharedField) candidate[field] = parsed.value;
       else candidate.halls[hallId][field] = parsed.value;
       try {
         if (!store || typeof store.setItem !== "function") throw new Error("Account storage unavailable");
-        if (store.setItem(core.STORE_KEY || STORE_KEY, JSON.stringify(candidate)) === false) throw new Error("Progress save rejected");
+        if (!unchanged && store.setItem(core.STORE_KEY || STORE_KEY, JSON.stringify(candidate)) === false) throw new Error("Progress save rejected");
         state.progress = candidate;
         delete state.fieldErrors[key];
         state.accessError = "";

@@ -4,15 +4,23 @@ const assert = require("node:assert/strict");
 const http = require("node:http");
 const { spawn } = require("node:child_process");
 
-function launchOnce() {
+function launchOnce(bindPort = 0) {
   const source = `
     const opened = [];
+    const requestedPorts = [];
+    // Exercise real binding without disturbing a user's already running port 8000.
+    const http = require('node:http');
+    const listen = http.Server.prototype.listen;
+    http.Server.prototype.listen = function(port, ...args) {
+      requestedPorts.push(port);
+      return listen.call(this, port === 8000 ? ${JSON.stringify(bindPort)} : port, ...args);
+    };
     require('child_process').exec = (command, callback) => {
       opened.push(command);
       if (callback) callback(null);
     };
     require('./serve').startServer((port, server) => {
-      const report = () => console.log('STARTUP_RESULT:' + JSON.stringify({ port, opened }));
+      const report = () => console.log('STARTUP_RESULT:' + JSON.stringify({ port, opened, requestedPorts }));
       if (server) server.close(report);
       else report();
     });
@@ -36,6 +44,7 @@ function launchOnce() {
 test("normal startup keeps the dedicated Qin port", async () => {
   const result = await launchOnce();
   assert.equal(result.port, 8000);
+  assert.deepEqual(result.requestedPorts, [8000]);
   if (process.platform === "win32") {
     assert.deepEqual(result.opened, ["start http://localhost:8000/"]);
   }
@@ -45,12 +54,13 @@ test("occupied Qin port fails without drifting or opening another website", asyn
   const occupied = http.createServer((request, response) => response.end("unrelated-service"));
   await new Promise((resolve, reject) => {
     occupied.once("error", reject);
-    occupied.listen(8000, resolve);
+    occupied.listen(0, resolve);
   });
   try {
-    const result = await launchOnce();
+    const result = await launchOnce(occupied.address().port);
     assert.equal(result.port, null);
     assert.deepEqual(result.opened, []);
+    assert.deepEqual(result.requestedPorts, [8000]);
   } finally {
     await new Promise(resolve => occupied.close(resolve));
   }

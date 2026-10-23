@@ -10,6 +10,42 @@
 
   var STORE_KEY = "qinshi_wooden_man_alley_progress_v1";
 
+  // Reconcile only changed DOM, keeping live inputs, focus and details state intact.
+  function updateMarkup(container, markup) {
+    if (!container.firstChild) { container.innerHTML = markup; return; }
+    var template = container.ownerDocument.createElement("template");
+    template.innerHTML = markup;
+    function patch(parent, source) {
+      var incoming = Array.prototype.slice.call(source.childNodes);
+      incoming.forEach(function (next, index) {
+        var current = parent.childNodes[index];
+        if (!current) { parent.appendChild(next.cloneNode(true)); return; }
+        if (current.nodeType !== next.nodeType || current.nodeName !== next.nodeName) {
+          parent.replaceChild(next.cloneNode(true), current); return;
+        }
+        if (next.nodeType === 3) {
+          if (current.nodeValue !== next.nodeValue) current.nodeValue = next.nodeValue;
+          return;
+        }
+        if (next.nodeType !== 1) return;
+        Array.prototype.slice.call(current.attributes).forEach(function (attribute) {
+          if (current.nodeName === "DETAILS" && attribute.name === "open") return;
+          if (!next.hasAttribute(attribute.name)) current.removeAttribute(attribute.name);
+        });
+        Array.prototype.slice.call(next.attributes).forEach(function (attribute) {
+          if (current.getAttribute(attribute.name) !== attribute.value) current.setAttribute(attribute.name, attribute.value);
+        });
+        if (next.nodeName === "INPUT") {
+          if (current.value !== next.value) current.value = next.value;
+          if (current.checked !== next.checked) current.checked = next.checked;
+        }
+        patch(current, next);
+      });
+      while (parent.childNodes.length > incoming.length) parent.removeChild(parent.lastChild);
+    }
+    patch(container, template.content);
+  }
+
   function clone(value) { return JSON.parse(JSON.stringify(value)); }
   function escapeHtml(value) {
     return String(value == null ? "" : value)
@@ -23,11 +59,13 @@
     var planner = options.planner;
     var store = options.store;
     var confirmAction = options.confirm || function () { return true; };
+    var calculationRevision = 0;
     var state = {
       mode: "progress",
       progress: core.normalizeProgress({}, data),
       calculatorDraft: null,
       calculatorResult: null,
+      calculatorBusy: false,
       calculatorDirty: false,
       calculatorSourceRevision: 0,
       progressRevision: 0,
@@ -35,7 +73,14 @@
       error: ""
     };
 
+    function cancelCalculation() {
+      calculationRevision += 1;
+      state.calculatorBusy = false;
+      if (options.runner) options.runner.cancel();
+    }
+
     function syncCalculatorFromProgress() {
+      cancelCalculation();
       state.calculatorDraft = clone(state.progress);
       state.calculatorResult = null;
       state.calculatorDirty = false;
@@ -165,6 +210,7 @@
     }
 
     function setMode(mode) {
+      if (mode !== "calculator") cancelCalculation();
       if (["progress", "calculator", "reference"].indexOf(mode) !== -1) {
         if (mode === "calculator" && !state.calculatorDirty) syncCalculatorFromProgress();
         state.mode = mode;
@@ -173,6 +219,7 @@
     }
 
     function setCalculatorDraft(draft) {
+      cancelCalculation();
       state.calculatorDraft = core.normalizeProgress(draft, data);
       state.calculatorDirty = true;
       state.calculatorSourceRevision = state.progressRevision;
@@ -181,6 +228,7 @@
       return syncCalculatorFromProgress();
     }
     function updateCalculator(field, value) {
+      cancelCalculation();
       var calculator = state.calculatorDraft.calculator;
       if (field === "direction") calculator.direction = value === "reachable" ? "reachable" : "target";
       else if (field === "targetFloor") calculator.targetFloor = Math.max(1, Math.min(data.maxFloor, Math.floor(Number(value) || 1)));
@@ -191,6 +239,7 @@
       return calculator;
     }
     function setCalculatorResource(key, value) {
+      cancelCalculation();
       if (data.resourceKeys.indexOf(key) === -1) return false;
       state.calculatorDraft.resources[key] = core.nonNegativeInteger(value);
       state.calculatorResult = null;
@@ -198,6 +247,7 @@
       return true;
     }
     function updateStageLimit(tierId, toolId, field, value) {
+      cancelCalculation();
       var limits = state.calculatorDraft.calculator.stageLimits;
       if (!limits[tierId] || !limits[tierId][toolId]) return false;
       if (field === "allowed") limits[tierId][toolId].allowed = Boolean(value);
@@ -206,7 +256,7 @@
       state.calculatorDirty = true;
       return true;
     }
-    function calculate() {
+    function calculationPayload() {
       var calculator = state.calculatorDraft.calculator;
       var input = {
         progress: state.calculatorDraft,
@@ -217,10 +267,42 @@
         targetFloor: calculator.targetFloor,
         risk: calculator.risk
       };
-      state.calculatorResult = calculator.direction === "reachable"
-        ? planner.planReachable(input, data, core)
-        : planner.planToTarget(input, data, core);
+      return { direction: calculator.direction, input: clone(input) };
+    }
+    function executeCalculation(payload) {
+      return payload.direction === "reachable"
+        ? planner.planReachable(payload.input, data, core)
+        : planner.planToTarget(payload.input, data, core);
+    }
+    function calculate() {
+      cancelCalculation();
+      state.calculatorResult = executeCalculation(calculationPayload());
       return state.calculatorResult;
+    }
+    function calculateAsync() {
+      cancelCalculation();
+      var revision = calculationRevision;
+      var payload = calculationPayload();
+      state.calculatorBusy = true;
+      state.calculatorResult = null;
+      state.error = "";
+      var pending;
+      try {
+        pending = options.runner ? options.runner.run(payload) : new Promise(function (resolve, reject) {
+          setTimeout(function () { try { resolve(executeCalculation(payload)); } catch (error) { reject(error); } }, 0);
+        });
+      } catch (error) { pending = Promise.reject(error); }
+      return Promise.resolve(pending).then(function (result) {
+        if (revision !== calculationRevision) return null;
+        state.calculatorBusy = false;
+        state.calculatorResult = result;
+        return result;
+      }, function (error) {
+        if (revision !== calculationRevision) return null;
+        state.calculatorBusy = false;
+        if (!error || error.name !== "AbortError") state.error = "木人巷计算失败，请重试。";
+        return null;
+      });
     }
     function saveCalculatorProgress() {
       if (state.calculatorSourceRevision !== state.progressRevision) {
@@ -260,6 +342,8 @@
       setCalculatorResource: setCalculatorResource,
       updateStageLimit: updateStageLimit,
       calculate: calculate,
+      calculateAsync: calculateAsync,
+      cancelCalculation: cancelCalculation,
       saveCalculatorProgress: saveCalculatorProgress,
       accountLabel: accountLabel,
       captureView: captureView,
@@ -307,7 +391,7 @@
           return '<label><span>' + entry[1] + '</span><input type="number" min="0" step="1" inputmode="numeric" data-wooden-package="' + item.id + '" data-package-field="' + entry[0] + '" value="' + item[entry[0]] + '"></label>';
         }).join("") + '</div></article>';
     }).join("");
-    elements.progress.innerHTML = '<section class="panel wooden-account-panel"><div><span>当前游戏账号</span><strong>' + escapeHtml(active.accountLabel()) + '</strong></div>' +
+    updateMarkup(elements.progress, '<section class="panel wooden-account-panel"><div><span>当前游戏账号</span><strong>' + escapeHtml(active.accountLabel()) + '</strong></div>' +
       '<label class="wooden-end-date"><span>活动结束时间</span><input type="date" data-wooden-end-date value="' + escapeHtml(progress.activityEndDate) + '"></label>' +
       '<div><span>剩余时间</span><strong>' + (days === null ? "未设置" : days + "天") + '</strong></div></section>' +
       '<section class="panel wooden-current-panel"><div class="wooden-section-head"><div><span>当前进度</span><strong>' + (progress.completedAllFloors ? "500层已全部完成" : "第" + progress.currentFloor + "层") + '</strong></div>' +
@@ -318,7 +402,7 @@
       '<button type="button" class="seg" data-wooden-action="clear-board"' + (!progress.openedCells.length ? " disabled" : "") + '>清空本层记录</button></aside></div></section>' +
       '<section class="panel"><div class="panel-title">当前资源</div><div class="wooden-resource-grid">' + resources + '</div></section>' +
       '<section class="panel"><div class="panel-title">礼包设置</div><p class="muted">秘匣内容暂未明确，只记录数量，不参与资源换算。</p><div class="wooden-package-grid">' + packages + '</div></section>' +
-      '<div class="wooden-danger-actions"><button type="button" class="seg" data-wooden-action="clear-event">清空当前账号木人巷数据</button></div>';
+      '<div class="wooden-danger-actions"><button type="button" class="seg" data-wooden-action="clear-event">清空当前账号木人巷数据</button></div>');
   }
 
   function formatNumber(value, digits) {
@@ -414,14 +498,14 @@
     var targets = data.targets.map(function (target) {
       return '<button type="button" class="seg' + (calculator.targetFloor === target.floor ? " active" : "") + '" data-wooden-target="' + target.floor + '">' + target.floor + '</button>';
     }).join("");
-    elements.calculator.innerHTML = '<section class="panel wooden-calculator-controls"><div class="filter-row"><span class="filter-label">计算方向</span><div class="segs"><button type="button" class="seg' + (calculator.direction === "target" ? " active" : "") + '" data-wooden-calc-direction="target">达到目标层</button><button type="button" class="seg' + (calculator.direction === "reachable" ? " active" : "") + '" data-wooden-calc-direction="reachable">现有资源能到哪层</button></div></div>' +
-      (calculator.direction === "target" ? '<div class="wooden-target-row"><span>快捷目标</span><div class="segs">' + targets + '</div><label><span>任意目标层</span><input type="number" min="1" max="500" step="1" inputmode="numeric" data-wooden-target-input value="' + calculator.targetFloor + '"></label></div>' : "") +
+    updateMarkup(elements.calculator, '<section class="panel wooden-calculator-controls"><div class="filter-row"><span class="filter-label">计算方向</span><div class="segs"><button type="button" class="seg' + (calculator.direction === "target" ? " active" : "") + '" data-wooden-calc-direction="target">达到目标层</button><button type="button" class="seg' + (calculator.direction === "reachable" ? " active" : "") + '" data-wooden-calc-direction="reachable">现有资源能到哪层</button></div></div>' +
+      '<div class="wooden-target-row"' + (calculator.direction === "target" ? "" : " hidden") + '><span>快捷目标</span><div class="segs">' + targets + '</div><label><span>任意目标层</span><input type="number" min="1" max="500" step="1" inputmode="numeric" data-wooden-target-input value="' + calculator.targetFloor + '"></label></div>' +
       '<div class="filter-row"><span class="filter-label">风险档位</span><div class="segs"><button type="button" class="seg' + (calculator.risk === "expected" ? " active" : "") + '" data-wooden-risk="expected">理论期望</button><button type="button" class="seg' + (calculator.risk === "conservative" ? " active" : "") + '" data-wooden-risk="conservative">保守估计</button><button type="button" class="seg' + (calculator.risk === "worst" ? " active" : "") + '" data-wooden-risk="worst">最坏情况</button></div></div>' +
       '<label class="wooden-package-toggle"><input type="checkbox" data-wooden-include-packages' + (calculator.includePurchasablePackages ? " checked" : "") + '> 计入当前账号仍可购买的礼包</label>' +
       '<div class="panel-title">本次计算资源</div><p class="muted">临时修改不会写入个人进度。</p><div class="wooden-resource-grid">' + resourceInputs + '</div>' +
       '<details data-wooden-advanced class="wooden-advanced"><summary>高级设置：各阶段道具限制</summary><div class="wooden-limit-stages">' + renderStageLimits(root, draft) + '</div></details>' +
       '<div class="wooden-calculator-actions"><button type="button" class="seg" data-wooden-calc-action="reload">从个人进度重新读取</button><button type="button" class="seg active" data-wooden-calc-action="calculate">开始计算</button><button type="button" class="seg" data-wooden-calc-action="save">保存回个人进度</button></div></section>' +
-      '<section class="wooden-calculation-result" id="wooden-calculation-result"><h2>计算结果</h2>' + (calculator.direction === "target" ? forwardResult(root, active.state.calculatorResult) : reverseResult(root, active.state.calculatorResult)) + '</section>';
+      '<section class="wooden-calculation-result" id="wooden-calculation-result"><h2>计算结果</h2>' + (calculator.direction === "target" ? forwardResult(root, active.state.calculatorResult) : reverseResult(root, active.state.calculatorResult)) + '</section>');
   }
 
   function renderReference(root) {
@@ -449,6 +533,12 @@
     if (active.state.mode === "progress") renderProgress(root);
     if (active.state.mode === "calculator") renderCalculator(root);
     if (active.state.mode === "reference") renderReference(root);
+    var calculateButton = elements.calculator.querySelector('[data-wooden-calc-action="calculate"]');
+    if (calculateButton) {
+      calculateButton.disabled = active.state.calculatorBusy;
+      calculateButton.textContent = active.state.calculatorBusy ? "正在计算…" : "开始计算";
+    }
+    elements.calculator.setAttribute("aria-busy", String(active.state.calculatorBusy));
     elements.error.hidden = !active.state.error;
     elements.error.textContent = active.state.error;
   }
@@ -470,9 +560,24 @@
       core: root.WOODEN_MAN_ALLEY_CORE,
       planner: root.WOODEN_MAN_ALLEY_PLANNER,
       store: root.QinshiAccounts,
+      runner: root.QinshiCalculationRunner ? root.QinshiCalculationRunner.create({ kind: "wooden", fallback: function (payload) {
+        return payload.direction === "reachable"
+          ? root.WOODEN_MAN_ALLEY_PLANNER.planReachable(payload.input, root.WOODEN_MAN_ALLEY_DATA, root.WOODEN_MAN_ALLEY_CORE)
+          : root.WOODEN_MAN_ALLEY_PLANNER.planToTarget(payload.input, root.WOODEN_MAN_ALLEY_DATA, root.WOODEN_MAN_ALLEY_CORE);
+      } }) : null,
       confirm: function (message) { return root.confirm(message); }
     });
     partition.dataset.woodenInitialized = "true";
+    partition.addEventListener("input", function (event) {
+      if (!event.target.matches("input")) return;
+      active.cancelCalculation();
+      active.state.calculatorResult = null;
+      var result = root.document.getElementById("wooden-calculation-result");
+      if (result) updateMarkup(result, '<h2>计算结果</h2>' + (active.state.calculatorDraft.calculator.direction === "target" ? forwardResult(root, null) : reverseResult(root, null)));
+      var button = elements.calculator.querySelector('[data-wooden-calc-action="calculate"]');
+      if (button) { button.disabled = false; button.textContent = "开始计算"; }
+      elements.calculator.setAttribute("aria-busy", "false");
+    });
     partition.addEventListener("click", function (event) {
       var mode = event.target.closest("[data-wooden-mode]");
       if (mode) { active.setMode(mode.dataset.woodenMode); renderMode(root); return; }
@@ -485,13 +590,23 @@
       var calcAction = event.target.closest("[data-wooden-calc-action]");
       if (calcAction) {
         if (calcAction.dataset.woodenCalcAction === "reload") active.reloadCalculator();
-        if (calcAction.dataset.woodenCalcAction === "calculate") active.calculate();
+        if (calcAction.dataset.woodenCalcAction === "calculate") {
+          active.calculateAsync().then(function (calculation) {
+            if (!calculation) {
+              elements.error.hidden = !active.state.error;
+              elements.error.textContent = active.state.error;
+              var button = elements.calculator.querySelector('[data-wooden-calc-action="calculate"]');
+              if (button && !active.state.calculatorBusy) { button.disabled = false; button.textContent = "开始计算"; }
+              elements.calculator.setAttribute("aria-busy", String(active.state.calculatorBusy));
+              return;
+            }
+            renderMode(root);
+            var result = root.document.getElementById("wooden-calculation-result");
+            if (calculation && result) result.scrollIntoView({ block: "start", behavior: "smooth" });
+          });
+        }
         if (calcAction.dataset.woodenCalcAction === "save") active.saveCalculatorProgress();
         renderMode(root);
-        if (calcAction.dataset.woodenCalcAction === "calculate") {
-          var result = root.document.getElementById("wooden-calculation-result");
-          if (result) result.scrollIntoView({ block: "start", behavior: "smooth" });
-        }
         return;
       }
       var cell = event.target.closest("[data-wooden-cell]");
@@ -519,6 +634,7 @@
     });
     root.document.addEventListener("qinshi:partitionchange", function (event) {
       if (event.detail && event.detail.name === "wooden-man-alley") renderMode(root);
+      else active.cancelCalculation();
     });
     renderMode(root);
     return active;

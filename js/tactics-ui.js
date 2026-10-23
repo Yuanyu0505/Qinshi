@@ -1032,7 +1032,7 @@
 
   function init() {
     var partition = document.getElementById("partition-tactics");
-    if (!partition) return;
+    if (!partition || partition.dataset.tacticsInitialized === "true") return;
     el.selector = document.getElementById("tactics-selector");
     el.modes = document.getElementById("tactics-modes");
     el.detailMode = document.getElementById("tactics-detail-mode");
@@ -1048,6 +1048,7 @@
       return;
     }
 
+    partition.dataset.tacticsInitialized = "true";
     calculatorRefresh = PERFORMANCE.createRefreshQueue(renderCalculatorResult, 120);
 
     el.selector.addEventListener("click", handleSelectorClick);
@@ -1082,5 +1083,6 @@
     if (!partition.hidden) activatePartition();
   }
 
+  window.TACTICS_UI = { init: init };
   document.addEventListener("DOMContentLoaded", init);
 })();

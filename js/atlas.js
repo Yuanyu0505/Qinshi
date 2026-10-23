@@ -213,6 +213,12 @@
   }
 
   function summarizeUpgrade(items, levels, targetLevel, upgradeStages) {
+    return summarizeAtlasStates((items || []).map(function (item) {
+      return { plan: upgradePlan(item, levelOf(item, levels), targetLevel, upgradeStages) };
+    }), targetLevel);
+  }
+
+  function summarizeAtlasStates(states, targetLevel) {
     var summary = {
       targetLevel: Number(targetLevel) || 1,
       total: 0,
@@ -223,9 +229,9 @@
       equipment: []
     };
     var equipmentMap = {};
-    (items || []).forEach(function (item) {
+    (states || []).forEach(function (state) {
       summary.total += 1;
-      var plan = upgradePlan(item, levelOf(item, levels), targetLevel, upgradeStages);
+      var plan = state.plan;
       if (plan.reached) return;
       summary.pending += 1;
       summary.knots += plan.knots;
@@ -370,7 +376,7 @@
     });
   }
 
-  function filterAtlas(items, options) {
+  function queryAtlas(items, options) {
     var opts = options || {};
     var category = opts.category || "全部";
     var minLevel = opts.minLevel == null ? 0 : Number(opts.minLevel);
@@ -410,8 +416,11 @@
     });
     var comparator = ordinaryComparator(opts);
     return stableSort(pinned, pinnedComparator)
-      .concat(stableSort(favorites, comparator), stableSort(regular, comparator))
-      .map(function (state) { return state.item; });
+      .concat(stableSort(favorites, comparator), stableSort(regular, comparator));
+  }
+
+  function filterAtlas(items, options) {
+    return queryAtlas(items, options).map(function (state) { return state.item; });
   }
 
   return {
@@ -431,6 +440,8 @@
     neededStages: neededStages,
     upgradePlan: upgradePlan,
     summarizeUpgrade: summarizeUpgrade,
+    summarizeAtlasStates: summarizeAtlasStates,
+    queryAtlas: queryAtlas,
     searchAtlas: searchAtlas,
     filterAtlas: filterAtlas
   };

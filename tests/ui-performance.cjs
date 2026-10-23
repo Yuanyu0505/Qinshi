@@ -12,15 +12,24 @@ before(async () => {
   browser = await chromium.launch({ channel: 'msedge', headless: true });
 });
 after(async () => { if (browser) await browser.close(); if (server) await new Promise(r => server.close(r)); });
+async function waitForPartition(page, part) {
+  await page.waitForFunction(name => {
+    const partition = document.getElementById('partition-' + name);
+    return partition && !partition.hidden && window.QinshiPartitionLoader.isReady(name);
+  }, part);
+}
 async function pageFor(part, width = 900) {
   const page = await browser.newPage({ viewport: { width, height: 900 }, serviceWorkers: 'block' });
+  await page.route('**/*', route => new URL(route.request().url()).origin === url ? route.continue() : route.abort());
   await openApp(page, url);
   await page.evaluate(p => document.querySelector('.tab[data-partition="' + p + '"]').click(), part);
+  await waitForPartition(page, part);
   return page;
 }
 
 test('大型隐藏分区仅在首次进入时渲染', async () => {
   const page = await browser.newPage({ viewport: { width: 900, height: 900 }, serviceWorkers: 'block' });
+  await page.route('**/*', route => new URL(route.request().url()).origin === url ? route.continue() : route.abort());
   try {
     await openApp(page, url);
     const targets = [
@@ -36,6 +45,7 @@ test('大型隐藏分区仅在首次进入时渲染', async () => {
     }
     for (const [part, selector] of targets) {
       await page.evaluate(name => document.querySelector('.tab[data-partition="' + name + '"]').click(), part);
+      await waitForPartition(page, part);
       assert.ok((await page.locator(selector).innerHTML()).trim(), part + ' should render after activation');
     }
   } finally { await page.close(); }

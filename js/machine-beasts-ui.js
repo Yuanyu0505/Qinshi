@@ -35,6 +35,62 @@
   var rendered = { progress: false, calculator: false, reference: false };
   var searchRefresh = {};
   var pendingSearches = {};
+  var calculationRunners = {};
+  var calculationSequence = 0;
+  var calculating = false;
+  var lastCostRenderKey = "";
+
+  function setCalculating(busy) {
+    calculating = busy;
+    if (!el.calculatorResult) return;
+    if (busy) el.calculatorResult.setAttribute("aria-busy", "true");
+    else el.calculatorResult.removeAttribute("aria-busy");
+    el.calculator.querySelectorAll('[data-machine-action="calculate"], [data-machine-action="calculate-school"]').forEach(function (button) {
+      button.disabled = busy;
+    });
+  }
+
+  function cancelCalculation(invalidate) {
+    calculationSequence += 1;
+    Object.keys(calculationRunners).forEach(function (key) { calculationRunners[key].cancel(); });
+    if (calculating && el.calculatorResult) el.calculatorResult.hidden = true;
+    setCalculating(false);
+    if (invalidate) {
+      state.calcResult = null;
+      state.schoolResult = null;
+      if (el.calculatorResult) el.calculatorResult.hidden = true;
+    }
+  }
+
+  function runCalculation(kind, payload) {
+    cancelCalculation(true);
+    var sequence = calculationSequence;
+    var account = ACCOUNT_STORAGE.currentAccount && ACCOUNT_STORAGE.currentAccount();
+    var accountId = account && account.id;
+    function fallback(input) {
+      return kind === "beast-single" ? CORE.calculateInvestmentPlan(DATA, beastById(input.beastId), input.progress, input.options)
+        : PLANNER.calculateSchoolPlans(DATA, input.schoolId, input.progressByBeast, input.options);
+    }
+    if (!calculationRunners[kind] && window.QinshiCalculationRunner) {
+      calculationRunners[kind] = window.QinshiCalculationRunner.create({ kind: kind, fallback: fallback });
+    }
+    setCalculating(true);
+    el.calculatorResult.hidden = false;
+    el.calculatorResult.innerHTML = '<p role="status">正在后台计算，可继续操作；修改规划输入将取消本次计算。</p>';
+    var task = calculationRunners[kind] ? calculationRunners[kind].run(payload) : new Promise(function (resolve) { setTimeout(function () { resolve(fallback(payload)); }, 0); });
+    task.then(function (result) {
+      var current = ACCOUNT_STORAGE.currentAccount && ACCOUNT_STORAGE.currentAccount();
+      if (sequence !== calculationSequence || (current && current.id) !== accountId) return;
+      setCalculating(false);
+      if (kind === "beast-single") { state.calcResult = result; renderCalculatorResult(result); }
+      else { state.schoolResult = result; renderSchoolCalculatorResult(result); }
+    }).catch(function (error) {
+      if (sequence !== calculationSequence || error.name === "AbortError") return;
+      setCalculating(false);
+      el.calculatorResult.hidden = true;
+      showError("计算失败，请调整输入后重试。", error);
+    });
+  }
 
   function escapeHtml(value) {
     return String(value === undefined || value === null ? "" : value)
@@ -111,7 +167,9 @@
 
   function saveProgress(beasts, referenceCost) {
     try {
-      var saved = ACCOUNT_STORAGE.setItem(STORE_KEY, JSON.stringify({ beasts: beasts || state.beasts, referenceCost: referenceCost || state.referenceCost }));
+      var serialized = JSON.stringify({ beasts: beasts || state.beasts, referenceCost: referenceCost || state.referenceCost });
+      if ((!ACCOUNT_STORAGE.isReadOnly || !ACCOUNT_STORAGE.isReadOnly()) && ACCOUNT_STORAGE.getItem(STORE_KEY) === serialized) return true;
+      var saved = ACCOUNT_STORAGE.setItem(STORE_KEY, serialized);
       if (saved === false) {
         showError("机关兽个人进度或参考成本保存失败，当前修改尚未保存。");
         return false;
@@ -200,6 +258,9 @@
   }
 
   function refreshReferenceCosts() {
+    var renderKey = JSON.stringify([state.referenceCostDraft, state.referenceCostDirty, state.referenceCostRequirements, referenceCostInputError()]);
+    if (renderKey === lastCostRenderKey) return;
+    lastCostRenderKey = renderKey;
     el.calculatorResult.querySelectorAll('[data-reference-cost-panel]').forEach(function (panel) {
       var requirements = state.referenceCostRequirements[panel.dataset.referenceCostPanel];
       if (requirements) panel.innerHTML = referenceCostPanel(requirements);
@@ -688,6 +749,7 @@
   }
 
   function setMode(mode) {
+    if (state.mode !== mode) cancelCalculation(false);
     state.mode = mode;
     applySearchContext(mode);
     el.modes.querySelectorAll("[data-machine-beast-mode]").forEach(function (button) { button.classList.toggle("active", button.dataset.machineBeastMode === mode); });
@@ -719,6 +781,7 @@
   }
 
   function restoreView(view) {
+    cancelCalculation(false);
     var saved = view || {};
     Object.keys(searchRefresh).forEach(function (scope) { searchRefresh[scope].cancel(); });
     state.searches = Object.assign({ progress: "", calculator: "", reference: "" }, saved.searches || {});
@@ -876,6 +939,7 @@
   function handleCalculatorClick(event) {
     var modeButton = event.target.closest("[data-machine-calculator-mode]");
     if (modeButton) {
+      cancelCalculation(true);
       state.calculatorMode = modeButton.dataset.machineCalculatorMode;
       el.calculatorModes.querySelectorAll("[data-machine-calculator-mode]").forEach(function (button) {
         button.classList.toggle("active", button === modeButton);
@@ -892,11 +956,12 @@
     if (action === "save-reference-cost") {
       updateReferenceCost(el.calculatorControls.querySelector('[data-reference-cost-field="awakeningBlueprintStock"]'));
     } else if (action === "reload-calculator") {
+      cancelCalculation(true);
       resetCalculator(beast.id);
       el.calculatorResult.hidden = true;
       renderCalculatorControls();
     } else if (action === "calculate") {
-      state.calcResult = CORE.calculateInvestmentPlan(DATA, beast, state.calcDraft, {
+      runCalculation("beast-single", { beastId: beast.id, progress: state.calcDraft, options: {
         targetLevel: state.calcTargetLevel,
         includeHighRanks: state.calcDraft.showHighRanks,
         includeMods: state.calcDraft.showMods,
@@ -904,9 +969,9 @@
         ownedLimits: state.singleInventoryPolicy.limits,
         newRankMode: state.singleNewRankMode,
         preferOwnedOnTie: true
-      });
-      renderCalculatorResult(state.calcResult);
+      } });
     } else if (action === "reload-school-calculator") {
+      cancelCalculation(true);
       resetSchoolCalculator(state.schoolDraft.schoolId);
       el.calculatorResult.hidden = true;
       renderCalculatorControls();
@@ -916,7 +981,7 @@
       var participatingIds = school.beastIds.filter(function (beastId) { return draft.participating[beastId]; });
       var limits = {};
       school.beastIds.forEach(function (beastId) { limits[beastId] = draft.ownedPoliciesByBeast[beastId].limits; });
-      state.schoolResult = PLANNER.calculateSchoolPlans(DATA, school, draft.progressByBeast, {
+      runCalculation("beast-school", { schoolId: school.id, progressByBeast: draft.progressByBeast, options: {
         targetStage: draft.targetStage,
         participatingBeastIds: participatingIds,
         useOwnedInventory: draft.useOwnedInventory,
@@ -924,8 +989,7 @@
         allowNewHighRanks: draft.allowNewHighRanks,
         allowNewModifications: draft.allowNewModifications,
         newRankMode: draft.newRankMode
-      });
-      renderSchoolCalculatorResult(state.schoolResult);
+      } });
     }
   }
 
@@ -935,6 +999,7 @@
       updateReferenceCost(target);
       return;
     }
+    cancelCalculation(true);
     if (target.matches('[data-machine-search="calculator"]')) {
       if (event.isComposing || state.composingSearch.calculator) return;
       scheduleSearchInput("calculator", target.value);
@@ -971,6 +1036,7 @@
       updateReferenceCost(target);
       return;
     }
+    cancelCalculation(true);
     if (target.matches("[data-calc-beast]")) {
       resetCalculator(target.value);
       el.calculatorResult.hidden = true;
@@ -1041,7 +1107,7 @@
 
   function init() {
     var partition = document.getElementById("partition-machine-beasts");
-    if (!partition) return;
+    if (!partition || partition.dataset.machineInitialized === "true") return;
     el.modes = document.getElementById("machine-beast-modes");
     el.error = document.getElementById("machine-beast-error");
     el.progress = document.getElementById("machine-beast-progress");
@@ -1060,6 +1126,7 @@
       return;
     }
     loadProgress();
+    partition.dataset.machineInitialized = "true";
     resetCalculator(DATA.beasts[0].id);
     resetSchoolCalculator(DATA.schools[0].id);
     el.progressSearch.innerHTML = searchBar("progress", "搜索名称、品质、流派、研发效果或获取来源");
@@ -1089,6 +1156,9 @@
     });
     function activatePartition(event) {
       if (event && (!event.detail || event.detail.name !== "machine-beasts")) {
+        cancelCalculation(false);
+        Object.keys(calculationRunners).forEach(function (key) { calculationRunners[key].dispose(); });
+        calculationRunners = {};
         Object.keys(searchRefresh).forEach(function (scope) { searchRefresh[scope].cancel(); });
         return;
       }

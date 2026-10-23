@@ -775,6 +775,8 @@
 
   function init() {
     if (!DATA || !CORE) return;
+    var partition = document.getElementById("partition-battle-box-pill-pouch");
+    if (!partition || partition.dataset.battlePouchInitialized === "true") return;
     el.error = document.getElementById("battle-pouch-error");
     el.progress = document.getElementById("battle-pouch-progress");
     el.account = document.getElementById("battle-pouch-account");
@@ -784,6 +786,7 @@
     el.calculator = document.getElementById("battle-pouch-calculator");
     el.reference = document.getElementById("battle-pouch-reference");
     if (!el.progress || !el.account || !el.calculator || !el.reference) return;
+    partition.dataset.battlePouchInitialized = "true";
     loadState();
     bindEvents();
     function activatePartition(event) {
@@ -794,5 +797,6 @@
     if (!document.getElementById("partition-battle-box-pill-pouch").hidden) activatePartition();
   }
 
+  window.BATTLE_BOX_PILL_POUCH_UI = { init: init };
   document.addEventListener("DOMContentLoaded", init);
 })();

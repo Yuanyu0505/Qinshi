@@ -2,6 +2,20 @@ const { test } = require("node:test");
 const assert = require("node:assert");
 const A = require("./atlas.js");
 
+test("queryAtlas：筛选派生计划可直接供汇总复用，等级改变后重新排序", () => {
+  const items = ["a", "b"].map(id => ({ id, name: id, atlas: "攻", level: 0, stages: [] }));
+  const options = { targetLevel: 2, upgradeStages: [{ to: 1, knots: 3, souls: 2 }, { to: 2, knots: 5, souls: 4 }], levels: { a: 0, b: 1 }, favorites: ["a", "b"], sortField: "knots", sortDirection: "asc" };
+  const states = A.queryAtlas(items, options);
+  assert.deepStrictEqual(states.map(state => state.item.id), ["b", "a"]);
+  states[0].plan.knots = 100;
+  assert.strictEqual(A.summarizeAtlasStates(states, 2).knots, 108);
+  options.levels.a = 2;
+  const changed = A.queryAtlas(items, options);
+  assert.deepStrictEqual(changed.map(state => state.item.id), ["a", "b"]);
+  assert.strictEqual(A.summarizeAtlasStates(changed, 2).pending, 1);
+  assert.strictEqual(A.summarizeAtlasStates(changed, 2).knots, 5);
+});
+
 test("elementOfDisciple：按提供名单匹配五行并兼容神弟子中点", () => {
   const expected = {
     金: ["神王道少羽", "神霸道田虎", "神赤霄刘季", "神极诣星魂", "神寒蝉吴旷", "神真刚", "神嬴政", "神紫女", "神云中君", "神伏念", "神胡姬", "神虞姬", "神白凤", "神典庆", "神季布", "神司徒万里", "神韩信", "神月神"],

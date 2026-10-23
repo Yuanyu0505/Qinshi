@@ -25,8 +25,6 @@
   const UI_PERFORMANCE = window.UI_PERFORMANCE;
   const ZHULU = window.ZHULU;
   const ZHULU_UI = window.ZHULU_UI;
-  const MACHINE_BEAST_UI = window.MACHINE_BEAST_UI;
-  const WOODEN_MAN_ALLEY_UI = window.WOODEN_MAN_ALLEY_UI;
   const ACCOUNT_STORAGE = window.QinshiAccounts;
   const ATLAS_LEVELS_KEY = "qinshi_atlas_levels_v1";
   const ATLAS_TARGET_LEVEL_KEY = "qinshi_atlas_target_level_v1";
@@ -66,6 +64,8 @@
   const atlasRefresh = UI_PERFORMANCE.createRefreshQueue(applyAtlas);
   const forgingRefresh = UI_PERFORMANCE.createRefreshQueue(applyForging);
   const progressRefresh = UI_PERFORMANCE.createRefreshQueue(applyProgressSearch);
+  const dropsRefresh = UI_PERFORMANCE.createRefreshQueue(applyDrops);
+  const quizRefresh = UI_PERFORMANCE.createRefreshQueue(applyQuiz);
   const equipmentMobileQuery = window.matchMedia("(max-width: 1024px)");
   let activeBookDetail = null;
   let forgeReturnSession = null;
@@ -76,6 +76,8 @@
   let dropActionTrigger = null;
   const itemNavigationStack = ITEM_NAV ? ITEM_NAV.createStack() : null;
   let itemMenuContext = null;
+  let itemNavigationRequest = 0;
+  let navigationIntent = 0;
   let switchPartition = function () {};
 
   const el = {
@@ -502,8 +504,8 @@
     if (partition === "atlas") return captureAtlasQueryView();
     if (partition === "drops") return captureDropView();
     if (partition === "forbidden" && window.FORBIDDEN_UI) return window.FORBIDDEN_UI.captureView();
-    if (partition === "machine-beasts" && MACHINE_BEAST_UI) return MACHINE_BEAST_UI.captureView();
-    if (partition === "wooden-man-alley" && WOODEN_MAN_ALLEY_UI) return WOODEN_MAN_ALLEY_UI.captureView();
+    if (partition === "machine-beasts" && window.MACHINE_BEAST_UI) return window.MACHINE_BEAST_UI.captureView();
+    if (partition === "wooden-man-alley" && window.WOODEN_MAN_ALLEY_UI) return window.WOODEN_MAN_ALLEY_UI.captureView();
     if (partition === "zhulu" && ZHULU_UI) return ZHULU_UI.captureView();
     return {};
   }
@@ -522,10 +524,10 @@
     } else if (partition === "forbidden" && window.FORBIDDEN_UI) {
       window.FORBIDDEN_UI.restoreView(view, afterRestore);
       return;
-    } else if (partition === "machine-beasts" && MACHINE_BEAST_UI) {
-      MACHINE_BEAST_UI.restoreView(view);
-    } else if (partition === "wooden-man-alley" && WOODEN_MAN_ALLEY_UI) {
-      WOODEN_MAN_ALLEY_UI.restoreView(view);
+    } else if (partition === "machine-beasts" && window.MACHINE_BEAST_UI) {
+      window.MACHINE_BEAST_UI.restoreView(view);
+    } else if (partition === "wooden-man-alley" && window.WOODEN_MAN_ALLEY_UI) {
+      window.WOODEN_MAN_ALLEY_UI.restoreView(view);
     } else if (partition === "zhulu" && ZHULU_UI) {
       ZHULU_UI.restoreView(view);
     }
@@ -538,7 +540,7 @@
     if (partition === "atlas") return applyAtlasNavigation(item);
     if (partition === "drops") return applyDropQueryNavigation(item);
     if (partition === "forbidden" && window.FORBIDDEN_UI) return window.FORBIDDEN_UI.applyNavigationQuery(item.forgeKey);
-    if (partition === "machine-beasts" && MACHINE_BEAST_UI) return MACHINE_BEAST_UI.applyNavigationQuery(item.machineBeastName || item.forgeKey);
+    if (partition === "machine-beasts" && window.MACHINE_BEAST_UI) return window.MACHINE_BEAST_UI.applyNavigationQuery(item.machineBeastName || item.forgeKey);
     if (partition === "zhulu" && ZHULU_UI) return ZHULU_UI.applyNavigationQuery(item.forgeKey);
     return capturePartitionView(partition);
   }
@@ -602,19 +604,29 @@
   }
 
   function clearItemNavigation() {
+    itemNavigationRequest += 1;
     if (itemNavigationStack) itemNavigationStack.clear();
     sharedForgingSearch.deactivate();
     updateItemNavigationReturn();
     closeItemNavigationMenu(false);
   }
 
-  function navigateResolvedItem(sourcePartition, target, item) {
+  async function navigateResolvedItem(sourcePartition, target, item) {
     if (!ITEM_NAV || !itemNavigationStack) return;
     if (!item || !target.partition) return;
+    const navigationRequest = ++itemNavigationRequest;
+    const intent = ++navigationIntent;
     const sourceView = capturePartitionView(sourcePartition);
+    if (window.QinshiPartitionLoader) {
+      try { await window.QinshiPartitionLoader.ensure(target.partition); }
+      catch (error) { window.alert(error.message); return; }
+      if (navigationRequest !== itemNavigationRequest || intent !== navigationIntent) return;
+      const sourcePanel = document.getElementById("partition-" + sourcePartition);
+      if (sourcePanel && sourcePanel.hidden) return;
+    }
     const destinationViewBeforeJump = capturePartitionView(target.partition);
     const sourceScrollY = window.scrollY;
-    switchPartition(target.partition, { source: "item-navigation", preserveEquipment: true });
+    switchPartition(target.partition, { source: "item-navigation", preserveEquipment: true, _requestIntent: intent });
     const destinationAppliedView = applyPartitionNavigation(target.partition, item, target);
     itemNavigationStack.push({
       sourcePartition: sourcePartition,
@@ -640,7 +652,7 @@
     navigateResolvedItem(source === "drops" ? "drops" : source, target, item);
   }
 
-  function returnFromItemNavigation() {
+  async function returnFromItemNavigation() {
     if (!ITEM_NAV || !itemNavigationStack) return;
     const frame = itemNavigationStack.pop();
     if (!frame) return;
@@ -654,7 +666,7 @@
       sourceView = cloneNavigationValue(frame.sourceView);
       sourceView.progress = cloneNavigationValue(currentDestinationView.progress);
     }
-    switchPartition(frame.sourcePartition, { source: "item-navigation-return", preserveEquipment: true });
+    if (await switchPartition(frame.sourcePartition, { source: "item-navigation-return", preserveEquipment: true }) === false) return;
     restorePartitionView(frame.sourcePartition, sourceView, function () {
       if (frame.sourcePartition === "forbidden" && window.FORBIDDEN_UI && typeof window.FORBIDDEN_UI.restoreScrollPosition === "function") {
         window.FORBIDDEN_UI.restoreScrollPosition(sourceView.scrollPosition, frame.sourceScrollY);
@@ -1088,6 +1100,12 @@
     const partitionScrollPositions = Object.create(null);
     let activePartition = "atlas";
     let mobileMoreRestoreTarget = null;
+    let partitionRequest = 0;
+    const loadStatus = document.createElement("div");
+    loadStatus.className = "panel partition-load-status";
+    loadStatus.setAttribute("role", "status");
+    loadStatus.hidden = true;
+    document.querySelector(".top").insertAdjacentElement("afterend", loadStatus);
     const parts = {
       equipment: document.getElementById("partition-equipment"),
       loulan: document.getElementById("partition-loulan"),
@@ -1157,16 +1175,37 @@
       const navigationOptions = options || {};
       if (!parts[name]) return;
       const source = navigationOptions.source || "user";
+      const intent = navigationOptions._requestIntent === undefined ? ++navigationIntent : navigationOptions._requestIntent;
+      if (intent !== navigationIntent) return false;
+      if (source === "user" && navigationOptions._requestIntent === undefined) clearItemNavigation();
+      const request = ++partitionRequest;
+      loadStatus.hidden = true;
+      if (window.QinshiPartitionLoader && !window.QinshiPartitionLoader.isReady(name)) {
+        setMoreOpen(false);
+        loadStatus.textContent = "正在加载" + (PARTITION_TITLES[name] || name) + "…";
+        loadStatus.hidden = false;
+        return window.QinshiPartitionLoader.ensure(name).then(function () {
+          if (request !== partitionRequest || intent !== navigationIntent) return false;
+          return switchPartition(name, Object.assign({}, navigationOptions, { _requestIntent: intent }));
+        }).catch(function () {
+          if (request !== partitionRequest) return false;
+          loadStatus.textContent = "分区加载失败，请检查连接后再次点击该分区重试。";
+          loadStatus.hidden = false;
+          return false;
+        });
+      }
+      if (name === "loulan" && window.QinshiPartitionLoader) window.QinshiPartitionLoader.ensure(name);
       const previousPartition = activePartition;
       if (name !== "equipment") equipmentRefresh.cancel();
       if (name !== "atlas") atlasRefresh.cancel();
+      if (name !== "drops") dropsRefresh.cancel();
+      if (name !== "quiz") quizRefresh.cancel();
       if (name !== "forging") {
         forgingRefresh.cancel();
         progressRefresh.cancel();
       }
       if (activePartition && activePartition !== name) partitionScrollPositions[activePartition] = window.scrollY;
       if (source === "user") {
-        clearItemNavigation();
         if (zhuluJumpSession) clearZhuluJumpSession();
         if (dropJumpSession) clearDropJumpSession();
         if (name !== "forging") invalidateForgeReturnSession("partition");
@@ -1192,6 +1231,8 @@
       }
       setMoreOpen(false);
       activePartition = name;
+      if (name === "drops") applyDrops();
+      if (name === "quiz") applyQuiz();
       document.dispatchEvent(new CustomEvent("qinshi:partitionchange", {
         detail: { name: name, previous: previousPartition, source: source }
       }));
@@ -1203,6 +1244,7 @@
           window.scrollTo({ top: partitionScrollPositions[name] || 0, behavior: "auto" });
         });
       }
+      return true;
     };
 
     partitionButtons.forEach((button) => {
@@ -1250,9 +1292,7 @@
 
   function initDrops() {
     if (!DROP_DATA || !DROPS) return;
-    el.dropSearch.addEventListener("input", () => {
-      applyDrops();
-    });
+    UI_PERFORMANCE.bindInput(el.dropSearch, () => {}, dropsRefresh);
     applyDrops();
   }
 
@@ -1537,10 +1577,11 @@
     });
     el.atlasResults.addEventListener("change", (e) => {
       if (e.target.classList.contains("atlas-level")) {
+        const previousEditor = atlasState.inventoryEditingId;
         closeAtlasInventoryEditor();
         atlasState.levels[e.target.dataset.id] = parseInt(e.target.value, 10) || 0;
         saveAtlasLevels();
-        applyAtlas();
+        applyAtlas(e.target.dataset.id, previousEditor);
         return;
       }
       if (e.target.matches("[data-atlas-inventory-owned]")) {
@@ -1722,13 +1763,14 @@
     return `${base}<span class="atlas-inventory-suffix is-short">（已有${status.owned}，还差<span class="atlas-inventory-missing">${status.missing}</span>）</span>`;
   }
 
-  function atlasItemHtml(item) {
+  function atlasItemHtml(item, derived) {
+    const derivedState = derived && derived.item === item ? derived : null;
     const L = ATLAS.levelOf(item, atlasState.levels);
     const itemId = String(item.id);
     const element = ATLAS.elementOfDisciple(item.name);
     const favorite = atlasState.favorites.includes(itemId);
     const pinned = favorite && atlasState.pins.includes(itemId);
-    const plan = ATLAS.upgradePlan(item, L, atlasState.targetLevel, ATLAS_DATA.meta.upgradeStages);
+    const plan = derivedState ? derivedState.plan : ATLAS.upgradePlan(item, L, atlasState.targetLevel, ATLAS_DATA.meta.upgradeStages);
     const equipmentHtml = atlasEquipmentHtml(itemId, plan, favorite);
     const upgradeHtml = plan.reached
       ? `<div class="atlas-upgrade done">已达到目标等级（${plan.currentLevel} / ${plan.targetLevel}级）</div>`
@@ -1770,10 +1812,9 @@
 
   function initQuiz() {
     if (!QUIZ_DATA || !QUIZ) return;
-    el.quizSearch.addEventListener("input", function () {
+    UI_PERFORMANCE.bindInput(el.quizSearch, function () {
       quizState.query = el.quizSearch.value;
-      applyQuiz();
-    });
+    }, quizRefresh);
     applyQuiz();
   }
 
@@ -1785,6 +1826,7 @@
   }
 
   function applyQuiz() {
+    quizRefresh.cancel();
     if (!QUIZ.hasQuery(quizState.query)) {
       el.quizResults.innerHTML = "";
       el.quizResults.hidden = true;
@@ -1833,7 +1875,7 @@
     if (card && item) card.outerHTML = atlasItemHtml(item);
   }
 
-  function applyAtlas() {
+  function applyAtlas(changedId, previousEditor) {
     atlasRefresh.cancel();
     el.atlasTabs.querySelectorAll("button").forEach((b) => {
       b.classList.toggle("active", b.dataset.atlas === atlasState.tab);
@@ -1848,7 +1890,7 @@
     }
     el.atlasUpgradeSummary.hidden = false;
     el.atlasResults.hidden = false;
-    const items = filterAtlasExactItems(ATLAS.filterAtlas(ATLAS_DATA.items, {
+    const states = ATLAS.queryAtlas(ATLAS_DATA.items, {
       category: atlasState.tab,
       minLevel: atlasState.levelMin,
       maxLevel: atlasState.levelMax,
@@ -1866,12 +1908,37 @@
       noteSources: atlasState.noteSources,
       sortField: atlasState.sortField,
       sortDirection: atlasState.sortDirection
-    }));
+    });
+    const items = filterAtlasExactItems(states.map(state => state.item));
+    const visibleItems = new Set(items);
+    const visibleStates = states.filter(state => visibleItems.has(state.item));
+    const stateByItem = new Map(visibleStates.map(state => [state.item, state]));
     el.atlasUpgradeSummary.innerHTML = atlasExactQueryStatusHtml(items) + atlasUpgradeSummaryHtml(
-      ATLAS.summarizeUpgrade(items, atlasState.levels, atlasState.targetLevel, ATLAS_DATA.meta.upgradeStages)
+      ATLAS.summarizeAtlasStates(visibleStates, atlasState.targetLevel)
     );
+    // Requery sorting and filters even for a local level edit; only reuse DOM when
+    // membership is unchanged. Favorites/pins may reorder when costs change.
+    if (typeof changedId === "string" && items.length) {
+      const cards = new Map(Array.from(el.atlasResults.querySelectorAll("[data-atlas-item]"))
+        .map(node => [node.dataset.atlasItem, node]));
+      if (cards.size === items.length && items.every(item => cards.has(String(item.id)))) {
+        items.forEach((item, index) => {
+          const id = String(item.id);
+          let card = cards.get(id);
+          if (id === changedId || id === previousEditor) {
+            const template = document.createElement("template");
+            template.innerHTML = atlasItemHtml(item, stateByItem.get(item));
+            const replacement = template.content.firstElementChild;
+            card.replaceWith(replacement);
+            card = replacement;
+          }
+          if (el.atlasResults.children[index] !== card) el.atlasResults.insertBefore(card, el.atlasResults.children[index] || null);
+        });
+        return;
+      }
+    }
     el.atlasResults.innerHTML = items.length
-      ? items.map(atlasItemHtml).join("")
+      ? items.map(item => atlasItemHtml(item, stateByItem.get(item))).join("")
       : '<div class="empty"><p>未找到匹配的图鉴弟子</p></div>';
   }
 
@@ -2373,6 +2440,7 @@
   }
 
   function applyDrops() {
+    dropsRefresh.cancel();
     const q = DROPS.normalize(el.dropSearch.value);
     el.dropDefaultOrange.hidden = Boolean(q);
     if (!q) {

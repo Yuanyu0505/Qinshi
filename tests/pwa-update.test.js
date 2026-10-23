@@ -28,6 +28,7 @@ async function flushAsync(times = 6) {
 async function loadPwa(registration, options = {}) {
   const elements = new Map([
     ['pwa-status', createElement()],
+    ['pwa-gallery-status', createElement()],
     ['pwa-update-notice', createElement()],
     ['pwa-mode-status', createElement()],
     ['pwa-version', createElement()],
@@ -81,6 +82,7 @@ async function loadPwa(registration, options = {}) {
     async json() { return { version: CURRENT_VERSION }; }
   }));
   const context = {
+    MessageChannel: options.MessageChannel,
     console,
     document: {
       hidden: false,
@@ -95,7 +97,7 @@ async function loadPwa(registration, options = {}) {
       return fetchImpl(...args, fetchAttempt);
     },
     caches: {
-      async keys() { return options.cacheKeys || ['qinshi-site-1.0.37', 'unrelated-cache']; },
+      async keys() { return options.cacheKeys || ['qinshi-site-1.0.37', 'qinshi-gallery-v1', 'unrelated-cache']; },
       async delete(key) { deletedCaches.push(key); return true; }
     },
     localStorage: {
@@ -106,8 +108,8 @@ async function loadPwa(registration, options = {}) {
     Promise,
     Date,
     URL,
-    setTimeout(callback) { Promise.resolve().then(callback); return 1; },
-    clearTimeout() {},
+    setTimeout(callback, delay) { if (options.MessageChannel) return setTimeout(callback,delay); Promise.resolve().then(callback); return 1; },
+    clearTimeout(timer) { if (options.MessageChannel) clearTimeout(timer); },
     setInterval(callback, delay) { intervalCalls.push({ callback, delay }); return intervalCalls.length; },
     clearInterval() {}
   };
@@ -137,6 +139,31 @@ async function loadPwa(registration, options = {}) {
 function idleRegistration(overrides = {}) {
   return { waiting: null, installing: null, addEventListener() {}, async update() {}, ...overrides };
 }
+
+for (const status of ['partial', 'ready']) {
+  test(`离线准备准确区分核心与${status === 'ready' ? '完整' : '未完成'}图库`, async () => {
+    const { MessageChannel } = require('node:worker_threads');
+    const loaded = await loadPwa(idleRegistration({ active: { postMessage(message,ports) {
+      ports[0].postMessage({ status, cached: status === 'ready' ? 16 : 3, total:16 });
+    } } }), { MessageChannel });
+    await flushAsync(12);
+    assert.match(loaded.elements.get('pwa-status').textContent, /核心/);
+    assert.doesNotMatch(loaded.elements.get('pwa-status').textContent, /全部工具资源/);
+    assert.match(loaded.elements.get('pwa-gallery-status').textContent, status === 'ready' ? /图库.*离线/ : /图库.*重试/);
+    assert.match(loaded.elements.get('pwa-mode-status').textContent, status === 'ready' ? /可离线使用/ : /核心可离线/);
+  });
+}
+
+test('图库准备消息不能覆盖待更新提示', async () => {
+  const { MessageChannel } = require('node:worker_threads');
+  const loaded = await loadPwa(idleRegistration({
+    waiting: { state:'installed', postMessage() {} },
+    active: { postMessage(message,ports) { ports[0].postMessage({ status:'partial', cached:3, total:16 }); } }
+  }), { MessageChannel });
+  await flushAsync(12);
+  assert.match(loaded.elements.get('pwa-status').textContent, /发现新版本/);
+  assert.match(loaded.elements.get('pwa-gallery-status').textContent, /图库.*重试/);
+});
 
 const currentLimits = { minimumReadVersion: CURRENT_VERSION, minimumWriteVersion: CURRENT_VERSION };
 
@@ -392,7 +419,7 @@ test('版本信标遇到短暂网络失败会自动重试三次并继续更新',
   assert.equal(updateCalls, 1);
 });
 
-test('强制修复只移除本站 Service Worker 和 PWA 缓存并保留个人进度', async () => {
+test('强制修复只移除本站 Service Worker 和核心 PWA 缓存并保留独立图库与个人进度', async () => {
   const unregistered = [];
   const registration = {
     scope: 'https://example.test/Qinshi/',

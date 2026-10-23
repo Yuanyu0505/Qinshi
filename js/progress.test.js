@@ -6,6 +6,30 @@ const vm = require("node:vm");
 const P = require("./progress.js");
 const EquipmentForging = require("./equipment-forging.js");
 
+test("searchEquipment：一次查询复用目录索引且不同实例及原地改名不会串数据", () => {
+  let nameReads = 0;
+  const option = { forgeName: "forge", get equipmentName() { nameReads++; return "sword"; }, aliases: ["blade"], preferred: true };
+  const catalog = [option];
+  const data = { items: [{ name: "forge", stages: [{ stage: "1", tokens: [{ n: "blade" }] }] }] };
+  const disciples = [{ id: "d", items: Array.from({ length: 30 }, (_, i) => ({ id: String(i), forgeName: "forge", equipmentName: "sword", progress: 0, quality: "red" })) }];
+  const result = P.searchEquipment(data, disciples, "blade", catalog);
+  assert.strictEqual(result.owned.length, 30);
+  assert.strictEqual(result.required.length, 30);
+  assert.ok(nameReads < 10, "catalog names should be read once per query, not per saved item or token: " + nameReads);
+  assert.strictEqual(P.searchEquipment({ items: [] }, disciples, "blade", catalog).required.length, 0);
+  data.items[0].name = "changed";
+  assert.strictEqual(P.searchEquipment(data, disciples, "blade", catalog).required.length, 0);
+  data.items[0].name = "forge";
+  option.aliases[0] = "new alias";
+  assert.strictEqual(P.searchEquipment(data, disciples, "blade", catalog).owned.length, 0);
+  assert.strictEqual(P.searchEquipment(data, disciples, "new alias", catalog).owned.length, 30);
+  const otherCatalog = [{ forgeName: "other", equipmentName: "other sword", aliases: ["new alias"], preferred: true }];
+  assert.strictEqual(P.searchEquipment(data, disciples, "new alias", otherCatalog).owned.length, 0);
+  assert.strictEqual(P.searchEquipment(data, disciples, "new alias", catalog).owned.length, 30);
+  data.items[0] = { name: "forge", stages: [{ stage: "1", tokens: [{ n: "replacement" }] }] };
+  assert.strictEqual(P.searchEquipment(data, disciples, "blade", catalog).required.length, 0);
+});
+
 function loadWindowData(file, key) {
   const context = { window: {} };
   vm.runInNewContext(fs.readFileSync(path.join(__dirname, "..", file), "utf8"), context);

@@ -41,10 +41,18 @@ async function enter(page) {
   await page.locator('[data-machine-beast-mode="calculator"]').click();
 }
 
+async function waitForCalculation(page, resultKey) {
+  await page.waitForFunction(key => {
+    const panel = document.querySelector('#machine-beast-calculator-result');
+    return window.MACHINE_BEAST_UI.captureView()[key] != null && panel && panel.getAttribute('aria-busy') !== 'true';
+  }, resultKey);
+}
+
 async function calculateSingle(page) {
   await page.locator('[data-calc-beast]').selectOption('war-demon');
   await page.locator('[data-calc-target]').selectOption('1');
   await page.locator('[data-machine-action="calculate"]').click();
+  await waitForCalculation(page, 'calcResult');
   await page.locator('[data-reference-cost-panel="single"] [data-reference-cost-total]').waitFor();
 }
 
@@ -60,6 +68,7 @@ async function calculateFixedSingle(page) {
     window.MACHINE_BEAST_UI.restoreView(view);
   });
   await page.locator('[data-machine-action="calculate"]').click();
+  await waitForCalculation(page, 'calcResult');
   const panel = page.locator('[data-reference-cost-panel="single"]');
   // Two zero-rank bodies: 192 blueprints * 70 + ceil(67 * 600 / 2.7).
   assert.equal(await panel.locator('[data-reference-cost-total]').textContent(), '28,329');
@@ -85,6 +94,7 @@ async function calculateFixedSchool(page) {
     window.MACHINE_BEAST_UI.restoreView(view);
   });
   await page.locator('[data-machine-action="calculate-school"]').click();
+  await waitForCalculation(page, 'schoolResult');
   const result = await page.evaluate(() => window.MACHINE_BEAST_UI.captureView().schoolResult);
   assert.equal(result.valid, true);
   assert.equal(result.plans.length, 1);
@@ -288,6 +298,7 @@ test('invalid stock or price replaces old totals and missing manual prices are n
   await page.locator('[data-calc-beast]').selectOption('mechanical-wing');
   await page.locator('[data-calc-target]').selectOption('1');
   await page.locator('[data-machine-action="calculate"]').click();
+  await waitForCalculation(page, 'calcResult');
   assert.match(await page.locator('[data-reference-cost-panel="single"]').textContent(), /未设置.*机关飞翼|机关飞翼.*未设置/);
   assert.equal(await page.locator('[data-reference-cost-total]').count(), 0);
   assert.notEqual(await page.locator('[data-reference-cost-panel="single"] .machine-reference-cost-error b').evaluate(node => getComputedStyle(node).color), 'rgb(255, 107, 99)');

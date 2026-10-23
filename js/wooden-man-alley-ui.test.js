@@ -146,3 +146,37 @@ test("calculator updates stage tool restrictions", () => {
   assert.strictEqual(limit.allowed, false);
   assert.strictEqual(limit.max, 3);
 });
+
+test("async calculator discards a result after input changes", async () => {
+  let resolve;
+  const control = controller({ runner: { run: () => new Promise(done => { resolve = done; }), cancel() {} } });
+  const pending = control.calculateAsync();
+  control.setCalculatorResource("woodSword", 12);
+  resolve({ targetFloor: 75 });
+  assert.equal(await pending, null);
+  assert.equal(control.state.calculatorResult, null);
+  assert.equal(control.state.calculatorBusy, false);
+});
+
+test("async calculator keeps synchronous planner compatibility and handles failures", async () => {
+  const control = controller();
+  const expected = control.calculate();
+  assert.deepEqual(await control.calculateAsync(), expected);
+  const failed = controller({ runner: { run: () => Promise.reject(new Error("worker unavailable")), cancel() {} } });
+  assert.equal(await failed.calculateAsync(), null);
+  assert.match(failed.state.error, /计算失败/);
+  assert.equal(failed.state.calculatorBusy, false);
+});
+
+test("loading or leaving calculator cancels in-flight result", async () => {
+  for (const invalidate of [control => control.load(), control => control.setMode("progress"), control => control.reloadCalculator()]) {
+    let resolve;
+    const control = controller({ runner: { run: () => new Promise(done => { resolve = done; }), cancel() {} } });
+    control.setMode("calculator");
+    const pending = control.calculateAsync();
+    invalidate(control);
+    resolve({ targetFloor: 75 });
+    assert.equal(await pending, null);
+    assert.equal(control.state.calculatorResult, null);
+  }
+});

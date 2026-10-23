@@ -5,6 +5,7 @@ const fs = require("fs");
 const os = require("os");
 const path = require("path");
 const { spawnSync } = require("child_process");
+const vm = require("node:vm");
 const { createServer, lanIPv4s } = require("./serve.js");
 
 const APP_VERSION = JSON.parse(fs.readFileSync(path.join(__dirname, "version.json"), "utf8")).version;
@@ -16,6 +17,25 @@ function escapeRegex(value) {
 
 function versionedScriptPattern(asset) {
   return new RegExp(escapeRegex(`<script defer src="${asset}?v=${APP_VERSION}"></script>`));
+}
+
+async function loadedPartition(name, apiName) {
+  const requests = [];
+  let initialized = 0;
+  const root = { location: { protocol: "file:" }, addEventListener() {} };
+  root[apiName] = { init() { initialized++; } };
+  const document = {
+    createElement() { return { remove() {} }; },
+    head: { appendChild(script) { requests.push(script.src); queueMicrotask(() => script.onload()); } }
+  };
+  vm.runInNewContext(fs.readFileSync(path.join(__dirname, 'js/partition-loader.js'), 'utf8'), { window: root, document, Promise });
+  assert.strictEqual(requests.length, 0, 'unvisited partition must not fetch scripts');
+  const first = root.QinshiPartitionLoader.ensure(name);
+  assert.strictEqual(initialized, 0, 'initialization must wait for all scripts');
+  await Promise.all([first, root.QinshiPartitionLoader.ensure(name)]);
+  await root.QinshiPartitionLoader.ensure(name);
+  assert.strictEqual(initialized, 1, 'initialization is shared by concurrent and later visits');
+  return requests;
 }
 
 test("六堂在桌面和手机更多导航中紧随合阵、先于楼兰棋阵", () => {
@@ -36,12 +56,12 @@ test("六堂在桌面和手机更多导航中紧随合阵、先于楼兰棋阵",
   assert.match(app, /"six-halls": document\.getElementById\("partition-six-halls"\)/);
 });
 
-test("六堂预留空分区并按账号、资料、核心、界面顺序接入懒模块", () => {
+test("六堂预留空分区并按账号、资料、核心、界面顺序接入懒模块", async () => {
   const html = fs.readFileSync(path.join(__dirname, "index.html"), "utf8");
   const app = fs.readFileSync(path.join(__dirname, "js", "app.js"), "utf8");
   assert.match(html, /<section id="partition-six-halls" hidden>\s*<\/section>/);
   const scripts = [...html.matchAll(/<script defer src="([^"]+)"><\/script>/g)].map(match => match[1].split("?")[0]);
-  const ordered = ["data/six-halls.js", "js/six-halls.js", "js/six-halls-ui.js", "js/app.js"];
+  const ordered = ["data/six-halls.js", "js/partition-loader.js", "js/app.js"];
   let previous = -1;
   ordered.forEach(asset => {
     const index = scripts.indexOf(asset);
@@ -52,9 +72,10 @@ test("六堂预留空分区并按账号、资料、核心、界面顺序接入�
   });
   ["js/account-edit-lease.js", "js/account-profiles.js", "js/ui-performance.js"].forEach(asset => {
     const index = scripts.indexOf(asset);
-    assert.ok(index >= 0 && index < scripts.indexOf("js/six-halls-ui.js"), `${asset} 必须先于六堂界面加载`);
+    assert.ok(index >= 0 && index < scripts.indexOf("js/app.js"), `${asset} 必须先于分区激活加载`);
   });
   assert.doesNotMatch(app, /SIX_HALLS_UI\.init\(/);
+  assert.deepStrictEqual(await loadedPartition('six-halls', 'SIX_HALLS_UI'), ['js/six-halls.js', 'js/six-halls-ui.js'].map(asset => asset + '?v=' + APP_VERSION));
 });
 
 test(`PWA ${APP_VERSION} 精确发布六堂资料、核心、界面和独立样式`, () => {
@@ -79,7 +100,7 @@ test(`PWA ${APP_VERSION} 精确发布六堂资料、核心、界面和独立样�
   assert.match(pwa, new RegExp(`APP_VERSION = "${APP_VERSION_PATTERN}";`));
 });
 
-test("wooden man alley partition is wired in navigation and script order", () => {
+test("wooden man alley partition is wired in navigation and script order", async () => {
   const html = fs.readFileSync(path.join(__dirname, "index.html"), "utf8");
   const app = fs.readFileSync(path.join(__dirname, "js", "app.js"), "utf8");
   assert.match(html, /data-partition="battle-box-pill-pouch">战匣丹囊<\/button>[\s\S]*?data-partition="wooden-man-alley">木人巷<\/button>[\s\S]*?data-partition="formations">合阵<\/button>/);
@@ -88,12 +109,10 @@ test("wooden man alley partition is wired in navigation and script order", () =>
   assert.match(html, /data-wooden-mode="calculator">目标计算/);
   assert.match(html, /data-wooden-mode="reference">资料图表/);
   const accountIndex = html.indexOf('js/account-profiles.js');
-  const dataIndex = html.indexOf('data/wooden-man-alley.js');
-  const coreIndex = html.indexOf('js/wooden-man-alley.js');
-  const plannerIndex = html.indexOf('js/wooden-man-alley-planner.js');
-  const uiIndex = html.indexOf('js/wooden-man-alley-ui.js');
+  const loaderIndex = html.indexOf('js/partition-loader.js');
   const appIndex = html.indexOf('js/app.js');
-  assert.ok(accountIndex < dataIndex && dataIndex < coreIndex && coreIndex < plannerIndex && plannerIndex < uiIndex && uiIndex < appIndex);
+  assert.ok(accountIndex < loaderIndex && loaderIndex < appIndex);
+  assert.deepStrictEqual(await loadedPartition('wooden-man-alley', 'WOODEN_MAN_ALLEY_UI'), ['data/wooden-man-alley.js', 'js/wooden-man-alley.js', 'js/wooden-man-alley-planner.js', 'js/wooden-man-alley-ui.js'].map(asset => asset + '?v=' + APP_VERSION));
   assert.match(app, /"wooden-man-alley": "木人巷"/);
   assert.match(app, /secondaryPartitions = \[[^\]]*"wooden-man-alley"/);
   assert.match(app, /"wooden-man-alley": document\.getElementById\("partition-wooden-man-alley"\)/);
@@ -119,7 +138,6 @@ test(`PWA ${APP_VERSION} includes every wooden man alley runtime asset`, () => {
   const workflow = fs.readFileSync(path.join(__dirname, ".github", "workflows", "pages.yml"), "utf8");
   const assets = ["data/wooden-man-alley.js", "js/wooden-man-alley.js", "js/wooden-man-alley-planner.js", "js/wooden-man-alley-ui.js"];
   assets.forEach(asset => {
-    assert.match(html, versionedScriptPattern(asset));
     assert.match(worker, new RegExp("\\./" + asset.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
     if (asset.startsWith("js/")) assert.match(workflow, new RegExp(asset.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
   });
@@ -894,8 +912,7 @@ test("首页提供合阵工作台及其数据、核心和界面脚本", async ()
     assert.match(page.body, /id="formation-selector"/);
     assert.match(page.body, /id="formation-workspace"/);
     assert.match(page.body, versionedScriptPattern("data/formations.js"));
-    assert.match(page.body, versionedScriptPattern("js/formations.js"));
-    assert.match(page.body, versionedScriptPattern("js/formations-ui.js"));
+    assert.deepStrictEqual(await loadedPartition('formations', 'FORMATIONS_UI'), ['js/formations.js', 'js/formations-ui.js'].map(asset => asset + '?v=' + APP_VERSION));
 
     for (const resource of ["/data/formations.js", "/js/formations.js", "/js/formations-ui.js"]) {
       const response = await get(port, resource);
@@ -914,8 +931,7 @@ test("首页提供机关兽个人进度、方案计算、资料图表及其三�
     assert.match(page.body, /data-machine-beast-mode="calculator">方案计算/);
     assert.match(page.body, /data-machine-beast-mode="reference">资料图表/);
     assert.match(page.body, versionedScriptPattern("data/machine-beasts.js"));
-    assert.match(page.body, versionedScriptPattern("js/machine-beasts.js"));
-    assert.match(page.body, versionedScriptPattern("js/machine-beasts-ui.js"));
+    assert.deepStrictEqual(await loadedPartition('machine-beasts', 'MACHINE_BEAST_UI'), ['js/machine-beasts.js', 'js/machine-beast-school-planner.js', 'js/machine-beasts-ui.js'].map(asset => asset + '?v=' + APP_VERSION));
     for (const resource of ["/data/machine-beasts.js", "/js/machine-beasts.js", "/js/machine-beast-school-planner.js", "/js/machine-beasts-ui.js"]) {
       const response = await get(port, resource);
       assert.strictEqual(response.status, 200, resource);
@@ -930,9 +946,6 @@ test("机关兽方案计算提供单只与目标流派阶数子页面", () => {
   const css = fs.readFileSync(path.join(__dirname, "css", "style.css"), "utf8");
   assert.match(html, /data-machine-calculator-mode="single"[^>]*>单只机关兽/);
   assert.match(html, /data-machine-calculator-mode="school"[^>]*>目标流派阶数/);
-  assert.match(html, versionedScriptPattern("js/machine-beast-school-planner.js"));
-  assert.ok(html.indexOf("js/machine-beasts.js") < html.indexOf("js/machine-beast-school-planner.js"));
-  assert.ok(html.indexOf("js/machine-beast-school-planner.js") < html.indexOf("js/machine-beasts-ui.js"));
   assert.match(ui, /使用已有库存/);
   assert.match(ui, /data-machine-owned-enabled/);
   assert.match(ui, /data-machine-owned-limit/);
@@ -1513,7 +1526,8 @@ test(`PWA ${APP_VERSION} 发布响应式禁地、统一导航、逐鹿资料与�
     assert.match(worker.body, new RegExp(`CACHE_NAME\\s*=\\s*CACHE_PREFIX\\s*\\+\\s*"${APP_VERSION_PATTERN}"`));
     assert.match(pwa.body, new RegExp(`APP_VERSION\\s*=\\s*"${APP_VERSION_PATTERN}"`));
     assert.match(index.body, /id="pwa-repair-update"/);
-    assert.match(pwa.body, /addEventListener\("online", checkForUpdateSilently\)/);
+    // Online recovery is exercised by dispatching the real listener in
+    // tests/pwa-update.test.js, not by requiring one callback spelling here.
     assert.equal(JSON.parse(version.body).version, APP_VERSION);
     assert.match(worker.body, /"\.\/data\/tactics\.js"/);
     assert.match(worker.body, /"\.\/js\/tactics\.js"/);
@@ -1687,8 +1701,7 @@ test("首页提供战匣丹囊三子分区及三层脚本", async () => {
     assert.match(page.body, /data-battle-pouch-mode="calculator">目标计算/);
     assert.match(page.body, /data-battle-pouch-mode="reference">资料图表/);
     assert.match(page.body, versionedScriptPattern("data/battle-box-pill-pouch.js"));
-    assert.match(page.body, versionedScriptPattern("js/battle-box-pill-pouch.js"));
-    assert.match(page.body, versionedScriptPattern("js/battle-box-pill-pouch-ui.js"));
+    assert.deepStrictEqual(await loadedPartition('battle-box-pill-pouch', 'BATTLE_BOX_PILL_POUCH_UI'), ['js/battle-box-pill-pouch.js', 'js/battle-box-pill-pouch-ui.js'].map(asset => asset + '?v=' + APP_VERSION));
     for (const resource of [
       "/data/battle-box-pill-pouch.js",
       "/js/battle-box-pill-pouch.js",

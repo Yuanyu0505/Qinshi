@@ -2,6 +2,50 @@
 
 const test = require('node:test');
 const assert = require('node:assert/strict');
+
+test('optional currency goal counts new draws and direct gifts, never historical draws',()=>{
+  const input={cumulative:1000,inventory:0,target:0,targetEnabled:false,currency:0,currencyTargetEnabled:true,currencyTarget:45,discount:10,vouchers:0,useVouchers:true,periods:[{number:2,sources:[{id:'pack98',name:'98礼包',draws:30,price:98,maxPurchases:1,availableDraws:0,purchaseCurrency:15,availableCurrency:0}]}]};
+  const r=planner.plan(input);assert.equal(r.valid,true);assert.equal(r.cheapest.totalBefore,98);assert.equal(r.cheapest.plannedDraws,30);assert.equal(r.cheapest.currencyBalance,45);assert.equal(r.cheapest.remainingTickets,0);
+  const both=planner.plan({...input,targetEnabled:true,target:1031});assert.equal(both.cheapest,null);assert.equal(both.shortfall,1);
+});
+
+test('surplus all is postprocessing and never adds purchases or unselected sources',()=>{
+  const input={cumulative:0,inventory:0,target:100,currency:4,currencyTargetEnabled:false,discount:4,vouchers:0,useVouchers:true,periods:[{number:6,sources:[{id:'pack',name:'礼包',draws:105,price:100,maxPurchases:1,availableDraws:0,purchaseCurrency:15}]}]};
+  const stop=planner.plan({...input,drawMode:'stop'}).cheapest,all=planner.plan({...input,drawMode:'all'}).cheapest;
+  assert.equal(stop.plannedDraws,100);assert.equal(stop.remainingTickets,5);assert.equal(stop.currencyBalance,119);
+  assert.equal(all.plannedDraws,105);assert.equal(all.remainingTickets,0);assert.equal(all.currencyBalance,124);
+  assert.deepEqual(all.periods[0].rows.map(r=>r.purchases),stop.periods[0].rows.map(r=>r.purchases));assert.equal(all.totalBefore,stop.totalBefore);
+});
+
+test('joint targets choose currency-rich packs and unlimited supplementation without target-sized arrays',()=>{
+  const base={cumulative:0,inventory:0,target:20,targetEnabled:true,currency:0,currencyTargetEnabled:true,currencyTarget:45,discount:10,vouchers:0,useVouchers:true,periods:[{number:2,sources:[{id:'cheap',name:'便宜券',draws:30,price:30,maxPurchases:1,availableDraws:0,purchaseCurrency:0},{id:'rich',name:'道具礼包',draws:30,price:40,maxPurchases:1,availableDraws:0,purchaseCurrency:15}]}]};
+  const r=planner.plan(base);assert.equal(r.cheapest.totalBefore,40);assert.equal(r.cheapest.plannedDraws,30);assert.equal(r.cheapest.currencyBalance,45);
+  const big=planner.plan({...base,targetEnabled:false,currencyTarget:1000000000000,periods:[{number:6,sources:[{id:'pack648',name:'648',draws:130,price:648,maxPurchases:null,availableDraws:0,purchaseCurrency:110}]}]});
+  assert.equal(big.valid,true);assert.equal(big.cheapest.periods[0].rows[0].purchases,4166666667);assert.equal(big.cheapest.plannedDraws,541666666630);assert.equal(big.cheapest.currencyBalance,1000000000000);
+});
+
+test('existing unused tickets may satisfy only the currency goal with zero new cost',()=>{
+  const r=planner.plan({cumulative:500,inventory:10,target:0,targetEnabled:false,currency:3,currencyTargetEnabled:true,currencyTarget:8,drawMode:'stop',discount:4,vouchers:0,useVouchers:true,periods:[]});
+  assert.equal(r.valid,true);assert.equal(r.cheapest.plannedDraws,5);assert.equal(r.cheapest.remainingTickets,5);assert.equal(r.cheapest.currencyBalance,8);
+});
+
+test('joint currency optimization agrees with an independent exhaustive purchase oracle',()=>{
+  let seed=2781;const next=n=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed%n;};
+  for(let fixture=0;fixture<100;fixture++){
+    const value={cumulative:next(4),inventory:next(4),currency:next(4),target:4+next(12),targetEnabled:!!next(2),currencyTargetEnabled:true,currencyTarget:4+next(16),discount:[0.0001,4.3,10][next(3)],vouchers:next(3),useVouchers:!!next(2),periods:Array.from({length:1+next(2)},(_,i)=>({number:i+2,sources:Array.from({length:3},(_,j)=>({id:'s'+j,name:'s'+j,draws:1+next(4),price:1+next(6),maxPurchases:next(3),availableDraws:next(3),availableCurrency:next(3),purchaseCurrency:next(4)}))}))};
+    const candidates=[];const target=value.targetEnabled?value.target:value.cumulative;
+    const enough=(tickets,gifts)=>tickets>=target-value.cumulative&&tickets+gifts+value.currency>=value.currencyTarget;
+    if(enough(value.inventory,0))candidates.push([null,0,0,value.cumulative+value.inventory-target]);
+    else for(let last=0;last<value.periods.length;last++){
+      const rows=value.periods.slice(0,last+1).flatMap(p=>p.sources);
+      const free=rows.reduce((n,s)=>n+s.availableDraws,0),gift=rows.reduce((n,s)=>n+s.availableCurrency,0);
+      const walk=(i,t,g,cost)=>{if(i===rows.length){if(!enough(value.inventory+free+t,gift+g))return;const v=value.useVouchers?Math.min(cost,value.vouchers):0;candidates.push([value.periods[last].number,Math.round((cost-v)*100*value.discount/10),v*100,value.cumulative+value.inventory+free+t-target]);return;}const s=rows[i];for(let n=0;n<=s.maxPurchases;n++)walk(i+1,t+n*s.draws,g+n*s.purchaseCurrency,cost+n*s.price);};walk(0,0,0,0);
+    }
+    const best=keys=>candidates.slice().sort((a,b)=>{for(const k of keys)if(a[k]!==b[k])return a[k]-b[k];return 0;})[0]||null;
+    const r=planner.plan(value);assert.equal(r.valid,true,JSON.stringify(value));assert.deepEqual(tuple(r.fastest),best([0,1,2,3]),'fast '+JSON.stringify(value));assert.deepEqual(tuple(r.cheapest),best([1,2,0,3]),'cheap '+JSON.stringify(value));
+    for(const p of [r.fastest,r.cheapest].filter(Boolean)){assert.ok(p.currencyBalance>=value.currencyTarget);assert.ok(!value.targetEnabled||p.finalCumulative>=value.target);assert.equal(p.currencyBalance,value.currency+p.directCurrency+p.plannedDraws);assert.equal(p.remainingTickets,p.availableTotal-value.cumulative-p.plannedDraws);}
+  }
+});
 const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');

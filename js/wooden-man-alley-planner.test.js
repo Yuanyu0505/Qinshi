@@ -16,6 +16,12 @@ test("applies all risk modes and rounds conservative demand once", () => {
   assert.strictEqual(PLANNER.applyRisk(4.1 + 4.1, 18, "conservative"), 10);
 });
 
+test('conservative demand never exceeds the same tool plan worst case',()=>{
+  assert.strictEqual(PLANNER.applyRisk(1,1,'conservative'),1);
+  assert.strictEqual(PLANNER.applyRisk(0,0,'conservative'),0);
+  assert.strictEqual(PLANNER.applyRisk(5,5,'conservative'),5);
+});
+
 test("plans every shortcut and arbitrary targets", () => {
   [75, 180, 230, 300, 330, 500, 222].forEach(targetFloor => {
     const result = PLANNER.planToTarget({ progress: progress(), targetFloor, risk: "expected" }, DATA, CORE);
@@ -32,7 +38,7 @@ test("uses the actual partial board for the current floor", () => {
     risk: "expected"
   }, DATA, CORE);
   assert.strictEqual(result.demand.expected, 1);
-  assert.strictEqual(result.demand.conservative, 2);
+  assert.strictEqual(result.demand.conservative, 1);
   assert.strictEqual(result.demand.worst, 1);
 });
 

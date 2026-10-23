@@ -9,7 +9,7 @@
 
   function applyRisk(expectedTotal, worstTotal, risk, multiplier) {
     if (risk === "worst") return Math.ceil(Math.max(0, worstTotal));
-    if (risk === "conservative") return Math.ceil(Math.max(0, expectedTotal) * (multiplier || 1.2));
+    if (risk === "conservative") return Math.min(Math.ceil(Math.max(0, worstTotal)), Math.ceil(Math.max(0, expectedTotal) * (multiplier || 1.2)));
     return Math.max(0, expectedTotal);
   }
 

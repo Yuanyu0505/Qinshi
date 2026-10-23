@@ -38,7 +38,7 @@
     return value;
   }
   function sourceData(data, id) { var source = data.sources.find(function(s) { return s.id === id; }); if (!source) fail('来源不存在'); return source; }
-  function sourceDefaults() { return { enabled: true, obtained: 0, purchased: 0, todayDate: null, todayObtained: 0, todayPurchased: 0 }; }
+  function sourceDefaults() { return { enabled: true, obtained: 0, purchased: 0, todayDate: null, todayObtained: 0, todayPurchased: 0, currencyObtained: 0 }; }
   function makePeriod(number, historical, data) {
     var period = { startDate: null, locked: historical, ended: historical, sources: {} };
     if (!historical) data.sources.forEach(function(source) {
@@ -48,9 +48,9 @@
     return period;
   }
   function createDefault(data) {
-    var state = { schemaVersion: 1, realms: {}, settings: { platformId: data.platforms[0].id, platforms: clone(data.platforms), vouchers: 0, useVouchers: true } };
+    var state = { schemaVersion: 2, realms: {}, settings: { platformId: data.platforms[0].id, platforms: clone(data.platforms), vouchers: 0, useVouchers: true } };
     data.realms.forEach(function(definition) {
-      var realm = { currentPeriod: definition.firstPeriod, cumulative: 0, inventory: 0, target: 4550, finished: false, periods: {} };
+      var realm = { currentPeriod: definition.firstPeriod, cumulative: 0, inventory: 0, target: 4550, currency: 0, targetEnabled: true, currencyTargetEnabled: false, currencyTarget: 0, drawMode: 'stop', finished: false, periods: {} };
       for (var number = 1; number <= data.maxPeriods; number++) realm.periods[number] = makePeriod(number, number < definition.firstPeriod, data);
       state.realms[definition.id] = realm;
     });
@@ -70,7 +70,7 @@
     if (typeof settings.platformId !== 'string' || !own(ids, settings.platformId)) fail('所选平台不存在');
     money(settings.vouchers, '代金'); boolean(settings.useVouchers, '使用代金');
   }
-  function validateSource(record, source, period) {
+  function validateSource(record, source, period, legacy) {
     object(record, '来源记录'); boolean(record.enabled, '来源启用状态');
     integer(record.obtained, '已获取抽数'); integer(record.purchased, '已购买份数');
     integer(record.todayObtained, '今日已获取抽数', source.daily ? source.draws : 0);
@@ -83,6 +83,10 @@
     var entitlement = source.price ? multiply(record.purchased, source.draws) : multiply(source.limit, source.draws);
     if (record.obtained > entitlement) fail('已获取抽数超过来源可领取权益');
     if (source.price) multiply(record.purchased, Math.round(source.price * 100));
+    if (!legacy) {
+      integer(record.currencyObtained, '本期已领取兑换道具', source.currencyReceipt ? (source.price ? multiply(record.purchased, source.currency) : source.currency) : 0);
+      if (source.id === 'pack6' && (record.obtained !== multiply(record.purchased, 3) || record.todayObtained !== 0)) fail('6元礼包购买即得3抽，不支持独立领取记录');
+    }
     if (!source.daily && record.todayDate !== null) fail('非每日来源不能填写今日日期');
     if (record.todayDate !== null && period.startDate !== null) {
       var stamp = dateTime(record.todayDate), begin = dateTime(period.startDate);
@@ -101,13 +105,19 @@
   }
   function validate(state, data) {
     object(state, '秘境存储');
-    if (state.schemaVersion !== 1) fail('秘境存储版本不支持');
+    if (state.schemaVersion !== 1 && state.schemaVersion !== 2) fail('秘境存储版本不支持');
+    var legacy = state.schemaVersion === 1;
     object(state.realms, '秘境列表'); validateSettings(state.settings);
     Object.keys(state.realms).forEach(function(id) {
       if (!data.realms.some(function(item) { return item.id === id; })) fail('秘境标识不存在');
       var realm = object(state.realms[id], '秘境记录');
       integer(realm.currentPeriod, '当前期数', data.maxPeriods); if (realm.currentPeriod < 1) fail('当前期数至少为1');
       integer(realm.cumulative, '累计已抽'); integer(realm.inventory, '持有未用'); integer(realm.target, '规划目标'); add(realm.cumulative, realm.inventory);
+      if (!legacy) {
+        integer(realm.currency, '当前兑换道具'); integer(realm.currencyTarget, '兑换道具目标');
+        boolean(realm.targetEnabled, '启用抽数目标'); boolean(realm.currencyTargetEnabled, '启用道具目标');
+        if (realm.drawMode !== 'stop' && realm.drawMode !== 'all') fail('抽取模式无效');
+      }
       boolean(realm.finished, '结束标记'); object(realm.periods, '期次记录');
       Object.keys(realm.periods).forEach(function(key) { if (!/^[1-6]$/.test(key) || Number(key) > data.maxPeriods) fail('存储期数无效'); });
       for (var number = 1; number <= data.maxPeriods; number++) {
@@ -122,8 +132,8 @@
         Object.keys(period.sources).forEach(function(sourceId) {
           var source = sourceData(data, sourceId);
           if (source.firstOnly && number !== 1) fail('首期赠送不能出现在后续期');
-          var record = period.sources[sourceId]; validateSource(record, source, period);
-          if ((!period.locked || period.startDate === null || number > realm.currentPeriod) && (record.obtained || record.purchased || record.todayObtained || record.todayPurchased || record.todayDate !== null)) fail('未开始的期次不能有实际记录');
+          var record = period.sources[sourceId]; validateSource(record, source, period, legacy);
+          if ((!period.locked || period.startDate === null || number > realm.currentPeriod) && (record.obtained || record.purchased || record.todayObtained || record.todayPurchased || record.todayDate !== null || (!legacy && record.currencyObtained))) fail('未开始的期次不能有实际记录');
         });
         if (!period.ended) data.sources.forEach(function(source) { if ((!source.firstOnly || number === 1) && !own(period.sources, source.id)) fail('来源明细缺失'); });
       }
@@ -132,7 +142,24 @@
     });
     return state;
   }
-  function normalize(raw, data) { if (raw === null || raw === undefined) return createDefault(data); validate(raw, data); return clone(raw); }
+  function normalize(raw, data) {
+    if (raw === null || raw === undefined) return createDefault(data);
+    validate(raw, data);
+    var next = clone(raw);
+    if (next.schemaVersion === 1) {
+      next.schemaVersion = 2;
+      Object.keys(next.realms).forEach(function(id) {
+        var realm = next.realms[id];
+        Object.assign(realm, {currency:0,targetEnabled:true,currencyTargetEnabled:false,currencyTarget:0,drawMode:'stop'});
+        Object.keys(realm.periods).forEach(function(number) { Object.keys(realm.periods[number].sources).forEach(function(id) {
+          var record = realm.periods[number].sources[id]; record.currencyObtained = 0;
+          if (id === 'pack6') { record.obtained = multiply(record.purchased, 3); record.todayObtained = 0; }
+        }); });
+      });
+      validate(next, data);
+    }
+    return next;
+  }
   function getRealm(state, id) { if (!own(state.realms, id)) fail('秘境不存在或已删除'); return state.realms[id]; }
   function getPeriod(realm, number, data) {
     integer(number, '期数', data.maxPeriods); if (number < 1 || !own(realm.periods, number)) fail('期次不存在'); return realm.periods[number];
@@ -189,7 +216,7 @@
     Object.keys(values).forEach(function(key) { if (keys.indexOf(key) < 0) fail(label + '包含不支持的字段'); target[key] = clone(values[key]); });
   }
   function updateTotals(state, id, values, data) {
-    var next = normalize(state, data); patchValues(getRealm(next, id), values, ['cumulative', 'inventory', 'target'], '进度输入'); return validate(next, data);
+    var next = normalize(state, data); patchValues(getRealm(next, id), values, ['cumulative', 'inventory', 'target', 'currency', 'targetEnabled', 'currencyTargetEnabled', 'currencyTarget', 'drawMode'], '进度输入'); return validate(next, data);
   }
   function updateSource(state, id, number, sourceId, values, now, data) {
     var next = advance(state, now, data), period = editable(next, id, number, now, data), realm = next.realms[id];
@@ -197,7 +224,11 @@
     if (number !== realm.currentPeriod || current.phase !== 'active') fail('只有进行中的当前期可以保存实际记录');
     if (!own(period.sources, sourceId)) fail('本期来源不存在');
     var source = sourceData(data, sourceId), record = period.sources[sourceId];
-    patchValues(record, values, ['obtained', 'purchased', 'todayDate', 'todayObtained', 'todayPurchased'], '来源输入');
+    patchValues(record, values, ['obtained', 'purchased', 'todayDate', 'todayObtained', 'todayPurchased', 'currencyObtained'], '来源输入');
+    if (sourceId === 'pack6') {
+      if ((own(values,'obtained') && values.obtained !== multiply(record.purchased,3)) || (own(values,'todayObtained') && values.todayObtained !== 0)) fail('6元礼包不支持独立领取');
+      record.obtained = multiply(record.purchased,3); record.todayObtained = 0;
+    }
     if (source.daily) {
       if ((record.todayObtained || record.todayPurchased) && record.todayDate !== current.today) fail('今日记录日期已变化，请重新确认后保存');
       if (record.todayDate !== null && record.todayDate > current.today) fail('今日记录日期不能晚于当前日期');
@@ -227,9 +258,17 @@
   function deleteRealm(state, id, now, data) {
     var next = advance(state, now, data); if (!getRealm(next, id).finished) fail('只有全部结束的秘境可以删除'); delete next.realms[id]; return next;
   }
+  function deletePlatform(state, id, data) {
+    var next = normalize(state, data);
+    if (data.platforms.some(function(p) { return p.id === id; })) fail('系统预设平台不能删除');
+    if (!next.settings.platforms.some(function(p) { return p.id === id; })) fail('平台不存在');
+    next.settings.platforms = next.settings.platforms.filter(function(p) { return p.id !== id; });
+    if (next.settings.platformId === id) next.settings.platformId = 'direct';
+    return validate(next, data);
+  }
   function buildPlanningInput(state, id, now, data) {
     var next = advance(state, now, data), realm = getRealm(next, id), settings = next.settings;
-    var input = { cumulative: realm.cumulative, inventory: realm.inventory, target: realm.target, discount: settings.platforms.find(function(p) { return p.id === settings.platformId; }).discount, vouchers: settings.vouchers, useVouchers: settings.useVouchers, periods: [] };
+    var input = { cumulative: realm.cumulative, inventory: realm.inventory, target: realm.target, currency: realm.currency, targetEnabled: realm.targetEnabled, currencyTargetEnabled: realm.currencyTargetEnabled, currencyTarget: realm.currencyTarget, drawMode: realm.drawMode, discount: settings.platforms.find(function(p) { return p.id === settings.platformId; }).discount, vouchers: settings.vouchers, useVouchers: settings.useVouchers, periods: [] };
     var availableTotal = add(realm.cumulative, realm.inventory);
     if (realm.finished) return input;
     for (var number = realm.currentPeriod; number <= data.maxPeriods; number++) {
@@ -249,11 +288,12 @@
         integer(available, '剩余可领抽数'); if (purchases !== null) integer(purchases, '剩余购买份数');
         availableTotal = add(availableTotal, available);
         if (purchases !== null) add(availableTotal, multiply(purchases, source.draws));
-        sources.push({ id: source.id, name: source.name, draws: source.draws, price: source.price, maxPurchases: purchases, availableDraws: available });
+        var availableCurrency = source.currencyReceipt ? (source.price ? multiply(record.purchased,source.currency) : source.currency) - record.currencyObtained : 0;
+        sources.push({ id: source.id, name: source.name, draws: source.draws, price: source.price, maxPurchases: purchases, availableDraws: available, availableCurrency: availableCurrency, purchaseCurrency: source.price ? source.currency : 0 });
       });
       input.periods.push({ number: number, sources: sources });
     }
     return input;
   }
-  return { createDefault: createDefault, normalize: normalize, advance: advance, status: status, setStartDate: setStartDate, updateTotals: updateTotals, updateSource: updateSource, setEnabled: setEnabled, setAll: setAll, applyFollowing: applyFollowing, updateSettings: updateSettings, deleteRealm: deleteRealm, buildPlanningInput: buildPlanningInput };
+  return { createDefault: createDefault, normalize: normalize, advance: advance, status: status, setStartDate: setStartDate, updateTotals: updateTotals, updateSource: updateSource, setEnabled: setEnabled, setAll: setAll, applyFollowing: applyFollowing, updateSettings: updateSettings, deletePlatform: deletePlatform, deleteRealm: deleteRealm, buildPlanningInput: buildPlanningInput };
 });

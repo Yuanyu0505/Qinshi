@@ -35,25 +35,25 @@ test('numeric UI totals save once without inventing source receipts before the e
 test('real worker plan uses saved vouchers before discount and leaves receipts unchanged',async()=>{
   const {context,page}=await openRealm();try{
     await setupSixYuan(page);const settings=page.locator('[data-realm-form=settings]');await settings.locator('[name=vouchers]').fill('2');await settings.locator('[type=submit]').click();
-    await page.locator('[name=target]').fill('3');await runPlan(page);const plans=page.locator('.realm-plan');assert.equal(await plans.count(),2);
+    await page.locator('[name=target]').fill('3');await runPlan(page);const plans=page.locator('.realm-plan');assert.equal(await plans.count(),1);
     assert.match(await plans.first().innerText(),/¥1\.60/);assert.match(await plans.first().innerText(),/¥6\.00/);
     const state=await saved(page);assert.equal(state.settings.vouchers,2);assert.equal(state.realms.guigu.periods[6].sources.pack6.purchased,0);
     assert.equal(state.realms.guigu.cumulative,0);assert.equal(state.realms.guigu.inventory,0);
   }finally{await context.close();}
 });
-test('today purchased but unclaimed six-yuan pack is recorded separately from today claimed',async()=>{
+test('today purchased six-yuan pack immediately grants three tickets',async()=>{
   const {context,page}=await openRealm({now:'2026-10-23T04:00:00Z'});try{
     const date=page.locator('[data-realm-form=date]');await date.locator('[name=startDate]').fill('2026-10-20');await date.locator('[type=submit]').click();
     assert.match(await page.locator('[data-realm-status]').innerText(),/进行中.*第4天/);
     const source=page.locator('[data-realm-source=pack6]');await source.locator('[name=purchased]').fill('1');await source.locator('[name=todayPurchased]').check();await source.locator('[type=submit]').click();
-    const record=(await saved(page)).realms.guigu.periods[6].sources.pack6;assert.equal(record.purchased,1);assert.equal(record.obtained,0);assert.equal(record.todayPurchased,1);assert.equal(record.todayObtained,0);
+    const record=(await saved(page)).realms.guigu.periods[6].sources.pack6;assert.equal(record.purchased,1);assert.equal(record.obtained,3);assert.equal(record.todayPurchased,1);assert.equal(record.todayObtained,0);
     const input=await page.evaluate(()=>window.SECRET_REALM_CORE.buildPlanningInput(JSON.parse(window.QinshiAccounts.getItem('qinshi_secret_realms_v1')),'guigu',Date.now(),window.SECRET_REALM_DATA));
-    const s=input.periods[0].sources.find(x=>x.id==='pack6');assert.equal(s.availableDraws,3);assert.equal(s.maxPurchases,10);
+    const s=input.periods[0].sources.find(x=>x.id==='pack6');assert.equal(s.availableDraws,0);assert.equal(s.maxPurchases,10);
   }finally{await context.close();}
 });
 test('a Beijing midnight boundary advances to the next planning period and locks expired records',async()=>{
   const {context,page}=await openRealm({now:'2026-10-23T04:00:00Z'});try{
-    await page.locator('#secret-realm-select').selectOption('gaoyue');await saveTotals(page,400,20);
+    await page.locator('[data-realm-id=gaoyue]').click();await saveTotals(page,400,20);
     const date=page.locator('[data-realm-form=date]');await date.locator('[name=startDate]').fill('2026-10-10');await date.locator('[type=submit]').click();
     assert.match(await page.locator('[data-realm-status]').innerText(),/第2期.*第14天/);
     await page.evaluate(()=>{window.__realmNow=Date.parse('2026-10-23T16:00:00Z');if(!window.QinshiAccounts.claimEditing(window.QinshiAccounts.currentAccount().id))throw Error('Test account editing lease unavailable after clock jump');document.dispatchEvent(new Event('visibilitychange'));});
@@ -73,7 +73,7 @@ test('paid pass claims do not duplicate free pass or bill an already purchased p
 });
 test('per-period source switches persist, all respects 648, and following does not affect the other realm',async()=>{
   const {context,page}=await openRealm();try{
-    await page.locator('#secret-realm-select').selectOption('gaoyue');await page.locator('[data-realm-mode=planner]').click();await page.locator('[data-realm-action=none]').click();await page.locator('[data-realm-enable=pack648]').check();await page.locator('[data-realm-action=following]').click();
+    await page.locator('[data-realm-id=gaoyue]').click();await page.locator('[data-realm-mode=planner]').click();await page.locator('[data-realm-action=none]').click();await page.locator('[data-realm-enable=pack648]').check();await page.locator('[data-realm-action=following]').click();
     let state=await saved(page);for(let n=2;n<=6;n++){assert.equal(state.realms.gaoyue.periods[n].sources.pack648.enabled,true);assert.equal(state.realms.gaoyue.periods[n].sources.pack6.enabled,false);}
     assert.equal(state.realms.guigu.periods[6].sources.pack648.enabled,false);
     await page.locator('[data-realm-action=all]').click();state=await saved(page);assert.equal(state.realms.gaoyue.periods[2].sources.pack648.enabled,false);assert.equal(state.realms.gaoyue.periods[2].sources.pack6.enabled,true);
@@ -84,7 +84,7 @@ test('custom platform discount is saved and reused in the other realm including 
   const {context,page}=await openRealm();try{
     await page.locator('[data-realm-mode=planner]').click();const form=page.locator('[data-realm-form=platform]');await form.locator('[name=platformName]').fill('自定义测试平台');await form.locator('[name=discount]').fill('4.333');await form.locator('[type=submit]').click();
     const state=await saved(page);assert.ok(state);assert.equal(state.settings.platforms.at(-1).discount,4.333);
-    await page.locator('#secret-realm-select').selectOption('gaoyue');assert.match(await page.locator('[name=platformId] option:checked').innerText(),/自定义测试平台.*4\.333/);
+    await page.locator('[data-realm-id=gaoyue]').click();assert.match(await page.locator('[name=platformId] option:checked').innerText(),/自定义测试平台.*4\.333/);
   }finally{await context.close();}
 });
 test('target draft survives source toggles before calculation',async()=>{
@@ -166,7 +166,7 @@ test('a second real tab makes the old account read-only without allowing acciden
     await saveTotals(page,90,2);other=await context.newPage();await openApp(other,url+'/#secret-realm');await other.waitForFunction(()=>Boolean(window.QinshiAccounts));
     await other.evaluate(()=>window.QinshiAccounts.takeOverEditing(window.QinshiAccounts.currentAccount().id));await page.waitForFunction(()=>window.QinshiAccounts.isReadOnly());
     await page.locator('[data-realm-action=reload]').click();assert.equal(await page.locator('[name=cumulative]').isDisabled(),true);assert.equal((await saved(page)).realms.guigu.cumulative,90);
-    await page.locator('[data-realm-mode=planner]').click();await page.locator('[name=target]').fill('90');await runPlan(page);assert.match(await page.locator('.realm-plan').first().innerText(),/现有抽数已足够/);
+    await page.locator('[data-realm-mode=planner]').click();await page.locator('[name=target]').fill('90');await runPlan(page);assert.match(await page.locator('.realm-plan').first().innerText(),/现有余额／库存可达标/);
     assert.equal((await saved(page)).realms.guigu.target,4550);
   }finally{await context.close();}
 });
@@ -185,11 +185,11 @@ test('a daily receipt form rendered yesterday cannot silently save yesterday fla
     await source.locator('[type=submit]').click();assert.equal((await saved(page)).realms.guigu.periods[6].sources.pack6.purchased,0);assert.match(await page.locator('[data-realm-error]').innerText(),/日期.*变化|跨日/);
   }finally{await context.close();}
 });
-test('a valid partial daily claim round trips through the actual UI without expanding to three draws',async()=>{
+test('old partial pack6 receipts migrate to fixed grants without changing real total inventory',async()=>{
   const {context,page}=await openRealm({now:'2026-10-23T04:00:00Z'});try{
-    await page.evaluate(()=>{const d=window.SECRET_REALM_DATA,k=window.SECRET_REALM_CORE;let s=k.createDefault(d);s=k.setStartDate(s,'guigu',6,'2026-10-20',Date.now(),d);s=k.updateSource(s,'guigu',6,'pack6',{purchased:1,obtained:1,todayDate:'2026-10-23',todayPurchased:1,todayObtained:1},Date.now(),d);window.QinshiAccounts.setItem('qinshi_secret_realms_v1',JSON.stringify(s));});
-    await page.locator('[data-realm-action=reload]').click();const source=page.locator('[data-realm-source=pack6]');assert.equal(await source.locator('[name=todayObtained]').inputValue(),'1');await source.locator('[type=submit]').click();
-    const row=(await saved(page)).realms.guigu.periods[6].sources.pack6;assert.equal(row.todayObtained,1);assert.equal(row.obtained,1);assert.equal(await page.locator('[data-realm-error]').isVisible(),false);
+    await page.evaluate(()=>{const d=window.SECRET_REALM_DATA,k=window.SECRET_REALM_CORE;let s=k.createDefault(d);s=k.setStartDate(s,'guigu',6,'2026-10-20',Date.now(),d);s.schemaVersion=1;Object.assign(s.realms.guigu.periods[6].sources.pack6,{purchased:1,obtained:1,todayDate:'2026-10-23',todayPurchased:1,todayObtained:1});window.QinshiAccounts.setItem('qinshi_secret_realms_v1',JSON.stringify(s));});
+    await page.locator('[data-realm-action=reload]').click();const source=page.locator('[data-realm-source=pack6]');assert.equal(await source.locator('[name=todayObtained]').count(),0);await source.locator('[type=submit]').click();
+    const state=await saved(page),row=state.realms.guigu.periods[6].sources.pack6;assert.equal(row.todayObtained,0);assert.equal(row.obtained,3);assert.equal(state.realms.guigu.inventory,0);assert.equal(await page.locator('[data-realm-error]').isVisible(),false);
   }finally{await context.close();}
 });
 test('direct local HTML secret realm retains calculation through the file-protocol fallback',async()=>{

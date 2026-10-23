@@ -26,6 +26,12 @@
         slot.shield = dunName(slot.shield);
       });
     });
+    if (!data.items.some(function(item){return item.name === '神千泷高月';})) {
+      data.items.push({name:'神千泷高月',quality:'红色神将',slots:[
+        {tian:'天府',shield:'人遁'},{tian:'天相',shield:'地遁'},{tian:'天同',shield:'天遁'},
+        {tian:'天梁',shield:'虎遁'},{tian:'天机',shield:'鬼遁'}
+      ]});
+    }
     if (data.items.some(function (item) { return item.name === "神隐虎季布"; })) return;
     var item = {
       name: "神隐虎季布",

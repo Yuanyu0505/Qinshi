@@ -32,12 +32,12 @@ function commonButton(page, name) {
   return page.locator('#ins-results [data-ins-common-key="' + encodeURIComponent(key(name)) + '"]');
 }
 
-test('首次不自动加入常用弟子且默认红色品质，切换页签不覆盖品质筛选', async () => {
+test('首次只默认加入神千泷高月且默认红色品质，切换页签不覆盖品质筛选', async () => {
   const page = await queryPage();
   try {
     assert.equal(await page.locator('#ins-quality').inputValue(), '红色神将');
     const stored = await getAccountJson(page, COMMON_KEY);
-    assert.deepEqual(stored.keys, []);
+    assert.deepEqual(stored.keys, [key('神千泷高月')]);
     assert.equal(await page.locator('#ins-results .ins-quality.orange').count(), 0);
     await page.locator('#ins-quality').selectOption('普通橙色');
     await page.locator('#inscription-modes [data-mode="reference"]').click();
@@ -60,7 +60,7 @@ test('个人进度优先于常用，重叠不重复，搜索及天位遁位仍�
     })));
     assert.equal(new Set(rows.map(r => r.name)).size, rows.length);
     assert.ok(rows.slice(0, 2).every(r => r.saved));
-    assert.ok(rows.slice(2).every(r => !r.common && !r.saved));
+    assert.ok(rows.slice(2).every(r => !r.saved && (r.name === '神千泷高月' ? r.common : !r.common)));
     await page.locator('#ins-tian').selectOption('天府');
     await page.locator('#ins-shield').selectOption('鬼遁');
     await page.locator('#ins-search').fill('田虎');
@@ -89,7 +89,7 @@ for (const width of [390, 900, 1440]) test(width + ' 常用切换保留卡片及
     await openQuery(page);
     assert.equal(await commonButton(page, '神逍遥子').getAttribute('aria-pressed'), 'false');
     assert.equal(await commonButton(page, '神东皇太一').getAttribute('aria-pressed'), 'true');
-    await setAccountJson(page, COMMON_KEY, { version: 1, keys: [] });
+    await setAccountJson(page, COMMON_KEY, { version: 1, keys: [], gaoyueDefaultApplied:true });
     await page.reload();
     await openQuery(page);
     assert.equal(await page.locator('#ins-results [data-ins-common-key][aria-pressed="true"]').count(), 0);
@@ -111,4 +111,12 @@ test('常用保存失败时保留原标记并提示，不虚报保存成功', as
     assert.ok(await page.locator('#ins-common-status').isVisible());
     assert.match(await page.locator('#ins-common-status').innerText(), /保存.*失败/);
   } finally { await page.close(); }
+});
+
+test('常用保存返回false时保留原标记并提示未保存',async()=>{
+  const page=await queryPage();try{
+    const before=await getAccountJson(page,COMMON_KEY);await page.evaluate(()=>{window.QinshiAccounts.setItem=()=>false;});
+    await commonButton(page,'神逍遥子').click();assert.equal(await commonButton(page,'神逍遥子').getAttribute('aria-pressed'),'false');
+    assert.deepEqual(await getAccountJson(page,COMMON_KEY),before);assert.match(await page.locator('#ins-common-status').innerText(),/保存.*失败/);
+  }finally{await page.close();}
 });

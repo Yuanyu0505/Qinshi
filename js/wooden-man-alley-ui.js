@@ -516,11 +516,13 @@
     var tools = data.tools.map(function (tool) { return '<article><strong>' + escapeHtml(tool.name) + '</strong><span>' + escapeHtml(tool.effect) + '</span></article>'; }).join("");
     var targets = data.targets.map(function (target) { return '<article><strong>' + target.floor + '层</strong><span>' + escapeHtml(target.reward) + '</span></article>'; }).join("");
     var packages = data.defaultPackages.map(function (item) { return '<tr><td>' + escapeHtml(item.name) + '</td><td>' + item.price + '元</td><td>' + item.swords + '</td><td>' + item.mysteryBoxes + '</td><td>' + item.limit + '</td></tr>'; }).join("");
+    var guideRows = [[75,850,119000],[180,2980,417200],[230,4230,592200],[330,7830,1096200],[500,16160,2262400]].map(function(row){return '<tr><td>'+row[0]+'</td><td>'+row[1]+'</td><td>'+formatNumber(row[2],0)+'</td></tr>';}).join('');
     elements.reference.innerHTML = '<section class="panel"><div class="panel-title">地图与消耗</div><div class="wooden-table-wrap"><table><thead><tr><th>层数</th><th>棋盘</th><th>木人</th><th>铁剑</th><th>横／纵／十字</th></tr></thead><tbody>' + tierRows + '</tbody></table></div></section>' +
       '<section class="panel"><div class="panel-title">辅助道具</div><div class="wooden-reference-grid">' + tools + '</div></section>' +
       '<section class="panel"><div class="panel-title">快捷目标</div><div class="wooden-reference-grid">' + targets + '</div></section>' +
       '<section class="panel"><div class="panel-title">礼包默认模板</div><div class="wooden-table-wrap"><table><thead><tr><th>礼包</th><th>价格</th><th>木剑</th><th>秘匣</th><th>限购</th></tr></thead><tbody>' + packages + '</tbody></table></div></section>' +
-      '<section class="panel wooden-method-notes"><div class="panel-title">计算口径</div><p><strong>理论期望：</strong>大奖在尚未击破木人中等概率分布且不放回。</p><p><strong>保守估计：</strong>汇总全部剩余期望后统一乘1.20并向上取整。</p><p><strong>最坏情况：</strong>大奖位于最后一个尚未击破的木人中。</p><p>秘匣内容暂未明确，只记录数量，不参与资源换算；木剑不会自动产出；不计算活动结束后的未使用道具退款。</p></section>';
+      '<section class="panel wooden-method-notes"><div class="panel-title">计算口径</div><p><strong>理论期望：</strong>大奖在尚未击破木人中等概率分布且不放回，取得大奖即进入下一层。</p><p><strong>保守估计：</strong>汇总全部剩余期望后统一乘1.20并向上取整，但不超过同一道具方案的最坏需求；并非成功率保证。</p><p><strong>最坏情况：</strong>大奖位于最后一个尚未击破的木人中。</p><p>秘匣内容暂未明确，只记录数量，不参与资源换算；木剑不会自动产出；不计算活动结束后的未使用道具退款。</p></section>' +
+      '<section class="panel wooden-method-notes"><div class="panel-title">攻略对照参考（从第1层开始）</div><p>图片按全清木人数×200元宝×0.7估价；0.7依据未说明，不是工具采用的购剑折扣。以下仅为攻略参考，不参与计算。实际规划按概率、风险档位、辅助道具、已有库存和半价券计算。</p><div class="wooden-table-wrap"><table><thead><tr><th>完成层数</th><th>全清木人数</th><th>攻略估价（元宝）</th></tr></thead><tbody>'+guideRows+'</tbody></table></div><p>331–500层均为7×7、49个木人。75／230／330层奖励图片有“灵媒／灵宝”不同字样，工具暂沿用“灵宝四选一”简称。</p></section>';
   }
 
   function renderMode(root) {

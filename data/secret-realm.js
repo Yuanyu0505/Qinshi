@@ -9,8 +9,10 @@
     ['pack198','198元礼包',55,198,2],['pack328','328元礼包',80,328,2],['pack648','648元礼包',130,648,null]
   ];
   var rewards=[[100,'弟子魂魄'],[200,'弟子神魄'],[350,'神兵武器'],[500,'神兵衣服'],[650,'298时装'],[750,'神兵饰品'],[850,'神兵典籍'],[1000,'298时装'],[1150,'武器'],[1300,'598时装'],[1400,'衣服'],[1500,'饰品'],[1650,'298时装'],[1800,'聚神印'],[1950,'戎装'],[2050,'典籍'],[2150,'机关碎片'],[2300,'298时装'],[2450,'觉醒神图'],[2600,'当期称号'],[2700,'元宝'],[2800,'神果'],[2950,'元宝'],[3100,'聚神印'],[3250,'称号'],[3350,'联动神将'],[3450,'武器'],[3600,'防具'],[3750,'饰品'],[3900,'典籍'],[4000,'联动神将戎装'],[4100,'机关碎片'],[4250,'联动神将神魄'],[4400,'觉醒神图'],[4550,'联动神将称号']];
-  return {maxPeriods:6,periodDays:14,realms:[{id:'guigu',name:'鬼谷盖聂',firstPeriod:6},{id:'gaoyue',name:'千泷高月',firstPeriod:2}],
-    sources:rows.map(function(r){return {id:r[0],name:r[1],draws:r[2],price:r[3],limit:r[4],daily:!!r[5],firstOnly:!!r[6]};}),
+  var currency={panda:56,'free-pass':40,'paid-pass':70,pack98:15,pack198:30,pack328:50,pack648:110};
+  return {maxPeriods:6,periodDays:14,realms:[{id:'guigu',name:'鬼谷盖聂',currencyName:'剑玦',firstPeriod:6},{id:'gaoyue',name:'千泷高月',currencyName:'月石',firstPeriod:2}],
+    sources:rows.map(function(r){return {id:r[0],name:r[1],draws:r[2],price:r[3],limit:r[4],daily:!!r[5],firstOnly:!!r[6],currency:currency[r[0]]||0,currencyReceipt:['panda','free-pass','paid-pass'].indexOf(r[0])!==-1};}),
+    gaoyueReference:{rewards:[[100,'千泷高月'],[200,'神魄×30'],[350,'神兵夜阑灯'],[500,'神兵橘裳']],shop:[[400,'泷星'],[700,'幻音天章'],[40,'神魄×5']]},
     rewards:rewards.map(function(r){return {draws:r[0],name:r[1]};}),
     platforms:[{id:'x7',name:'小7',discount:4},{id:'guopan',name:'果盘',discount:4},{id:'gamefan',name:'游戏fan',discount:4.3},{id:'mumayi',name:'木蚂蚁',discount:4.3},{id:'direct',name:'直充',discount:10}]
   };

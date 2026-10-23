@@ -71,6 +71,12 @@ test('wood worker matches synchronous results and leaves the UI event loop respo
         draft.calculator.includePurchasablePackages = true;
         woodControl.setCalculatorDraft(draft);
         const expected = JSON.stringify(woodControl.calculate());
+        const syncTarget = WOODEN_MAN_ALLEY_PLANNER.planToTarget;
+        const syncReachable = WOODEN_MAN_ALLEY_PLANNER.planReachable;
+        const forbiddenFallback = () => { throw new Error('Main-thread fallback is forbidden in Worker responsiveness test'); };
+        WOODEN_MAN_ALLEY_PLANNER.planToTarget = forbiddenFallback;
+        WOODEN_MAN_ALLEY_PLANNER.planReachable = forbiddenFallback;
+        try {
         for (let n = 0; n < 3; n++) {
           await new Promise(resolve => setTimeout(resolve, 30));
           const longTasks = [];
@@ -87,11 +93,17 @@ test('wood worker matches synchronous results and leaves the UI event loop respo
           if (JSON.stringify(result) !== expected) throw new Error('Worker changed planner result');
           samples.push({ direction, ms, ticks, longTasks });
         }
+        } finally {
+          WOODEN_MAN_ALLEY_PLANNER.planToTarget = syncTarget;
+          WOODEN_MAN_ALLEY_PLANNER.planReachable = syncReachable;
+        }
       }
       return samples;
     });
     console.log(JSON.stringify({ workerSamples: samples, cpu: 'desktop page CPU4x simulation; worker thread rate may differ' }));
-    for (const sample of samples) assert.ok(sample.ticks > 0, 'UI timer must run during calculation');
+    // A short successful Worker job need not outlive a timer's scheduling delay.
+    // Check progress across the real job batch, not a minimum job duration.
+    assert.ok(samples.reduce((total,sample)=>total+sample.ticks,0)>0,'UI timer must run during the calculation batch');
   } finally { await page.close(); }
 });
 [360, 390, 768, 1100].forEach(width => test('wood edits preserve live controls focus and advanced expansion at ' + width, { skip: process.env.WOOD_BASELINE === '1' }, async () => {

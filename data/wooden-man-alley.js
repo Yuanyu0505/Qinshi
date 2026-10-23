@@ -35,11 +35,18 @@
     ],
     resourceKeys: ["woodSword", "ironSword", "horizontalQi", "verticalQi", "crossQi", "bomb", "mirror", "discountCoupon", "ingots", "mysteryBoxes"],
     targets: [
+      { floor: 10, reward: "武学材料自选（兵临城下／风林火山）×5" },
+      { floor: 25, reward: "武学材料自选（兵临城下／风林火山）×10" },
+      { floor: 50, reward: "武学材料自选（兵临城下／风林火山）×15" },
       { floor: 75, reward: "灵宝四选一 ×4" },
+      { floor: 130, reward: "武学材料自选（兵临城下／风林火山）×50" },
       { floor: 180, reward: "木人常驻称号" },
       { floor: 230, reward: "灵宝四选一 ×12" },
+      { floor: 280, reward: "武学材料自选（兵临城下／风林火山）×100" },
       { floor: 300, reward: "木人限时称号" },
       { floor: 330, reward: "灵宝四选一 ×20" },
+      { floor: 380, reward: "武学材料自选（兵临城下／风林火山）×130" },
+      { floor: 430, reward: "武学材料自选（兵临城下／风林火山）×130" },
       { floor: 500, reward: "最高层完成" }
     ],
     defaultPackages: [

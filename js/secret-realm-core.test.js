@@ -13,6 +13,56 @@ function scheduled(id = 'gaoyue', period = 2) { return core.setStartDate(default
 function active(id = 'gaoyue', period = 2) { return core.advance(scheduled(id, period), start, data); }
 function row(state, id, period, source) { return core.buildPlanningInput(state, id, start, data).periods.find(p => p.number === period).sources.find(s => s.id === source); }
 
+test('v1 migration preserves real totals and derives fixed pack6 receipts without inventing currency', () => {
+  const legacy = active(); legacy.schemaVersion = 1;
+  for (const realm of Object.values(legacy.realms)) {
+    for (const key of ['currency','targetEnabled','currencyTargetEnabled','currencyTarget','drawMode']) delete realm[key];
+    for (const period of Object.values(realm.periods)) for (const record of Object.values(period.sources)) delete record.currencyObtained;
+  }
+  legacy.realms.gaoyue.cumulative = 20; legacy.realms.gaoyue.inventory = 7;
+  Object.assign(legacy.realms.gaoyue.periods[2].sources.pack6, {purchased:1,obtained:1,todayPurchased:1,todayObtained:1,todayDate:'2026-10-01'});
+  const next=core.normalize(legacy,data), realm=next.realms.gaoyue;
+  assert.equal(next.schemaVersion,2); assert.equal(realm.cumulative,20);assert.equal(realm.inventory,7);assert.equal(realm.currency,0);
+  assert.equal(realm.currencyTargetEnabled,false);assert.equal(realm.drawMode,'stop');
+  assert.equal(realm.periods[2].sources.pack6.obtained,3);assert.equal(realm.periods[2].sources.pack6.todayObtained,0);
+  assert.equal(legacy.realms.gaoyue.periods[2].sources.pack6.obtained,1);
+  legacy.realms.gaoyue.periods[2].sources.pack6.obtained=4;
+  assert.throws(()=>core.normalize(legacy,data));
+});
+
+test('currency targets and independently claimed rewards never repeat previous draws or purchased pack gifts',()=>{
+  let state=active(); state=core.updateTotals(state,'gaoyue',{currency:50,targetEnabled:false,currencyTargetEnabled:true,currencyTarget:700,drawMode:'all'},data);
+  state=core.updateSource(state,'gaoyue',2,'panda',{currencyObtained:20},start,data);
+  state=core.updateSource(state,'gaoyue',2,'paid-pass',{purchased:1,currencyObtained:30},start,data);
+  state=core.updateSource(state,'gaoyue',2,'pack98',{purchased:1,obtained:30},start,data);
+  const input=core.buildPlanningInput(state,'gaoyue',start,data);
+  assert.equal(input.currency,50);assert.equal(input.currencyTarget,700);assert.equal(input.targetEnabled,false);
+  assert.equal(row(state,'gaoyue',2,'panda').availableCurrency,36);
+  assert.equal(row(state,'gaoyue',2,'paid-pass').availableCurrency,40);
+  assert.equal(row(state,'gaoyue',2,'paid-pass').purchaseCurrency,70);
+  assert.equal(row(state,'gaoyue',2,'pack98').availableCurrency,0);
+  assert.equal(row(state,'gaoyue',2,'pack98').purchaseCurrency,15);
+  assert.throws(()=>core.updateSource(state,'gaoyue',2,'panda',{currencyObtained:57},start,data));
+  assert.throws(()=>core.updateSource(defaults(),'gaoyue',2,'panda',{currencyObtained:1},start,data));
+  assert.equal(core.advance(state,start+14*day,data).realms.gaoyue.currency,50);
+});
+
+test('fixed six-yuan purchases grant three tickets immediately and today purchase prevents another purchase',()=>{
+  const state=core.updateSource(active(),'gaoyue',2,'pack6',{purchased:1,todayPurchased:1,todayDate:'2026-10-01'},start,data);
+  assert.equal(state.realms.gaoyue.periods[2].sources.pack6.obtained,3);
+  assert.equal(row(state,'gaoyue',2,'pack6').availableDraws,0);
+  assert.equal(row(state,'gaoyue',2,'pack6').maxPurchases,13);
+  assert.throws(()=>core.updateSource(state,'gaoyue',2,'pack6',{todayObtained:1},start,data));
+});
+
+test('deleting selected custom platform falls back to direct without changing balances or preset platforms',()=>{
+  let state=core.updateSettings(defaults(),{platforms:[...data.platforms,{id:'custom-test',name:'私人平台',discount:3}],platformId:'custom-test',vouchers:20},data);
+  state=core.deletePlatform(state,'custom-test',data);
+  assert.equal(state.settings.platformId,'direct');assert.equal(state.settings.vouchers,20);
+  assert.equal(state.settings.platforms.some(p=>p.id==='custom-test'),false);
+  assert.throws(()=>core.deletePlatform(state,'x7',data));
+});
+
 test('defaults expose independent realms, locked history, shared settings and no first-only reward', () => {
   const state = defaults();
   assert.equal(state.realms.guigu.currentPeriod, 6);
@@ -117,14 +167,14 @@ test('source validation rejects paid overclaims, limit breaches, invalid daily r
 
 test('partial paid pass is already paid and its unclaimed draws incur no second purchase', () => {
   const state = core.updateSource(active(), 'gaoyue', 2, 'paid-pass', { purchased: 1, obtained: 21 }, start, data);
-  assert.deepEqual(row(state, 'gaoyue', 2, 'paid-pass'), { id: 'paid-pass', name: '付费通行证', draws: 88, price: 98, maxPurchases: 0, availableDraws: 67 });
+  assert.deepEqual(row(state, 'gaoyue', 2, 'paid-pass'), { id: 'paid-pass', name: '付费通行证', draws: 88, price: 98, maxPurchases: 0, availableDraws: 67, availableCurrency:70, purchaseCurrency:70 });
   assert.equal(state.realms.gaoyue.cumulative, 0);
   assert.equal(state.realms.gaoyue.inventory, 0);
 });
 
 test('free source availability subtracts obtained draws and never represents a new paid purchase', () => {
   const state = core.updateSource(active(), 'gaoyue', 2, 'panda', { obtained: 7 }, start, data);
-  assert.deepEqual(row(state, 'gaoyue', 2, 'panda'), { id: 'panda', name: '熊猫头', draws: 35, price: 0, maxPurchases: 0, availableDraws: 28 });
+  assert.deepEqual(row(state, 'gaoyue', 2, 'panda'), { id: 'panda', name: '熊猫头', draws: 35, price: 0, maxPurchases: 0, availableDraws: 28, availableCurrency:56, purchaseCurrency:0 });
 });
 
 test('missed daily rewards expire and today already obtained is subtracted only once', () => {
@@ -137,13 +187,13 @@ test('missed daily rewards expire and today already obtained is subtracted only 
   assert.equal(core.buildPlanningInput(state, 'gaoyue', start + 10 * day, data).periods[0].sources.find(s => s.id === 'daily-free').availableDraws, 4);
 });
 
-test('today pack6 bought but not claimed preserves paid entitlement and removes today purchase slot', () => {
+test('today pack6 bought immediately grants tickets and removes today purchase slot', () => {
   const now = start + 9 * day;
-  let state = core.updateSource(active(), 'gaoyue', 2, 'pack6', { purchased: 2, obtained: 3, todayDate: '2026-10-10', todayObtained: 0, todayPurchased: 1 }, now, data);
+  let state = core.updateSource(active(), 'gaoyue', 2, 'pack6', { purchased: 2, todayDate: '2026-10-10', todayPurchased: 1 }, now, data);
   let source = core.buildPlanningInput(state, 'gaoyue', now, data).periods[0].sources.find(s => s.id === 'pack6');
-  assert.equal(source.availableDraws, 3);
+  assert.equal(source.availableDraws, 0);
   assert.equal(source.maxPurchases, 4);
-  state = core.updateSource(state, 'gaoyue', 2, 'pack6', { obtained: 6, todayDate: '2026-10-10', todayObtained: 3, todayPurchased: 1 }, now, data);
+  state = core.updateSource(state, 'gaoyue', 2, 'pack6', { purchased: 2, todayDate: '2026-10-10', todayPurchased: 1 }, now, data);
   source = core.buildPlanningInput(state, 'gaoyue', now, data).periods[0].sources.find(s => s.id === 'pack6');
   assert.equal(source.availableDraws, 0);
   assert.equal(source.maxPurchases, 4);
@@ -223,7 +273,7 @@ test('first-period gift is available once only when the data explicitly starts t
   const firstData = structuredClone(data); firstData.realms[1].firstPeriod = 1;
   const state = core.createDefault(firstData);
   const periods = core.buildPlanningInput(state, 'gaoyue', start, firstData).periods;
-  assert.deepEqual(periods[0].sources.find(s => s.id === 'first-gift'), { id: 'first-gift', name: '首期秘境赠送', draws: 19, price: 0, maxPurchases: 0, availableDraws: 19 });
+  assert.deepEqual(periods[0].sources.find(s => s.id === 'first-gift'), { id: 'first-gift', name: '首期秘境赠送', draws: 19, price: 0, maxPurchases: 0, availableDraws: 19, availableCurrency:0, purchaseCurrency:0 });
   assert.equal(periods.slice(1).some(p => p.sources.some(s => s.id === 'first-gift')), false);
 });
 

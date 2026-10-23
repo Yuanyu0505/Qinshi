@@ -7,6 +7,7 @@
   var STORE_KEY = "qinshi_inscription_progress_v2";
   var COMMON_STORE_KEY = "qinshi_inscription_common_v1";
   var commonKeys = new Set();
+  var commonDefaultApplied = false;
   var TIANS = ["天府", "天相", "天同", "天梁", "天机"];
   var SHIELDS = ["天遁", "地遁", "人遁", "神遁", "鬼遁", "龙遁", "虎遁", "风遁", "云遁"];
   var MAIN = {
@@ -153,7 +154,7 @@
   }
   function saveCommonDisciples(keys) {
     try {
-      ACCOUNT_STORAGE.setItem(COMMON_STORE_KEY, JSON.stringify({ version: 1, keys: Array.from(keys) }));
+      if (ACCOUNT_STORAGE.setItem(COMMON_STORE_KEY, JSON.stringify({ version: 1, keys: Array.from(keys), gaoyueDefaultApplied: commonDefaultApplied })) === false) throw new Error('Common disciples were not saved');
       commonStatus("");
       return true;
     } catch (error) {
@@ -166,13 +167,27 @@
       var raw = ACCOUNT_STORAGE.getItem(COMMON_STORE_KEY);
       if (raw === null) {
         commonKeys = new Set();
-        saveCommonDisciples(commonKeys);
+        commonDefaultApplied = true;
+        var gaoyue = DATA.items.find(function(item){return item.name === '神千泷高月' && item.quality === '红色神将';});
+        if (gaoyue) commonKeys.add(keyOf(gaoyue));
+        if (!saveCommonDisciples(commonKeys)) { commonKeys = new Set(); commonDefaultApplied = false; }
         return;
       }
       var stored = JSON.parse(raw);
       if (!stored || stored.version !== 1 || !Array.isArray(stored.keys)) throw new Error("Invalid common disciples");
+      if (!stored.keys.every(function(key){return typeof key === 'string' && itemByKey(key);}) ||
+          (Object.prototype.hasOwnProperty.call(stored,'gaoyueDefaultApplied') && typeof stored.gaoyueDefaultApplied !== 'boolean')) throw new Error('Invalid common disciples migration data');
       // 已保存的空名单同样有效，不再补回初始名单。
       commonKeys = new Set(stored.keys.filter(function (key) { return typeof key === "string" && itemByKey(key); }));
+      commonDefaultApplied = stored.gaoyueDefaultApplied === true;
+      if (!commonDefaultApplied) {
+        var updated = new Set(commonKeys);
+        var gaoyue = DATA.items.find(function(item){return item.name === '神千泷高月' && item.quality === '红色神将';});
+        if (gaoyue) updated.add(keyOf(gaoyue));
+        commonDefaultApplied = true;
+        if (saveCommonDisciples(updated)) commonKeys = updated;
+        else commonDefaultApplied = false;
+      }
     } catch (error) {
       commonKeys = new Set();
       commonStatus("常用弟子读取失败，已保留原始记录；铭文个人进度不受影响。");

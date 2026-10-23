@@ -1,7 +1,7 @@
 "use strict";
 
 const CACHE_PREFIX = "qinshi-site-";
-const CACHE_NAME = CACHE_PREFIX + "1.0.58";
+const CACHE_NAME = CACHE_PREFIX + "1.0.59";
 const GALLERY_CACHE_NAME = "qinshi-gallery-v1";
 const PRECACHE_URLS = [
   "./",
@@ -9,6 +9,11 @@ const PRECACHE_URLS = [
   "./manifest.webmanifest",
   "./css/style.css",
   "./css/six-halls.css",
+  "./css/secret-realm.css",
+  "./data/secret-realm.js",
+  "./js/secret-realm-core.js",
+  "./js/secret-realm-planner.js",
+  "./js/secret-realm-ui.js",
   "./data/special-equipment.js",
   "./data/forging.js",
   "./data/drops.js",

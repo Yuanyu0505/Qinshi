@@ -4,6 +4,7 @@ function loadKind(kind) {
   if (loadedKinds[kind]) return;
   var paths;
   if (kind === "wooden") paths = ["../data/wooden-man-alley.js", "wooden-man-alley.js", "wooden-man-alley-planner.js"];
+  else if (kind === "secret-realm") paths = ["secret-realm-planner.js"];
   else if (kind === "beast-single" || kind === "beast-school") paths = ["../data/machine-beasts.js", "machine-beasts.js", "machine-beast-school-planner.js"];
   else throw new Error("未知计算类型");
   paths.forEach(function (path) { importScripts(path + self.location.search); });
@@ -14,7 +15,9 @@ self.onmessage = function (event) {
   try {
     loadKind(message.kind);
     var payload = message.input, result;
-    if (message.kind === "wooden") {
+    if (message.kind === "secret-realm") {
+      result = self.SECRET_REALM_PLANNER.plan(payload);
+    } else if (message.kind === "wooden") {
       result = payload.direction === "reachable"
         ? self.WOODEN_MAN_ALLEY_PLANNER.planReachable(payload.input, self.WOODEN_MAN_ALLEY_DATA, self.WOODEN_MAN_ALLEY_CORE)
         : self.WOODEN_MAN_ALLEY_PLANNER.planToTarget(payload.input, self.WOODEN_MAN_ALLEY_DATA, self.WOODEN_MAN_ALLEY_CORE);

@@ -39,6 +39,7 @@
     drops: "关卡掉落",
     equipment: "装备属性",
     forbidden: "禁地",
+    "secret-realm": "秘境",
     forging: "橙装锻造",
     inscription: "铭文",
     "machine-beasts": "机关兽",
@@ -506,6 +507,7 @@
     if (partition === "forbidden" && window.FORBIDDEN_UI) return window.FORBIDDEN_UI.captureView();
     if (partition === "machine-beasts" && window.MACHINE_BEAST_UI) return window.MACHINE_BEAST_UI.captureView();
     if (partition === "wooden-man-alley" && window.WOODEN_MAN_ALLEY_UI) return window.WOODEN_MAN_ALLEY_UI.captureView();
+    if (partition === "secret-realm" && window.SECRET_REALM_UI) return window.SECRET_REALM_UI.captureView();
     if (partition === "zhulu" && ZHULU_UI) return ZHULU_UI.captureView();
     return {};
   }
@@ -528,6 +530,8 @@
       window.MACHINE_BEAST_UI.restoreView(view);
     } else if (partition === "wooden-man-alley" && window.WOODEN_MAN_ALLEY_UI) {
       window.WOODEN_MAN_ALLEY_UI.restoreView(view);
+    } else if (partition === "secret-realm" && window.SECRET_REALM_UI) {
+      window.SECRET_REALM_UI.restoreView(view);
     } else if (partition === "zhulu" && ZHULU_UI) {
       ZHULU_UI.restoreView(view);
     }
@@ -1096,7 +1100,7 @@
     const mobileMoreLayer = document.getElementById("mobile-more-layer");
     const mobileMoreClose = document.getElementById("mobile-more-close");
     const appShell = document.querySelector(".app-shell");
-    const secondaryPartitions = ["forbidden", "inscription", "machine-beasts", "tactics", "battle-box-pill-pouch", "wooden-man-alley", "formations", "six-halls", "loulan", "zhulu", "quiz", "settings"];
+    const secondaryPartitions = ["forbidden", "secret-realm", "inscription", "machine-beasts", "tactics", "battle-box-pill-pouch", "wooden-man-alley", "formations", "six-halls", "loulan", "zhulu", "quiz", "settings"];
     const partitionScrollPositions = Object.create(null);
     let activePartition = "atlas";
     let mobileMoreRestoreTarget = null;
@@ -1121,6 +1125,7 @@
       "wooden-man-alley": document.getElementById("partition-wooden-man-alley"),
       formations: document.getElementById("partition-formations"),
       "six-halls": document.getElementById("partition-six-halls"),
+      "secret-realm": document.getElementById("partition-secret-realm"),
       zhulu: document.getElementById("partition-zhulu"),
       settings: document.getElementById("partition-settings")
     };
@@ -1221,7 +1226,7 @@
         button.classList.toggle("active", button.dataset.partition === name);
       });
       Object.keys(parts).forEach((key) => {
-        parts[key].hidden = key !== name;
+        if (parts[key]) parts[key].hidden = key !== name;
       });
       if (mobileMoreToggle) {
         mobileMoreToggle.classList.toggle("active", secondaryPartitions.includes(name));

@@ -6391,7 +6391,7 @@ header.top{display:flex;align-items:center;justify-content:space-between;gap:16p
 #partition-wooden-man-alley[hidden] { display: none; }
 #partition-wooden-man-alley button { min-height: 44px; }
 #partition-wooden-man-alley .panel { margin: 0; }
-#partition-wooden-man-alley .wooden-man-modes { position: sticky; z-index: 8; top: 0; padding: 8px; border: 1px solid rgba(173, 124, 36, .48); border-radius: 9px; background: rgba(14, 10, 7, .94); }
+#partition-wooden-man-alley .wooden-man-modes { position: static; padding: 8px; border: 1px solid rgba(173, 124, 36, .48); border-radius: 9px; background: rgba(14, 10, 7, .94); }
 #partition-wooden-man-alley .wooden-account-panel { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; align-items: end; }
 #partition-wooden-man-alley .wooden-account-panel > div,
 #partition-wooden-man-alley .wooden-end-date { display: grid; gap: 6px; }

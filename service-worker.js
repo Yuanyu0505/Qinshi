@@ -1,7 +1,7 @@
 "use strict";
 
 const CACHE_PREFIX = "qinshi-site-";
-const CACHE_NAME = CACHE_PREFIX + "1.0.60";
+const CACHE_NAME = CACHE_PREFIX + "1.0.61";
 const GALLERY_CACHE_NAME = "qinshi-gallery-v1";
 const PRECACHE_URLS = [
   "./",

@@ -57,7 +57,7 @@
 
 ### Task 4: Frozen acceptance and release
 
-**Files:** version.json, index.html, sw.js, js/pwa.js, js/loader.js, docs/superpowers/reports/2026-10-27-inscription-crafting.md.
+**Files:** version.json, index.html, service-worker.js, js/pwa.js, js/partition-loader.js, .github/workflows/pages.yml, docs/superpowers/reports/2026-10-27-inscription-crafting.md.
 - [ ] Independent branch review, repair with regression tests; ensure all user cases in report. Review own diff and sources values.
 - [ ] Set version1.0.62 everywhere and cache all new assets; verify loader order rules->paths/state->legacy/UI.
 - [ ] Freeze runtime files. Run complete unit then browser round1, same round2; capture full logs and input SHA. Any failure/code fix restarts count. Check actual desktop/mobile/tablet DOM, file:// and PWA offline/upgrades. No production game writes.

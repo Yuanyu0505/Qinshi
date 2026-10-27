@@ -137,9 +137,10 @@
         var counts=new Map(); entries.forEach(function (e) { counts.set(e,(counts.get(e)||0)+1); });
         if (Array.from(counts).some(function (entry) { return entry[0].quantity!==null && entry[1]>entry[0].quantity; })) return;
         var inputs=entries.map(function (entry) { return entry.material; });
-        // Failure reuse must really cover all target identities, never suggest AAA
-        // merely because random fill might create its missing target term.
-        if (!target.terms.every(function (term) { return inputs.some(function (m) { return m.terms.some(function (t) { return termKey(t)===termKey(term); }); }); })) return;
+        // Only orange-two failure reuse requires exact inherited coverage (no
+        // missing-target AAA). Other grades may project unknown blue speed or
+        // fill missing terms; Rules.preview is the authority for their reachability.
+        if (target.quality==="o2" && !target.terms.every(function (term) { return inputs.some(function (m) { return m.terms.some(function (t) { return termKey(t)===termKey(term); }); }); })) return;
         var route=verifiedRoute(target,inputs); if (route) { route.inventoryBound=entries.every(function (entry) { return entry.quantity!==null; }); recipes.set(route.id,route); }
       });
     });

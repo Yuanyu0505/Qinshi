@@ -95,3 +95,18 @@ test("quantity-bearing reuse entries cannot turn null or missing quantities into
   for(const qty of [null,undefined,-1,1.5,NaN,Infinity]) assert.equal(Paths.reuseRecipes(g,[{material,quantity:qty}]).valid,false);
   assert.equal(Paths.reuseRecipes(g,new Array(1)).valid,false);
 });
+const blueSpeedGoal={prefix:"天同",dun:"鬼遁",quality:"p1",attrs:["速","防"]};
+const blueSpeed={prefix:"天同",dun:"鬼遁",quality:"b2",origin:"wash",terms:[{attr:"速",tier:"?"}]};
+const blueDefense={prefix:"天同",dun:"鬼遁",quality:"b2",origin:"wash",terms:[{attr:"防",tier:"H"}]};
+test("concrete-material planner projects blue unknown speed through preview with .5 high-speed chance", () => {
+  const result=Paths.reuseRecipes(blueSpeedGoal,[blueSpeed,blueDefense]);
+  assert.equal(result.valid,true); assert.equal(result.templateMode,true);
+  const recipe=result.recipes.find(r=>r.inputs.some(m=>has(m,"速","?"))&&r.inputs.some(m=>has(m,"防","H")));
+  assert.ok(recipe); assert.equal(recipe.probability,0.5); assert.equal(recipe.deterministic,false);
+});
+test("counted-stock planner retains legal blue unknown speed recipe and respects one of each input", () => {
+  const result=Paths.reuseRecipes(blueSpeedGoal,[{material:blueSpeed,quantity:1},{material:blueDefense,quantity:1}]);
+  assert.equal(result.valid,true); assert.equal(result.templateMode,false); assert.equal(result.recipes.length,1);
+  assert.equal(result.recipes[0].probability,0.5); assert.equal(result.recipes[0].inventoryBound,true);
+  assert.ok(result.recipes[0].requirements.every(e=>e.quantity===1));
+});

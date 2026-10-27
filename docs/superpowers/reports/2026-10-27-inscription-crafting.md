@@ -2,7 +2,7 @@
 
 ## 范围与授权
 
-用户确认完整方案后直接实施；要求连续两轮完整测试通过再合并本地master、更新PWA、推送GitHub。实现、审查和连续两轮验收已完成，未填写的发布项不代表成功。
+用户确认完整方案后直接实施；要求连续两轮完整测试通过再合并本地master、更新PWA、推送GitHub。实现、审查、连续两轮验收、master合并及功能发布均已完成。
 
 基线：df997cdf1fc37a099ce965c03225426b991d7563，PWA1.0.61。
 计划：docs/superpowers/plans/2026-10-27-inscription-crafting.md。
@@ -25,11 +25,15 @@
 | 连续第2轮unit | 878/878，exit0，失败/取消/跳过/TODO均0 |
 | 连续第2轮browser | 25文件共247/247，exit0，失败/取消/跳过/TODO均0 |
 | 整分支独立审查 | 已完成，I1单一修复波及所有测试夹具scoped复核均通过，无开放项 |
-| 本地master合并 | 未执行 |
-| 远端main推送及Pages | 未执行 |
-| 线上版本及新静态资源 | 未执行 |
+| 本地master合并 | df997cd→8276e7e快进；合并后完整unit878/878，exit0 |
+| 远端main推送及Pages | master:main推送8276e7e成功；Pages运行40503356726为COMPLETED/SUCCESS |
+| 线上版本及新静态资源 | 1.0.62；version/index/SW/pwa/loader及4个新JS、1个新CSS共10文件HTTP200，SHA256逐项与Git对象一致 |
 
 正式验收凭据：test-results/inscription-crafting-release-proof.json，以及同名前缀-round1/2-unit/browser.log。四阶段均有开始/结束、exit0，最后status=passed；另行汇总确认两轮各25个browser文件、247项，无遗漏或跳过。测试输入SHA256：72ad285f390fb2d864ae0ad0d6e0be4ec62af7dd4d6d049dfaf2c92aa49afb88。末次运行后重新计算144文件指纹相同。
+
+发布凭据：[功能提交](https://github.com/Yuanyu0505/Qinshi/commit/8276e7e72d996afdff18e8b0a72a1f6e20cd7746)、[Pages部署](https://github.com/Yuanyu0505/Qinshi/actions/runs/40503356726)、[在线工具](https://yuanyu0505.github.io/Qinshi/)。REST API限流后，改读公开Actions页面对应提交的结构化状态，确认成功，不凭推送命令猜测已上线。线上10文件核对记录test-results/inscription-crafting-online-assets.json。后续仅收尾文档提交，不改变已验收运行文件。
+
+Windows快进检出会把部分LF换为CRLF，合并后的原始字节指纹因此不同。对全部144个文件逐一与验收提交Git对象比较，差异仅行尾，没有其他内容变化；运行目录Git差异为空，用户Excel哈希不变。合并后的878项unit另行通过，日志test-results/inscription-crafting-merged-unit.log。
 
 修复前诊断运行（不计连续正式轮）：unit878/878通过；browser在历史1.0.53→1.0.54测试发现旧首页与当下铭文脚本混用，报Rules undefined duns。根代理独立重跑复现。该历史fixture只固定改动文件，漏掉本次新增依赖的消费脚本；2b64ea1固定对应历史铭文版本，并对1.0.58升级用例补齐old/update/offline无pageerror断言。没有关闭错误检查或跳过历史用例。
 
@@ -63,6 +67,7 @@
 4. 洗练概率与总成本未知，不编造数值，只给已备齐具体材料后的步骤合成概率。
 5. 巨大多X组合保留显式参数化入口和具体材料规划器，按需展开；不提前生成所有等价笛卡尔树，也不静默截断路线。若界面隐藏这些入口会构成功能缺失，须浏览器验证。
 6. 实际PWA文件名为service-worker.js及js/partition-loader.js，Pages另有显式JS复制清单，均须注册新资源。
+7. Windows检出后按规范Git内容与行尾归一化复核，不把LF/CRLF当作功能修改；若还有其他内容差异就不能沿用先前验收。此次144文件全部比较，无其他差异。
 
 ## 边界与剩余风险
 

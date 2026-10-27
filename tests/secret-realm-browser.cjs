@@ -146,10 +146,22 @@ for(const width of [320,390,768,1100,1440])test(width+' width realm planning and
   }finally{await context.close();}
 });
 test('installed PWA loads secret realm and calculates on a real worker fully offline',async()=>{
+  const pageErrors=[];
   const {context,page}=await openRealm();try{
-    await page.waitForFunction(()=>Boolean(navigator.serviceWorker.controller));await context.setOffline(true);await page.reload({waitUntil:'networkidle'});
+    page.on('pageerror',error=>pageErrors.push(error.message));
+    await page.evaluate(()=>navigator.serviceWorker.ready);
+    await page.waitForFunction(async()=>{const registration=await navigator.serviceWorker.getRegistration();return registration?.active?.state==='activated';});
+    const installedReload=await page.reload({waitUntil:'networkidle'});
+    await page.waitForFunction(()=>Boolean(navigator.serviceWorker.controller));
+    assert.equal(installedReload.fromServiceWorker(),true,'The installed PWA must serve the page before offline testing');
+    await page.locator('#secret-realm-content').waitFor();
+    await context.setOffline(true);await page.reload({waitUntil:'networkidle'});
     await setupSixYuan(page);await page.evaluate(()=>{window.SECRET_REALM_PLANNER={plan:()=>{throw Error('Main-thread fallback forbidden by offline-worker test');}};});
     await runPlan(page);assert.match(await page.locator('.realm-plan').first().innerText(),/¥2\.40/);
+  }catch(error){
+    try{if(!page.isClosed())console.error('Installed realm fixture failure diagnostics',{pageErrors,registration:await page.evaluate(async()=>{const r=await navigator.serviceWorker.getRegistration();return {active:r?.active?.state??null,installing:r?.installing?.state??null,waiting:r?.waiting?.state??null,controller:navigator.serviceWorker.controller?.state??null};})});}
+    catch(diagnosticError){console.error('Fixture diagnostics unavailable',diagnosticError.message,pageErrors);}
+    throw error;
   }finally{await context.close();}
 });
 test('edited inputs and leaving the partition cannot receive an older held worker result',async()=>{

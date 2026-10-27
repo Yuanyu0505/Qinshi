@@ -203,9 +203,18 @@ test('installed core demand-loads modules and executes real calculation workers 
   const { openApp } = require('./browser-test-helpers.cjs');
   const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
   const page = await context.newPage();
+  const pageErrors = [];
+  page.on('pageerror', error => pageErrors.push(error.message));
   try {
     await openApp(page, url);
+    await page.evaluate(() => navigator.serviceWorker.ready);
+    await page.waitForFunction(async () => {
+      const registration = await navigator.serviceWorker.getRegistration();
+      return registration?.active?.state === 'activated';
+    });
+    const installedReload = await page.reload({ waitUntil: 'networkidle' });
     await page.waitForFunction(() => Boolean(navigator.serviceWorker.controller));
+    assert.equal(installedReload.fromServiceWorker(), true, 'The installed core must serve the page before offline testing');
     await context.setOffline(true);
     await page.reload({ waitUntil: 'networkidle' });
     await page.evaluate(() => document.querySelector('[data-partition="wooden-man-alley"]').click());
@@ -224,5 +233,13 @@ test('installed core demand-loads modules and executes real calculation workers 
     await page.locator('[data-machine-action="calculate"]').click();
     await page.locator('[data-reference-cost-panel="single"]').waitFor();
     assert.equal(await page.evaluate(() => window.MACHINE_BEAST_UI.captureView().calcResult.valid), true);
+  } catch (error) {
+    try {
+      if (!page.isClosed()) console.error('Installed core fixture failure diagnostics', { pageErrors, registration: await page.evaluate(async () => {
+        const r = await navigator.serviceWorker.getRegistration();
+        return { active: r?.active?.state ?? null, installing: r?.installing?.state ?? null, waiting: r?.waiting?.state ?? null, controller: navigator.serviceWorker.controller?.state ?? null };
+      }) });
+    } catch (diagnosticError) { console.error('Fixture diagnostics unavailable', diagnosticError.message, pageErrors); }
+    throw error;
   } finally { await context.close(); }
 });

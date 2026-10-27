@@ -149,7 +149,7 @@ test('installed PWA loads secret realm and calculates on a real worker fully off
   const pageErrors=[];
   const {context,page}=await openRealm();try{
     page.on('pageerror',error=>pageErrors.push(error.message));
-    await page.evaluate(()=>navigator.serviceWorker.ready);
+    await page.waitForFunction(async()=>{await navigator.serviceWorker.ready;return true;});
     await page.waitForFunction(async()=>{const registration=await navigator.serviceWorker.getRegistration();return registration?.active?.state==='activated';});
     const installedReload=await page.reload({waitUntil:'networkidle'});
     await page.waitForFunction(()=>Boolean(navigator.serviceWorker.controller));

@@ -207,7 +207,7 @@ test('installed core demand-loads modules and executes real calculation workers 
   page.on('pageerror', error => pageErrors.push(error.message));
   try {
     await openApp(page, url);
-    await page.evaluate(() => navigator.serviceWorker.ready);
+    await page.waitForFunction(async () => { await navigator.serviceWorker.ready; return true; });
     await page.waitForFunction(async () => {
       const registration = await navigator.serviceWorker.getRegistration();
       return registration?.active?.state === 'activated';

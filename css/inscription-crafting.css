@@ -1,0 +1,59 @@
+.ins-crafting { min-width:0; }
+.ins-crafting *, .ins-crafting *::before, .ins-crafting *::after { box-sizing:border-box; }
+.craft-panel { background:var(--panel,#1c1914); border:1px solid var(--line,#443a29); border-radius:12px; padding:16px; margin:12px 0; min-width:0; }
+.craft-panel h3,.craft-panel h4 { margin:0 0 12px; }
+.craft-controls { display:grid; grid-template-columns:repeat(auto-fit,minmax(155px,1fr)); gap:12px; margin:12px 0; }
+.craft-controls label,.craft-attr-row label { display:flex; flex-direction:column; gap:6px; min-width:0; }
+.ins-crafting select,.ins-crafting input { width:100%; min-width:0; max-width:100%; padding:9px; }
+.ins-crafting button { max-width:100%; white-space:normal; overflow-wrap:anywhere; cursor:pointer; }
+.craft-actions { display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin:10px 0; }
+.craft-actions button,.craft-node button { padding:8px 12px; }
+.craft-attr-row { display:grid; grid-template-columns:1fr 75px; gap:8px; margin:8px 0; }
+.craft-status { padding:12px; border:1px solid #b18646; border-radius:8px; white-space:pre-wrap; margin:12px 0; color:#efd3a1; overflow-wrap:anywhere; }
+.craft-note { color:var(--muted,#b7ad99); line-height:1.7; font-size:13px; overflow-wrap:anywhere; }
+.craft-positions { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:8px; padding:0; list-style:none; }
+.craft-positions li { padding:8px; border:1px solid #49412f; border-radius:6px; overflow-wrap:anywhere; }
+.craft-positions .unavailable { opacity:.75; }
+.craft-scroll { overflow-x:auto; max-width:100%; overscroll-behavior-x:contain; }
+.craft-table { width:100%; border-collapse:collapse; font-size:13px; }
+.craft-table th,.craft-table td { text-align:left; padding:9px; border-bottom:1px solid #49412f; vertical-align:top; }
+.craft-matrix { min-width:700px; }
+.craft-matrix td { min-width:110px; }
+.craft-table small { display:block; color:var(--muted,#b7ad99); }
+.craft-strategy { border:1px solid #53452d; border-radius:8px; margin:10px 0; min-width:0; }
+.craft-strategy>summary { padding:13px; cursor:pointer; overflow-wrap:anywhere; }
+.craft-strategy-body { padding:0 12px 12px; min-width:0; }
+.craft-route { border-top:1px solid #49412f; padding:14px 0; min-width:0; }
+.craft-flow { display:grid; grid-template-columns:minmax(0,1.35fr) 30px minmax(110px,.7fr) 30px minmax(0,1fr); align-items:center; gap:0; margin:10px 0; min-width:0; }
+.craft-inputs { display:grid; gap:10px; min-width:0; position:relative; }
+.craft-node { background:rgba(127,108,69,.1); border:1px solid #6e5c39; border-radius:8px; padding:12px; min-width:0; overflow-wrap:anywhere; }
+.craft-node.craft-output { border-color:#ad914d; }
+.craft-node p { margin:6px 0; }
+.craft-node label { display:block; font-size:12px; margin-top:8px; }
+.craft-operation { text-align:center; }
+.craft-edge { height:2px; background:#c39c55; position:relative; width:100%; }
+.craft-edge::after { content:""; position:absolute; right:0; top:-4px; border-left:7px solid #c39c55; border-top:5px solid transparent; border-bottom:5px solid transparent; }
+.craft-inputs>.craft-node { position:relative; }
+.craft-inputs>.craft-node::after { content:""; position:absolute; right:-15px; top:50%; width:15px; height:2px; background:#c39c55; }
+.craft-inputs::after { content:""; position:absolute; right:-15px; top:0; bottom:0; border-right:2px solid #c39c55; }
+.craft-recipe { border:1px solid #49412f; border-radius:8px; padding:12px; margin:10px 0; }
+.craft-inventory { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:10px; }
+.craft-inventory .craft-node { display:flex; flex-direction:column; gap:6px; }
+.craft-pending { border:2px solid #c39c55; padding:14px; border-radius:10px; margin-top:12px; }
+.craft-highlight { color:#edcf87; }
+.craft-node [data-expanded-material] .craft-flow { grid-template-columns:minmax(0,1fr); }
+.craft-node [data-expanded-material] .craft-edge { width:2px; height:25px; justify-self:center; }
+.craft-node [data-expanded-material] .craft-edge::after { top:auto; bottom:0; right:-4px; border-left:5px solid transparent; border-right:5px solid transparent; border-top:7px solid #c39c55; border-bottom:0; }
+.craft-node [data-expanded-material] .craft-inputs::after,.craft-node [data-expanded-material] .craft-inputs>.craft-node::after { display:none; }
+.craft-legacy-warning { color:#f0bb7c; font-size:12px; margin:6px 0; white-space:pre-wrap; }
+.inscription-modes { flex-wrap:wrap; }
+@media(max-width:650px) {
+  .craft-panel { padding:12px; }
+  .craft-controls { grid-template-columns:minmax(0,1fr); }
+  .craft-flow { grid-template-columns:minmax(0,1fr); }
+  .craft-edge { width:2px; height:25px; justify-self:center; }
+  .craft-edge::after { top:auto; bottom:0; right:-4px; border-left:5px solid transparent; border-right:5px solid transparent; border-top:7px solid #c39c55; border-bottom:0; }
+  .craft-inputs::after,.craft-inputs>.craft-node::after { display:none; }
+  .craft-inventory { grid-template-columns:minmax(0,1fr); }
+  .craft-positions { grid-template-columns:minmax(0,1fr); }
+}

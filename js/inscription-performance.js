@@ -6,7 +6,7 @@
 })(typeof window !== "undefined" ? window : null, function () {
   "use strict";
 
-  var MODES = ["progress", "query", "reference"];
+  var MODES = ["progress", "query", "reference", "crafting-paths", "crafting-simulator"];
 
   function createRenderCoordinator(options) {
     options = options || {};
@@ -16,8 +16,8 @@
     var queryDelay = Number(options.queryDelay) || 120;
     var activeMode = "";
     var pendingQuery = null;
-    var rendered = { progress: false, query: false, reference: false };
-    var dirty = { progress: true, query: true, reference: true };
+    var rendered = {}, dirty = {};
+    MODES.forEach(function (mode) { rendered[mode] = false; dirty[mode] = true; });
 
     function assertMode(mode) {
       if (MODES.indexOf(mode) === -1) throw new Error("Unknown inscription mode: " + mode);

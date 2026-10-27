@@ -3,6 +3,7 @@
 
   var DATA = window.INSCRIPTION_DATA;
   var PERFORMANCE = window.INSCRIPTION_PERFORMANCE;
+  var RULES = window.InscriptionRules;
   var ACCOUNT_STORAGE = window.QinshiAccounts;
   var STORE_KEY = "qinshi_inscription_progress_v2";
   var COMMON_STORE_KEY = "qinshi_inscription_common_v1";
@@ -18,32 +19,17 @@
     "天机": { "1": "护盾+354400、内力+22150", "2": "护盾+602400、内力+37650" }
   };
   var COMMON_SUBS = ["闪避", "招架", "治疗效果"];
-  var LEGACY_SUB_NAMES = { "防御": "防", "技能减免": "技免", "技伤减免": "技免" };
-  var SUBS = {
-    "天遁": [{ n: "攻", x: true }, { n: "暴击伤害" }, { n: "技免" }, { n: "内力" }, { n: "追加伤害" }],
-    "地遁": [{ n: "PVP速" }, { n: "暴击" }, { n: "PVP免伤" }, { n: "技能穿透", x: true }, { n: "防" }],
-    "人遁": [{ n: "血", x: true }, { n: "抗暴击" }, { n: "PVP伤害" }, { n: "技能穿透" }, { n: "防" }],
-    "神遁": [{ n: "PVP速" }, { n: "攻", x: true }, { n: "PVP伤害", x: true }, { n: "技能穿透" }, { n: "内力" }],
-    "鬼遁": [{ n: "速", x: true }, { n: "血" }, { n: "护盾" }, { n: "暴击伤害" }, { n: "防" }],
-    "龙遁": [{ n: "PVP速", x: true }, { n: "血" }, { n: "暴击", x: true }, { n: "PVP伤害" }, { n: "技免" }],
-    "虎遁": [{ n: "血", x: true }, { n: "暴击伤害" }, { n: "抗暴击" }, { n: "内力", x: true }, { n: "追加伤害" }],
-    "风遁": [{ n: "攻" }, { n: "暴击" }, { n: "护盾" }, { n: "PVP免伤", x: true }, { n: "追加伤害" }],
-    "云遁": [{ n: "护盾", x: true }, { n: "抗暴击", x: true }, { n: "PVP免伤" }, { n: "技免", x: true }, { n: "防" }]
-  };
-  SHIELDS.forEach(function (shield) {
-    COMMON_SUBS.forEach(function (name) {
-      if (!SUBS[shield].some(function (attr) { return attr.n === name; })) {
-        SUBS[shield].push({ n: name });
-      }
-    });
+  var SUBS = {};
+  RULES.duns.forEach(function (dun) {
+    SUBS[dun.id] = dun.attrs.concat(COMMON_SUBS).map(function (name) { return { n:name, x:dun.high.indexOf(name) !== -1, common:COMMON_SUBS.indexOf(name) !== -1 }; });
   });
   var SHIELD_NOTES = {
-    "龙遁": "可洗3/4/5速度；可洗血属性，最多双血",
-    "鬼遁": "可洗3/4/5速度；可洗血属性，最多双血",
-    "神遁": "二星橙色铭文最多3+4速",
-    "地遁": "二星橙色铭文最多3+4速",
-    "人遁": "可洗血属性；可三血",
-    "虎遁": "可洗血属性；可三血"
+    "龙遁": "PVP速支持高/中/低档；中档来自合成，蓝二速度1的档位不可辨识",
+    "鬼遁": "速支持高/中/低档；中档来自合成，蓝二速度1的档位不可辨识",
+    "神遁": "PVP速无高档，橙二最高低档3/中档4；中档来自合成",
+    "地遁": "PVP速无高档，橙二最高低档3/中档4；中档来自合成",
+    "人遁": "血、抗暴击支持三档；技能穿透最多两档",
+    "虎遁": "血、内力支持三档；同一种不分档属性每枚只能一条"
   };
 
   var progress = loadProgress();
@@ -80,7 +66,9 @@
       renderers: {
         progress: renderProgressList,
         query: renderQuery,
-        reference: renderReference
+        reference: renderReference,
+        "crafting-paths": function () { window.InscriptionCraftingUI.activate("crafting-paths"); },
+        "crafting-simulator": function () { window.InscriptionCraftingUI.activate("crafting-simulator"); }
       },
       schedule: function (callback, delay) { return window.setTimeout(callback, delay); },
       cancel: function (id) { window.clearTimeout(id); },
@@ -125,7 +113,7 @@
           slot.subs = values.map(function (value) { return normalizeAttrName(slot.shield, value); });
           var subValues = Array.isArray(slot.subValues) ? slot.subValues.slice(0, 3) : [];
           while (subValues.length < 3) subValues.push("");
-          slot.subValues = subValues.map(function (value) { return String(value || "").trim(); });
+          slot.subValues = subValues.map(function (value) { return String(value == null ? "" : value).trim(); });
           delete slot.sub;
         });
       });
@@ -133,19 +121,26 @@
     } catch (error) { return {}; }
   }
   function normalizeDunName(value) {
-    var text = String(value || "");
-    return text.endsWith("盾") ? text.slice(0, -1) + "遁" : text;
+    return RULES.normalizeDun(String(value || ""));
   }
   function normalizeAttrName(shield, value) {
     shield = normalizeDunName(shield);
     value = String(value || "");
     var attrs = SUBS[shield] || [];
-    var normalized = LEGACY_SUB_NAMES[value] || value;
+    var normalized = RULES.normalizeAttr(value);
     var withoutThree = normalized.replace(/^3/, "");
-    withoutThree = LEGACY_SUB_NAMES[withoutThree] || withoutThree;
-    return attrs.some(function (attr) { return attr.x && attr.n === withoutThree; }) ? withoutThree : normalized;
+    withoutThree = RULES.normalizeAttr(withoutThree);
+    return attrs.some(function (attr) { return attr.n === withoutThree; }) ? withoutThree : normalized;
   }
-  function saveProgress() { ACCOUNT_STORAGE.setItem(STORE_KEY, JSON.stringify(progress)); }
+  function saveProgress(key, record) {
+    // Only the explicitly edited disciple changes. Historical aliases/text in other
+    // records stay byte-equivalent JSON values, not this display-normalized copy.
+    var latest = JSON.parse(ACCOUNT_STORAGE.getItem(STORE_KEY) || "{}");
+    if (!latest || typeof latest !== "object" || Array.isArray(latest)) throw new Error("Invalid inscription progress data");
+    if (record === undefined) delete latest[key]; else latest[key] = record;
+    if (ACCOUNT_STORAGE.setItem(STORE_KEY, JSON.stringify(latest)) === false) throw new Error("Inscription progress was not saved");
+    progress = loadProgress();
+  }
 
   function commonStatus(message) {
     if (!el.commonStatus) return;
@@ -234,9 +229,10 @@
   function switchMode(event) {
     var button = event.target.closest("button[data-mode]");
     if (!button) return;
-    renderCoordinator.activate(button.dataset.mode);
+    var rendered = renderCoordinator.activate(button.dataset.mode);
+    if (!rendered && button.dataset.mode.indexOf("crafting-") === 0) window.InscriptionCraftingUI.activate(button.dataset.mode);
     el.modes.querySelectorAll("button").forEach(function (item) { item.classList.toggle("active", item === button); });
-    ["progress", "query", "reference"].forEach(function (mode) {
+    ["progress", "query", "reference", "crafting-paths", "crafting-simulator"].forEach(function (mode) {
       document.getElementById("inscription-" + mode).hidden = mode !== button.dataset.mode;
     });
   }
@@ -263,7 +259,7 @@
   function renderEditor(item) {
     if (!item) { el.editor.innerHTML = ""; return; }
     var saved = progress[keyOf(item)];
-    el.editor.innerHTML = '<section class="ins-editor"><div class="ins-card-head"><div><span class="ins-quality ' + (item.quality === "红色神将" ? "red" : "orange") + '">' + item.quality + '</span><b>' + escapeHtml(item.name) + '</b></div><button type="button" class="link-btn" data-action="cancel">取消</button></div><div class="muted-tip ins-editor-tip">每个位置分别选择三条副属性并填写附加内容（如：+6%）；普通属性最多选择两条相同，标记为“极致”的属性允许三条相同。</div>' + item.slots.map(function (slot) {
+    el.editor.innerHTML = '<section class="ins-editor"><div class="ins-card-head"><div><span class="ins-quality ' + (item.quality === "红色神将" ? "red" : "orange") + '">' + item.quality + '</span><b>' + escapeHtml(item.name) + '</b></div><button type="button" class="link-btn" data-action="cancel">取消</button></div><div class="muted-tip ins-editor-tip">紫色每枚2条、橙色每枚3条；同一种不分档属性只允许1条，同属性同档不能重复，每枚最多2条高档。填写规则内精确数值（如+6%）；紫色以上中档来自合成。全空位置仅存为草稿。历史异常仅提示，调整后才保存。</div>' + item.slots.map(function (slot) {
       var old = saved && saved.slots && saved.slots.find(function (x) { return x.tian === slot.tian; });
       var quality = old ? old.quality : "橙色";
       var star = old ? old.star : "2";
@@ -274,7 +270,7 @@
     refreshEditorMain();
   }
   function subOptionsHtml(shield, selected) {
-    return '<option value="">请选择</option>' + SUBS[shield].map(function (attr) {
+    return '<option value="">请选择</option>' + (selected && !SUBS[shield].some(function (a) { return a.n === selected; }) ? '<option selected value="' + escapeHtml(selected) + '">' + escapeHtml(selected) + '（历史不支持属性）</option>' : '') + SUBS[shield].map(function (attr) {
       return '<option value="' + escapeHtml(attr.n) + '"' + (attr.n === selected ? " selected" : "") + '>' + attr.n + (attr.x ? "（极致可三条）" : "") + '</option>';
     }).join("");
   }
@@ -284,27 +280,60 @@
   function subDisplayText(base, value) {
     return base ? base + String(value || "").trim() : "";
   }
-  function refreshEditorMain(event) {
-    if (event && event.target.classList.contains("ins-edit-sub") && event.target.value) {
-      var changedRow = event.target.closest(".ins-editor-slot");
-      var changedAttr = SUBS[changedRow.dataset.shield].find(function (item) { return item.n === event.target.value; });
-      var selectedCount = Array.prototype.filter.call(changedRow.querySelectorAll(".ins-edit-sub"), function (select) { return select.value === event.target.value; }).length;
-      if (changedAttr && !changedAttr.x && selectedCount > 2) event.target.value = "";
-    }
+  function qualityId(slot) { return (slot.quality === "紫色" ? "p" : "o") + (String(slot.star) === "1" ? "1" : "2"); }
+  function validateSlot(slot) {
+    var quality = qualityId(slot), required = RULES.qualities.find(function (q) { return q.id === quality; }).count;
+    var subs = slot.subs || [], values = slot.subValues || [], errors = [];
+    var nonempty = subs.filter(Boolean).length;
+    if (!nonempty && !values.some(Boolean)) return { valid:true, draft:true, errors:["未填写草稿，不作为有效材料"] };
+    if (nonempty !== required || subs.slice(required).some(Boolean) || values.slice(required).some(Boolean)) errors.push("此品质需恰好" + required + "条副属性，历史条数无效时请明确调整");
+    var candidates = subs.slice(0, required).map(function (attr, i) {
+      var raw = String(values[i] || "").trim();
+      if (!attr || !/^\+?\d+(?:\.\d+)?%?$/.test(raw)) { errors.push("副属性" + (i+1) + "缺失或非标准数值：" + (raw || "未填写")); return []; }
+      var amount = Number(raw.replace(/[+%]/g,""));
+      var info=RULES.attributes.find(function(a){return a.id===RULES.normalizeAttr(attr);});
+      if(raw.endsWith('%')&&info&&info.unit!=='%'){errors.push("副属性"+(i+1)+"不是百分比属性，不能填写百分号");return [];}
+      var choices = RULES.termsFor(slot.shield, quality).filter(function (term) { return term.attr === RULES.normalizeAttr(attr) && RULES.value(term,quality) === amount; });
+      if (!choices.length) errors.push("副属性" + (i+1) + "不支持此属性/数值：" + attr + raw);
+      return choices;
+    });
+    if (errors.length) return { valid:false,errors:errors };
+    var combinations = [[]];candidates.forEach(function (choices) { var next=[];combinations.forEach(function (terms) { choices.forEach(function (term) { next.push(terms.concat([term])); }); });combinations=next; });
+    var valid = combinations.some(function (terms) { return ["wash","crafted"].some(function (origin) { return RULES.validate({prefix:slot.tian,dun:slot.shield,quality:quality,origin:origin,terms:terms}).valid; }); });
+    return {valid:valid,errors:valid?[]:["词条组合无合法洗练/合成来源（同档或不分档重复、高档上限或来源不符）"]};
+  }
+  function slotWarningHtml(slot) {
+    var result=validateSlot(slot);
+    return result.valid && !result.draft ? "" : '<div class="craft-legacy-warning">' + (result.draft ? "草稿：" : "历史记录警告：") + escapeHtml(result.errors.join("；")) + '</div>';
+  }
+  function editorSlot(row) {
+    var subs=Array.from(row.querySelectorAll(".ins-edit-sub")).map(function (select) { return select.value; });
+    return {tian:row.dataset.tian,shield:row.dataset.shield,quality:row.querySelector(".ins-edit-quality").value,star:row.querySelector(".ins-edit-star").value,subs:subs,subValues:Array.from(row.querySelectorAll(".ins-edit-sub-value")).map(function (input,index) {return subs[index] ? input.value.trim() : "";})};
+  }
+  function refreshEditorMain() {
+    // Do not silently erase invalid choices; show the reason until corrected.
     el.editor.querySelectorAll(".ins-editor-slot").forEach(function (row) {
       var quality = row.querySelector(".ins-edit-quality").value;
       var star = row.querySelector(".ins-edit-star").value;
       row.querySelector(".ins-main-preview").textContent = quality === "紫色" ? "主属性：暂不展示" : "主属性：" + MAIN[row.dataset.tian][star];
       var selects = Array.prototype.slice.call(row.querySelectorAll(".ins-edit-sub"));
       var selected = selects.map(function (select) { return select.value; });
+      var count = quality === "紫色" ? 2 : 3;
       selects.forEach(function (select, currentIndex) {
+        var label=select.closest("label"), input=label.querySelector(".ins-edit-sub-value");
+        label.hidden=currentIndex>=count&&!select.value&&!input.value;
         Array.prototype.forEach.call(select.options, function (option) {
           if (!option.value) { option.disabled = false; return; }
           var attr = SUBS[row.dataset.shield].find(function (item) { return item.n === option.value; });
           var otherCount = selected.filter(function (value, index) { return index !== currentIndex && value === option.value; }).length;
-          option.disabled = Boolean(attr && !attr.x && select.value !== option.value && otherCount >= 2);
+          option.disabled = Boolean(attr && select.value !== option.value && otherCount >= (attr.common ? 1 : attr.x ? count : 2));
         });
+        var listId="ins-values-"+row.dataset.tian+"-"+currentIndex, list=label.querySelector("datalist");
+        if(!list){list=document.createElement("datalist");label.appendChild(list);}list.id=listId;input.setAttribute("list",listId);
+        var qualityKey=(quality === "紫色" ? "p" : "o")+star;
+        list.innerHTML=RULES.termsFor(row.dataset.shield,qualityKey).filter(function (t) {return t.attr===select.value;}).map(function(t){var meta=RULES.attributes.find(function(a){return a.id===t.attr;});return '<option value="+'+RULES.value(t,qualityKey)+meta.unit+'">'+({H:'高档',M:'中档',L:'低档',U:'不分档'}[t.tier])+'</option>';}).join("");
       });
+      var warning=row.querySelector(".craft-legacy-warning");if(warning)warning.remove();row.insertAdjacentHTML("beforeend",slotWarningHtml(editorSlot(row)));
     });
   }
   function handleEditorClick(event) {
@@ -313,12 +342,12 @@
     if (button.dataset.action === "cancel") { editingKey = ""; el.editor.innerHTML = ""; return; }
     var item = itemByKey(editingKey);
     if (!item) return;
-    progress[editingKey] = { name: item.name, quality: item.quality, slots: Array.prototype.map.call(el.editor.querySelectorAll(".ins-editor-slot"), function (row) {
-      var subs = Array.prototype.map.call(row.querySelectorAll(".ins-edit-sub"), function (select) { return select.value; });
-      var subValues = Array.prototype.map.call(row.querySelectorAll(".ins-edit-sub-value"), function (input, index) { return subs[index] ? input.value.trim() : ""; });
-      return { tian: row.dataset.tian, shield: row.dataset.shield, quality: row.querySelector(".ins-edit-quality").value, star: row.querySelector(".ins-edit-star").value, subs: subs, subValues: subValues };
-    }) };
-    saveProgress();
+    var slots=Array.from(el.editor.querySelectorAll(".ins-editor-slot")).map(editorSlot);
+    var invalid=slots.filter(function(slot){return !validateSlot(slot).valid;});
+    if(invalid.length){refreshEditorMain();commonStatus("铭文未保存：请调整无效历史记录或非法数值/条数。");return;}
+    try { saveProgress(editingKey,{name:item.name,quality:item.quality,slots:slots}); }
+    catch(error){commonStatus("铭文保存失败："+error.message);return;}
+    commonStatus("");
     editingKey = "";
     el.editor.innerHTML = "";
     renderCoordinator.invalidate("progress");
@@ -332,10 +361,10 @@
     }).join("") : '<div class="empty ins-empty"><p>尚未保存弟子铭文</p></div>';
   }
   function savedSlotHtml(slot) {
-    var main = slot.quality === "紫色" ? "主属性暂不展示" : MAIN[slot.tian][slot.star];
+    var main = slot.quality === "紫色" ? "主属性暂不展示" : (MAIN[slot.tian] && MAIN[slot.tian][slot.star] || "未知主属性");
     var subs = Array.isArray(slot.subs) ? slot.subs : ["", "", ""];
     var subValues = Array.isArray(slot.subValues) ? slot.subValues : ["", "", ""];
-    return '<div class="ins-saved-slot"><div class="ins-saved-core"><b>' + slot.tian + ' · ' + slot.shield + extremeNoteHtml(slot.shield) + '</b>' + starBadgeHtml(slot.quality, slot.star) + mainStackHtml(main) + '</div><div class="ins-saved-substats">' + subs.map(function (sub, index) { var display = subDisplayText(sub, subValues[index]); return '<span class="ins-saved-sub' + (isExtremeAttr(slot.shield, sub) ? " extreme" : "") + '"><small>副属性' + (index + 1) + '</small><strong>' + (display ? escapeHtml(display) : "未设置") + '</strong></span>'; }).join("") + '</div></div>';
+    return '<div class="ins-saved-slot"><div class="ins-saved-core"><b>' + escapeHtml(slot.tian + ' · ' + slot.shield) + extremeNoteHtml(slot.shield) + '</b>' + starBadgeHtml(slot.quality, slot.star) + mainStackHtml(main) + '</div><div class="ins-saved-substats">' + subs.map(function (sub, index) { var display = subDisplayText(sub, subValues[index]); return '<span class="ins-saved-sub' + (isExtremeAttr(slot.shield, sub) ? " extreme" : "") + '"><small>副属性' + (index + 1) + '</small><strong>' + (display ? escapeHtml(display) : "未设置") + '</strong></span>'; }).join("") + '</div>' + slotWarningHtml(slot) + '</div>';
   }
   function starBadgeHtml(quality, star) {
     var normalizedQuality = quality === "紫色" ? "紫色" : "橙色";
@@ -351,8 +380,7 @@
       var deleteKey = decodeURIComponent(button.dataset.deleteKey);
       var item = itemByKey(deleteKey);
       if (!item || !window.confirm("确定删除“" + item.name + "”的铭文个人进度吗？")) return;
-      delete progress[deleteKey];
-      saveProgress();
+      try { saveProgress(deleteKey); } catch(error) { commonStatus("铭文删除未保存："+error.message);return; }
       if (editingKey === deleteKey) { editingKey = ""; el.editor.innerHTML = ""; }
       renderCoordinator.invalidate("progress");
       renderCoordinator.markDirty("query");
@@ -390,7 +418,7 @@
     var visibleSlots = item.slots.filter(slotMatchesFilter);
     return '<article class="ins-query-card' + (saved ? " saved" : "") + '" data-ins-query-key="' + encodedKey(item) + '"><div class="ins-card-head"><div><span class="ins-quality ' + (item.quality === "红色神将" ? "red" : "orange") + '">' + item.quality + '</span><b class="' + (saved ? "ins-saved-name" : "") + '">' + escapeHtml(item.name) + '</b>' + commonButtonHtml(item) + (saved ? '<span class="ins-saved-mark">个人进度已保存</span>' : "") + '</div></div><div class="ins-query-slots">' + visibleSlots.map(function (slot) {
       var savedSlot = savedProgress && savedProgress.slots.find(function (entry) { return entry.tian === slot.tian && entry.shield === slot.shield; });
-      return '<div class="ins-query-slot"><div class="ins-slot-title">' + slot.tian + ' · ' + slot.shield + extremeNoteHtml(slot.shield) + '</div>' + queryMainHtml(slot, savedSlot) + '<div class="ins-query-substats"><div class="ins-sub-list"><span class="ins-sub-label">可洗练副属性</span>' + SUBS[slot.shield].map(subTagHtml).join("") + '</div>' + currentSubstatsHtml(savedSlot) + '</div></div>';
+      return '<div class="ins-query-slot"><div class="ins-slot-title">' + slot.tian + ' · ' + slot.shield + extremeNoteHtml(slot.shield) + '</div>' + queryMainHtml(slot, savedSlot) + '<div class="ins-query-substats"><div class="ins-sub-list"><span class="ins-sub-label">支持副属性（含合成档）</span>' + SUBS[slot.shield].map(subTagHtml).join("") + '</div>' + currentSubstatsHtml(savedSlot) + '</div></div>';
     }).join("") + '</div></article>';
   }
   function queryMainHtml(slot, savedSlot) {
@@ -405,17 +433,17 @@
     var subValues = Array.isArray(savedSlot.subValues) ? savedSlot.subValues : ["", "", ""];
     var current = subs.map(function (sub, index) { return subDisplayText(sub, subValues[index]); }).filter(Boolean);
     var values = current.length ? current.map(function (value) { return '<span class="ins-current-sub-tag">' + escapeHtml(value) + '</span>'; }).join("") : '<span class="ins-current-sub-tag empty">未设置</span>';
-    return '<div class="ins-current-substats"><span class="ins-current-sub-label">当前副属性</span>' + values + '</div>';
+    return '<div class="ins-current-substats"><span class="ins-current-sub-label">当前副属性</span>' + values + '</div>' + slotWarningHtml(savedSlot);
   }
   function subTagHtml(attr) { return '<span class="ins-sub-tag' + (attr.x ? " extreme" : "") + '">' + attr.n + (attr.x ? '<em>可三条</em>' : "") + '</span>'; }
-  function isExtremeAttr(shield, name) { return SUBS[shield].some(function (attr) { return attr.x && attr.n === name; }); }
+  function isExtremeAttr(shield, name) { return (SUBS[shield] || []).some(function (attr) { return attr.x && attr.n === name; }); }
   function extremeNoteHtml(shield) {
-    var names = SUBS[shield].filter(function (attr) { return attr.x; }).map(function (attr) { return attr.n; });
+    var names = (SUBS[shield] || []).filter(function (attr) { return attr.x; }).map(function (attr) { return attr.n; });
     return names.length ? '<span class="ins-extreme-note">（极致：' + names.join("、") + '）</span>' : "";
   }
 
   function renderReference() {
-    el.reference.innerHTML = '<section class="ins-reference-block"><h3>天位主属性</h3><p class="mobile-scroll-hint" aria-hidden="true">左右滑动查看全部星级 →</p><div class="table-wrap mobile-scroll-region" tabindex="0" aria-label="天位主属性资料表，可左右滑动"><table class="ins-reference-table"><thead><tr><th>天位</th><th>' + starBadgeHtml("橙色", "1") + '</th><th>' + starBadgeHtml("橙色", "2") + '</th><th>紫色</th></tr></thead><tbody>' + TIANS.map(function (tian) { return '<tr><th>' + tian + '</th><td>' + MAIN[tian]["1"] + '</td><td>' + MAIN[tian]["2"] + '</td><td>暂不展示主属性</td></tr>'; }).join("") + '</tbody></table></div></section><section class="ins-reference-block"><h3>遁位副属性</h3><p class="mobile-scroll-hint" aria-hidden="true">左右滑动查看全部说明 →</p><div class="table-wrap mobile-scroll-region" tabindex="0" aria-label="遁位副属性资料表，可左右滑动"><table class="ins-reference-table"><thead><tr><th>遁位</th><th>可洗练副属性</th><th>备注</th></tr></thead><tbody>' + SHIELDS.map(function (shield) { return '<tr><th>' + shield + extremeNoteHtml(shield) + '</th><td><div class="ins-sub-list">' + SUBS[shield].map(subTagHtml).join("") + '</div></td><td class="ins-shield-note">' + (SHIELD_NOTES[shield] || "—") + '</td></tr>'; }).join("") + '</tbody></table></div><div class="muted-tip">“极致”表示该基础属性可同时出现在副属性1、副属性2、副属性3中，不是名为“3攻”或“3技能穿透”的单条属性。</div></section>';
+    el.reference.innerHTML = '<section class="ins-reference-block"><h3>天位主属性</h3><p class="mobile-scroll-hint" aria-hidden="true">左右滑动查看全部星级 →</p><div class="table-wrap mobile-scroll-region" tabindex="0" aria-label="天位主属性资料表，可左右滑动"><table class="ins-reference-table"><thead><tr><th>天位</th><th>' + starBadgeHtml("橙色", "1") + '</th><th>' + starBadgeHtml("橙色", "2") + '</th><th>紫色</th></tr></thead><tbody>' + TIANS.map(function (tian) { return '<tr><th>' + tian + '</th><td>' + MAIN[tian]["1"] + '</td><td>' + MAIN[tian]["2"] + '</td><td>暂不展示主属性</td></tr>'; }).join("") + '</tbody></table></div></section><section class="ins-reference-block"><h3>遁位副属性</h3><p class="mobile-scroll-hint" aria-hidden="true">左右滑动查看全部说明 →</p><div class="table-wrap mobile-scroll-region" tabindex="0" aria-label="遁位副属性资料表，可左右滑动"><table class="ins-reference-table"><thead><tr><th>遁位</th><th>支持副属性（含合成档）</th><th>备注</th></tr></thead><tbody>' + SHIELDS.map(function (shield) { return '<tr><th>' + shield + extremeNoteHtml(shield) + '</th><td><div class="ins-sub-list">' + SUBS[shield].map(subTagHtml).join("") + '</div></td><td class="ins-shield-note">' + (SHIELD_NOTES[shield] || "—") + '</td></tr>'; }).join("") + '</tbody></table></div><div class="muted-tip">“极致”表示该属性支持高/中/低三档，橙色可分别各选一条，并非可以洗出三条相同档位。紫色最多两条，紫色以上中档来自合成；同一种不分档属性仅一条。具体品质数值与来源见合成路径查询。</div></section>';
   }
 
   document.addEventListener("DOMContentLoaded", init);

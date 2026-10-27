@@ -13,6 +13,7 @@
 <link rel="stylesheet" href="css/style.css?v=1.0.61">
 <link rel="stylesheet" href="css/six-halls.css?v=1.0.61">
 <link rel="stylesheet" href="css/secret-realm.css?v=1.0.61">
+<link rel="stylesheet" href="css/inscription-crafting.css?v=1.0.61">
 </head>
 <body>
 <div id="account-init-overlay" class="account-init-overlay" hidden>
@@ -304,6 +305,8 @@
         <button type="button" class="seg active" data-mode="progress">个人进度</button>
         <button type="button" class="seg" data-mode="query">查询筛选</button>
         <button type="button" class="seg" data-mode="reference">资料图表</button>
+        <button type="button" class="seg" data-mode="crafting-paths">合成路径查询</button>
+        <button type="button" class="seg" data-mode="crafting-simulator">合成模拟</button>
       </div>
 
       <div id="ins-common-status" class="error" role="alert" hidden></div>
@@ -334,6 +337,8 @@
       </section>
 
       <section id="inscription-reference" hidden></section>
+      <section id="inscription-crafting-paths" class="ins-crafting" hidden></section>
+      <section id="inscription-crafting-simulator" class="ins-crafting" hidden></section>
     </section>
 
     <section id="partition-machine-beasts" hidden>
@@ -961,6 +966,10 @@
 <script defer src="js/quiz.js?v=1.0.61"></script>
 <script defer src="js/ui-performance.js?v=1.0.61"></script>
 <script defer src="js/inscription-performance.js?v=1.0.61"></script>
+<script defer src="js/inscription-rules.js?v=1.0.61"></script>
+<script defer src="js/inscription-paths.js?v=1.0.61"></script>
+<script defer src="js/inscription-crafting-state.js?v=1.0.61"></script>
+<script defer src="js/inscription-crafting-ui.js?v=1.0.61"></script>
 <script defer src="js/inscription.js?v=1.0.61"></script>
 <script defer src="js/zhulu.js?v=1.0.61"></script>
 <script defer src="js/settings.js?v=1.0.61"></script>

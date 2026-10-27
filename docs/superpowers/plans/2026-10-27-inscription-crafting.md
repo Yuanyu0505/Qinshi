@@ -32,33 +32,33 @@
 
 **Files:** Create js/inscription-rules.js, js/inscription-rules.test.js.
 **Interfaces:** UMD window.InscriptionRules and CommonJS; quality IDs b2,p1,p2,o1,o2. Term={attr,tier} tier H/M/L/U/?; material={prefix,dun,quality,origin,terms}. Export qualities/attributes/duns, termsFor(dun,quality,origin?), validate(material), value(term,quality), label(term,quality), signature(material), bestTargets(dun,quality,attrs), preview(materials), sample(outcomes,random).
-- [ ] RED tests: p2 wash low/high valid vs low/mid invalid; p2 crafted low invalid; ghost b2speed+highdef -> literal two outputs; ghost/dragon double speed fixedM+complete complement pool; three penetration earth valid human invalid; equipment/source/count rejects; probability sums1; four-select3 exact25 and triple exact1; all max2H; every growth vector table.
-- [ ] Run focused node --test with bundled runtime, record expected missing module RED.
-- [ ] Implement according to Spec, normalized aliases旧盾/防御/技能减免. Interface may add helpers but document exact exports for downstream.
-- [ ] Focused GREEN and full unit once; self-review and commit only owned files. Report TDD and interface examples.
+- [x] RED tests: p2 wash low/high valid vs low/mid invalid; p2 crafted low invalid; ghost b2speed+highdef -> literal two outputs; ghost/dragon double speed fixedM+complete complement pool; three penetration earth valid human invalid; equipment/source/count rejects; probability sums1; four-select3 exact25 and triple exact1; all max2H; every growth vector table.
+- [x] Run focused node --test with bundled runtime, record expected missing module RED.
+- [x] Implement according to Spec, normalized aliases旧盾/防御/技能减免. Interface may add helpers but document exact exports for downstream.
+- [x] Focused GREEN and full unit once; self-review and commit only owned files. Report TDD and interface examples.
 
 ### Task 2: Paths and persistent workbench
 
 **Files:** Create js/inscription-paths.js, js/inscription-crafting-state.js and corresponding .test.js.
 **Interfaces:** Paths.generate({prefix,dun,quality,attrs}) -> target(s), grouped routes with material/operation nodes and subroutes; consumes Rules. State.createStore(accountStorage) -> actual inventory, goals, per-goal virtual workspace; pure transactions via checked saves. Expose add/update actual by signature, save/delete goal, copy actual, set virtual, stage pending, retry, commitPending(action), reset workspace. Source validators use Rules.
-- [ ] RED earth three pen deterministic and probability including failures; human doublepen+PVP no forged deterministic; arbitrary mixed goals and lower qualities; all duns; all concrete X alternatives; no invalid generated recipes. State tests save/restore goals, actual shared signatures, no actual writes from sim, double-submit, insufficient inventory, random input bounds, failed save rollback, malformed saved state preserved.
-- [ ] Implement recursive/partitioned source planning, cache canonically, same-shape grouping with full branch data; low seeds wash, M sources crafted; probability and reuse computed with Rules preview. No template-only coverage or silent cap.
-- [ ] Implement validated versioned account store; pending holds recipe/result/unique token, commit rechecks stock, atomic single saved payload, retry no writes to inventory. Inventory integers >=0, fail loudly on storage false/errors, raw malformed data not overwritten.
-- [ ] GREEN focused + full unit; self-review commit and interface usage report.
+- [x] RED earth three pen deterministic and probability including failures; human doublepen+PVP no forged deterministic; arbitrary mixed goals and lower qualities; all duns; all concrete X alternatives; no invalid generated recipes. State tests save/restore goals, actual shared signatures, no actual writes from sim, double-submit, insufficient inventory, random input bounds, failed save rollback, malformed saved state preserved.
+- [x] Implement recursive/partitioned source planning, cache canonically, same-shape grouping with full branch data; low seeds wash, M sources crafted; probability and reuse computed with Rules preview. No template-only coverage or silent cap.
+- [x] Implement validated versioned account store; pending holds recipe/result/unique token, commit rechecks stock, atomic single saved payload, retry no writes to inventory. Inventory integers >=0, fail loudly on storage false/errors, raw malformed data not overwritten.
+- [x] GREEN focused + full unit; self-review commit and interface usage report.
 
 ### Task 3: UI, legacy consistency, browser tests
 
 **Files:** Create js/inscription-crafting-ui.js, css/inscription-crafting.css, tests/inscription-crafting.cjs. Modify index.html, js/inscription.js, js/inscription-performance.js, relevant old tests and loader/sw asset registry.
 **Interfaces:** Consumes Rules/Paths/State; two added mode sections. Locally drawn HTML/SVG/CSS flows, concrete inventory editors, simulation add/source/preview/pending actions, autosaved target switcher.
-- [ ] RED browser key journey and responsive layouts before implementation; use existing browser helper server and bundled Chromium packages. Test exact same input probabilities vs target, expected illegal washedM option absent, blue speed only visible1, file origin, refresh, account switch, old invalid progress no data loss, simulator snapshot isolation, doublecommit/retry, backup payload inclusion.
-- [ ] Add independent target/quality/dun/attribute filters; disciple optional; explicit prefix only after genericfilter. Detailed reason + alternative suggestion, no silent targetchange. Per-quality table and old editor normalize/warnings while preserving legacy serialized records until user saves valid adjustments.
-- [ ] Flow nodes have concrete input/output/probability/stock; X expansion all legal choices, failure complementary recipe builder, grouped collapsible branches. Preserve focus and lazy rendering. Add material collections with qty/source, inventory copies confirm replacement, simulator slot selection/count checks, all previews with pagination (probability not truncated), pending only commit once, saved current workspace.
-- [ ] Wire original modes to coordinator and version asset loading; no external library. Mobile native accessible controls, visual flows with arrows. Run focused+full tests, self-review, commit.
+- [x] RED browser key journey and responsive layouts before implementation; use existing browser helper server and bundled Chromium packages. Test exact same input probabilities vs target, expected illegal washedM option absent, blue speed only visible1, file origin, refresh, account switch, old invalid progress no data loss, simulator snapshot isolation, doublecommit/retry, backup payload inclusion.
+- [x] Add independent target/quality/dun/attribute filters; disciple optional; explicit prefix only after genericfilter. Detailed reason + alternative suggestion, no silent targetchange. Per-quality table and old editor normalize/warnings while preserving legacy serialized records until user saves valid adjustments.
+- [x] Flow nodes have concrete input/output/probability/stock; X expansion all legal choices, failure complementary recipe builder, grouped collapsible branches. Preserve focus and lazy rendering. Add material collections with qty/source, inventory copies confirm replacement, simulator slot selection/count checks, all previews with pagination (probability not truncated), pending only commit once, saved current workspace.
+- [x] Wire original modes to coordinator and version asset loading; no external library. Mobile native accessible controls, visual flows with arrows. Run focused+full tests, self-review, commit.
 
 ### Task 4: Frozen acceptance and release
 
 **Files:** version.json, index.html, service-worker.js, js/pwa.js, js/partition-loader.js, .github/workflows/pages.yml, docs/superpowers/reports/2026-10-27-inscription-crafting.md.
-- [ ] Independent branch review, repair with regression tests; ensure all user cases in report. Review own diff and sources values.
-- [ ] Set version1.0.62 everywhere and cache all new assets; verify loader order rules->paths/state->legacy/UI.
-- [ ] Freeze runtime files. Run complete unit then browser round1, same round2; capture full logs and input SHA. Any failure/code fix restarts count. Check actual desktop/mobile/tablet DOM, file:// and PWA offline/upgrades. No production game writes.
+- [x] Independent branch review, repair with regression tests; ensure all user cases in report. Review own diff and sources values.
+- [x] Set version1.0.62 everywhere and cache all new assets; verify loader order rules->paths/state->legacy/UI.
+- [x] Freeze runtime files. Run complete unit then browser round1, same round2; capture full logs and input SHA. Any failure/code fix restarts count. Check actual desktop/mobile/tablet DOM, file:// and PWA offline/upgrades. No production game writes.
 - [ ] Commit tracked feature-only files; fastforward master; push existing master:main remote. Verify Pages workflow SHA and online version/static assets, report observed results. Preserve unrelated local content.

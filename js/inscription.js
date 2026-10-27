@@ -308,7 +308,8 @@
   }
   function editorSlot(row) {
     var subs=Array.from(row.querySelectorAll(".ins-edit-sub")).map(function (select) { return select.value; });
-    return {tian:row.dataset.tian,shield:row.dataset.shield,quality:row.querySelector(".ins-edit-quality").value,star:row.querySelector(".ins-edit-star").value,subs:subs,subValues:Array.from(row.querySelectorAll(".ins-edit-sub-value")).map(function (input,index) {return subs[index] ? input.value.trim() : "";})};
+    // Validation must see orphaned historical text, not silently turn it into a draft.
+    return {tian:row.dataset.tian,shield:row.dataset.shield,quality:row.querySelector(".ins-edit-quality").value,star:row.querySelector(".ins-edit-star").value,subs:subs,subValues:Array.from(row.querySelectorAll(".ins-edit-sub-value")).map(function (input) {return input.value;})};
   }
   function refreshEditorMain() {
     // Do not silently erase invalid choices; show the reason until corrected.

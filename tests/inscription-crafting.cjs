@@ -363,3 +363,57 @@ test('递归o2到o1到p2保留全部深层分支，规划使用精确中间目�
     assert.deepEqual(await s.locator('[data-craft-field="attr"]').evaluateAll(els=>els.map(el=>el.value)),['技能穿透','技能穿透','技能穿透']);
   }finally{await page.close();}
 });
+
+async function openLegacyRemarkEditor(page){
+  const raw=JSON.stringify({'红色神将\u0000神鬼谷盖聂':{name:'神鬼谷盖聂',quality:'红色神将',slots:[
+    {tian:'天府',shield:'人遁',quality:'橙色',star:'2',subs:['','',''],subValues:['旧备注，数值待确认','','']},
+    {tian:'天同',shield:'地遁',quality:'橙色',star:'2',subs:['技能穿透','技能穿透','技能穿透'],subValues:['+6%','+5%','+4%']}
+  ]}});
+  await setAccountItem(page,'qinshi_inscription_progress_v2',raw);await page.reload();
+  await page.locator('.tab[data-partition="inscription"]').evaluate(el=>el.click());await page.locator('[data-mode="progress"]').click();
+  assert.equal(await getAccountItem(page,'qinshi_inscription_progress_v2'),raw,'loading must not rewrite the historical remark');
+  assert.match(await page.locator('#ins-progress-list').innerText(),/旧备注，数值待确认/);
+  await page.locator('[data-edit-key]').first().click();
+  assert.equal(await getAccountItem(page,'qinshi_inscription_progress_v2'),raw,'opening the editor must not rewrite the remark');
+  const remarkRow=page.locator('.ins-editor-slot[data-tian="天府"]');
+  assert.equal(await remarkRow.locator('.ins-edit-sub-value').first().inputValue(),'旧备注，数值待确认');
+  return {raw,remarkRow,otherRow:page.locator('.ins-editor-slot[data-tian="天同"]')};
+}
+
+test('旧空属性备注直接保存必须阻止，加载及编辑不改raw且显示原备注错误',async()=>{
+  const page=await pageFor();try{
+    const {raw,remarkRow}=await openLegacyRemarkEditor(page);
+    await page.locator('#ins-progress-editor [data-action="save"]').click();
+    assert.equal(await getAccountItem(page,'qinshi_inscription_progress_v2'),raw);
+    assert.match(await page.locator('#ins-common-status').innerText(),/未保存/);
+    assert.match(await remarkRow.locator('.craft-legacy-warning').innerText(),/旧备注，数值待确认/);
+    assert.equal(await remarkRow.locator('.ins-edit-sub-value').first().inputValue(),'旧备注，数值待确认');
+  }finally{await page.close();}
+});
+
+test('旧空属性备注不能因修改同弟子另一合法槽位而被顺带清除',async()=>{
+  const page=await pageFor();try{
+    const {raw,remarkRow,otherRow}=await openLegacyRemarkEditor(page);
+    await otherRow.locator('.ins-edit-sub').nth(2).selectOption('治疗效果');await otherRow.locator('.ins-edit-sub-value').nth(2).fill('+6%');
+    await page.locator('#ins-progress-editor [data-action="save"]').click();
+    assert.equal(await getAccountItem(page,'qinshi_inscription_progress_v2'),raw);
+    assert.match(await page.locator('#ins-common-status').innerText(),/未保存/);
+    assert.equal(await remarkRow.locator('.ins-edit-sub-value').first().inputValue(),'旧备注，数值待确认');
+    assert.equal(await otherRow.locator('.ins-edit-sub').nth(2).inputValue(),'治疗效果');
+    assert.equal(await otherRow.locator('.ins-edit-sub-value').nth(2).inputValue(),'+6%');
+  }finally{await page.close();}
+});
+
+test('旧空属性备注只有用户明确清空后才可保存为空草稿',async()=>{
+  const page=await pageFor();try{
+    const {remarkRow}=await openLegacyRemarkEditor(page);
+    await remarkRow.locator('.ins-edit-sub-value').first().fill('');await remarkRow.locator('.ins-edit-sub-value').first().dispatchEvent('change');
+    await page.locator('#ins-progress-editor [data-action="save"]').click();
+    const saved=JSON.parse(await getAccountItem(page,'qinshi_inscription_progress_v2'))['红色神将\u0000神鬼谷盖聂'];
+    assert.deepEqual(saved.slots.find(slot=>slot.tian==='天府').subs,['','','']);
+    assert.deepEqual(saved.slots.find(slot=>slot.tian==='天府').subValues,['','','']);
+    assert.deepEqual(saved.slots.find(slot=>slot.tian==='天同').subValues,['+6%','+5%','+4%']);
+    assert.equal(await page.locator('#ins-progress-editor .ins-editor').count(),0);
+    assert.match(await page.locator('#ins-progress-list').innerText(),/未填写草稿/);
+  }finally{await page.close();}
+});

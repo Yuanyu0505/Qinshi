@@ -16,11 +16,13 @@ async function openServer() {
 
 test('crafting PWA restores pending offline and commits once without changing actual inventory', { timeout: 120000 }, async () => {
   const { server, url } = await openServer();
-  let browser, context;
+  let browser, context, page;
+  const pageErrors = [];
   try {
     browser = await chromium.launch({ channel: 'msedge', headless: true });
     context = await browser.newContext({ viewport: { width: 390, height: 844 } });
-    const page = await context.newPage();
+    page = await context.newPage();
+    page.on('pageerror', error => pageErrors.push(error.message));
     await openApp(page, url);
     assert.equal(await page.evaluate(() => Boolean(window.InscriptionRules && window.InscriptionPaths && window.InscriptionCraftingState && window.InscriptionCraftingUI)), true, 'offline crafting runtime must actually be loaded');
     const before = await page.evaluate(() => {
@@ -41,7 +43,14 @@ test('crafting PWA restores pending offline and commits once without changing ac
     });
     assert.ok(before.pending);
     await page.evaluate(() => navigator.serviceWorker.ready);
+    await page.waitForFunction(async () => {
+      const registration = await navigator.serviceWorker.getRegistration();
+      return registration?.active?.state === 'activated';
+    });
+    const controlledReload = await page.reload({ waitUntil: 'networkidle' });
     await page.waitForFunction(() => Boolean(navigator.serviceWorker.controller));
+    assert.equal(controlledReload.fromServiceWorker(), true, 'The installed crafting worker must serve the page');
+    assert.deepEqual(await page.evaluate(id => window.InscriptionCraftingState.createStore(window.QinshiAccounts).snapshot().workspaces[id].pending, before.id), before.pending, 'The controlled reload must preserve pending');
     const cached = await page.evaluate(async assets => {
       const names = await caches.keys();
       const cache = await caches.open(names.find(name => name.startsWith('qinshi-site-')));
@@ -74,6 +83,14 @@ test('crafting PWA restores pending offline and commits once without changing ac
     assert.equal(after.output.length, 1);
     assert.equal(after.output[0].quantity, 1);
     assert.deepEqual(after.output[0].material.terms.map(term => [term.attr, term.tier]).sort(), [['技能穿透', 'H'], ['技能穿透', 'L'], ['技能穿透', 'M']]);
+  } catch (error) {
+    try {
+      if (page && !page.isClosed()) console.error('Crafting offline fixture failure diagnostics', { pageErrors, registration: await page.evaluate(async () => {
+        const r = await navigator.serviceWorker.getRegistration();
+        return { active: r?.active?.state ?? null, installing: r?.installing?.state ?? null, waiting: r?.waiting?.state ?? null, controller: navigator.serviceWorker.controller?.state ?? null };
+      }) });
+    } catch (diagnosticError) { console.error('Fixture diagnostics unavailable', diagnosticError.message, pageErrors); }
+    throw error;
   } finally {
     await context?.close();
     await browser?.close();
@@ -89,7 +106,8 @@ test('installed actual 1.0.61 upgrades to crafting release preserving legacy val
   const { server, url } = await openServer();
   const serve = server.listeners('request')[0];
   server.removeListener('request', serve);
-  let oldMode = true, browser, context;
+  let oldMode = true, browser, context, page;
+  const pageErrors = [];
   server.on('request', (request, response) => {
     const pathname = new URL(request.url, url).pathname;
     const key = pathname === '/' ? '/index.html' : pathname;
@@ -100,10 +118,19 @@ test('installed actual 1.0.61 upgrades to crafting release preserving legacy val
   try {
     browser = await chromium.launch({ channel: 'msedge', headless: true });
     context = await browser.newContext({ viewport: { width: 768, height: 1024 } });
-    const page = await context.newPage();
+    page = await context.newPage();
+    page.on('pageerror', error => pageErrors.push(error.message));
     await page.goto(url, { waitUntil: 'networkidle' });
     await ensureTestAccount(page);
+    // Match the historical upgrade fixtures: the old worker must be active before navigation.
+    await page.evaluate(() => navigator.serviceWorker.ready);
+    await page.waitForFunction(async () => {
+      const registration = await navigator.serviceWorker.getRegistration();
+      return registration?.active?.state === 'activated';
+    });
+    const oldReload = await page.reload({ waitUntil: 'networkidle' });
     await page.waitForFunction(() => Boolean(navigator.serviceWorker.controller));
+    assert.equal(oldReload.fromServiceWorker(), true, 'The installed 1.0.61 worker must serve the old page');
     assert.equal(await page.locator('#pwa-version').innerText(), '1.0.61');
     const legacy = await page.evaluate(() => {
       const raw = JSON.stringify({ '红色神将\u0000神鬼谷盖聂': { name: '神鬼谷盖聂', quality: '红色神将', slots: [
@@ -134,6 +161,14 @@ test('installed actual 1.0.61 upgrades to crafting release preserving legacy val
     const names = await page.evaluate(() => caches.keys());
     assert.ok(names.includes('qinshi-site-' + currentAppVersion()));
     assert.equal(names.includes('qinshi-site-1.0.61'), false);
+  } catch (error) {
+    try {
+      if (page && !page.isClosed()) console.error('1.0.61 fixture failure diagnostics', { pageErrors, registration: await page.evaluate(async () => {
+        const r = await navigator.serviceWorker.getRegistration();
+        return { active: r?.active?.state ?? null, installing: r?.installing?.state ?? null, waiting: r?.waiting?.state ?? null, controller: navigator.serviceWorker.controller?.state ?? null };
+      }) });
+    } catch (diagnosticError) { console.error('Fixture diagnostics unavailable', diagnosticError.message, pageErrors); }
+    throw error;
   } finally {
     await context?.close();
     await browser?.close();

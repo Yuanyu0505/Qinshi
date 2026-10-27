@@ -21,7 +21,7 @@ const BUSINESS_FILES = [
   'data/machine-beasts.js', 'js/machine-beasts.js', 'js/machine-beasts-ui.js',
   'js/machine-beast-school-planner.js', 'css/style.css'
 ];
-const RELEASE_FILES = ['index.html', 'js/pwa.js', 'service-worker.js', 'version.json', ...BUSINESS_FILES];
+const RELEASE_FILES = ['index.html', 'js/pwa.js', 'js/inscription.js', 'service-worker.js', 'version.json', ...BUSINESS_FILES];
 
 function releaseSnapshots() {
   const old = new Map();

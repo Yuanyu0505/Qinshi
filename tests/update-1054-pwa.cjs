@@ -18,7 +18,7 @@ const CACHE_PREFIX = 'qinshi-site-';
 const UNRELATED_CACHE = 'update-1054-unrelated-cache';
 const PROGRESS_KEY = 'qinshi_six_halls_progress_v1';
 const RELEASE_FILES = [
-  'index.html', 'js/pwa.js', 'service-worker.js', 'version.json',
+  'index.html', 'js/pwa.js', 'js/inscription.js', 'service-worker.js', 'version.json',
   'data/forbidden.js', 'js/six-halls-ui.js', 'css/six-halls.css'
 ];
 const CACHED_RELEASE_FILES = [

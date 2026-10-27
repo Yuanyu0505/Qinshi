@@ -31,29 +31,29 @@
 .craft-strategy { border:1px solid #74603b; border-radius:8px; margin:14px 0; min-width:0; }
 .craft-strategy>summary { padding:14px; cursor:pointer; overflow-wrap:anywhere; font-weight:600; }
 .craft-strategy-body { padding:0 12px 12px; min-width:0; }
-.craft-diagram { overflow:auto; max-width:100%; padding:14px 4px; overscroll-behavior-x:contain; }
-.craft-diagram>.craft-tree { width:max-content; min-width:100%; }
-.craft-tree { display:flex; flex-direction:column; align-items:center; gap:6px; min-width:0; text-align:center; }
-.craft-tree>.craft-note { max-width:420px; margin:4px 0; }
-.craft-tree-inputs { display:flex; gap:20px; align-items:flex-end; padding-bottom:16px; position:relative; }
-.craft-tree-inputs::after { content:""; height:2px; position:absolute; left:30px; right:30px; bottom:0; background:#bba16a; }
-.craft-tree-branch { position:relative; min-width:175px; max-width:100%; }
-.craft-tree-branch::after { content:""; width:2px; height:16px; background:#bba16a; position:absolute; bottom:-16px; left:50%; }
-.craft-copy-count { display:block; padding:5px 8px; margin:0 auto 8px; width:max-content; max-width:100%; border:1px solid #6b5936; border-radius:20px; color:#edcf87; font-size:12px; }
+.craft-flow-guide { color:var(--muted,#b7ad99); font-size:13px; line-height:1.7; padding:8px 0 2px; }
+.craft-flow-step { min-width:0; margin:22px 0; }
+.craft-flow-step h5,.craft-flow-reuse-title { color:#edcf87; font-size:15px; margin:0 0 10px; line-height:1.6; }
+.craft-flow-viewer { max-width:100%; min-width:0; border:1px solid #cbd8e4; border-radius:12px; overflow:hidden; background:#fff; }
+.craft-flow-toolbar { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px; padding:8px 12px; border-bottom:1px solid #e2e9ef; background:#f7fbff; color:#416580; font-size:12px; }
+.craft-flow-toolbar>div { display:flex; gap:6px; }
+.ins-crafting .craft-flow-toolbar button { padding:7px 10px; min-height:40px; min-width:52px; border:1px solid #c9d9e7; border-radius:7px; background:#fff; color:#005aab; font-size:12px; }
+.ins-crafting .craft-flow-toolbar button:focus-visible { outline:2px solid #005aab; outline-offset:1px; }
+.craft-flow-viewport { overflow:auto; max-width:100%; min-width:0; overscroll-behavior:contain; touch-action:pan-x pan-y; scrollbar-color:#b5c8d8 #f4f8fb; }
+.craft-flow-viewport:focus-visible { outline:2px solid #438ac1; outline-offset:-3px; }
+.craft-flow-svg { display:block; max-width:none; margin:0 auto; background:#fff; }
+.craft-flow-connection { fill:none; stroke:#929aa2; stroke-width:1.2; }
+.craft-flow-box rect { fill:#e5f3ff; stroke:#d4dee6; stroke-width:1.1; }
+.craft-flow-success rect { stroke:#a9c8df; stroke-width:1.4; }
+.craft-flow-box text,.craft-flow-label text { fill:#005aab; font:600 14px system-ui,"Microsoft YaHei",sans-serif; text-anchor:middle; dominant-baseline:middle; }
+.craft-flow-label rect { fill:#f5faff; stroke:#cddfec; stroke-width:1; }
+.craft-flow-label text { font-size:12px; font-weight:500; }
 .craft-node { background:#85704312; border:1px solid #6e5c39; border-radius:9px; padding:12px; min-width:0; overflow-wrap:anywhere; }
 .craft-node p { margin:6px 0; line-height:1.65; }
-.craft-tree>.craft-node { width:100%; min-width:170px; max-width:380px; }
 .craft-output { border-width:2px; }
 .craft-quality-b2 { border-color:#3f92af; background:#2b71821c; }
 .craft-quality-p1,.craft-quality-p2 { border-color:#9d6ab9; background:#75408316; }
 .craft-quality-o1,.craft-quality-o2 { border-color:#c2954c; background:#94672c16; }
-.craft-operation { padding:10px 18px; border:1px solid #b9a172; border-radius:8px; background:#32291b; color:#f2dfb1; line-height:1.65; }
-.craft-operation small { display:block; }
-.craft-tree-arrow { color:#c9aa67; font-size:23px; line-height:1; }
-.craft-outcome-branches { width:100%; max-width:760px; margin-top:6px; text-align:left; }
-.craft-outcome-branches>summary { cursor:pointer; padding:8px; color:#e5c985; }
-.craft-outcome-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; padding:8px; }
-.craft-success { border:2px solid #6eaf90; background:#40785118; }
 .craft-materials { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:14px; }
 .craft-material { border:1px solid #76613d; border-radius:9px; padding:12px; min-width:0; margin:0; }
 .craft-material legend { color:#edcf87; padding:0 6px; font-weight:600; }
@@ -74,15 +74,7 @@
   .craft-attrs select { padding:9px 3px; font-size:12px; }
   .craft-materials { grid-template-columns:minmax(0,1fr); }
   .craft-strategy-body { padding:0 8px 10px; }
-  .craft-diagram { padding:8px 0; }
-  .craft-diagram>.craft-tree { width:100%; min-width:0; }
-  .craft-tree { width:100%; }
-  .craft-tree-inputs { display:grid; grid-template-columns:minmax(0,1fr); width:100%; gap:14px; padding:0 0 0 10px; border-left:2px solid #9b824f; }
-  .craft-tree-inputs::after,.craft-tree-branch::after { display:none; }
-  .craft-tree-branch { min-width:0; }
-  .craft-tree>.craft-node { min-width:0; }
-  .craft-copy-count { font-size:11px; }
-  .craft-operation { max-width:100%; padding:8px; font-size:13px; }
-  .craft-outcome-grid { grid-template-columns:minmax(0,1fr); }
+  .craft-flow-toolbar { padding:7px 8px; }
+  .craft-flow-step { margin:18px 0; }
   .craft-suggestions { max-height:260px; }
 }

@@ -1,6 +1,6 @@
 (function (root) {
   'use strict';
-  var R=root.InscriptionRules, P=root.InscriptionPaths, S=root.InscriptionCraftingState;
+  var R=root.InscriptionRules, P=root.InscriptionPaths, S=root.InscriptionCraftingState, F=root.InscriptionFlowchart;
   var views={}, store, state, token, accountId, loaded=false, sequence=0;
   var modelNote='等概率模型，非实测游戏频率。各步骤概率以材料备齐为前提；置换概率未知，不计算整条路线的总成功率。';
   function esc(value) { return String(value==null?'':value).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
@@ -171,27 +171,6 @@
   function graphMaterial(m,x,extra) {
     return '<div class="craft-node craft-quality-'+m.quality+' '+(extra||'')+'"><b>'+esc(qLabel(m.quality))+'</b><p>'+esc(displayTerms(m,x))+'</p></div>';
   }
-  function graph(node,x) {
-    var content='';
-    if(node.children.length){
-      content='<div class="craft-tree-inputs">'+node.children.map(function(child){
-        return '<div class="craft-tree-branch">'+(child.quantity>1?'<span class="craft-copy-count">本分支整组制作 × '+child.quantity+'</span>':'')+graph(child.node,x)+'</div>';
-      }).join('')+'</div><div class="craft-tree-arrow" aria-hidden="true">↓</div>'+
-        '<div class="craft-operation">'+(node.kind==='wash'?'置换 / 洗练':'合成 · '+probability(node.probability))+
-        (node.promotion?'<small>自动附加'+esc(node.promotion)+'晋升铭文 × 1</small>':'')+'</div><div class="craft-tree-arrow" aria-hidden="true">↓</div>';
-    }
-    content+=graphMaterial(node.material,x,'craft-output');
-    if(node.kind==='base') content+='<p class="craft-note">收集 / 置换指定蓝二；获取概率未知。</p>';
-    if(node.kind==='failure') content+='<p class="craft-note">保留上方步骤的失败品。</p>';
-    if(node.note) content+='<p class="craft-note">'+esc(node.note)+'</p>';
-    if(node.kind==='craft' && node.probability<1){
-      var sig=R.signature(node.material);
-      content+='<details class="craft-outcome-branches"><summary>本步骤的成功 / 失败分支（'+node.outcomes.length+'种）</summary><div class="craft-outcome-grid">'+node.outcomes.map(function(outcome){
-        return '<div class="craft-node '+(R.signature(outcome.material)===sig?'craft-success':'')+'"><b>'+probability(outcome.probability)+' · '+(R.signature(outcome.material)===sig?'所需产物':'失败品，保留复用')+'</b><p>'+esc(displayTerms(outcome.material,x))+'</p></div>';
-      }).join('')+'</div></details>';
-    }
-    return '<div class="craft-tree">'+content+'</div>';
-  }
   function renderPlan(v,plan) {
     var host=area(v,'results'),target=state.target;
     host.innerHTML='<section class="craft-panel"><h3>从蓝二到'+qLabel(target.quality)+'的完整路线</h3><p class="craft-note">'+modelNote+'</p>'+
@@ -206,9 +185,7 @@
         var details=document.createElement('details');details.className='craft-strategy';
         details.innerHTML='<summary>'+esc((kind==='deterministic'?'必中':'概率')+'路线 '+(index+1))+' · 蓝二 → '+qLabel(target.quality)+'</summary><div class="craft-strategy-body"></div>';
         var rendered=false;
-        function fill(){if(rendered)return;rendered=true;details.querySelector('.craft-strategy-body').innerHTML='<div class="craft-diagram">'+graph(route.tree,plan.xAttr)+'</div>'+
-          (route.reuse.length?'<h4>失败品继续利用支线</h4>'+route.reuse.map(function(tree){return '<div class="craft-diagram">'+graph(tree,plan.xAttr)+'</div>';}).join(''):
-            (kind==='probability'?'<p class="craft-note">当前失败品不具备已知的直接复用成目标配方。请保留，后续只有材料覆盖完整目标且通过预览校验时才能复用。</p>':''));}
+        function fill(){if(rendered)return;rendered=true;details.querySelector('.craft-strategy-body').innerHTML=F.render(route,plan.xAttr,{positionLabel:target.discipleKey?target.slot.replace('|',' · '):position(target).dun});}
         details.addEventListener('toggle',function(){if(details.open)fill();});
         groups.appendChild(details);if(index===0){fill();details.open=true;}
       });
@@ -313,6 +290,7 @@
   }
   function onClick(v,control) {
     var action=control.dataset.craftAction;
+    if(action.indexOf('diagram-')===0){F.zoom(control.closest('[data-flow-viewer]'),action.slice(8));return;}
     if(action==='reload'){activate(v.mode);return;}
     if(!loaded||currentAccount()!==accountId){status(v,'请重新打开铭文分区后再操作。');return;}
     status(v,'');
@@ -348,7 +326,7 @@
     }
   }
   function activate(mode) {
-    if(!R||!P||!S||!root.QinshiAccounts||!root.INSCRIPTION_DATA)return;
+    if(!R||!P||!S||!F||!root.QinshiAccounts||!root.INSCRIPTION_DATA)return;
     if(!store)store=S.createWorkbench(root.QinshiAccounts);
     var v=views[mode]||init(mode),account=currentAccount(),result=store.inspect();
     if(!result.valid){

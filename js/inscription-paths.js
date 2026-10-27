@@ -146,5 +146,141 @@
     });
     return {valid:true,errors:[],recipes:Array.from(recipes.values()).sort(function (a,b) { return b.probability-a.probability || (a.id<b.id ? -1 : 1); }),templateMode:Array.from(available.values()).some(function (entry) { return entry.quantity===null; })};
   }
-  return {generate:generate,expand:expand,reuseRecipes:reuseRecipes};
+  // Presentation planning is separate from exhaustive exact-material planning.
+  // Every operation is still accepted only after the existing rule preview.
+  function representative(goal) {
+    var best = Rules.bestTargets(goal.dun, goal.quality, goal.attrs);
+    if (!best.targets.length) return { valid:false, errors:[best.reason], targets:[], strategies:[] };
+    var prefix = goal.prefix || Rules.prefixes[0];
+    if (!Rules.prefixes.includes(prefix)) return { valid:false, errors:["前缀无效"], targets:[], strategies:[] };
+    var xAttr = ["闪避", "招架", "治疗效果"].find(function (attr) { return !goal.attrs.includes(attr); });
+    var exactCache = new Map(), treeCache = new Map();
+    function material(quality, terms) {
+      var m = { prefix:prefix, dun:goal.dun, quality:quality, terms:clone(terms) }, origins = sources(m);
+      return origins.length ? Object.assign(m, {origin:origins[0]}) : null;
+    }
+    function routesFor(target) {
+      var sig = Rules.signature(target);
+      if (!exactCache.has(sig)) {
+        var prev = previous(target.quality), core = prev ? Rules.termsFor(target.dun, prev).filter(function (t) {
+          return target.terms.some(function (wanted) { return wanted.attr===t.attr && (wanted.tier===t.tier || t.tier==="?"); });
+        }) : [];
+        var selected=[], metadata=prev && Rules.recipes[prev];
+        if (metadata) {
+          var pool=unique(core.concat(xAttr ? [{attr:xAttr,tier:"U"}] : [])), candidates=[];
+          var count=Rules.qualities.find(function(q){return q.id===prev;}).count;
+          choose(pool,count,false,function(terms){var m=material(prev,terms);if(m)candidates.push(m);});
+          choose(candidates,metadata.count,true,function(inputs){var route=verifiedRoute(target,inputs);if(route)selected.push(route);});
+        }
+        // Prefer one consistent, ungraded X across the entire diagram. Never
+        // manufacture a probability from an unspecified multi-X material pool.
+        selected = selected.filter(function (route) {
+          return route.inputs.every(function (input) { return input.terms.every(function (t) {
+            return core.some(function (c) { return termKey(c)===termKey(t); }) || (t.tier==="U" && t.attr===xAttr);
+          }); });
+        });
+        selected.sort(function (a,b) {
+          return b.probability-a.probability || a.requirements.length-b.requirements.length || (a.id<b.id ? -1 : 1);
+        });
+        exactCache.set(sig, selected);
+      }
+      return exactCache.get(sig);
+    }
+    function fromRoute(route, mode) {
+      var children = [];
+      for (var i=0;i<route.requirements.length;i++) {
+        var entry = route.requirements[i], child = build(entry.material, mode);
+        if (!child) return null;
+        children.push({ quantity:entry.quantity, node:child });
+      }
+      return { kind:"craft", material:clone(route.target), children:children, promotion:route.promotion,
+        probability:route.probability, outcomes:clone(route.outcomes), hasChance:route.probability<1 || children.some(function (c) { return c.node.hasChance; }) };
+    }
+    function washed(target, mode) {
+      if (!sources(target).includes("wash")) return null;
+      // A purple low term is prepared by washing an already crafted base, NOT
+      // by inheriting a low tier from blue materials.
+      var terms = target.terms.map(function (t) { return {attr:t.attr,tier:t.tier==="L" ? "M" : t.tier}; });
+      var base = material(target.quality, terms);
+      if (!base || Rules.signature(base)===Rules.signature(target)) {
+        var pool = Rules.termsFor(target.dun,target.quality,"crafted"), count = Rules.qualities.find(function (q) { return q.id===target.quality; }).count;
+        base = null;
+        choose(pool,count,false,function (candidate) {
+          if (base) return;
+          var value = material(target.quality,candidate);
+          if (value && sources(value).includes("crafted") && !candidate.some(function (t) { return t.tier==="L"; })) base=value;
+        });
+      }
+      if (!base || Rules.signature(base)===Rules.signature(target)) return null;
+      var child = build(base,mode,true);
+      return child ? { kind:"wash", material:Object.assign(clone(target),{origin:"wash"}), children:[{quantity:1,node:child}], probability:null, hasChance:child.hasChance,
+        note:"置换至指定词条；低档只能通过置换准备。洗练概率未知，不计入合成成功率。" } : null;
+    }
+    function build(target, mode, noWash) {
+      var key = Rules.signature(target)+":"+mode+":"+Boolean(noWash);
+      if (treeCache.has(key)) return clone(treeCache.get(key));
+      if (target.quality==="b2") return {kind:"base",material:clone(target),children:[],probability:null,hasChance:false};
+      var list = routesFor(target), ordered = list.slice();
+      if (mode==="chance" && target.quality==="o1") ordered.sort(function (a,b) {
+        return Number(a.deterministic)-Number(b.deterministic) || b.probability-a.probability || a.requirements.length-b.requirements.length;
+      });
+      var tree = null;
+      // Guaranteed operations are preferred in the stable route. If the model
+      // necessarily randomizes a blue speed, show it honestly as probability.
+      for (var i=0;i<ordered.length && !tree;i++) tree=fromRoute(ordered[i],mode);
+      if (!tree && !noWash) tree=washed(target,mode);
+      treeCache.set(key,tree);
+      return tree && clone(tree);
+    }
+    function shape(node) {
+      return JSON.stringify([node.kind,Rules.signature(node.material),node.children.map(function(c){return [c.quantity,shape(c.node)];})]);
+    }
+    function probabilityNodes(node, output) {
+      if (node.kind==="craft" && node.probability<1 && node.material.quality==="o1") output.push(node);
+      node.children.forEach(function (c) { probabilityNodes(c.node,output); });
+    }
+    function reuse(tree, target) {
+      if (target.quality!=="o2") return [];
+      var nodes=[]; probabilityNodes(tree,nodes);
+      var seen=new Set(), result=[];
+      nodes.forEach(function (node) {
+        var wanted=Rules.signature(node.material);
+        if (seen.has(wanted)) return;
+        seen.add(wanted);
+        var failures=node.outcomes.filter(function(o){return Rules.signature(o.material)!==wanted;}).map(function(o){return o.material;});
+        var possible=[];
+        choose(failures,3,true,function(inputs){
+          if (!target.terms.every(function(t){return inputs.some(function(m){return m.terms.some(function(x){return termKey(t)===termKey(x);});});})) return;
+          var recipe=verifiedRoute(target,inputs);
+          if (recipe) possible.push(recipe);
+        });
+        possible.sort(function(a,b){return b.probability-a.probability || b.requirements.length-a.requirements.length;});
+        if (possible.length) {
+          var route=possible[0];
+          result.push({ kind:"craft",material:clone(target),probability:route.probability,promotion:null,outcomes:clone(route.outcomes),hasChance:route.probability<1,
+            note:"下列材料均为上方概率步骤留下的失败品；需备齐所示种类与数量，不能把缺少目标词条的失败品视为可达。",
+            children:route.requirements.map(function(e){return {quantity:e.quantity,node:{kind:"failure",material:clone(e.material),children:[],probability:null,hasChance:false}};}) });
+        }
+      });
+      return result;
+    }
+    var targets=best.targets.map(function(terms){return material(goal.quality,terms);}).filter(Boolean), strategies=[], seen=new Set();
+    targets.forEach(function (target) {
+      var candidates=[build(target,"stable"),build(target,"chance")];
+      if (target.quality!=="b2" && sources(target).includes("wash")) candidates.push(washed(target,"stable"));
+      // Direct complementary inputs and a single-X pool are distinct ideas,
+      // not every permutation of concrete attributes.
+      var categories=new Set();
+      routesFor(target).forEach(function(route){
+        var category=(route.deterministic ? "exact" : "chance")+":"+(route.requirements.length===1 ? "repeat" : "complement");
+        if (!categories.has(category)) { categories.add(category); candidates.push(fromRoute(route,"stable")); }
+      });
+      candidates.filter(Boolean).forEach(function(tree){
+        var identity=shape(tree); if (seen.has(identity)) return; seen.add(identity);
+        strategies.push({ kind:tree.hasChance ? "probability" : "deterministic", tree:tree, reuse:reuse(tree,target) });
+      });
+    });
+    return {valid:true,errors:[],targets:targets,strategies:strategies,xAttr:xAttr};
+  }
+  return {generate:generate,expand:expand,reuseRecipes:reuseRecipes,representative:representative};
 });

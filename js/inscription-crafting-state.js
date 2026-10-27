@@ -161,8 +161,93 @@
       }); },
       clearPending: function (id) { return change(function (state) { requireWorkspace(state,id).pending=null; }); },
       resetSimulation: function (id) { return change(function (state) { requireWorkspace(state,id); state.workspaces[id]=workspace(); }); },
-      updateDraft: function (value) { if (!object(value)) fail("草稿格式无效"); return change(function (state) { state.draft=copy(value); }); }
+      updateDraft: function (value) { if (!object(value)) fail("草稿格式无效"); return change(function (state) { state.draft=copy(value); }); },
+      saveSimple: function (value, expected, accountId) { return change(function (state) {
+        var account = typeof storage.currentAccount === "function" ? storage.currentAccount() : null;
+        if ((account ? account.id : null) !== accountId) fail("账号已切换，请重新打开铭文分区");
+        var current = state.draft.simpleWorkbench;
+        if ((current === undefined ? null : JSON.stringify(current)) !== expected) fail("模拟现场已在其他页面更新，请重新打开分区后再操作");
+        checkSimple(value);
+        // Deliberately retain the old goals, inventory, workspaces and drafts.
+        state.draft.simpleWorkbench = copy(value);
+      }); }
     };
   }
-  return { KEY: KEY, createStore: createStore };
+  function defaultTarget() { return { discipleKey: "", slot: "", dun: "", quality: "o2", attrs: ["", "", ""] }; }
+  function blankSimulation() { return { stage: "b2", inputs: [], pending: null }; }
+  function context(target) {
+    var pair = target.slot.split("|");
+    // An unspecified disciple represents any ONE common prefix, never mixed prefixes.
+    return { prefix: target.discipleKey ? pair[0] : Rules.prefixes[0], dun: target.discipleKey ? pair[1] : target.dun };
+  }
+  function infer(value) {
+    var errors = [];
+    for (var i = 0; i < 2; i++) {
+      var checked = Rules.validate(Object.assign({}, value, { origin: i ? "crafted" : "wash" }));
+      if (checked.valid) return checked.material;
+      errors = errors.concat(checked.errors);
+    }
+    fail("此材料不存在合法的洗练或合成来源：" + Array.from(new Set(errors)).join("；"));
+  }
+  function simulationPreview(value) {
+    var sim = value.simulation, recipe = Rules.recipes[sim.stage], position = context(value.target);
+    if (!recipe) fail("当前阶段没有后续合成配方");
+    if (sim.inputs.length !== recipe.count) fail("请填满本次" + recipe.count + "枚材料");
+    var materials = sim.inputs.map(function (terms) {
+      return infer({ prefix: position.prefix, dun: position.dun, quality: sim.stage, terms: terms });
+    });
+    var result = Rules.preview(materials);
+    if (!result.valid) fail(result.errors.join("；"));
+    return result;
+  }
+  function checkSimple(value) {
+    if (!object(value) || value.version !== 1 || !object(value.target) || !object(value.simulation)) fail("轻量模拟现场格式无效");
+    var target = value.target, q = Rules.qualities.find(function (item) { return item.id === target.quality; });
+    if (!q || ![target.discipleKey, target.slot, target.dun].every(function (s) { return typeof s === "string" && s.length <= 300; })) fail("目标筛选格式无效");
+    if (!Array.isArray(target.attrs) || target.attrs.length !== q.count || target.attrs.some(function (a) { return a !== "" && !Rules.attributes.some(function (x) { return x.id === a; }); })) fail("目标属性数量或名称无效");
+    if (target.dun && !Rules.duns.some(function (d) { return d.id === target.dun; })) fail("目标遁位无效");
+    if (target.slot && !Rules.prefixes.some(function (prefix) { return Rules.duns.some(function (d) { return target.slot === prefix + "|" + d.id; }); })) fail("弟子铭文位置无效");
+    var sim = value.simulation, stage = Rules.qualities.find(function (item) { return item.id === sim.stage; }), recipe = Rules.recipes[sim.stage];
+    if (!stage || !Array.isArray(sim.inputs) || sim.inputs.length > (recipe ? recipe.count : 0)) fail("模拟阶段或材料数量无效");
+    sim.inputs.forEach(function (terms) {
+      if (!Array.isArray(terms) || terms.length !== stage.count || terms.some(function (t) { return t !== null && (!object(t) || !Rules.attributes.some(function (a) { return a.id === t.attr; }) || !["H", "M", "L", "U", "?"].includes(t.tier)); })) fail("材料草稿格式无效");
+    });
+    if (sim.pending !== null) {
+      var pending = sim.pending;
+      if (!object(pending) || typeof pending.id !== "string" || !pending.id || !object(pending.material)) fail("模拟结果格式无效");
+      var checked = Rules.validate(pending.material), preview = simulationPreview(value);
+      var match = checked.valid && preview.outcomes.find(function (o) { return Rules.signature(o.material) === Rules.signature(checked.material); });
+      if (!match || pending.material.origin !== "crafted" || pending.probability !== match.probability) fail("模拟结果与本次材料不匹配");
+    }
+    return value;
+  }
+  function createWorkbench(storage) {
+    var legacy = createStore(storage);
+    function inspect() {
+      var found = legacy.inspect();
+      if (!found.valid) return found;
+      try {
+        var saved = found.state.draft.simpleWorkbench, value;
+        if (saved !== undefined) value = copy(checkSimple(saved));
+        else {
+          value = { version: 1, target: defaultTarget(), simulation: blankSimulation() };
+          var old = found.state.draft["crafting-paths"] || found.state.draft["crafting-simulator"], f = old && old.form;
+          if (f && Rules.qualities.some(function (q) { return q.id === f.quality; })) {
+            value.target.quality = f.quality;
+            var count = Rules.qualities.find(function (q) { return q.id === f.quality; }).count;
+            value.target.attrs = Array.from({ length: count }, function (_, i) { return Array.isArray(f.attrs) && Rules.attributes.some(function (a) { return a.id === f.attrs[i]; }) ? f.attrs[i] : ""; });
+            value.target.discipleKey = typeof f.discipleKey === "string" ? f.discipleKey : "";
+            value.target.dun = Rules.normalizeDun(f.dun) || "";
+            if (value.target.discipleKey && Rules.prefixes.includes(f.prefix) && value.target.dun) value.target.slot = f.prefix + "|" + value.target.dun;
+          }
+        }
+        return { valid: true, state: checkSimple(value), token: saved === undefined ? null : JSON.stringify(saved), errors: [] };
+      } catch (error) { return { valid: false, state: null, errors: [error.message] }; }
+    }
+    return {
+      inspect: inspect,
+      save: function (value, expected, accountId) { legacy.saveSimple(value, expected, accountId); return inspect(); }
+    };
+  }
+  return { KEY: KEY, createStore: createStore, createWorkbench: createWorkbench, blankSimulation: blankSimulation, context: context, infer: infer, preview: simulationPreview };
 });

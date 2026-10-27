@@ -70,6 +70,7 @@ test('地三穿显示完整分组、递归准备、真实连接与全部结果�
     assert.match(await s.locator('[data-craft-results]').innerText(), /技能穿透6%.*技能穿透4%.*技能穿透5%/s);
     assert.ok(await s.locator('[data-route-group]').count() > 1);
     await s.locator('[data-route-group]').first().locator('summary').first().click();
+    await s.locator('.craft-flow .craft-edge').first().waitFor({state:'attached'});
     assert.ok(await s.locator('.craft-flow .craft-edge').count() > 0);
     await s.locator('[data-craft-action="expand-material"]').first().click();
     assert.ok(await s.locator('[data-expanded-material]').count() > 0);
@@ -79,6 +80,7 @@ test('地三穿显示完整分组、递归准备、真实连接与全部结果�
     await goal(page, { dun: '人遁', attrs: ['技能穿透','技能穿透','PVP伤害'] });
     await s.locator('[data-craft-action="generate"]').click();
     await s.locator('[data-route-group]').first().locator('summary').first().click();
+    await s.locator('.craft-flow .craft-edge').first().waitFor({state:'attached'});
     const illegal = await s.locator('[data-material-origin="wash"]').evaluateAll(els => els.some(el => el.textContent.includes('中档')));
     assert.equal(illegal, false);
     assert.match(await s.locator('[data-craft-results]').innerText(), /等概率模型/);
@@ -156,6 +158,7 @@ for(const width of [360,390,768,1024,1440]) test(width+' 响应式表单、流�
   const page=await pageFor('paths',width);try{
     const s=await goal(page); await s.locator('[data-craft-action="generate"]').click();
     await s.locator('[data-route-group]').first().locator('summary').first().click();
+    await s.locator('.craft-flow').first().waitFor({state:'attached'});
     assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1),false);
     assert.equal(await s.locator('input,select,button').evaluateAll(els=>els.filter(el=>el.getClientRects().length).some(el=>{const r=el.getBoundingClientRect();return r.width<1||r.left<0||r.right>innerWidth+1;})),false);
     fs.mkdirSync(path.join(__dirname,'../test-results/inscription-crafting'),{recursive:true});
@@ -293,8 +296,70 @@ test('193条具体路线均可展开加载，13个策略组不截断，条件必
     assert.match(await groups.first().locator('summary').first().innerText(),/^条件必中/);
     for(const group of await groups.all()){
       await group.locator('summary').first().click();
+      await group.locator('[data-concrete-route]').first().waitFor({state:'attached'});
       while(await group.locator('[data-more]').count())await group.locator('[data-more]').click();
     }
     assert.equal(await s.locator('[data-concrete-route]').count(),193);
+  }finally{await page.close();}
+});
+
+test('弟子选定后改搜索词保留当前弟子、实际位置与存储草稿',async()=>{
+  const page=await pageFor();try{
+    const s=section(page);await s.locator('[data-craft-field="disciple-search"]').fill('墨眉天明');
+    await s.locator('[data-craft-field="disciple"]').selectOption({label:'墨眉天明 · 普通橙色'});
+    await s.locator('[data-craft-field="slot"]').selectOption('天府|龙遁');
+    const before=await s.locator('[data-craft-field="disciple"]').inputValue();
+    const draftBefore=JSON.parse(await getAccountItem(page,KEY)).draft['crafting-paths'].form;
+    await s.locator('[data-craft-field="disciple-search"]').fill('盖聂');
+    assert.equal(await s.locator('[data-craft-field="disciple"]').inputValue(),before);
+    assert.equal(await s.locator('[data-craft-field="slot"]').inputValue(),'天府|龙遁');
+    assert.equal(await s.locator('[data-craft-field="dun"]').inputValue(),'龙遁');
+    assert.equal(await s.locator('[data-craft-field="prefix"]').inputValue(),'天府');
+    assert.match(await s.locator('[data-craft-field="disciple"]').innerText(),/盖聂/);
+    assert.deepEqual(JSON.parse(await getAccountItem(page,KEY)).draft['crafting-paths'].form,draftBefore);
+    await page.locator('[data-mode="query"]').click();await page.locator('[data-mode="crafting-paths"]').click();
+    assert.equal(await s.locator('[data-craft-field="disciple"]').inputValue(),before);
+    await page.reload();await page.locator('.tab[data-partition="inscription"]').evaluate(el=>el.click());await page.locator('[data-mode="crafting-paths"]').click();
+    assert.equal(await s.locator('[data-craft-field="disciple"]').inputValue(),before);
+    assert.equal(await s.locator('[data-craft-field="slot"]').inputValue(),'天府|龙遁');
+  }finally{await page.close();}
+});
+
+test('递归o2到o1到p2保留全部深层分支，规划使用精确中间目标而非顶层目标',async()=>{
+  const page=await pageFor();try{
+    const s=await goal(page);await s.locator('[data-craft-action="generate"]').click();
+    const outer=s.locator('[data-route-group]').first();await outer.locator('summary').first().click();
+    const o1Node=outer.locator('[data-concrete-route]').first().locator(':scope > .craft-flow > .craft-inputs > .craft-node').first();
+    await o1Node.locator(':scope > [data-craft-action="expand-material"]').click();
+    const o1=o1Node.locator(':scope > [data-material-expansion]');
+    assert.ok(await o1.locator(':scope > .craft-panel [data-reuse-branch]').count()===0);
+    const o1Group=o1.locator(':scope > [data-route-group]').first();await o1Group.locator('summary').first().click();
+    const nodes=o1Group.locator('[data-concrete-route]').first().locator(':scope > .craft-flow > .craft-inputs > .craft-node');
+    const washNode=nodes.locator('xpath=self::*[@data-material-origin="wash"]').first();
+    await washNode.locator(':scope > [data-craft-action="expand-material"]').click();
+    const lowP2=washNode.locator(':scope > [data-material-expansion]');
+    assert.equal(await lowP2.locator(':scope > .craft-panel [data-additional-branch]').count(),3);
+    const craftNode=nodes.locator('xpath=self::*[@data-material-origin="crafted"]').first();
+    await craftNode.locator(':scope > [data-craft-action="expand-material"]').click();
+    const p2=craftNode.locator(':scope > [data-material-expansion]');
+    assert.equal(await p2.locator(':scope > .craft-panel [data-additional-branch]').count(),3);
+    await p2.locator(':scope > .craft-panel [data-craft-action="open-planner"]').first().click();
+    const editor=s.locator('[data-craft-material-editor]');
+    assert.equal(await editor.locator('[data-material-field="quality"]').inputValue(),'p1');
+    await editor.locator('[data-material-field="origin"]').selectOption('wash');
+    await editor.locator('[data-material-field="term"]').nth(0).selectOption('技能穿透:H');await editor.locator('[data-material-field="term"]').nth(1).selectOption('治疗效果:U');
+    await editor.locator('[data-craft-action="add-template"]').click();
+    await editor.locator('[data-material-field="origin"]').selectOption('crafted');
+    await editor.locator('[data-material-field="term"]').nth(0).selectOption('技能穿透:M');await editor.locator('[data-material-field="term"]').nth(1).selectOption('治疗效果:U');
+    await editor.locator('[data-craft-action="add-template"]').click();
+    const planner=p2.locator(':scope > .craft-panel [data-craft-planner]');
+    await planner.locator('[data-craft-action="plan-templates"]').click();
+    assert.equal(await planner.locator('[data-concrete-route]').count(),2);
+    assert.match(await planner.innerText(),/紫一 → 紫二/);
+    assert.match(await planner.innerText(),/33\.3333%/);
+    const outputs=await planner.locator('.craft-output').allTextContents();
+    assert.ok(outputs.every(text=>text.includes('紫二目标')&&text.includes('技能穿透4%')&&text.includes('技能穿透3%')&&!text.includes('橙二')));
+    assert.equal(await s.locator('[data-craft-field="quality"]').inputValue(),'o2');
+    assert.deepEqual(await s.locator('[data-craft-field="attr"]').evaluateAll(els=>els.map(el=>el.value)),['技能穿透','技能穿透','技能穿透']);
   }finally{await page.close();}
 });

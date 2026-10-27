@@ -49,7 +49,7 @@
   }
   function initView(mode) {
     var el = document.getElementById('inscription-' + mode);
-    var v = views[mode] = { mode: mode, el: el, goalId: '', selection: [], registry: {}, plannerMaterials: [] };
+    var v = views[mode] = { mode: mode, el: el, goalId: '', selection: [], registry: {}, planner: null };
     el.innerHTML = '<div class="craft-status" data-craft-status role="alert" hidden></div>' +
       '<section class="craft-panel"><h3>' + (mode === 'crafting-paths' ? '合成路径查询' : '合成模拟工作台') + '</h3>' +
       '<p class="craft-note">目标、可消耗实际库存与每个目标的虚拟库存分别保存，不会自动计入个人已佩戴铭文。切换页签保留输入。</p>' +
@@ -84,7 +84,7 @@
   }
   function refreshDisciples(v) {
     var selected = field(v,'disciple').value, query = field(v,'disciple-search').value.trim().toLowerCase();
-    var items = root.INSCRIPTION_DATA.items.filter(function (i) { return !query || i.name.toLowerCase().includes(query) || i.quality + '\0' + i.name === selected; });
+    var items = root.INSCRIPTION_DATA.items.filter(function (i) { return !query || i.name.toLowerCase().includes(query) || encodeURIComponent(i.quality + '\0' + i.name) === selected; });
     field(v,'disciple').innerHTML = options(items.map(function (i) { return { id:encodeURIComponent(i.quality + '\0' + i.name), label:i.name + ' · ' + i.quality }; }), selected, '不限定弟子');
   }
   function disciple(v) { var key = decodeURIComponent(field(v,'disciple').value); return root.INSCRIPTION_DATA.items.find(function (i) { return i.quality + '\0' + i.name === key; }); }
@@ -148,7 +148,7 @@
   }
   function useGoal(v,id) {
     var goal = v.state.goals.find(function (g) { return g.id === id; }); if (!goal) return;
-    area(v,'results').innerHTML='';v.plannerQuality=null;v.plannerMaterials=[];
+    area(v,'results').innerHTML='';v.planner=null;
     v.goalId = id; v.selection = (v.state.workspaces[id].selection || []).slice(); restoreForm(v,goal);
     persist(v); renderMaterialEditor(v); refreshInventory(v); renderWorkspace(v); refreshGoalList(v);
   }
@@ -186,7 +186,7 @@
     }
     more();
   }
-  function renderPlan(v,host,result,branching) {
+  function renderPlan(v,host,result) {
     if(!result.valid) { host.textContent=result.errors.join('；');return; }
     host.innerHTML='<p class="craft-note">' + model + '</p><p class="craft-highlight">精确目标：' + result.targets.map(function (m) { return esc(materialText(m)); }).join('；') + '</p>' +
       result.preparations.map(function (p) { return '<p class="craft-note">可直接洗练准备：' + esc(materialText(p.material)) + ' × ' + p.quantity + '；洗练随机，概率未知</p>'; }).join('') +
@@ -197,24 +197,32 @@
       d.innerHTML='<summary>' + (group.kind==='deterministic' ? '条件必中' : '概率合成') + (extras ? ' · 具体X：'+esc(extras) : '') + (group.preferred && group.kind!=='deterministic' ? ' · 同类概率路线推荐复用' : '') + ' · '+group.routeIds.length+' 条路线</summary><div class="craft-strategy-body"></div>';
       d._render=function(){var ids=new Set(group.routeIds);pagedRoutes(v,d.querySelector('.craft-strategy-body'),result.routes.filter(function (r) { return ids.has(r.id); }),false);};host.appendChild(d);
     });
-    if(branching) renderBranches(v,host,result);
+    renderBranches(v,host,result);
   }
   function renderBranches(v,host,result) {
     var branches=(result.additionalBranches || []).concat(result.reuseBranches || []);
     if(!branches.length)return;
-    var panel=document.createElement('section');panel.className='craft-panel';
-    panel.innerHTML='<h4>多X与失败品复用规划</h4><p class="craft-note">选择具体材料后按规则重算，不把不同X一律当作25%。可混用成功品与失败品；AAA缺少目标属性时不可达。库存模式尊重实际数量，模板模式可重复并显示所需数量。</p>' + branches.map(function (b) { return '<p '+(b.kind==='failure-reuse'?'data-reuse-branch':'data-additional-branch')+'>'+esc(b.label)+' '+button('open-planner','选择具体材料并计算',' data-quality="'+esc(b.inputQuality)+'"')+'</p>'; }).join('') + '<div data-craft-planner></div>';
-    host.appendChild(panel);
+    result.targets.forEach(function(target){
+      var panel=document.createElement('section');panel.className='craft-panel';panel.dataset.craftBranchPanel='';
+      var targetRef=register(v,clone(target));
+      panel.innerHTML='<h4>多X与失败品复用规划</h4><p class="craft-highlight">精确规划目标：'+esc(materialText(target))+'</p><p class="craft-note">选择具体材料后按规则重算，不把不同X一律当作25%。可混用成功品与失败品；AAA缺少目标属性时不可达。库存模式尊重实际数量，模板模式可重复并显示所需数量。</p>' + branches.map(function (b) { return '<p '+(b.kind==='failure-reuse'?'data-reuse-branch':'data-additional-branch')+'>'+esc(b.label)+' '+button('open-planner','选择具体材料并计算',' data-quality="'+esc(b.inputQuality)+'" data-ref="'+targetRef+'"')+'</p>'; }).join('') + '<div data-craft-planner></div>';
+      host.appendChild(panel);
+    });
   }
-  function openPlanner(v,quality) {
-    v.plannerQuality=quality;v.plannerMaterials=[];
-    var host=area(v,'planner');host.innerHTML='<h4>'+qLabel(quality)+'具体材料选择</h4><p class="craft-note">从本账号实际库存勾选候选类型（按库存数量），或用下方具体材料编辑器加入独立配方模板；模板与库存两种计算入口分开，不会混记。模板可加入所有合法X，不限于目标属性。</p><div data-planner-stock></div><div class="craft-actions">'+button('plan-stock','按勾选实际库存计算')+button('plan-templates','按具体模板计算')+'</div><div data-planner-templates></div><div data-planner-results></div>';
-    renderPlannerStock(v); var ed=area(v,'material-editor');ed.querySelector('[data-material-field="quality"]').value=quality;updateMaterialTerms(v);ed.scrollIntoView({block:'nearest'});
+  function openPlanner(v,b) {
+    var target=clone(v.registry[b.dataset.ref]), quality=b.dataset.quality;
+    var host=b.closest('[data-craft-branch-panel]').querySelector('[data-craft-planner]');
+    var planner={host:host,target:target,quality:quality,materials:[]};host._planner=planner;v.planner=planner;
+    host.innerHTML='<h4>'+qLabel(quality)+'具体材料选择</h4><p class="craft-highlight">按此精确目标计算：'+esc(materialText(target))+'</p><p class="craft-note">从本账号实际库存勾选候选类型（按库存数量），或用下方具体材料编辑器加入独立配方模板；模板与库存两种计算入口分开，不会混记。模板可加入所有合法X，不限于目标属性。</p><div data-planner-stock></div><div class="craft-actions">'+button('plan-stock','按勾选实际库存计算')+button('plan-templates','按具体模板计算')+'</div><div data-planner-templates></div><div data-planner-results></div>';
+    renderPlannerStock(v); var ed=area(v,'material-editor');ed.querySelector('[data-material-field="prefix"]').value=target.prefix;ed.querySelector('[data-material-field="dun"]').value=target.dun;ed.querySelector('[data-material-field="quality"]').value=quality;updateMaterialTerms(v);ed.scrollIntoView({block:'nearest'});
+    status(v,'材料模板将加入当前精确规划目标：'+materialText(target));
   }
   function renderPlannerStock(v) {
-    var host=v.el.querySelector('[data-planner-stock]');if(!host)return;
-    var f=form(v), candidates=v.state.actual.filter(function (x) { return x.material.prefix===f.prefix&&x.material.dun===f.dun&&x.material.quality===v.plannerQuality; });
-    host.innerHTML=candidates.length ? candidates.map(function (x) {var id=register(v,x);return '<label class="craft-note"><input style="width:auto" type="checkbox" data-planner-entry="'+id+'"> '+esc(materialText(x.material))+' × '+x.quantity+'</label>';}).join('<br>') : '<p class="craft-note">没有此位置/品质的实际库存，可录入实际材料或添加具体模板。</p>';
+    v.el.querySelectorAll('[data-craft-planner]').forEach(function(host){
+      var planner=host._planner;if(!planner)return;
+      var target=planner.target, candidates=v.state.actual.filter(function (x) { return x.material.prefix===target.prefix&&x.material.dun===target.dun&&x.material.quality===planner.quality; });
+      host.querySelector('[data-planner-stock]').innerHTML=candidates.length ? candidates.map(function (x) {var id=register(v,x);return '<label class="craft-note"><input style="width:auto" type="checkbox" data-planner-entry="'+id+'"> '+esc(materialText(x.material))+' × '+x.quantity+'</label>';}).join('<br>') : '<p class="craft-note">没有此位置/品质的实际库存，可录入实际材料或添加具体模板。</p>';
+    });
   }
   function sourcesFor(m) { return ['wash','crafted'].filter(function (o) { var c=clone(m);c.origin=o;return R.validate(c).valid; }); }
   function refreshInventory(v) {
@@ -300,7 +308,7 @@
     if(!target.matches('[data-craft-field]'))return;
     var name=target.dataset.craftField;
     if(name==='saved-goal'){if(target.value)useGoal(v,target.value);return;}
-    if(['attr','quality','disciple','slot','prefix','dun'].includes(name)) {area(v,'results').innerHTML='';v.plannerQuality=null;v.plannerMaterials=[];}
+    if(['attr','quality','disciple','slot','prefix','dun'].includes(name)) {area(v,'results').innerHTML='';v.planner=null;}
     if(name==='disciple'){refreshSlots(v);field(v,'prefix').value='';field(v,'dun').value='';}
     if(name==='slot'&&target.value){var slot=target.value.split('|');field(v,'prefix').value=slot[0];field(v,'dun').value=slot[1];}
     if(name==='quality'){var attrs=inputAttrs(v),count=qInfo(target.value).count;attrs=attrs.slice(0,count);while(attrs.length<count)attrs.push('');renderAttrs(v,attrs);}
@@ -320,18 +328,21 @@
       var f=form(v),item=disciple(v);
       if(item&&!item.slots.some(function(s){return s.tian===f.prefix&&R.normalizeDun(s.shield)===f.dun;})){status(v,'请从该弟子的实际位置中选择前缀与遁位');return;}
       if(!f.prefix||!f.dun){status(v,'请填写遁位与前缀，并选满目标属性');return;}
-      var plan=P.generate(f);if(!plan.valid){status(v,targetReason(f.dun,f.attrs,plan.errors.join('；')));return;}status(v,'');renderPlan(v,area(v,'results'),plan,true);persist(v);return;
+      var plan=P.generate(f);if(!plan.valid){status(v,targetReason(f.dun,f.attrs,plan.errors.join('；')));return;}status(v,'');v.planner=null;renderPlan(v,area(v,'results'),plan);persist(v);return;
     }
-    if(action==='expand-material'){var ref=b.dataset.ref,entry=v.registry[ref],host=v.el.querySelector('[data-material-expansion="'+ref+'"]');if(host.childNodes.length){host.hidden=!host.hidden;return;}host.dataset.expandedMaterial='';renderPlan(v,host,P.expand(entry.material),false);return;}
-    if(action==='open-planner'){openPlanner(v,b.dataset.quality);return;}
+    if(action==='expand-material'){var ref=b.dataset.ref,entry=v.registry[ref],host=v.el.querySelector('[data-material-expansion="'+ref+'"]');if(host.childNodes.length){host.hidden=!host.hidden;return;}host.dataset.expandedMaterial='';renderPlan(v,host,P.expand(entry.material));return;}
+    if(action==='open-planner'){openPlanner(v,b);return;}
     if(action==='add-template'){
-      if(!v.plannerQuality){status(v,'先在多X / 失败复用分支中点击“选择具体材料并计算”');return;}
-      call(v,function(){var m=materialFromEditor(v);if(m.quality!==v.plannerQuality)throw new Error('模板品质必须为'+qLabel(v.plannerQuality));v.plannerMaterials.push(m);v.el.querySelector('[data-planner-templates]').textContent='具体模板：'+v.plannerMaterials.map(materialText).join('；');},'已加入具体模板（不改实际或虚拟库存）');return;
+      var activePlanner=v.planner;
+      if(!activePlanner||!activePlanner.host.isConnected){status(v,'先在多X / 失败复用分支中点击“选择具体材料并计算”');return;}
+      call(v,function(){var m=materialFromEditor(v);if(m.quality!==activePlanner.quality)throw new Error('模板品质必须为'+qLabel(activePlanner.quality));if(m.prefix!==activePlanner.target.prefix||m.dun!==activePlanner.target.dun)throw new Error('模板必须与当前精确规划目标同前缀、遁位');activePlanner.materials.push(m);activePlanner.host.querySelector('[data-planner-templates]').textContent='具体模板：'+activePlanner.materials.map(materialText).join('；');},'已加入当前精确目标模板（不改实际或虚拟库存）');return;
     }
     if(action==='plan-stock'||action==='plan-templates'){
-      var inputs=action==='plan-stock'?Array.from(v.el.querySelectorAll('[data-planner-entry]:checked')).map(function(c){return v.registry[c.dataset.plannerEntry];}):v.plannerMaterials;
+      var plannerHost=b.closest('[data-craft-planner]'),planner=plannerHost&&plannerHost._planner;
+      if(!planner){status(v,'请先打开具体分支的规划器');return;}
+      var inputs=action==='plan-stock'?Array.from(plannerHost.querySelectorAll('[data-planner-entry]:checked')).map(function(c){return v.registry[c.dataset.plannerEntry];}):planner.materials;
       if(!inputs.length){status(v,'请先选择具体材料；X通配不能入库或直接计算');return;}
-      var calculated=P.reuseRecipes(form(v),inputs),out=v.el.querySelector('[data-planner-results]');out.innerHTML='';
+      var calculated=P.reuseRecipes(planner.target,inputs),out=plannerHost.querySelector('[data-planner-results]');out.innerHTML='';
       if(!calculated.valid){status(v,calculated.errors.join('；'));return;}
       out.innerHTML='<p class="craft-note">'+(calculated.templateMode?'模板模式（尚未检查实际库存）':'实际库存数量约束')+'，共 '+calculated.recipes.length+' 条可达配方。'+(!calculated.recipes.length?'当前材料不能覆盖目标，或实际数量不足；不会将缺词AAA当作可达。':'')+'</p>';pagedRoutes(v,out,calculated.recipes,true);return;
     }

@@ -1,11 +1,11 @@
 .ins-crafting { min-width:0; }
-#partition-inscription { --ins-term-blue:#72b8ff; --ins-term-purple:#d0a0ff; --ins-term-orange:#ffb454; }
+#partition-inscription { --ins-term-blue:#72b8ff; --ins-term-purple:#d0a0ff; --ins-term-orange:#f79646; }
 #partition-inscription .ins-term-value { font-weight:700; overflow-wrap:anywhere; }
 #partition-inscription .ins-term-value.ins-term-blue { color:var(--ins-term-blue); fill:var(--ins-term-blue); }
 #partition-inscription .ins-term-value.ins-term-purple { color:var(--ins-term-purple); fill:var(--ins-term-purple); }
 #partition-inscription .ins-term-value.ins-term-orange { color:var(--ins-term-orange); fill:var(--ins-term-orange); }
 #partition-inscription .ins-term-tier { color:var(--muted,#b7ad99); font-weight:400; white-space:nowrap; }
-#partition-inscription .craft-flow-svg { --ins-term-blue:#1467b7; --ins-term-purple:#8341b0; --ins-term-orange:#9c5100; }
+#partition-inscription .craft-flow-svg { --ins-term-blue:#1467b7; --ins-term-purple:#8341b0; --ins-term-orange:#f79646; }
 #partition-inscription .craft-flow-svg .ins-term-tier { fill:#516172; font-weight:400; }
 .ins-edit-term-preview { display:block; min-width:0; font-size:12px; line-height:1.6; margin-top:4px; }
 .ins-crafting *, .ins-crafting *::before, .ins-crafting *::after { box-sizing:border-box; }
@@ -51,12 +51,17 @@
 .craft-flow-viewport { overflow:auto; max-width:100%; min-width:0; overscroll-behavior:contain; touch-action:pan-x pan-y; scrollbar-color:#b5c8d8 #f4f8fb; }
 .craft-flow-viewport:focus-visible { outline:2px solid #438ac1; outline-offset:-3px; }
 .craft-flow-svg { display:block; max-width:none; margin:0 auto; background:#fff; }
-.craft-flow-connection { fill:none; stroke:#929aa2; stroke-width:1.6; }
+.craft-flow-connection { fill:none; stroke:#929aa2; stroke-width:2.4; }
+.craft-flow-stage rect { fill:none; stroke-width:3; }
+.craft-flow-stage-blue { stroke:#1467b7; color:#1467b7; }
+.craft-flow-stage-purple { stroke:#8341b0; color:#8341b0; }
+.craft-flow-stage-orange { stroke:#f79646; color:#f79646; }
+.craft-flow-stage text { fill:currentColor; stroke:none; font:700 14px system-ui,"Microsoft YaHei",sans-serif; }
 .craft-flow-box rect { fill:#e5f3ff; stroke:#d4dee6; stroke-width:1.1; }
 .craft-flow-success rect { stroke:#a9c8df; stroke-width:1.4; }
 .craft-flow-box text,.craft-flow-label text { fill:#005aab; font:600 14px system-ui,"Microsoft YaHei",sans-serif; text-anchor:middle; dominant-baseline:middle; }
 .craft-flow-label rect { fill:#f5faff; stroke:#cddfec; stroke-width:1; }
-.craft-flow-label text { font-size:12px; font-weight:500; }
+.craft-flow-label text { font-size:14px; font-weight:700; }
 .craft-node { background:#85704312; border:1px solid #6e5c39; border-radius:9px; padding:12px; min-width:0; overflow-wrap:anywhere; }
 .craft-node p { margin:6px 0; line-height:1.65; }
 .craft-output { border-width:2px; }

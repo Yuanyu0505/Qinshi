@@ -17,6 +17,15 @@
   }
   function empty() { return { schemaVersion: 1, idSequence: 0, actual: [], goals: [], workspaces: {}, draft: {} }; }
   function workspace() { return { inventory: [], stage: "b2", selection: [], pending: null }; }
+  function refreshSpeedProbability(pending, output, materials) {
+    // Only the old duplicate-blue-speed 1/9 model changed. Keep the sampled
+    // material and all inventory quantities, while refreshing its model label.
+    if (!output || pending.probability !== 1/9 || output.probability !== 1/17 || !Array.isArray(materials) || materials.length !== 2) return;
+    var first=materials[0], second=materials[1];
+    if (first.quality==='b2' && second.quality==='b2' && ['鬼遁','龙遁'].includes(first.dun) && first.dun===second.dun &&
+        first.terms.length===1 && second.terms.length===1 && first.terms[0].tier==='?' && second.terms[0].tier==='?' && first.terms[0].attr===second.terms[0].attr &&
+        output.material.terms.some(function(t){return t.attr===first.terms[0].attr&&t.tier==='M';})) pending.probability=output.probability;
+  }
   function requireWorkspace(state, id) {
     if (!state.goals.some(function (g) { return g.id === id; }) || !Object.hasOwn(state.workspaces, id)) fail("目标不存在");
     return state.workspaces[id];
@@ -76,6 +85,7 @@
         var recipe = selected(ws, pending.selection, goal);
         if (JSON.stringify(recipe.inputs) !== JSON.stringify(pending.inputs) || JSON.stringify(ws.selection) !== JSON.stringify(pending.selection)) fail("待提交材料已改变");
         var result = concrete(pending.result), output = recipe.preview.outcomes.find(function (o) { return Rules.signature(o.material) === Rules.signature(result); });
+        refreshSpeedProbability(pending,output,recipe.materials);
         if (!output || result.origin !== "crafted" || pending.probability !== output.probability || pending.quality !== recipe.preview.quality) fail("待提交结果无效");
       }
     });
@@ -217,6 +227,8 @@
       if (!object(pending) || typeof pending.id !== "string" || !pending.id || !object(pending.material)) fail("模拟结果格式无效");
       var checked = Rules.validate(pending.material), preview = simulationPreview(value);
       var match = checked.valid && preview.outcomes.find(function (o) { return Rules.signature(o.material) === Rules.signature(checked.material); });
+      var dun=context(value.target).dun;
+      refreshSpeedProbability(pending,match,sim.inputs.map(function(terms){return {quality:sim.stage,dun:dun,terms:terms};}));
       if (!match || pending.material.origin !== "crafted" || pending.probability !== match.probability) fail("模拟结果与本次材料不匹配");
     }
     return value;
@@ -228,7 +240,7 @@
       if (!found.valid) return found;
       try {
         var saved = found.state.draft.simpleWorkbench, value;
-        if (saved !== undefined) value = copy(checkSimple(saved));
+        if (saved !== undefined) value = checkSimple(copy(saved));
         else {
           value = { version: 1, target: defaultTarget(), simulation: blankSimulation() };
           var old = found.state.draft["crafting-paths"] || found.state.draft["crafting-simulator"], f = old && old.form;

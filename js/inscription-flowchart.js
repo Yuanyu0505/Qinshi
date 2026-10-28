@@ -59,7 +59,7 @@
     return 'M '+a.x+' '+a.y+' V '+(b.y-r)+' Q '+b.x+' '+b.y+' '+(b.x+sign*r)+' '+b.y+
       ' H '+(c.x-sign*r)+' Q '+c.x+' '+c.y+' '+c.x+' '+(c.y+r)+' V '+d.y;
   }
-  function svg(title,nodes,edges,width,height){
+  function svg(title,nodes,edges,width,height,stages){
     var id='ins-flow-'+(++serial),map=new Map(nodes.map(function(n){return[n.id,n];})),labels=[];
     var connections=edges.map(function(e){
       var from=map.get(e.from),to=map.get(e.to),a={x:from.x+from.w*(e.fromPort===undefined?0.5:e.fromPort),y:from.y+from.h};
@@ -75,7 +75,8 @@
     var description=nodes.map(function(n){return n.lines.map(lineText).join('，');}).join('；')+'。'+edges.filter(function(e){return e.label;}).map(function(e){return lineText(map.get(e.from).lines[0])+' → '+lineText(map.get(e.to).lines[0])+'：'+[].concat(e.label).join('，');}).join('；');
     return '<svg xmlns="http://www.w3.org/2000/svg" class="craft-flow-svg" role="img" aria-labelledby="'+id+'-title '+id+'-desc" viewBox="0 0 '+width+' '+height+'" width="'+Math.round(width*0.9)+'" height="'+Math.round(height*0.9)+'" data-flow-width="'+width+'" data-flow-height="'+height+'">'+
       '<title id="'+id+'-title">'+esc(title)+'</title><desc id="'+id+'-desc">'+esc(description)+'</desc>'+
-      '<defs>'+wireColors.map(function(color,i){return '<marker id="'+id+'-arrow-'+i+'" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="8" markerHeight="8" orient="auto"><path d="M 1 1 L 7 4 L 1 7" fill="none" stroke="'+color+'" stroke-width="1.4"/></marker>';}).join('')+'</defs>'+connections+
+      '<defs>'+wireColors.map(function(color,i){return '<marker id="'+id+'-arrow-'+i+'" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="8" markerHeight="8" orient="auto"><path d="M 1 1 L 7 4 L 1 7" fill="none" stroke="'+color+'" stroke-width="1.8"/></marker>';}).join('')+'</defs>'+
+      stages.map(function(stage){return '<g class="craft-flow-stage craft-flow-stage-'+stage.kind+'"><rect x="4" y="'+stage.top+'" width="'+(width-8)+'" height="'+(stage.bottom-stage.top)+'" rx="12"/><text x="18" y="'+(stage.top+20)+'">'+stage.label+'</text></g>';}).join('')+connections+
       nodes.map(function(n){return '<g class="craft-flow-box craft-flow-'+n.kind+'"><rect x="'+n.x+'" y="'+n.y+'" width="'+n.w+'" height="'+n.h+'" rx="17"/>'+n.lines.map(function(line,i){return '<text x="'+(n.x+n.w/2)+'" y="'+(n.y+22+i*20)+'">'+lineHtml(line)+'</text>';}).join('')+'</g>';}).join('')+labels.join('')+'</svg>';
   }
   function figure(title,drawing,note){
@@ -88,7 +89,7 @@
   function letter(index){var result='';do{result=String.fromCharCode(65+index%26)+result;index=Math.floor(index/26)-1;}while(index>=0);return result;}
   function candidateInfo(node){
     if(node.kind==='wash')return ['置换 / 洗练','得到指定词条组合'];
-    if(node.children.some(function(c){return c.node.material.terms.some(function(t){return t.tier==='?';});}))return ['蓝二速度特殊合成','按合法结果等概率生成'];
+    if(node.children.some(function(c){return c.node.material.terms.some(function(t){return t.tier==='?';});}))return ['蓝二速度档位不可辨','按合法结果等概率生成'];
     var pool=new Set();node.children.forEach(function(c){c.node.material.terms.forEach(function(t){pool.add(t.attr+':'+t.tier);});});
     var count=R.qualities.find(function(q){return q.id===node.material.quality;}).count;
     if(pool.size<count)return ['候选不足，随机补词条','按完整合法结果分支'];
@@ -138,7 +139,7 @@
             return {parts:[{text:'失败'+qLabel(o.material.quality)+' '+letter(i)+number+'：'}].concat(terms(o.material,x)[0].parts,[{text:' ｜ '+percent(o.probability)}])};
           });
           var total=failures.reduce(function(sum,o){return sum+o.probability;},0);
-          var group=add(['失败结果（合计 '+percent(total)+'）'].concat(rows),level,'failure');
+          var group=add(['失败结果（合计 '+percent(total)+'）'].concat(settings.showFailures?rows:[failures.length+'种结果已收起，点击上方按钮展开']),level,'failure');
           failures.forEach(function(o,i){remember(o.material,Object.assign({},group,{ref:letter(i)+number}));});
           link(operation,group,'');
         }
@@ -162,19 +163,23 @@
       grouped.forEach(function(g,i){link(g.n,operation,'',{toPort:(i+1)/(grouped.length+1)});});
       link(operation,goal,'',{toPort:(index+1)/(route.reuse.length+2)});
       if(reuse.probability<1){
-        var other=add(['非目标'+qLabel(reuse.material.quality),'其他结果合计 '+percent(1-reuse.probability)],levels[reuse.material.quality],'failure');
+        var failures=reuse.outcomes.filter(function(o){return R.signature(o.material)!==R.signature(reuse.material);});
+        var rows=failures.map(function(o,i){return {parts:[{text:'复用失败'+qLabel(o.material.quality)+' '+(index+1)+'-'+letter(i)+'：'}].concat(terms(o.material,x)[0].parts,[{text:' ｜ '+percent(o.probability)}])};});
+        var other=add(['非目标'+qLabel(reuse.material.quality),'其他结果合计 '+percent(1-reuse.probability)].concat(settings.showFailures?rows:[failures.length+'种结果已收起，点击上方按钮展开']),levels[reuse.material.quality],'failure');
         link(operation,other,'');
       }
     });
-    var y=16,width=360,gap=18,byId=new Map(nodes.map(function(n){return[n.id,n];}));
+    var y=16,width=360,gap=18,byId=new Map(nodes.map(function(n){return[n.id,n];})),stages=[],stage;
     var rows=[];
     for(var level=0;level<=8;level++){
       var row=nodes.filter(function(n){return n.level===level;});
       if(!row.length)continue;
       var span=row.reduce(function(sum,n){return sum+n.w;},0)+gap*(row.length-1);
-      width=Math.max(width,span+32);rows.push({nodes:row,span:span});
+      width=Math.max(width,span+32);rows.push({nodes:row,span:span,level:level});
     }
     rows.forEach(function(row){
+      var kind=row.level<2?'blue':row.level<6?'purple':'orange';
+      if(!stage||stage.kind!==kind){stage={kind:kind,label:kind==='blue'?'蓝色品质流程':kind==='purple'?'紫色品质流程':'橙色品质流程',top:y,bottom:y};stages.push(stage);y+=34;}
       row.nodes.forEach(function(n){
         var incoming=edges.filter(function(e){return e.to===n.id;}).map(function(e){return byId.get(e.from);});
         var materials=incoming.filter(function(from){return from.kind!=='promotion';}).map(function(from){return from.x+from.w/2;}).sort(function(a,b){return a-b;});
@@ -191,6 +196,7 @@
       var left=16,height=Math.max.apply(null,row.nodes.map(function(n){return n.h;}));
       row.nodes.forEach(function(n,i){n.x=Math.max(left,n.desired-n.w/2);n.y=y+height-n.h;n.wireColor=i%wireColors.length;left=n.x+n.w+gap;width=Math.max(width,n.x+n.w+16);});
       y+=height+60;
+      stage.bottom=y-48;
     });
     nodes.forEach(function(n){
       var incoming=edges.filter(function(e){return e.to===n.id;}).sort(function(a,b){var aa=byId.get(a.from),bb=byId.get(b.from);return aa.x+aa.w/2-bb.x-bb.w/2;});
@@ -210,7 +216,8 @@
       if(typeof e.label==='string'&&e.label.indexOf('× ')===0){e.labelX=from.x+from.w/2;e.labelY=from.y+from.h+20;}
     });
     return '<div class="craft-flow-guide">每个方案一图到底。合成材料与独立置换材料并行汇入下一次合成；箭头上的 × 数量表示投料数。成功品和失败品直接连到后续用途，不靠跨图编号衔接。多次尝试需重复准备相应材料。</div>'+
-      figure(title,svg(title,nodes,edges,width,y-44),'置换概率未知；合成与失败品复用概率以所连材料已经备齐为前提。独立置换分支需另备同品质铭文，不是把其他支线的 M 材料继续洗掉。');
+      (nodes.some(function(n){return n.kind==='failure';})?'<div class="craft-actions"><button type="button" class="seg" data-craft-action="diagram-failures" aria-expanded="'+Boolean(settings.showFailures)+'">'+(settings.showFailures?'收起所有失败结果':'展开所有失败结果')+'</button></div>':'')+
+      figure(title,svg(title,nodes,edges,width,y-32,stages),'概率按最终合法组合等概率模型推算，并非游戏实测频率。置换概率未知；合成与失败品复用概率以所连材料已经备齐为前提。独立置换分支需另备同品质铭文，不是把其他支线的 M 材料继续洗掉。');
   }
   function zoom(viewer,action){
     if(!viewer)return;var drawing=viewer.querySelector('svg');if(!drawing)return;

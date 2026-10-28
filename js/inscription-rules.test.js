@@ -142,14 +142,15 @@ test("shortage adds only legal H/M/U, preserves anchors, and never creates a thi
   assert.ok(outputs.every(o=>o.probability===1/9));
 });
 
-test("two blue ghost speeds retain M1 and equiprobably complement, including H2 not HH", () => {
-  for (const [dun,attr,count] of [["鬼遁","速",9],["龙遁","PVP速",9],["地遁","PVP速",9],["神遁","PVP速",9]]) {
+test("two blue speeds expand hidden H/M and deduplicate equiprobable visible combinations", () => {
+  for (const [dun,attr,count] of [["鬼遁","速",17],["龙遁","PVP速",17],["地遁","PVP速",9],["神遁","PVP速",9]]) {
     const a=mat("b2",[term(attr,"?")],"wash",dun);
     const outputs=preview([a,a]);
     assert.equal(outputs.length,count);
-    assert.ok(outputs.every(o=>keys(o.terms).includes(attr+":M")));
+    assert.ok(outputs.every(o=>o.terms.some(t=>t.attr===attr)));
     assert.ok(outputs.every(o=>o.probability===1/count));
-    assert.equal(outputs.filter(o=>keys(o.terms).includes(attr+":H")).length,["鬼遁","龙遁"].includes(dun)?1:0);
+    assert.equal(outputs.filter(o=>keys(o.terms).includes(attr+":H")).length,["鬼遁","龙遁"].includes(dun)?9:0);
+    assert.equal(outputs.filter(o=>keys(o.terms).includes(attr+":H")&&keys(o.terms).includes(attr+":M")).length,["鬼遁","龙遁"].includes(dun)?1:0);
   }
 });
 

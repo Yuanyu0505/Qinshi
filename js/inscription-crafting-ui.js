@@ -174,7 +174,7 @@
     var host=area(v,'results'),target=state.target;
     host.innerHTML='<section class="craft-panel"><h3>从蓝二到'+qLabel(target.quality)+'的完整路线</h3><p class="craft-note">'+modelNote+'</p>'+
       '<p class="craft-note">'+(target.discipleKey?esc(itemFor(target).name+' · '+target.slot.replace('|',' · ')):'通用遁位路线：全部材料必须为同一个前缀、同一个遁位。')+
-      '。杂词条 X 不指定具体属性，默认采用同一种不分档词条；本路线需要一致的 X 不可换成多个不同杂词条。</p><div data-route-groups></div></section>';
+      '。杂词条 X 不指定具体属性，默认采用同一种不分档词条；本路线需要一致的 X 不可换成多个不同杂词条。</p><p class="craft-note">展示具有不同中间配料的代表路线，每个目标最多整理21个候选后去重，不穷举所有材料树，也不按投料顺序变化凑方案。</p><div data-route-groups></div></section>';
     var groups=host.querySelector('[data-route-groups]');
     ['deterministic','probability'].forEach(function(kind){
       var routes=plan.strategies.filter(function(s){return s.kind===kind;});
@@ -184,7 +184,14 @@
         var details=document.createElement('details');details.className='craft-strategy';
         details.innerHTML='<summary>'+esc((kind==='deterministic'?'必中':'概率')+'路线 '+(index+1))+' · 蓝二 → '+qLabel(target.quality)+'</summary><div class="craft-strategy-body"></div>';
         var rendered=false;
-        function fill(){if(rendered)return;rendered=true;details.querySelector('.craft-strategy-body').innerHTML=F.render(route,plan.xAttr,{positionLabel:target.discipleKey?target.slot.replace('|',' · '):position(target).dun});}
+        function fill(){if(rendered)return;rendered=true;var body=details.querySelector('.craft-strategy-body');body.renderFlow=function(show){
+          var old=body.querySelector('[data-flow-viewer]'),zoom=old?Number(old.dataset.zoom):0.9;
+          body.innerHTML=F.render(route,plan.xAttr,{showFailures:show,positionLabel:target.discipleKey?target.slot.replace('|',' · '):position(target).dun});
+          body.dataset.failures=show?'open':'closed';
+          var viewer=body.querySelector('[data-flow-viewer]'),drawing=viewer.querySelector('svg');viewer.dataset.zoom=String(zoom);
+          drawing.style.width=Math.round(Number(drawing.dataset.flowWidth)*zoom)+'px';drawing.style.height=Math.round(Number(drawing.dataset.flowHeight)*zoom)+'px';
+          viewer.querySelector('[data-craft-action="diagram-reset"]').textContent=Math.round(zoom*100)+'%';
+        };body.renderFlow(false);}
         details.addEventListener('toggle',function(){if(details.open)fill();});
         groups.appendChild(details);if(index===0){fill();details.open=true;}
       });
@@ -248,7 +255,7 @@
     }
   }
   function outcomes(list) {
-    return '<details class="craft-preview-outcomes" open><summary>结果预览 · '+list.length+'种组合</summary><div class="craft-scroll"><table class="craft-table"><thead><tr><th>产物</th><th>概率</th></tr></thead><tbody>'+
+    return '<details class="craft-preview-outcomes"><summary>结果预览 · '+list.length+'种组合（点击展开）</summary><div class="craft-scroll"><table class="craft-table"><thead><tr><th>产物</th><th>概率</th></tr></thead><tbody>'+
       list.map(function(o){return '<tr><td>'+esc(qLabel(o.material.quality)+'：')+displayTerms(o.material)+'</td><td>'+probability(o.probability)+'</td></tr>';}).join('')+'</tbody></table></div></details>';
   }
   function renderAll(clearRoutes) {
@@ -289,6 +296,7 @@
   }
   function onClick(v,control) {
     var action=control.dataset.craftAction;
+    if(action==='diagram-failures'){var body=control.closest('.craft-strategy-body');if(body&&body.renderFlow)body.renderFlow(body.dataset.failures!=='open');return;}
     if(action.indexOf('diagram-')===0){F.zoom(control.closest('[data-flow-viewer]'),action.slice(8));return;}
     if(!loaded||currentAccount()!==accountId){status(v,'请重新打开铭文分区后再操作。');return;}
     status(v,'');

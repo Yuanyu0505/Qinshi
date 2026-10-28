@@ -14,6 +14,26 @@ function fixture() {
   return { store, goal, storage, accounts, switchTo: value => { active=value; }, fail: value => { failure=value; } };
 }
 function setup() { const f=fixture(); f.id=f.goal(); f.store.setActual(a,2); f.store.setActual(b,2); f.store.copyActual(f.id); f.store.setSelection(f.id,[Rules.signature(a),Rules.signature(b)]); return f; }
+
+test("old double-blue-speed pending probability migrates without losing token or inventory", () => {
+  const f=fixture(), speed={prefix:'天府',dun:'鬼遁',quality:'b2',origin:'wash',terms:[{attr:'速',tier:'?'}]};
+  f.store.setActual(b,7);
+  const outcome=Rules.preview([speed,speed]).outcomes.find(o=>o.terms.some(t=>t.attr==='速'&&t.tier==='M'));
+  const simple={version:1,target:{discipleKey:'',slot:'',dun:'鬼遁',quality:'o2',attrs:['速','速','防']},simulation:{stage:'b2',inputs:[speed.terms,speed.terms],pending:{id:'legacy',material:{...outcome.material,prefix:'天府'},probability:1/9}}};
+  // Unspecified disciple uses the first shared prefix, not a mixed prefix.
+  simple.simulation.pending.material.prefix=Rules.prefixes[0];
+  f.store.updateDraft({simpleWorkbench:simple});
+  const workbench=State.createWorkbench(f.storage), inspected=workbench.inspect();
+  assert.equal(inspected.valid,true);
+  assert.equal(inspected.state.simulation.pending.probability,1/17);
+  assert.equal(JSON.parse(inspected.token).simulation.pending.probability,1/9);
+  assert.equal(workbench.save(inspected.state,inspected.token,'one').valid,true);
+  assert.equal(f.store.snapshot().actual[0].quantity,7);
+  const corrupted=JSON.parse(JSON.stringify(simple));
+  corrupted.simulation.pending.material.terms=[{attr:'速',tier:'H'},{attr:'闪避',tier:'U'}];
+  f.store.updateDraft({simpleWorkbench:corrupted});
+  assert.equal(workbench.inspect().valid,false);
+});
 test("actual totals merge source identity, quantities reject noninteger and wildcard", () => {
   const f=fixture(); f.store.setActual(b,2); f.store.setActual({...b,origin:"wash",terms:[{attr:"防",tier:"H"},{attr:"治疗效果",tier:"U"}]},1);
   const common=material([["治疗效果","U"],["闪避","U"]]); f.store.setActual(common,2); f.store.setActual({...common,origin:"wash"},3);

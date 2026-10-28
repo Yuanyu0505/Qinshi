@@ -5,6 +5,20 @@ const Rules = require("./inscription-rules.js");
 const Paths = require("./inscription-paths.js");
 const goal = (dun="地遁", attrs=["技能穿透","技能穿透","技能穿透"],quality="o1") => ({prefix:"天同",dun,quality,attrs});
 const has = (m,attr,tier) => m.terms.some(t=>t.attr===attr&&t.tier===tier);
+
+test("representative cloud routes retain multiple complementary intermediate recipes", () => {
+  const plan=Paths.representative(goal('云遁',['护盾','护盾','技免'],'o2'));
+  assert.equal(plan.valid,true);
+  const pairs=new Set();
+  function walk(node) {
+    if(node.kind==='craft'&&node.material.quality==='o1'&&node.probability===1)
+      pairs.add(JSON.stringify(node.children.map(c=>[Rules.signature(c.node.material),c.quantity]).sort()));
+    node.children.forEach(c=>walk(c.node));
+  }
+  plan.strategies.forEach(s=>walk(s.tree));
+  assert.ok(pairs.size>=2);
+  assert.ok(plan.strategies.length<=21*plan.targets.length);
+});
 test("earth triple penetration exposes deterministic overlapping pairs and .25 U seed", () => {
   const result=Paths.generate(goal()); assert.equal(result.valid,true); assert.equal(result.bestTargets.targets.length,1);
   const exact=result.routes.filter(r=>r.probability===1);

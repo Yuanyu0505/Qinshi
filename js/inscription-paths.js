@@ -186,10 +186,10 @@
       }
       return exactCache.get(sig);
     }
-    function fromRoute(route, mode) {
+    function fromRoute(route, mode, variant) {
       var children = [];
       for (var i=0;i<route.requirements.length;i++) {
-        var entry = route.requirements[i], child = build(entry.material, mode);
+        var entry = route.requirements[i], child = build(entry.material, mode, false, variant);
         if (!child) return null;
         children.push({ quantity:entry.quantity, node:child });
       }
@@ -216,8 +216,9 @@
       return child ? { kind:"wash", material:Object.assign(clone(target),{origin:"wash"}), children:[{quantity:1,node:child}], probability:null, hasChance:child.hasChance,
         note:"置换至指定词条；低档只能通过置换准备。洗练概率未知，不计入合成成功率。" } : null;
     }
-    function build(target, mode, noWash) {
-      var key = Rules.signature(target)+":"+mode+":"+Boolean(noWash);
+    function build(target, mode, noWash, variant) {
+      variant=variant||0;
+      var key = Rules.signature(target)+":"+mode+":"+Boolean(noWash)+":"+variant;
       if (treeCache.has(key)) return clone(treeCache.get(key));
       if (target.quality==="b2") return {kind:"base",material:clone(target),children:[],probability:null,hasChance:false};
       var list = routesFor(target), ordered = list.slice();
@@ -225,9 +226,18 @@
         return Number(a.deterministic)-Number(b.deterministic) || b.probability-a.probability || a.requirements.length-b.requirements.length;
       });
       var tree = null;
+      // Preserve meaningful alternative intermediate recipes instead of always
+      // discarding every complementary tree after the first one. Limit the
+      // search to six pivots; never take a Cartesian product of all subtrees.
+      if (variant && ordered.length && ['p2','o1'].includes(target.quality)) {
+        var preferred=ordered.filter(function(r){return mode==='stable'?r.deterministic:!r.deterministic;});
+        if(preferred.length) ordered=preferred;
+        var offset=variant%Math.min(6,ordered.length);
+        ordered=ordered.slice(offset).concat(ordered.slice(0,offset));
+      }
       // Guaranteed operations are preferred in the stable route. If the model
       // necessarily randomizes a blue speed, show it honestly as probability.
-      for (var i=0;i<ordered.length && !tree;i++) tree=fromRoute(ordered[i],mode);
+      for (var i=0;i<ordered.length && !tree;i++) tree=fromRoute(ordered[i],mode,variant);
       if (!tree && !noWash) tree=washed(target,mode);
       treeCache.set(key,tree);
       return tree && clone(tree);
@@ -267,13 +277,14 @@
     var targets=best.targets.map(function(terms){return material(goal.quality,terms);}).filter(Boolean), strategies=[], seen=new Set();
     targets.forEach(function (target) {
       var candidates=[build(target,"stable"),build(target,"chance")];
+      for(var variant=1;variant<6;variant++) candidates.push(build(target,'stable',false,variant),build(target,'chance',false,variant));
       if (target.quality!=="b2" && sources(target).includes("wash")) candidates.push(washed(target,"stable"));
       // Direct complementary inputs and a single-X pool are distinct ideas,
       // not every permutation of concrete attributes.
       var categories=new Set();
       routesFor(target).forEach(function(route){
-        var category=(route.deterministic ? "exact" : "chance")+":"+(route.requirements.length===1 ? "repeat" : "complement");
-        if (!categories.has(category)) { categories.add(category); candidates.push(fromRoute(route,"stable")); }
+        var category=(route.deterministic ? "exact" : "chance")+":"+route.requirements.map(function(e){return Rules.signature(e.material)+'*'+e.quantity;}).join('|');
+        if (!categories.has(category) && categories.size<8) { categories.add(category); candidates.push(fromRoute(route,"stable")); }
       });
       candidates.filter(Boolean).forEach(function(tree){
         var identity=shape(tree); if (seen.has(identity)) return; seen.add(identity);

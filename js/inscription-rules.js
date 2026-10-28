@@ -197,13 +197,10 @@
     if (normalized.length !== recipe.count) return failure(["配方需要" + recipe.count + "枚" + first.quality + "材料"]);
     if (normalized.some(function (m) { return m.prefix !== first.prefix || m.dun !== first.dun || m.quality !== first.quality; })) return failure(["合成材料必须同前缀、遁位和品质"]);
     var count = qualityInfo(recipe.quality).count, pools = [[]];
-    var unknown = normalized.flatMap(function (m) { return m.terms; }).filter(function (t) { return t.tier === "?"; });
     normalized.forEach(function (m) { m.terms.forEach(function (t) {
       if (t.tier !== "?") { pools.forEach(function (pool) { pool.push(t); }); return; }
-      // Repeated blue speed is one visible anchor M, never two hidden H rolls.
-      if (unknown.filter(function (u) { return u.attr === t.attr; }).length > 1) {
-        pools.forEach(function (pool) { pool.push(makeTerm(t.attr, "M")); }); return;
-      }
+      // Expand indistinguishable blue H/M interpretations, including HH and MM.
+      // Final visible combinations are deduplicated below, not hidden-roll weighted.
       var tiers = dunInfo(first.dun).high.indexOf(t.attr) >= 0 ? ["M", "H"] : ["M"], next = [];
       pools.forEach(function (pool) { tiers.forEach(function (tier) { next.push(pool.concat([makeTerm(t.attr, tier)])); }); });
       pools = next;

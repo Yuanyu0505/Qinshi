@@ -183,12 +183,17 @@
       }); }
     };
   }
-  function defaultTarget() { return { discipleKey: "", slot: "", dun: "", quality: "o2", attrs: ["", "", ""] }; }
+  function defaultTarget() { return { discipleKey: "", slot: "", dun: "", quality: "o2", attrs: ["", "", ""], xTerm: null }; }
   function blankSimulation() { return { stage: "b2", inputs: [], pending: null }; }
   function context(target) {
     var pair = target.slot.split("|");
     // An unspecified disciple represents any ONE common prefix, never mixed prefixes.
     return { prefix: target.discipleKey ? pair[0] : Rules.prefixes[0], dun: target.discipleKey ? pair[1] : target.dun };
+  }
+  function xOptions(target) {
+    var position=context(target),best=Rules.bestTargets(position.dun,target.quality,target.attrs),wanted=new Set();
+    best.targets.forEach(function(terms){terms.forEach(function(term){wanted.add(term.attr+':'+term.tier);});});
+    return Rules.termsFor(position.dun,target.quality).filter(function(term){return term.tier!=='?'&&!wanted.has(term.attr+':'+term.tier);});
   }
   function infer(value) {
     var errors = [];
@@ -217,6 +222,7 @@
     if (!Array.isArray(target.attrs) || target.attrs.length !== q.count || target.attrs.some(function (a) { return a !== "" && !Rules.attributes.some(function (x) { return x.id === a; }); })) fail("目标属性数量或名称无效");
     if (target.dun && !Rules.duns.some(function (d) { return d.id === target.dun; })) fail("目标遁位无效");
     if (target.slot && !Rules.prefixes.some(function (prefix) { return Rules.duns.some(function (d) { return target.slot === prefix + "|" + d.id; }); })) fail("弟子铭文位置无效");
+    if (target.xTerm != null && (!object(target.xTerm) || !xOptions(target).some(function(term){return term.attr===target.xTerm.attr&&term.tier===target.xTerm.tier;}))) fail("具体杂词 X 不符合当前遁位、品质或目标属性，请重新选择");
     var sim = value.simulation, stage = Rules.qualities.find(function (item) { return item.id === sim.stage; }), recipe = Rules.recipes[sim.stage];
     if (!stage || !Array.isArray(sim.inputs) || sim.inputs.length > (recipe ? recipe.count : 0)) fail("模拟阶段或材料数量无效");
     sim.inputs.forEach(function (terms) {
@@ -261,5 +267,5 @@
       save: function (value, expected, accountId) { legacy.saveSimple(value, expected, accountId); return inspect(); }
     };
   }
-  return { KEY: KEY, createStore: createStore, createWorkbench: createWorkbench, blankSimulation: blankSimulation, context: context, infer: infer, preview: simulationPreview };
+  return { KEY: KEY, createStore: createStore, createWorkbench: createWorkbench, blankSimulation: blankSimulation, context: context, xOptions: xOptions, infer: infer, preview: simulationPreview };
 });

@@ -50,18 +50,22 @@
     } else next.slot='';
     var count=quality(next.quality).count, allowed=R.termsFor(position(next).dun,next.quality).map(function(t){return t.attr;});
     next.attrs=Array.from({length:count},function(_,i){return allowed.includes(next.attrs[i])?next.attrs[i]:'';});
+    if(!next.xTerm||!S.xOptions(next).some(function(t){return t.attr===next.xTerm.attr&&t.tier===next.xTerm.tier;}))next.xTerm=null;
     return next;
   }
   function changeTarget(v,next) {
+    var previousX=next.xTerm;
     next=normalizeTarget(next);
     if (sameTarget(next,state.target)) { renderAll(false); return; }
     var before=position(state.target), after=position(next), sim=state.simulation;
     var incompatible=before.prefix!==after.prefix || before.dun!==after.dun ||
       R.qualities.findIndex(function(q){return q.id===sim.stage;})>=R.qualities.findIndex(function(q){return q.id===next.quality;});
+    var queryOnly=next.discipleKey===state.target.discipleKey&&next.slot===state.target.slot&&next.dun===state.target.dun&&next.quality===state.target.quality&&JSON.stringify(next.attrs)===JSON.stringify(state.target.attrs);
+    if(queryOnly)incompatible=false;
     if (incompatible && sceneExists(sim) && !root.confirm('新目标与当前模拟现场不兼容。切换将重置当前材料和结果，旧版保存数据不受影响。是否继续？')) { renderAll(false); return; }
     var draft=clone(state); draft.target=next;
     if (incompatible) draft.simulation=S.blankSimulation();
-    if (save(v,draft)) { Object.keys(views).forEach(function(key){views[key].generation++;}); renderAll(true); }
+    if (save(v,draft)) { Object.keys(views).forEach(function(key){views[key].generation++;}); renderAll(true); if(previousX&&!next.xTerm)status(v,'原具体杂词 X 不再适用于当前选择，已恢复为未指定 X 的符号模板。'); }
     else renderAll(false);
   }
   function init(mode) {
@@ -80,6 +84,7 @@
       '<div class="craft-actions">'+button('clear-options','清除所有选项')+'</div>'+
       '<div data-craft-attrs class="craft-attrs"></div>'+
       '<p class="craft-note">属性槽由品质决定，必须选满；同属性同档位不能重复，每枚最多两条高档。</p>'+
+      (mode==='crafting-paths'?'<div class="craft-controls craft-x-picker"><label>具体杂词 X（可选）<select data-craft-field="x-term"></select></label></div><p class="craft-note" data-craft-x-note></p>':'')+
       '<div data-craft-analysis></div></section>'+
       '<details class="craft-panel craft-values"><summary>所选属性的品质、档位与数值</summary><div data-craft-matrix></div></details>'+
       (mode==='crafting-paths'?'<div class="craft-actions">'+button('generate','一键查询合成路径')+'</div><div data-craft-results></div>':
@@ -131,6 +136,12 @@
     var attrs=Array.from(new Set(R.termsFor(dun,target.quality).map(function(t){return t.attr;})));
     area(v,'attrs').style.setProperty('--craft-slots',quality(target.quality).count);
     area(v,'attrs').innerHTML=target.attrs.map(function(attr,i){return '<label>目标属性'+(i+1)+'<select data-craft-field="attr" data-index="'+i+'"'+(!dun?' disabled':'')+'>'+options(attrs,attr,'请选择属性')+'</select></label>';}).join('');
+    if(field(v,'x-term')){
+      var chosen=target.xTerm,termId=chosen?chosen.attr+':'+chosen.tier:'';
+      field(v,'x-term').innerHTML=options(T.sortTerms(S.xOptions(target),target.quality).map(function(t){return {id:t.attr+':'+t.tier,label:T.plain(t,target.quality)};}),termId,'不指定 X（符号模板）');
+      field(v,'x-term').disabled=!dun;
+      area(v,'x-note').innerHTML=chosen?'已指定具体 X：'+T.html(chosen,target.quality)+'。沿途保持同一属性、同一档位，数值随品质变化；各阶段仍需满足合法来源，不可用时会说明。':'未指定 X：保留“杂词条 X（同一个）”的符号写法。模板概率以同一种合法不分档杂词为条件，不能直接套用于任意带档位的属性。此选择仅用于路径查询，不改变模拟投料。';
+    }
     renderAnalysis(v); renderMatrix(v);
   }
   function renderAnalysis(v) {
@@ -189,7 +200,9 @@
     v.plan=plan;
     host.innerHTML='<section class="craft-panel"><h3>从蓝二到'+qLabel(target.quality)+'的完整路线</h3><p class="craft-note">'+modelNote+'</p>'+
       '<p class="craft-note">'+(target.discipleKey?esc(itemFor(target).name+' · '+target.slot.replace('|',' · '))+'。':'通用遁位路线：全部材料必须为同一个前缀、同一个遁位。')+
-      '杂词条 X 不指定具体属性，默认采用同一种词条/不分档词条；本路线需要一致的 X 不可换成多个不同杂词条。</p><p class="craft-note">展示具有不同中间配料的代表路线，每个目标最多整理21个候选后去重，不穷举所有材料树，也不按投料顺序变化凑方案。点击星标收藏当前完整路线，收藏方案统一排在所有未收藏方案之前。</p><div data-route-groups></div></section>';
+      (plan.symbolicX===false?'具体杂词 X：'+T.html(plan.xTerm,target.quality)+'；按实际词条逐阶段校验并计算，不会自动替换成其他 X。':'杂词条 X 不指定具体属性，默认采用同一种词条/不分档词条；本路线需要一致的 X 不可换成多个不同杂词条。所示概率以同一种合法不分档杂词为条件。')+'</p>'+
+      (plan.notes||[]).map(function(note){return '<p class="craft-note">'+esc(note)+'</p>';}).join('')+
+      '<p class="craft-note">按材料准备方式展示常规代表路线，不穷举所有材料树，也不把投料顺序变化算作新方案。每步概率均以该步材料已经备齐为条件，置换概率未知。点击星标收藏当前完整路线，收藏方案统一排在所有未收藏方案之前。</p><div data-route-groups></div></section>';
     var groups=host.querySelector('[data-route-groups]');
     var entries=plan.strategies.map(function(route,index){return {route:route,index:index,favorite:favoriteFor(route,target,plan.xAttr)};});
     ['favorites','deterministic','probability'].forEach(function(kind){
@@ -201,7 +214,7 @@
         var route=entry.route;
         var details=document.createElement('details');details.className='craft-strategy';
         details.dataset.routeIndex=String(entry.index);if(entry.favorite)details.classList.add('craft-favorite-pinned');
-        details.innerHTML='<summary class="craft-route-summary"><span>'+esc((route.kind==='deterministic'?'必中':'概率')+'路线 '+(entry.index+1))+' · 蓝二 → '+qLabel(target.quality)+'</span>'+
+        details.innerHTML='<summary class="craft-route-summary"><span>'+esc((route.kind==='deterministic'?'必中':'概率')+'路线 '+(entry.index+1))+' · 蓝二 → '+qLabel(target.quality)+(route.label?' · '+esc(route.label):'')+'</span>'+
           '<button type="button" class="craft-favorite-star'+(entry.favorite?' is-favorite':'')+'" data-craft-action="toggle-favorite" data-route-index="'+entry.index+'" aria-label="'+(entry.favorite?'取消收藏此完整路线':'收藏此完整路线')+'" aria-pressed="'+(entry.favorite?'true':'false')+'" title="'+(entry.favorite?'取消收藏':'收藏完整路线')+'"'+(!favoriteState||!favoriteState.valid||favoriteState.readOnly||favoriteBusy?' disabled':'')+'>'+(entry.favorite?'★':'☆')+'</button></summary><div class="craft-strategy-body"></div>';
         var rendered=false;
         function fill(){if(rendered)return;rendered=true;var body=details.querySelector('.craft-strategy-body');body.renderFlow=function(show){
@@ -245,8 +258,8 @@
     root.setTimeout(function(){
       if(!loaded||currentAccount()!==account||accountId!==account||request!==v.generation||JSON.stringify(state.target)!==selected)return;
       try{
-        var result=P.representative({prefix:p.prefix,dun:p.dun,quality:target.quality,attrs:target.attrs});
-        if(!result.valid)throw new Error(result.errors.join('；'));
+        var result=P.representative({prefix:p.prefix,dun:p.dun,quality:target.quality,attrs:target.attrs,xTerm:target.xTerm||null});
+        if(!result.valid)throw new Error(result.errors.concat(result.notes||[]).join('；'));
         if(!result.strategies.length)throw new Error('当前目标尚无可展示的完整路线；不会用不合法步骤补齐。');
         v.planTarget=selected; renderPlan(v,result); status(v,'');
       }catch(error){status(v,error.message);}
@@ -319,6 +332,9 @@
       if(name==='quality')target.quality=control.value;
       if(name==='slot')target.slot=control.value;
       if(name==='dun')target.dun=control.value;
+      if(name==='x-term'){
+        var split=control.value.lastIndexOf(':');target.xTerm=control.value?{attr:control.value.slice(0,split),tier:control.value.slice(split+1)}:null;
+      }
       changeTarget(v,target);return;
     }
     var sim=clone(state.simulation);
@@ -347,7 +363,7 @@
     }
     if(action==='clear-options'){
       if(sceneExists(state.simulation)&&!root.confirm('清除所有筛选、当前模拟材料及结果？已保存的个人铭文数据不受影响。'))return;
-      var cleared=clone(state);cleared.target={discipleKey:'',slot:'',dun:'',quality:'o2',attrs:['','','']};cleared.simulation=S.blankSimulation();
+      var cleared=clone(state);cleared.target={discipleKey:'',slot:'',dun:'',quality:'o2',attrs:['','',''],xTerm:null};cleared.simulation=S.blankSimulation();
       if(save(v,cleared)){Object.keys(views).forEach(function(key){views[key].generation++;});renderAll(true);}return;
     }
     if(action==='generate'){generate(v);return;}

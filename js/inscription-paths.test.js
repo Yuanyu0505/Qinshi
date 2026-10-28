@@ -19,7 +19,7 @@ test('normal representative recipes inherit every target instead of fishing for 
           const unknown=inputs.flatMap(m=>m.terms).filter(t=>t.attr===attr&&t.tier==='?').length;
           assert.ok(wanted.filter(t=>!known.has(t.tier)).length<=unknown);
         }
-        if(['p2','o2'].includes(node.material.quality))assert.equal(node.probability,1);
+        if(node.material.quality==='o2')assert.equal(node.probability,1);
       }
       node.children.forEach(c=>visit(c.node));
     }
@@ -144,4 +144,147 @@ test("counted-stock planner retains legal blue unknown speed recipe and respects
   assert.equal(result.valid,true); assert.equal(result.templateMode,false); assert.equal(result.recipes.length,1);
   assert.equal(result.recipes[0].probability,0.5); assert.equal(result.recipes[0].inventoryBound,true);
   assert.ok(result.recipes[0].requirements.every(e=>e.quantity===1));
+});
+
+function treeNodes(tree) {
+  return [tree,...tree.children.flatMap(child=>treeNodes(child.node))];
+}
+
+test("routine speed preparation retains identical HM and mixed same-X purple-two families", () => {
+  for(const [dun,attr] of [["鬼遁","速"],["龙遁","PVP速"]]) {
+    const plan=Paths.representative(goal(dun,[attr,attr,attr],"o2"));
+    assert.equal(plan.valid,true);
+    assert.deepEqual(plan.xTerm,{attr:"闪避",tier:"U"});
+    assert.equal(plan.symbolicX,true);
+    assert.ok(plan.strategies.every(strategy=>strategy.symbolicX&&strategy.xTerm.attr==="闪避"));
+    const nodes=plan.strategies.flatMap(strategy=>treeNodes(strategy.tree));
+    const pairs=nodes.filter(node=>node.kind==="craft"&&node.material.quality==="p2"&&has(node.material,attr,"H")&&has(node.material,attr,"M"));
+    const identical=pairs.find(node=>node.children.length===1&&node.children[0].quantity===3);
+    assert.ok(identical,"purple-one HM × 3 preparation must remain available");
+    assert.equal(identical.probability,1);
+    assert.equal(identical.children[0].node.probability,1/17);
+    assert.ok(treeNodes(identical).every(node=>!node.xSource),"a no-X blue-speed recipe must not acquire symbolic provenance");
+    const split=pairs.find(node=>node.children.length===2&&node.children.every(child=>has(child.node.material,"闪避","U")));
+    assert.ok(split,"purple-one M+X/H+same-X preparation must survive deterministic-route pruning");
+    assert.deepEqual(split.children.map(child=>child.quantity).sort(),[1,2]);
+    assert.equal(split.probability,1/3);
+    assert.ok(split.children.every(child=>child.node.probability===0.5));
+    const orange=nodes.filter(node=>node.kind==="craft"&&node.material.quality==="o1");
+    assert.ok(orange.length);
+    assert.ok(orange.every(node=>node.probability===0.25));
+    assert.ok(orange.every(node=>node.children.some(child=>child.node.kind==="wash"&&has(child.node.material,attr,"L")&&has(child.node.material,"闪避","U"))));
+    assert.ok(!nodes.some(node=>node.kind==="wash"&&node.material.quality==="p2"&&has(node.material,attr,"H")&&has(node.material,attr,"L")));
+    assert.ok(plan.strategies.length<=21*plan.targets.length);
+  }
+});
+
+test("routine low+X preparation generalizes beyond same-attribute speed goals", () => {
+  const plan=Paths.representative(goal("人遁",["技能穿透","技能穿透","PVP伤害"],"o2"));
+  assert.equal(plan.valid,true);
+  const nodes=plan.strategies.flatMap(strategy=>treeNodes(strategy.tree));
+  const pairs=nodes.filter(node=>node.kind==="craft"&&node.material.quality==="p2"&&has(node.material,"技能穿透","M")&&has(node.material,"PVP伤害","M"));
+  assert.ok(pairs.some(node=>node.probability===1&&node.children.length===1&&node.children[0].quantity===3));
+  assert.ok(pairs.some(node=>node.probability===1/3&&node.children.length===2&&node.children.every(child=>has(child.node.material,"闪避","U"))));
+  assert.ok(nodes.some(node=>node.kind==="wash"&&node.material.quality==="p2"&&has(node.material,"技能穿透","L")&&has(node.material,"闪避","U")));
+});
+
+test("empty X remains optional and target common terms do not become symbolic sources", () => {
+  const g=goal("鬼遁",["闪避","招架","治疗效果"],"o2");
+  for(const configured of [g,{...g,xTerm:null}]) {
+    const plan=Paths.representative(configured);
+    assert.equal(plan.valid,true);
+    assert.equal(plan.symbolicX,true);
+    assert.ok(plan.strategies.length);
+    assert.ok(plan.strategies.every(strategy=>treeNodes(strategy.tree).every(node=>!node.xSource)));
+  }
+});
+
+test("symbolic provenance is confined to explicit X leaves and craft recipes have stable source keys", () => {
+  const plan=Paths.representative(goal("鬼遁",["速","速","速"],"o2"));
+  let symbolicLeaves=0,randomFillWithX=0;
+  for(const strategy of plan.strategies) for(const node of treeNodes(strategy.tree)) {
+    if(node.xSource) {
+      symbolicLeaves++;
+      assert.ok(["base","wash"].includes(node.kind));
+      assert.ok(has(node.material,"闪避","U"));
+    }
+    if(node.kind==="craft") {
+      const inputs=node.children.flatMap(child=>Array.from({length:child.quantity},()=>child.node.material));
+      assert.equal(node.sourceKey,JSON.stringify([Rules.signature(node.material),inputs.map(Rules.signature).sort()]));
+      if(!inputs.some(material=>has(material,"闪避","U"))&&node.outcomes.some(outcome=>has(outcome.material,"闪避","U"))) {
+        randomFillWithX++;
+        assert.ok(treeNodes(node).every(child=>!child.xSource));
+      }
+    }
+    assert.ok(node.material.terms.every(term=>Object.keys(term).sort().join(",")==="attr,tier"));
+  }
+  assert.ok(symbolicLeaves>0);
+  assert.ok(randomFillWithX>0);
+});
+
+test("selected graded X recalculates legal sources without symbolic replacement", () => {
+  const xTerm={attr:"防",tier:"H"};
+  const plan=Paths.representative({...goal("鬼遁",["速","速","速"],"o2"),xTerm});
+  assert.equal(plan.valid,true);
+  assert.deepEqual(plan.xTerm,xTerm);
+  assert.equal(plan.symbolicX,false);
+  for(const strategy of plan.strategies) {
+    assert.deepEqual(strategy.xTerm,xTerm);
+    assert.equal(strategy.symbolicX,false);
+    for(const node of treeNodes(strategy.tree)) {
+      assert.equal(node.xSource,undefined);
+      assert.equal(Rules.validate(node.material).valid,true);
+      if(node.kind==="craft") {
+        const inputs=node.children.flatMap(child=>Array.from({length:child.quantity},()=>child.node.material));
+        const preview=Rules.preview(inputs);
+        const match=preview.outcomes.find(outcome=>Rules.signature(outcome.material)===Rules.signature(node.material));
+        assert.equal(match.probability,node.probability);
+      }
+    }
+  }
+  assert.ok(plan.strategies.some(strategy=>treeNodes(strategy.tree).some(node=>node.kind==="wash"&&node.material.quality==="p2"&&has(node.material,"速","L")&&has(node.material,"防","H"))));
+});
+
+test("a blue-legal middle-tier X cannot be invented as a purple low+X wash source", () => {
+  const xTerm={attr:"血",tier:"M"};
+  const blocked=Paths.representative({...goal("鬼遁",["速","速","速"],"o2"),xTerm});
+  assert.equal(blocked.valid,false);
+  assert.equal(blocked.strategies.length,0);
+  assert.deepEqual(blocked.xTerm,xTerm);
+  assert.ok(blocked.errors.length);
+  assert.ok(blocked.notes.some(note=>/紫二/.test(note)&&/洗练|来源/.test(note)));
+  const partial=Paths.representative({...goal("鬼遁",["速","速"],"p2"),xTerm});
+  assert.equal(partial.valid,true,"legal no-X preparation families must not be discarded");
+  assert.ok(partial.strategies.some(strategy=>treeNodes(strategy.tree).some(node=>node.kind==="craft"&&node.material.quality==="p2"&&node.children.some(child=>has(child.node.material,"血","M")))));
+  assert.ok(partial.strategies.every(strategy=>!treeNodes(strategy.tree).some(node=>has(node.material,"闪避","U"))),"selected X must never fall back to the default placeholder");
+});
+
+test("illegal concrete X is rejected rather than silently changed to another term", () => {
+  for(const xTerm of [{attr:"攻",tier:"H"},{attr:"闪避",tier:"H"},{attr:"血",tier:"?"}]) {
+    const plan=Paths.representative({...goal("鬼遁",["速","速","速"],"o2"),xTerm});
+    assert.equal(plan.valid,false);
+    assert.equal(plan.strategies.length,0);
+    assert.ok(plan.errors.length);
+  }
+});
+
+test("failure reuse presents repeated 2+1 coverage and retains its exact producing recipe", () => {
+  const plan=Paths.representative(goal("地遁",["技能穿透","技能穿透","技能穿透"],"o2"));
+  const branches=plan.strategies.flatMap(strategy=>strategy.reuse.map(branch=>({strategy,branch})));
+  assert.ok(branches.length);
+  for(const {strategy,branch} of branches) {
+    assert.equal(branch.coverageReuse,true);
+    assert.equal(branch.probability,0.25);
+    assert.deepEqual(branch.children.map(child=>child.quantity).sort(),[1,2]);
+    const producers=treeNodes(strategy.tree).filter(node=>node.kind==="craft");
+    const pool=branch.children.flatMap(child=>child.node.material.terms);
+    assert.ok(branch.material.terms.every(term=>pool.some(candidate=>candidate.attr===term.attr&&candidate.tier===term.tier)));
+    for(const child of branch.children) {
+      assert.equal(child.node.kind,"failure");
+      assert.equal(child.node.xSource,undefined);
+      const producer=producers.find(node=>node.sourceKey===child.node.sourceKey);
+      assert.ok(producer);
+      assert.ok(producer.outcomes.some(outcome=>Rules.signature(outcome.material)===Rules.signature(child.node.material))));
+    }
+  }
 });

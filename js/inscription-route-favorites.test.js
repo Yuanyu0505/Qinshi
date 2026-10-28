@@ -3,6 +3,7 @@ const {test}=require('node:test');
 const assert=require('node:assert/strict');
 const Rules=require('./inscription-rules.js');
 const Favorites=require('./inscription-route-favorites.js');
+const Paths=require('./inscription-paths.js');
 
 function fixture(){
   const accounts={one:new Map(),two:new Map()};let active='one',failure='',readOnly=false,serial=0;
@@ -25,6 +26,24 @@ function washRoute(){
   return {route:{kind:'deterministic',tree:{kind:'wash',material,children:[],promotion:null,probability:null,hasChance:false},reuse:[]},target:{discipleKey:'',slot:'',dun:'地遁',quality:'o1',attrs:['闪避','技能穿透','技能穿透']},xAttr:'招架'};
 }
 function toggle(f,input,token=f.store.inspect().token){return f.store.toggle(input.route,input.target,input.xAttr,token,f.storage.currentAccount().id);}
+
+function xRoute(symbolicX=true,xTerm={attr:'闪避',tier:'U'}){
+  const blue=terms=>({prefix:'天府',dun:'鬼遁',quality:'b2',origin:'wash',terms});
+  const base=(terms,xSource)=>({kind:'base',material:blue(terms),children:[],promotion:null,xSource});
+  function craft(quality,terms,children,extra={}){
+    const inputs=children.flatMap(c=>Array(c.quantity).fill(c.node.material)),preview=Rules.preview(inputs);
+    const material={prefix:'天府',dun:'鬼遁',quality,origin:'crafted',terms},output=preview.outcomes.find(o=>Rules.signature(o.material)===Rules.signature(material));
+    assert.ok(output);
+    return {kind:'craft',material:output.material,children,promotion:preview.promotion,outcomes:preview.outcomes,probability:output.probability,sourceKey:JSON.stringify([Rules.signature(output.material),inputs.map(Rules.signature).sort()]),...extra};
+  }
+  const high={attr:'速',tier:'H'},mid={attr:'速',tier:'M'};
+  const inputs=[{quantity:1,node:base([{attr:'速',tier:'?'}],false)},{quantity:1,node:base([xTerm],symbolicX)}];
+  const highSource=craft('p1',[high,xTerm],inputs),midSource=craft('p1',[mid,xTerm],inputs);
+  const tree=craft('p2',[high,mid],[{quantity:2,node:highSource},{quantity:1,node:midSource}]);
+  const failure=(source,terms)=>({kind:'failure',material:source.outcomes.find(o=>o.material.terms.some(t=>t.tier===terms.tier&&t.attr===terms.attr)).material,children:[],promotion:null,sourceKey:source.sourceKey});
+  const reuse=craft('p2',[high,mid],[{quantity:2,node:failure(highSource,mid)},{quantity:1,node:failure(midSource,high)}],{coverageReuse:true});
+  return {route:{kind:'probability',tree,reuse:[reuse],xTerm,symbolicX},target:{discipleKey:'',slot:'',dun:'鬼遁',quality:'p2',attrs:['速','速']},xAttr:xTerm.attr};
+}
 
 test('favorites store compact trees, keep generic ownership unbound, and rebuild current probabilities',async()=>{
   const f=fixture(),input=speedRoute(),saved=await toggle(f,input),raw=f.storage.getItem(Favorites.KEY),record=saved.entries[0].record;
@@ -99,4 +118,110 @@ test('unknown envelopes or foreign ownership preserve original bytes and block c
     const f=fixture();f.storage.setItem(Favorites.KEY,raw);assert.equal(f.store.inspect().valid,false);
     await assert.rejects(toggle(f,speedRoute()));assert.equal(f.storage.getItem(Favorites.KEY),raw);
   }
+});
+
+test('symbolic X and failure production metadata survive compact favorite round trips',async()=>{
+  const f=fixture(),saved=await toggle(f,xRoute()),entry=saved.entries[0],raw=f.storage.getItem(Favorites.KEY);
+  assert.equal(entry.valid,true);
+  assert.deepEqual(entry.route.xTerm,{attr:'闪避',tier:'U'});assert.equal(entry.route.symbolicX,true);
+  assert.match(raw,/"xSource":true/);assert.match(raw,/"sourceKey":/);assert.match(raw,/"coverageReuse":true/);
+  assert.doesNotMatch(raw,/"(?:outcomes|probability|hasChance)"\s*:/);
+  assert.equal(entry.route.reuse[0].probability,1/3);
+  assert.equal(entry.route.reuse[0].children.reduce((sum,c)=>sum+c.quantity,0),3);
+});
+
+test('concrete X identity distinguishes symbolic mode and exact attribute tiers',async()=>{
+  const f=fixture(),symbolic=xRoute(),concrete=xRoute(false);
+  await toggle(f,symbolic);await toggle(f,concrete);
+  assert.equal(f.store.inspect().entries.length,2);
+  const fixed=Favorites.prepare(concrete.route,concrete.target,concrete.xAttr);
+  const changed={...concrete.route,xTerm:{attr:'防',tier:'H'}};
+  assert.equal(Favorites.match([fixed],changed,concrete.target,'防'),null);
+  const tiered=Favorites.prepare(changed,concrete.target,'防');
+  assert.equal(Favorites.match([tiered],{...changed,xTerm:{attr:'防',tier:'M'}},concrete.target,'防'),null);
+  assert.equal(f.store.inspect().entries.find(e=>e.route.symbolicX===false).route.tree.children[0].node.children.some(c=>c.node.xSource===true),false);
+});
+
+test('two concrete tier choices save independently and retain their physical source materials',async()=>{
+  const f=fixture();
+  await toggle(f,xRoute(false,{attr:'防',tier:'H'}));await toggle(f,xRoute(false,{attr:'防',tier:'M'}));
+  const entries=f.store.inspect().entries;
+  assert.equal(entries.length,2);
+  assert.deepEqual(entries.map(entry=>entry.route.xTerm.tier).sort(),['H','M']);
+  for(const entry of entries){
+    assert.equal(entry.valid,true);assert.equal(entry.route.symbolicX,false);
+    const blue=entry.route.tree.children[0].node.children.find(child=>child.node.material.terms.some(term=>term.attr==='防'));
+    assert.deepEqual(blue.node.material.terms,[entry.route.xTerm]);
+  }
+});
+
+test('wrong failure producer references invalidate saved reuse without replacing it',()=>{
+  const input=xRoute(),saved=Favorites.prepare(input.route,input.target,input.xAttr);
+  saved.route.reuse[0].children[0].node.sourceKey='a-different-producer';
+  assert.throws(()=>Favorites.rehydrate(saved),/失败产物|生产/);
+});
+
+test('legacy reuse with ambiguous physical failure signatures is retained as invalid',()=>{
+  const input=speedRoute(),preview=input.route.tree.outcomes,high={attr:'速',tier:'H'},mid={attr:'速',tier:'M'},x={attr:'闪避',tier:'U'},other={attr:'招架',tier:'U'};
+  const pair=terms=>preview.find(o=>terms.every(t=>o.material.terms.some(u=>u.attr===t.attr&&u.tier===t.tier))).material;
+  const left=input.route.tree,right={...input.route.tree,material:pair([high,x])};
+  const rootPreview=Rules.preview([left.material,left.material,right.material]),target=rootPreview.outcomes.find(o=>o.material.terms.every(t=>t.attr==='速'));
+  const tree={kind:'craft',material:target.material,children:[{quantity:2,node:left},{quantity:1,node:right}],promotion:null};
+  const reuse={kind:'craft',material:target.material,promotion:null,children:[{quantity:2,node:{kind:'failure',material:pair([mid,other]),children:[]}},{quantity:1,node:{kind:'failure',material:pair([high,other]),children:[]}}]};
+  const saved=Favorites.prepare({kind:'probability',tree,reuse:[reuse]},{...input.target,quality:'p2'},'闪避');
+  const entry=Favorites.inspectRecord({...saved,id:'ambiguous',createdAt:'2026-10-28',updatedAt:'2026-10-28',rulesVersion:'observable-equal-speed17-v1'});
+  assert.equal(entry.valid,false);assert.match(entry.errors[0],/生产步骤关联不明确/);
+  assert.deepEqual(entry.record.route,saved.route);
+});
+
+test('illegal X source metadata is rejected rather than relabeling a different physical term',()=>{
+  const input=xRoute(),saved=Favorites.prepare(input.route,input.target,input.xAttr);
+  const producer=saved.route.tree.children[0].node;
+  producer.children.find(c=>c.node.material.terms[0].attr==='速').node.xSource=true;
+  assert.throws(()=>Favorites.rehydrate(saved),/X|杂词条/);
+});
+
+test('a concrete X may share a target attribute when its exact tier is different',()=>{
+  const input=washRoute(),candidate=Favorites.prepare({...input.route,xTerm:{attr:'技能穿透',tier:'M'},symbolicX:false},input.target,'技能穿透');
+  const route=Favorites.rehydrate(candidate);
+  assert.deepEqual(route.xTerm,{attr:'技能穿透',tier:'M'});
+  assert.equal(route.symbolicX,false);
+});
+
+test('a saved craft source key must still identify its own expanded physical recipe',()=>{
+  const input=xRoute(),saved=Favorites.prepare(input.route,input.target,input.xAttr);
+  saved.route.tree.sourceKey='another-recipe';
+  assert.throws(()=>Favorites.rehydrate(saved),/生产步骤|配方/);
+});
+
+test('legacy records rehydrate when legal and remain unchanged on inspection',async()=>{
+  const f=fixture();await toggle(f,xRoute());const data=JSON.parse(f.storage.getItem(Favorites.KEY)),record=data.entries[0];
+  record.rulesVersion='observable-equal-speed17-v1';delete record.route.xTerm;delete record.route.symbolicX;
+  function legacy(node){delete node.xSource;delete node.sourceKey;delete node.coverageReuse;node.children.forEach(c=>legacy(c.node));}
+  legacy(record.route.tree);record.route.reuse.forEach(legacy);
+  f.storage.setItem(Favorites.KEY,JSON.stringify(data));const raw=f.storage.getItem(Favorites.KEY),entry=f.store.inspect().entries[0];
+  assert.equal(entry.valid,true);assert.equal(entry.rulesUpdated,true);assert.equal(entry.route.symbolicX,true);
+  assert.equal(f.storage.getItem(Favorites.KEY),raw);
+});
+
+test('three-common targets save when symbolic fallback X is only an unused placeholder',async()=>{
+  const target={discipleKey:'',slot:'',dun:'鬼遁',quality:'o1',attrs:['闪避','招架','治疗效果']};
+  const plan=Paths.representative({prefix:'天府',...target});
+  assert.equal(plan.valid,true);assert.deepEqual(plan.xTerm,{attr:'闪避',tier:'U'});assert.equal(plan.symbolicX,true);
+  const f=fixture(),saved=await toggle(f,{route:plan.strategies[0],target,xAttr:plan.xAttr}),entry=saved.entries[0];
+  assert.equal(entry.valid,true);assert.deepEqual(entry.route.tree.material.terms.map(term=>term.attr).sort(),['招架','治疗效果','闪避'].sort());
+  function hasSource(node){return node.xSource===true||node.children.some(child=>hasSource(child.node));}
+  assert.equal(hasSource(entry.route.tree),false);
+});
+
+test('legacy symbolic fallback overlapping a target is not inferred as a physical X source',()=>{
+  const material={prefix:'天府',dun:'鬼遁',quality:'o1',origin:'wash',terms:[{attr:'闪避',tier:'U'},{attr:'招架',tier:'U'},{attr:'治疗效果',tier:'U'}]};
+  const route={kind:'deterministic',tree:{kind:'wash',material,children:[],promotion:null},reuse:[]};
+  const target={discipleKey:'',slot:'',dun:'鬼遁',quality:'o1',attrs:['闪避','招架','治疗效果']};
+  const candidate=Favorites.prepare(route,target,'闪避'),hydrated=Favorites.rehydrate(candidate);
+  assert.equal(hydrated.symbolicX,true);assert.notEqual(hydrated.tree.xSource,true);
+  const marked=JSON.parse(JSON.stringify(candidate));marked.route.tree.xSource=true;
+  assert.throws(()=>Favorites.rehydrate(marked),/杂词条 X 来源/);
+  const concrete=JSON.parse(JSON.stringify(candidate));concrete.route.xTerm={attr:'闪避',tier:'U'};concrete.route.symbolicX=false;
+  assert.throws(()=>Favorites.rehydrate(concrete),/目标词条冲突/);
 });

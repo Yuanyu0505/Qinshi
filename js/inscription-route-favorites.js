@@ -5,7 +5,7 @@
   if(root)root.InscriptionRouteFavorites=api;
 })(typeof window!=='undefined'?window:null,function(R){
   'use strict';
-  var KEY='qinshi_inscription_route_favorites_v1', RULES_VERSION='observable-equal-speed17-v1', sequence=0;
+  var KEY='qinshi_inscription_route_favorites_v1', RULES_VERSION='observable-equal-speed17-optional-x-v2', sequence=0;
   function copy(value){return JSON.parse(JSON.stringify(value));}
   function object(value){return !!value&&typeof value==='object'&&!Array.isArray(value);}
   function fail(message){throw new Error(message);}
@@ -19,6 +19,19 @@
     var bound=typeof target.discipleKey==='string'&&!!target.discipleKey, slot=bound?String(target.slot||'').split('|'):[];
     return {discipleKey:bound?target.discipleKey:'',tian:bound?slot[0]:'',dun:R.normalizeDun(bound?slot[1]:target.dun),quality:target.quality,attrs:cleanAttrs(target.attrs)};
   }
+  function termKey(term){return term.attr+':'+term.tier;}
+  function xConfig(route,xAttr){
+    var legacy=route.xTerm===undefined&&route.symbolicX===undefined,term=route.xTerm===undefined?(xAttr?{attr:xAttr,tier:'U'}:null):route.xTerm;
+    if(!legacy&&(typeof route.symbolicX!=='boolean'||!object(route.xTerm)&&!(route.xTerm===null&&route.symbolicX===false)))fail('杂词条 X 配置无效');
+    if(term&&(!object(term)||!R.attributes.some(function(attr){return attr.id===term.attr;})||!['U','H','M','L'].includes(term.tier)))fail('杂词条 X 属性或档位无效');
+    var symbolic=legacy?!!term:route.symbolicX;
+    if(symbolic&&(!term||term.tier!=='U'||!R.attributes.some(function(attr){return attr.id===term.attr&&attr.group==='common';})))fail('符号杂词条 X 必须使用合法不分档词条模板');
+    return {xTerm:term?{attr:term.attr,tier:term.tier}:null,symbolicX:symbolic,legacy:legacy};
+  }
+  function recipeKey(material,children){
+    var inputs=[];children.forEach(function(child){for(var i=0;i<child.quantity;i++)inputs.push(R.signature(child.node.material));});
+    return JSON.stringify([R.signature(material),inputs.sort()]);
+  }
   function compactNode(node,budget,depth){
     if(!object(node)||++budget.count>2000||depth>20||!['base','wash','craft','failure'].includes(node.kind)||!Array.isArray(node.children))fail('路线节点结构无效');
     var checked=R.validate(node.material);
@@ -28,21 +41,31 @@
       return {quantity:child.quantity,node:compactNode(child.node,budget,depth+1)};
     });
     children.sort(function(a,b){return JSON.stringify(a).localeCompare(JSON.stringify(b));});
-    return {kind:node.kind,material:checked.material,promotion:node.promotion==null?null:node.promotion,children:children};
+    var result={kind:node.kind,material:checked.material,promotion:node.promotion==null?null:node.promotion,children:children};
+    ['xSource','coverageReuse'].forEach(function(key){if(node[key]!==undefined){if(typeof node[key]!=='boolean')fail('路线来源标记无效');result[key]=node[key];}});
+    if(node.sourceKey!==undefined){if(typeof node.sourceKey!=='string'||!node.sourceKey||node.sourceKey.length>20000)fail('失败产物生产标识无效');result.sourceKey=node.sourceKey;}
+    return result;
   }
   function compactRoute(route){
     if(!object(route)||!Array.isArray(route.reuse)||!['deterministic','probability'].includes(route.kind))fail('完整路线结构无效');
     var budget={count:0};
-    return {kind:route.kind,tree:compactNode(route.tree,budget,0),reuse:route.reuse.map(function(node){return compactNode(node,budget,0);})};
+    var result={kind:route.kind,tree:compactNode(route.tree,budget,0),reuse:route.reuse.map(function(node){return compactNode(node,budget,0);})};
+    if(route.xTerm!==undefined||route.symbolicX!==undefined){var config=xConfig(route,'');result.xTerm=config.xTerm;result.symbolicX=config.symbolicX;}
+    return result;
   }
   function identity(record){
     var owner=record.owner;
     if(!object(owner))fail('收藏归属无效');
     var route=compactRoute(record.route);
-    return JSON.stringify([owner.discipleKey,owner.tian,owner.dun,owner.quality,cleanAttrs(owner.attrs),record.xAttr||'',route.tree,route.reuse]);
+    var config=xConfig(route,record.xAttr);
+    return JSON.stringify([owner.discipleKey,owner.tian,owner.dun,owner.quality,cleanAttrs(owner.attrs),config.xTerm,config.symbolicX,route.tree,route.reuse]);
   }
   function prepare(route,target,xAttr){
-    return {owner:ownerFor(target),xAttr:xAttr||'',route:compactRoute(route)};
+    var compact=compactRoute(route),config=xConfig(route,xAttr);
+    // Legacy records are inspected in place, but new saves carry the explicit
+    // A/B choice so a later query cannot silently replace their meaning.
+    if(!config.legacy){compact.xTerm=config.xTerm;compact.symbolicX=config.symbolicX;}
+    return {owner:ownerFor(target),xAttr:config.xTerm?config.xTerm.attr:'',route:compact};
   }
   function hydrate(record,items){
     var owner=record.owner;
@@ -56,16 +79,26 @@
       }
     }else if(owner.tian!=='')fail('通用路线不能绑定弟子天位');
     if(target.dun!==owner.dun||target.quality!==owner.quality||JSON.stringify(target.terms.map(function(t){return t.attr;}).sort())!==JSON.stringify(attrs))fail('路线产物与收藏目标不一致');
-    if(record.xAttr&&(!R.attributes.some(function(a){return a.id===record.xAttr&&a.group==='common';})||attrs.includes(record.xAttr)))fail('杂词条标记与目标属性冲突');
-    var failures=new Set();
+    var config=xConfig(compact,record.xAttr),xTerm=config.xTerm,xIsTarget=!!xTerm&&target.terms.some(function(term){return termKey(term)===termKey(xTerm);});
+    // All three common terms may already be targets. The symbolic template is
+    // then an unused placeholder, not a fourth material term or an X source.
+    if(xTerm&&(!config.symbolicX&&xIsTarget||!R.qualities.some(function(q){return R.termsFor(owner.dun,q.id).some(function(term){return termKey(term)===termKey(xTerm);});})))fail('杂词条 X 与目标词条冲突或不支持此遁位');
+    if(record.xAttr&&(!xTerm||record.xAttr!==xTerm.attr))fail('杂词条 X 标记与具体词条不一致');
+    var failures=new Map();
     function node(value,allowFailure,collect){
       var m=value.material,children=value.children.map(function(child){return {quantity:child.quantity,node:node(child.node,allowFailure,collect)};});
       if(m.prefix!==target.prefix||m.dun!==target.dun)fail('整条路线必须同前缀、同遁位');
       var result={kind:value.kind,material:copy(m),children:children,promotion:value.promotion,probability:null,hasChance:children.some(function(child){return child.node.hasChance;})};
+      if(value.xSource!==undefined)result.xSource=value.xSource;
+      if(value.coverageReuse!==undefined)result.coverageReuse=value.coverageReuse;
+      if(value.xSource===true&&(!config.symbolicX||!xTerm||xIsTarget||!['base','wash'].includes(value.kind)||!m.terms.some(function(term){return termKey(term)===termKey(xTerm);})))fail('杂词条 X 来源标记必须属于提供同一个额外 X 的起始或洗练材料，不能把目标项标成 X');
+      if(config.legacy&&config.symbolicX&&xTerm&&!xIsTarget&&value.xSource===undefined&&['base','wash'].includes(value.kind)&&m.terms.some(function(term){return termKey(term)===termKey(xTerm);}))result.xSource=true;
       if(value.kind==='base'){
         if(m.quality!=='b2'||children.length||value.promotion!==null)fail('起始材料必须为蓝二');
       }else if(value.kind==='failure'){
-        if(!allowFailure||children.length||value.promotion!==null||!failures.has(R.signature(m)))fail('复用材料不属于这条路线的具体失败产物');
+        var producers=failures.get(R.signature(m)),source=value.sourceKey;
+        if(!allowFailure||children.length||value.promotion!==null||!producers||source&&!producers.has(source)||!source&&producers.size!==1)fail('复用材料不属于这条路线的具体失败产物，或生产步骤关联不明确');
+        result.sourceKey=source||Array.from(producers)[0];
       }else if(value.kind==='wash'){
         if(m.origin!=='wash'||value.promotion!==null||children.length)fail('置换准备必须从当前品质独立开始，不包含隐藏制作支线');
         result.note='另行置换合成素材铭文；置换概率未知，不计入合成成功率。';
@@ -77,16 +110,19 @@
         if(preview.promotion!==value.promotion||preview.quality!==m.quality)fail('合成配方或晋升材料已变化');
         var wanted=R.signature(m),output=preview.outcomes.find(function(outcome){return R.signature(outcome.material)===wanted;});
         if(!output)fail('保存的材料组合已无法得到该目标产物');
+        var sourceKey=recipeKey(m,children);
+        if(value.sourceKey!==undefined&&value.sourceKey!==sourceKey)fail('合成生产步骤标识与保存的配方不一致');
+        result.sourceKey=sourceKey;
         result.outcomes=preview.outcomes;result.probability=output.probability;result.hasChance=result.hasChance||output.probability<1;
-        if(collect)preview.outcomes.forEach(function(outcome){var sig=R.signature(outcome.material);if(sig!==wanted)failures.add(sig);});
+        if(collect)preview.outcomes.forEach(function(outcome){var sig=R.signature(outcome.material);if(sig!==wanted){if(!failures.has(sig))failures.set(sig,new Set());failures.get(sig).add(sourceKey);}});
       }
       return result;
     }
     var tree=node(compact.tree,false,true),reuse=compact.reuse.map(function(value){
       if(value.kind!=='craft'||R.signature(value.material)!==R.signature(target)||value.children.some(function(child){return child.node.kind!=='failure';}))fail('失败品复用分支结构无效');
-      var result=node(value,true,false);result.note='材料均为本路线的具体失败品，需另行备齐所示种类与数量。';return result;
+      var result=node(value,true,false);result.note='需备齐三枚合法同品质失败材料，同种可重复；去重候选池必须覆盖全部目标词条，概率以材料备齐为前提。';return result;
     });
-    return {kind:tree.hasChance?'probability':'deterministic',tree:tree,reuse:reuse};
+    return {kind:tree.hasChance?'probability':'deterministic',tree:tree,reuse:reuse,xTerm:xTerm,symbolicX:config.symbolicX};
   }
   function inspectRecord(record,items){
     try{
@@ -216,7 +252,7 @@
   function changed(){root.dispatchEvent(new CustomEvent('inscription-route-favorites-change'));}
   function init(){
     view=document.getElementById('inscription-crafting-favorites');if(!view)return false;
-    view.innerHTML='<div class="craft-status" data-favorite-status role="alert" hidden></div><section class="craft-panel"><h3>收藏合成路径</h3><p class="craft-note">按当前游戏账号独立保存。这里的筛选不会修改查询目标或模拟现场；通用路线不绑定任何弟子、天位。</p><div class="craft-controls craft-favorites-filters"><label class="craft-search">弟子搜索<input type="search" data-favorite-field="search" autocomplete="off" placeholder="输入弟子姓名"></label><label>目标品质<select data-favorite-field="quality"></select></label><label>天位<select data-favorite-field="tian"></select></label><label>遁位<select data-favorite-field="dun"></select></label></div><div class="craft-attrs" style="--craft-slots:3">'+[0,1,2].map(function(i){return '<label>属性'+(i+1)+'<select data-favorite-field="attr'+i+'"></select></label>';}).join('')+'</div><div class="craft-actions"><button type="button" class="seg" data-favorite-clear>清除收藏筛选</button><button type="button" class="seg" data-favorite-refresh>刷新收藏</button></div><p class="craft-note" data-favorite-count></p><p class="craft-note">通用遁位路线：全部材料必须为同一个前缀、同一个遁位。杂词条 X 不指定具体属性，默认采用同一种词条/不分档词条；本路线需要一致的 X 不可换成多个不同杂词条。</p></section><div data-favorite-results></div>';
+    view.innerHTML='<div class="craft-status" data-favorite-status role="alert" hidden></div><section class="craft-panel"><h3>收藏合成路径</h3><p class="craft-note">按当前游戏账号独立保存。这里的筛选不会修改查询目标或模拟现场；通用路线不绑定任何弟子、天位。</p><div class="craft-controls craft-favorites-filters"><label class="craft-search">弟子搜索<input type="search" data-favorite-field="search" autocomplete="off" placeholder="输入弟子姓名"></label><label>目标品质<select data-favorite-field="quality"></select></label><label>天位<select data-favorite-field="tian"></select></label><label>遁位<select data-favorite-field="dun"></select></label></div><div class="craft-attrs" style="--craft-slots:3">'+[0,1,2].map(function(i){return '<label>属性'+(i+1)+'<select data-favorite-field="attr'+i+'"></select></label>';}).join('')+'</div><div class="craft-actions"><button type="button" class="seg" data-favorite-clear>清除收藏筛选</button><button type="button" class="seg" data-favorite-refresh>刷新收藏</button></div><p class="craft-note" data-favorite-count></p><p class="craft-note">通用遁位路线：全部材料必须为同一个前缀、同一个遁位。未指定具体 X 的收藏使用同一种合法不分档词条作为符号模板，概率仅对该模板条件成立；已指定的收藏固定属性与档位，不会自动换成其他 X。</p></section><div data-favorite-results></div>';
     view.addEventListener('input',function(event){if(event.target===field('search'))renderResults();});
     view.addEventListener('change',function(event){if(event.target.matches('[data-favorite-field]')){var value=filters();if(event.target===field('dun')||event.target===field('quality'))renderFilters(value);renderResults();}});
     view.addEventListener('click',function(event){

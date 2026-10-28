@@ -14,6 +14,7 @@
 .craft-panel h3,.craft-panel h4 { margin:0 0 12px; }
 .craft-controls { display:grid; grid-template-columns:repeat(auto-fit,minmax(155px,1fr)); gap:12px; margin:12px 0; }
 .craft-filters { grid-template-columns:repeat(4,minmax(0,1fr)); }
+.craft-x-picker { grid-template-columns:minmax(0,360px); }
 .craft-controls label,.craft-attrs label,.craft-material label { display:flex; flex-direction:column; gap:6px; min-width:0; }
 .ins-crafting select,.ins-crafting input { width:100%; min-width:0; max-width:100%; padding:9px; }
 .ins-crafting button { max-width:100%; white-space:normal; overflow-wrap:anywhere; cursor:pointer; }

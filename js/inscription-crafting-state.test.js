@@ -15,6 +15,42 @@ function fixture() {
 }
 function setup() { const f=fixture(); f.id=f.goal(); f.store.setActual(a,2); f.store.setActual(b,2); f.store.copyActual(f.id); f.store.setSelection(f.id,[Rules.signature(a),Rules.signature(b)]); return f; }
 
+test("optional X choices follow the selected position and exclude exact requested terms", () => {
+  const target={discipleKey:'',slot:'',dun:'鬼遁',quality:'o2',attrs:['速','速','速']};
+  const choices=State.xOptions(target);
+  assert.ok(choices.some(t=>t.attr==='防'&&t.tier==='H'));
+  assert.ok(choices.some(t=>t.attr==='血'&&t.tier==='M'));
+  assert.ok(choices.some(t=>t.attr==='闪避'&&t.tier==='U'));
+  assert.ok(!choices.some(t=>t.attr==='速'||t.attr==='技能穿透'));
+  assert.deepEqual(State.xOptions({...target,dun:''}),[]);
+  assert.ok(!State.xOptions({...target,discipleKey:'test',slot:'天府|人遁'}).some(t=>t.attr==='速'));
+  assert.ok(State.xOptions({...target,attrs:['速','速','防']}).some(t=>t.attr==='速'&&t.tier==='L'));
+  assert.ok(!State.xOptions({...target,quality:'b2',attrs:['防']}).some(t=>t.tier==='?'));
+});
+
+test("optional X saves independently of simulation inputs and defaults to symbolic mode", () => {
+  const f=fixture(),workbench=State.createWorkbench(f.storage),fresh=workbench.inspect();
+  assert.equal(fresh.valid,true);assert.equal(fresh.state.target.xTerm,null);
+  const value=fresh.state;
+  value.target={discipleKey:'',slot:'',dun:'鬼遁',quality:'o2',attrs:['速','速','速'],xTerm:{attr:'血',tier:'M'}};
+  value.simulation={stage:'b2',inputs:[[{attr:'速',tier:'?'}],[{attr:'速',tier:'?'}]],pending:null};
+  let saved=workbench.save(value,fresh.token,'one');
+  assert.equal(saved.valid,true);assert.deepEqual(saved.state.target.xTerm,{attr:'血',tier:'M'});
+  const original=JSON.parse(JSON.stringify(saved.state.simulation));
+  saved.state.target.xTerm=null;saved=workbench.save(saved.state,saved.token,'one');
+  assert.deepEqual(saved.state.simulation,original);assert.equal(saved.state.target.xTerm,null);
+  saved.state.target.xTerm={attr:'速',tier:'H'};
+  assert.throws(()=>workbench.save(saved.state,saved.token,'one'),/杂词/);
+  f.switchTo('two');assert.equal(workbench.inspect().state.target.xTerm,null);
+});
+
+test("legacy targets without X remain readable without rewriting stored data", () => {
+  const f=fixture(),simple={version:1,target:{discipleKey:'',slot:'',dun:'鬼遁',quality:'o2',attrs:['速','速','速']},simulation:{stage:'b2',inputs:[],pending:null}};
+  f.store.updateDraft({simpleWorkbench:simple});const raw=f.storage.getItem(State.KEY);
+  assert.equal(State.createWorkbench(f.storage).inspect().valid,true);
+  assert.equal(f.storage.getItem(State.KEY),raw);
+});
+
 test("old double-blue-speed pending probability migrates without losing token or inventory", () => {
   const f=fixture(), speed={prefix:'天府',dun:'鬼遁',quality:'b2',origin:'wash',terms:[{attr:'速',tier:'?'}]};
   f.store.setActual(b,7);

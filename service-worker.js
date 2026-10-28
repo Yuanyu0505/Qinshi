@@ -48,6 +48,7 @@ const PRECACHE_URLS = [
   "./js/quiz.js",
   "./js/inscription-performance.js",
   "./js/inscription-rules.js",
+  "./js/inscription-terms.js",
   "./js/inscription-paths.js",
   "./js/inscription-crafting-state.js",
   "./js/inscription-flowchart.js",

@@ -1,20 +1,19 @@
 (function (root) {
   'use strict';
-  var R=root.InscriptionRules, P=root.InscriptionPaths, S=root.InscriptionCraftingState, F=root.InscriptionFlowchart;
+  var R=root.InscriptionRules, P=root.InscriptionPaths, S=root.InscriptionCraftingState, F=root.InscriptionFlowchart, T=root.InscriptionTerms;
   var views={}, store, state, token, accountId, loaded=false, sequence=0;
   var modelNote='等概率模型，非实测游戏频率。各步骤概率以材料备齐为前提；置换概率未知，不计算整条路线的总成功率。';
   function esc(value) { return String(value==null?'':value).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
   function clone(value) { return JSON.parse(JSON.stringify(value)); }
   function quality(id) { return R.qualities.find(function(q){return q.id===id;}); }
   function qLabel(id) { var q=quality(id); return q?q.label:id; }
-  function tier(id) { return {H:'高档',M:'中档',L:'低档',U:'不分档','?':'档位不可辨识'}[id]||id; }
   function probability(value) {
     var number=value*100, rounded=Math.round(number);
     if(value>0 && rounded===0)return '不足1%';
     if(value<1 && rounded===100)return '超过99%';
     return (Math.abs(number-rounded)>1e-8?'约':'')+rounded+'%';
   }
-  function friendly(message) { return String(message).replace(/\b[HMLU]\b/g,tier); }
+  function friendly(message) { return String(message).replace(/\b[HMLU]\b/g,T.tierLabel); }
   function field(v,name) { return v.el.querySelector('[data-craft-field="'+name+'"]'); }
   function area(v,name) { return v.el.querySelector('[data-craft-'+name+']'); }
   function options(list,value,empty) {
@@ -29,7 +28,7 @@
   function position(target) { return S.context(target); }
   function sameTarget(a,b) { return JSON.stringify(a)===JSON.stringify(b); }
   function displayTerms(m,x) {
-    return m.terms.map(function(t){return t.attr===x?'杂词条 X':R.label(t,m.quality)+'［'+tier(t.tier)+'］';}).join(' ＋ ');
+    return m.terms.map(function(t){return t.attr===x?'杂词条 X':T.html(t,m.quality);}).join(' ＋ ');
   }
   function sceneExists(sim) { return !!sim.pending || sim.inputs.some(function(terms){return terms.some(Boolean);}); }
   function currentAccount() { var a=root.QinshiAccounts.currentAccount(); return a?a.id:null; }
@@ -136,14 +135,14 @@
     if(!dun){host.innerHTML='<p class="craft-note">请选择弟子实际位置，或不指定弟子后独立选择遁位。</p>';return;}
     if(target.attrs.some(function(a){return !a;})){host.innerHTML='<p class="craft-note">选满当前品质的'+quality(target.quality).count+'条目标属性后，显示可行性及最优组合。</p>';return;}
     var best=R.bestTargets(dun,target.quality,target.attrs);
-    if(best.targets.length){host.innerHTML='<div class="craft-analysis"><b>可以组成，最优合法组合：</b>'+best.targets.map(function(terms){return '<p>'+esc(displayTerms({terms:terms,quality:target.quality}))+'</p>';}).join('')+'</div>';return;}
+    if(best.targets.length){host.innerHTML='<div class="craft-analysis"><b>可以组成，最优合法组合：</b>'+best.targets.map(function(terms){return '<p>'+displayTerms({terms:terms,quality:target.quality})+'</p>';}).join('')+'</div>';return;}
     var replacements=[],known=new Set(),available=Array.from(new Set(R.termsFor(dun,target.quality).map(function(t){return t.attr;})));
     function alternatives(start,remaining,changed){
       if(replacements.length>=3)return;
       if(!remaining){
         var key=changed.slice().sort().join('|');if(known.has(key))return;known.add(key);
         var candidate=R.bestTargets(dun,target.quality,changed);
-        if(candidate.targets.length)replacements.push(changed.join(' ＋ ')+' → '+displayTerms({terms:candidate.targets[0],quality:target.quality}));
+        if(candidate.targets.length)replacements.push({attrs:changed,terms:candidate.targets[0]});
         return;
       }
       for(var i=start;i<=target.attrs.length-remaining;i++) available.forEach(function(attr){
@@ -153,7 +152,7 @@
     }
     for(var changes=1;changes<=target.attrs.length&&!replacements.length;changes++)alternatives(0,changes,target.attrs.slice());
     host.innerHTML='<div class="craft-analysis unavailable"><b>无法组成所选搭配</b><p>'+esc(friendly(best.reason))+'</p>'+
-      (replacements.length?'<p>可参考的合法替代（仅建议，不会替换选择）：</p><ul>'+replacements.slice(0,3).map(function(text){return '<li>'+esc(text)+'</li>';}).join('')+'</ul>':'<p>请减少重复属性，或调整遁位、目标品质。</p>')+'</div>';
+      (replacements.length?'<p>可参考的合法替代（仅建议，不会替换选择）：</p><ul>'+replacements.slice(0,3).map(function(item){return '<li>'+esc(item.attrs.join(' ＋ '))+' → '+displayTerms({terms:item.terms,quality:target.quality})+'</li>';}).join('')+'</ul>':'<p>请减少重复属性，或调整遁位、目标品质。</p>')+'</div>';
   }
   function renderMatrix(v) {
     var target=state.target,dun=position(target).dun,attrs=Array.from(new Set(target.attrs.filter(Boolean)));
@@ -163,13 +162,13 @@
         return '<tr><th>'+esc(attr)+'</th>'+R.qualities.map(function(q){
           return '<td>'+R.termsFor(dun,q.id).filter(function(t){return t.attr===attr;}).map(function(t){
             var sources=['wash','crafted'].filter(function(origin){return R.termsFor(dun,q.id,origin).some(function(term){return term.attr===t.attr&&term.tier===t.tier;});});
-            return '<div>'+esc(R.label(t,q.id)+'［'+tier(t.tier)+'］')+'<small>'+sources.map(function(s){return s==='wash'?'置换':'合成';}).join(' / ')+'</small></div>';
+            return '<div>'+T.html(t,q.id)+'<small>'+sources.map(function(s){return s==='wash'?'置换':'合成';}).join(' / ')+'</small></div>';
           }).join('')+'</td>';
         }).join('')+'</tr>';
       }).join('')+'</tbody></table></div>';
   }
   function graphMaterial(m,x,extra) {
-    return '<div class="craft-node craft-quality-'+m.quality+' '+(extra||'')+'"><b>'+esc(qLabel(m.quality))+'</b><p>'+esc(displayTerms(m,x))+'</p></div>';
+    return '<div class="craft-node craft-quality-'+m.quality+' '+(extra||'')+'"><b>'+esc(qLabel(m.quality))+'</b><p>'+displayTerms(m,x)+'</p></div>';
   }
   function renderPlan(v,plan) {
     var host=area(v,'results'),target=state.target;
@@ -232,7 +231,7 @@
         return '<fieldset class="craft-material"><legend>材料 '+(i+1)+' · '+qLabel(sim.stage)+'</legend>'+terms.map(function(term,j){
           var pool=R.termsFor(p.dun,sim.stage),peers=terms.filter(function(_,k){return k!==j;});
           var choices=pool.filter(function(t){return partialAllowed(peers,t,sim.stage);});
-          return '<label>词条 '+(j+1)+'<select data-sim-material="'+i+'" data-sim-term="'+j+'">'+options(choices.map(function(t){return{id:t.attr+':'+t.tier,label:R.label(t,sim.stage)+'［'+tier(t.tier)+'］'};}),term?term.attr+':'+term.tier:'','请选择合法词条')+'</select></label>';
+          return '<label>词条 '+(j+1)+'<select data-sim-material="'+i+'" data-sim-term="'+j+'">'+options(choices.map(function(t){return{id:t.attr+':'+t.tier,label:T.plain(t,sim.stage)};}),term?term.attr+':'+term.tier:'','请选择合法词条')+'</select></label>';
         }).join('')+button('clear-material','清空本次材料',' data-index="'+i+'"')+'</fieldset>';
       }).join('')+'</div><div data-craft-preview></div><div class="craft-actions">'+button('roll','模拟合成')+'</div><div data-craft-pending></div>';
     var preview;
@@ -250,7 +249,7 @@
   }
   function outcomes(list) {
     return '<details class="craft-preview-outcomes" open><summary>结果预览 · '+list.length+'种组合</summary><div class="craft-scroll"><table class="craft-table"><thead><tr><th>产物</th><th>概率</th></tr></thead><tbody>'+
-      list.map(function(o){return '<tr><td>'+esc(qLabel(o.material.quality)+'：'+displayTerms(o.material))+'</td><td>'+probability(o.probability)+'</td></tr>';}).join('')+'</tbody></table></div></details>';
+      list.map(function(o){return '<tr><td>'+esc(qLabel(o.material.quality)+'：')+displayTerms(o.material)+'</td><td>'+probability(o.probability)+'</td></tr>';}).join('')+'</tbody></table></div></details>';
   }
   function renderAll(clearRoutes) {
     if(!state)return;
@@ -326,7 +325,7 @@
     }
   }
   function activate(mode) {
-    if(!R||!P||!S||!F||!root.QinshiAccounts||!root.INSCRIPTION_DATA)return;
+    if(!R||!P||!S||!F||!T||!root.QinshiAccounts||!root.INSCRIPTION_DATA)return;
     if(!store)store=S.createWorkbench(root.QinshiAccounts);
     var v=views[mode]||init(mode),account=currentAccount(),result=store.inspect();
     if(!result.valid){

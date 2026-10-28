@@ -1,9 +1,10 @@
 (function (root, factory) {
   'use strict';
-  var api=factory(typeof module==='object'&&module.exports?require('./inscription-rules.js'):root.InscriptionRules);
+  var common=typeof module==='object'&&module.exports;
+  var api=factory(common?require('./inscription-rules.js'):root.InscriptionRules,common?require('./inscription-terms.js'):root.InscriptionTerms);
   if(typeof module==='object'&&module.exports)module.exports=api;
   if(root)root.InscriptionFlowchart=api;
-})(typeof window!=='undefined'?window:null,function(R){
+})(typeof window!=='undefined'?window:null,function(R,T){
   'use strict';
   var serial=0;
   function esc(value){return String(value==null?'':value).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
@@ -12,19 +13,32 @@
   function terms(material,x){
     return material.terms.map(function(t,index){
       if(t.attr===x)return (index?'＋':'')+'杂词条 X（同一个）';
-      var meta=R.attributes.find(function(a){return a.id===t.attr;});
-      var name={'技能穿透':'穿透','暴击伤害':'暴伤','抗暴击':'抗暴','速':'速度','PVP速':'PVP速度'}[t.attr]||t.attr;
-      var tier={H:'高档',M:'中档',L:'低档',U:'', '?':''}[t.tier];
-      return (index?'＋':'')+R.value(t,material.quality)+meta.unit+tier+name+(t.tier==='?'?'（档位不可辨）':'');
+      var value=T.describe(t,material.quality);
+      return {parts:[{text:index?'＋':''},{text:value.body,role:'value',rank:value.rank},{text:value.suffix,role:'tier'}]};
     });
+  }
+  function lineText(line){return typeof line==='string'?line:line.parts.map(function(part){return part.text;}).join('');}
+  function lineHtml(line){
+    if(typeof line==='string')return esc(line);
+    return line.parts.map(function(part){
+      var css=part.role==='value'?'ins-term-value ins-term-'+part.rank:part.role==='tier'?'ins-term-tier':'';
+      return '<tspan'+(css?' class="'+css+'"':'')+'>'+esc(part.text)+'</tspan>';
+    }).join('');
   }
   function wrap(lines,width){
     var limit=(width-32)/14,result=[];
-    lines.forEach(function(line){var text='',size=0;Array.from(String(line)).forEach(function(c){
-      var weight=/[\u0000-\u00ff]/.test(c)?0.6:1;
-      if(size+weight>limit&&text){result.push(text);text='';size=0;}
-      text+=c;size+=weight;
-    });result.push(text);});
+    lines.forEach(function(line){
+      var rich=typeof line!=='string',parts=rich?line.parts:[{text:line}],picked=[],size=0;
+      function flush(){result.push(rich?{parts:picked}:picked.map(function(p){return p.text;}).join(''));picked=[];size=0;}
+      parts.forEach(function(part){Array.from(part.text).forEach(function(c){
+        var weight=/[\u0000-\u00ff]/.test(c)?0.6:1;
+        if(size+weight>limit&&picked.length)flush();
+        var last=picked[picked.length-1];
+        if(last&&last.role===part.role&&last.rank===part.rank)last.text+=c;
+        else picked.push({text:c,role:part.role,rank:part.rank});
+        size+=weight;
+      });});flush();
+    });
     return result;
   }
   function box(id,x,y,width,lines,kind){var text=wrap(lines,width);return{id:id,x:x,y:y,w:width,h:24+text.length*20,lines:text,kind:kind||'material'};}
@@ -45,15 +59,15 @@
       if(e.label){
         var lines=wrap(Array.isArray(e.label)?e.label:[e.label],230),w=Math.min(230,Math.max(64,Math.max.apply(null,lines.map(function(s){return Array.from(s).reduce(function(n,c){return n+(/[\u0000-\u00ff]/.test(c)?8.4:14);},0);}))+24));
         var h=lines.length*18+10,x=e.labelX===undefined?d.x:e.labelX,y=e.labelY===undefined?d.y-44:e.labelY;
-        labels.push('<g class="craft-flow-label"><rect x="'+(x-w/2)+'" y="'+(y-h/2)+'" width="'+w+'" height="'+h+'" rx="'+Math.min(15,h/2)+'"/>'+lines.map(function(line,i){return '<text x="'+x+'" y="'+(y-(lines.length-1)*9+i*18)+'">'+esc(line)+'</text>';}).join('')+'</g>');
+        labels.push('<g class="craft-flow-label"><rect x="'+(x-w/2)+'" y="'+(y-h/2)+'" width="'+w+'" height="'+h+'" rx="'+Math.min(15,h/2)+'"/>'+lines.map(function(line,i){return '<text x="'+x+'" y="'+(y-(lines.length-1)*9+i*18)+'">'+lineHtml(line)+'</text>';}).join('')+'</g>');
       }
       return '<path class="craft-flow-connection" d="'+path([a,{x:a.x,y:via},{x:d.x,y:via},d])+'" marker-end="url(#'+id+'-arrow)"/>';
     }).join('');
-    var description=nodes.map(function(n){return n.lines.join('，');}).join('；')+'。'+edges.filter(function(e){return e.label;}).map(function(e){return map.get(e.from).lines[0]+' → '+map.get(e.to).lines[0]+'：'+[].concat(e.label).join('，');}).join('；');
+    var description=nodes.map(function(n){return n.lines.map(lineText).join('，');}).join('；')+'。'+edges.filter(function(e){return e.label;}).map(function(e){return lineText(map.get(e.from).lines[0])+' → '+lineText(map.get(e.to).lines[0])+'：'+[].concat(e.label).join('，');}).join('；');
     return '<svg xmlns="http://www.w3.org/2000/svg" class="craft-flow-svg" role="img" aria-labelledby="'+id+'-title '+id+'-desc" viewBox="0 0 '+width+' '+height+'" width="'+width+'" height="'+height+'" data-flow-width="'+width+'" data-flow-height="'+height+'">'+
       '<title id="'+id+'-title">'+esc(title)+'</title><desc id="'+id+'-desc">'+esc(description)+'</desc>'+
       '<defs><marker id="'+id+'-arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="8" markerHeight="8" orient="auto"><path d="M 1 1 L 7 4 L 1 7" fill="none" stroke="#929aa2" stroke-width="1.2"/></marker></defs>'+connections+
-      nodes.map(function(n){return '<g class="craft-flow-box craft-flow-'+n.kind+'"><rect x="'+n.x+'" y="'+n.y+'" width="'+n.w+'" height="'+n.h+'" rx="17"/>'+n.lines.map(function(line,i){return '<text x="'+(n.x+n.w/2)+'" y="'+(n.y+22+i*20)+'">'+esc(line)+'</text>';}).join('')+'</g>';}).join('')+labels.join('')+'</svg>';
+      nodes.map(function(n){return '<g class="craft-flow-box craft-flow-'+n.kind+'"><rect x="'+n.x+'" y="'+n.y+'" width="'+n.w+'" height="'+n.h+'" rx="17"/>'+n.lines.map(function(line,i){return '<text x="'+(n.x+n.w/2)+'" y="'+(n.y+22+i*20)+'">'+lineHtml(line)+'</text>';}).join('')+'</g>';}).join('')+labels.join('')+'</svg>';
   }
   function figure(title,drawing,note){
     return '<section class="craft-flow-step"><h5>'+esc(title)+'</h5><div class="craft-flow-viewer" data-flow-viewer data-zoom="1">'+

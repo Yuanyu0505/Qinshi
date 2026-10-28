@@ -4,6 +4,7 @@
   var DATA = window.INSCRIPTION_DATA;
   var PERFORMANCE = window.INSCRIPTION_PERFORMANCE;
   var RULES = window.InscriptionRules;
+  var TERMS = window.InscriptionTerms;
   var ACCOUNT_STORAGE = window.QinshiAccounts;
   var STORE_KEY = "qinshi_inscription_progress_v2";
   var COMMON_STORE_KEY = "qinshi_inscription_common_v1";
@@ -24,10 +25,10 @@
     SUBS[dun.id] = dun.attrs.concat(COMMON_SUBS).map(function (name) { return { n:name, x:dun.high.indexOf(name) !== -1, common:COMMON_SUBS.indexOf(name) !== -1 }; });
   });
   var SHIELD_NOTES = {
-    "龙遁": "PVP速支持高/中/低档；中档来自合成，蓝二速度1的档位不可辨识",
-    "鬼遁": "速支持高/中/低档；中档来自合成，蓝二速度1的档位不可辨识",
-    "神遁": "PVP速无高档，橙二最高低档3/中档4；中档来自合成",
-    "地遁": "PVP速无高档，橙二最高低档3/中档4；中档来自合成",
+    "龙遁": "PVP速支持高/中/低档；中档来自合成，蓝二为" + TERMS.html({attr:"PVP速",tier:"?"},"b2"),
+    "鬼遁": "速支持高/中/低档；中档来自合成，蓝二为" + TERMS.html({attr:"速",tier:"?"},"b2"),
+    "神遁": "PVP速无高档，橙二最高为" + TERMS.html({attr:"PVP速",tier:"L"},"o2") + "／" + TERMS.html({attr:"PVP速",tier:"M"},"o2") + "；中档来自合成",
+    "地遁": "PVP速无高档，橙二最高为" + TERMS.html({attr:"PVP速",tier:"L"},"o2") + "／" + TERMS.html({attr:"PVP速",tier:"M"},"o2") + "；中档来自合成",
     "人遁": "血、抗暴击支持三档；技能穿透最多两档",
     "虎遁": "血、内力支持三档；同一种不分档属性每枚只能一条"
   };
@@ -61,6 +62,10 @@
     el.suggestions.addEventListener("click", selectSuggestion);
     el.editor.addEventListener("click", handleEditorClick);
     el.editor.addEventListener("change", refreshEditorMain);
+    el.editor.addEventListener("input", function(event) {
+      if (!event.target.matches(".ins-edit-sub-value")) return;
+      updateEditorTerm(event.target.closest(".ins-editor-slot"), event.target.closest("label"));
+    });
     el.progressList.addEventListener("click", handleProgressAction);
     renderCoordinator = PERFORMANCE.createRenderCoordinator({
       renderers: {
@@ -275,10 +280,10 @@
     }).join("");
   }
   function subEditorHtml(shield, selected, value, index) {
-    return '<label><span>副属性' + (index + 1) + '</span><span class="ins-sub-editor-fields"><select class="ins-edit-sub">' + subOptionsHtml(shield, selected) + '</select><input class="ins-edit-sub-value" type="text" value="' + escapeHtml(value || "") + '" placeholder="如：+6%" aria-label="副属性' + (index + 1) + '附加内容"></span></label>';
+    return '<label><span>副属性' + (index + 1) + '</span><span class="ins-sub-editor-fields"><select class="ins-edit-sub">' + subOptionsHtml(shield, selected) + '</select><input class="ins-edit-sub-value" type="text" value="' + escapeHtml(value || "") + '" placeholder="如：+6%" aria-label="副属性' + (index + 1) + '附加内容"></span><span class="ins-edit-term-preview"></span></label>';
   }
-  function subDisplayText(base, value) {
-    return base ? base + String(value || "").trim() : "";
+  function subDisplayHtml(slot, index) {
+    return TERMS.savedHtml((slot.subs || [])[index], (slot.subValues || [])[index], slot.shield, qualityId(slot));
   }
   function qualityId(slot) { return (slot.quality === "紫色" ? "p" : "o") + (String(slot.star) === "1" ? "1" : "2"); }
   function validateSlot(slot) {
@@ -311,12 +316,16 @@
     // Validation must see orphaned historical text, not silently turn it into a draft.
     return {tian:row.dataset.tian,shield:row.dataset.shield,quality:row.querySelector(".ins-edit-quality").value,star:row.querySelector(".ins-edit-star").value,subs:subs,subValues:Array.from(row.querySelectorAll(".ins-edit-sub-value")).map(function (input) {return input.value;})};
   }
+  function updateEditorTerm(row, label) {
+    var q=(row.querySelector(".ins-edit-quality").value === "紫色" ? "p" : "o") + row.querySelector(".ins-edit-star").value;
+    label.querySelector(".ins-edit-term-preview").innerHTML=TERMS.savedHtml(label.querySelector(".ins-edit-sub").value,label.querySelector(".ins-edit-sub-value").value,row.dataset.shield,q);
+  }
   function refreshEditorMain() {
     // Do not silently erase invalid choices; show the reason until corrected.
     el.editor.querySelectorAll(".ins-editor-slot").forEach(function (row) {
       var quality = row.querySelector(".ins-edit-quality").value;
       var star = row.querySelector(".ins-edit-star").value;
-      row.querySelector(".ins-main-preview").textContent = quality === "紫色" ? "主属性：暂不展示" : "主属性：" + MAIN[row.dataset.tian][star];
+      row.querySelector(".ins-main-preview").innerHTML = quality === "紫色" ? "主属性：暂不展示" : "主属性：" + mainStackHtml(MAIN[row.dataset.tian][star],"o"+star);
       var selects = Array.prototype.slice.call(row.querySelectorAll(".ins-edit-sub"));
       var selected = selects.map(function (select) { return select.value; });
       var count = quality === "紫色" ? 2 : 3;
@@ -332,7 +341,8 @@
         var listId="ins-values-"+row.dataset.tian+"-"+currentIndex, list=label.querySelector("datalist");
         if(!list){list=document.createElement("datalist");label.appendChild(list);}list.id=listId;input.setAttribute("list",listId);
         var qualityKey=(quality === "紫色" ? "p" : "o")+star;
-        list.innerHTML=RULES.termsFor(row.dataset.shield,qualityKey).filter(function (t) {return t.attr===select.value;}).map(function(t){var meta=RULES.attributes.find(function(a){return a.id===t.attr;});return '<option value="+'+RULES.value(t,qualityKey)+meta.unit+'">'+({H:'高档',M:'中档',L:'低档',U:'不分档'}[t.tier])+'</option>';}).join("");
+        list.innerHTML=RULES.termsFor(row.dataset.shield,qualityKey).filter(function (t) {return t.attr===select.value;}).map(function(t){var meta=RULES.attributes.find(function(a){return a.id===t.attr;}),text=escapeHtml(TERMS.plain(t,qualityKey));return '<option value="+'+RULES.value(t,qualityKey)+meta.unit+'" label="'+text+'">'+text+'</option>';}).join("");
+        updateEditorTerm(row,label);
       });
       var warning=row.querySelector(".craft-legacy-warning");if(warning)warning.remove();row.insertAdjacentHTML("beforeend",slotWarningHtml(editorSlot(row)));
     });
@@ -364,8 +374,7 @@
   function savedSlotHtml(slot) {
     var main = slot.quality === "紫色" ? "主属性暂不展示" : (MAIN[slot.tian] && MAIN[slot.tian][slot.star] || "未知主属性");
     var subs = Array.isArray(slot.subs) ? slot.subs : ["", "", ""];
-    var subValues = Array.isArray(slot.subValues) ? slot.subValues : ["", "", ""];
-    return '<div class="ins-saved-slot"><div class="ins-saved-core"><b>' + escapeHtml(slot.tian + ' · ' + slot.shield) + extremeNoteHtml(slot.shield) + '</b>' + starBadgeHtml(slot.quality, slot.star) + mainStackHtml(main) + '</div><div class="ins-saved-substats">' + subs.map(function (sub, index) { var display = subDisplayText(sub, subValues[index]); return '<span class="ins-saved-sub' + (isExtremeAttr(slot.shield, sub) ? " extreme" : "") + '"><small>副属性' + (index + 1) + '</small><strong>' + (display ? escapeHtml(display) : "未设置") + '</strong></span>'; }).join("") + '</div>' + slotWarningHtml(slot) + '</div>';
+    return '<div class="ins-saved-slot"><div class="ins-saved-core"><b>' + escapeHtml(slot.tian + ' · ' + slot.shield) + extremeNoteHtml(slot.shield) + '</b>' + starBadgeHtml(slot.quality, slot.star) + mainStackHtml(main,qualityId(slot)) + '</div><div class="ins-saved-substats">' + subs.map(function (sub, index) { var display = subDisplayHtml(slot,index); return '<span class="ins-saved-sub' + (isExtremeAttr(slot.shield, sub) ? " extreme" : "") + '"><small>副属性' + (index + 1) + '</small><span>' + (display || "未设置") + '</span></span>'; }).join("") + '</div>' + slotWarningHtml(slot) + '</div>';
   }
   function starBadgeHtml(quality, star) {
     var normalizedQuality = quality === "紫色" ? "紫色" : "橙色";
@@ -373,7 +382,7 @@
     var stars = Array(count + 1).join('<span class="ins-rank-star" aria-hidden="true">★</span>');
     return '<span class="ins-rank-stars ' + (normalizedQuality === "紫色" ? "purple" : "orange") + '" aria-label="' + normalizedQuality + count + '星" title="' + normalizedQuality + count + '星">' + stars + '</span>';
   }
-  function mainStackHtml(main) { return '<span class="ins-main-stack">' + main.split("、").map(function (part) { return '<span>' + escapeHtml(part.trim()) + '</span>'; }).join("") + '</span>'; }
+  function mainStackHtml(main, quality) { return TERMS.mainHtml(main,quality); }
   function handleProgressAction(event) {
     var button = event.target.closest("button[data-edit-key],button[data-delete-key]");
     if (!button) return;
@@ -426,14 +435,13 @@
     var quality = savedSlot && savedSlot.quality === "紫色" ? "紫色" : "橙色";
     var star = savedSlot && String(savedSlot.star) === "1" ? "1" : "2";
     var main = quality === "紫色" ? "主属性暂不展示" : MAIN[slot.tian][star];
-    return '<div class="ins-main-line"><span class="ins-main-rank">' + starBadgeHtml(quality, star) + '<small>主属性</small></span>' + mainStackHtml(main) + '</div>';
+    return '<div class="ins-main-line"><span class="ins-main-rank">' + starBadgeHtml(quality, star) + '<small>主属性</small></span>' + mainStackHtml(main,(quality==="紫色"?"p":"o")+star) + '</div>';
   }
   function currentSubstatsHtml(savedSlot) {
     if (!savedSlot) return "";
     var subs = Array.isArray(savedSlot.subs) ? savedSlot.subs : ["", "", ""];
-    var subValues = Array.isArray(savedSlot.subValues) ? savedSlot.subValues : ["", "", ""];
-    var current = subs.map(function (sub, index) { return subDisplayText(sub, subValues[index]); }).filter(Boolean);
-    var values = current.length ? current.map(function (value) { return '<span class="ins-current-sub-tag">' + escapeHtml(value) + '</span>'; }).join("") : '<span class="ins-current-sub-tag empty">未设置</span>';
+    var current = subs.map(function (_, index) { return subDisplayHtml(savedSlot,index); }).filter(Boolean);
+    var values = current.length ? current.map(function (value) { return '<span class="ins-current-sub-tag">' + value + '</span>'; }).join("") : '<span class="ins-current-sub-tag empty">未设置</span>';
     return '<div class="ins-current-substats"><span class="ins-current-sub-label">当前副属性</span>' + values + '</div>' + slotWarningHtml(savedSlot);
   }
   function subTagHtml(attr) { return '<span class="ins-sub-tag' + (attr.x ? " extreme" : "") + '">' + attr.n + (attr.x ? '<em>可三条</em>' : "") + '</span>'; }
@@ -444,7 +452,7 @@
   }
 
   function renderReference() {
-    el.reference.innerHTML = '<section class="ins-reference-block"><h3>天位主属性</h3><p class="mobile-scroll-hint" aria-hidden="true">左右滑动查看全部星级 →</p><div class="table-wrap mobile-scroll-region" tabindex="0" aria-label="天位主属性资料表，可左右滑动"><table class="ins-reference-table"><thead><tr><th>天位</th><th>' + starBadgeHtml("橙色", "1") + '</th><th>' + starBadgeHtml("橙色", "2") + '</th><th>紫色</th></tr></thead><tbody>' + TIANS.map(function (tian) { return '<tr><th>' + tian + '</th><td>' + MAIN[tian]["1"] + '</td><td>' + MAIN[tian]["2"] + '</td><td>暂不展示主属性</td></tr>'; }).join("") + '</tbody></table></div></section><section class="ins-reference-block"><h3>遁位副属性</h3><p class="mobile-scroll-hint" aria-hidden="true">左右滑动查看全部说明 →</p><div class="table-wrap mobile-scroll-region" tabindex="0" aria-label="遁位副属性资料表，可左右滑动"><table class="ins-reference-table"><thead><tr><th>遁位</th><th>支持副属性（含合成档）</th><th>备注</th></tr></thead><tbody>' + SHIELDS.map(function (shield) { return '<tr><th>' + shield + extremeNoteHtml(shield) + '</th><td><div class="ins-sub-list">' + SUBS[shield].map(subTagHtml).join("") + '</div></td><td class="ins-shield-note">' + (SHIELD_NOTES[shield] || "—") + '</td></tr>'; }).join("") + '</tbody></table></div><div class="muted-tip">“极致”表示该属性支持高/中/低三档，橙色可分别各选一条，并非可以洗出三条相同档位。紫色最多两条，紫色以上中档来自合成；同一种不分档属性仅一条。具体品质数值与来源见合成路径查询。</div></section>';
+    el.reference.innerHTML = '<section class="ins-reference-block"><h3>天位主属性</h3><p class="mobile-scroll-hint" aria-hidden="true">左右滑动查看全部星级 →</p><div class="table-wrap mobile-scroll-region" tabindex="0" aria-label="天位主属性资料表，可左右滑动"><table class="ins-reference-table"><thead><tr><th>天位</th><th>' + starBadgeHtml("橙色", "1") + '</th><th>' + starBadgeHtml("橙色", "2") + '</th><th>紫色</th></tr></thead><tbody>' + TIANS.map(function (tian) { return '<tr><th>' + tian + '</th><td>' + mainStackHtml(MAIN[tian]["1"],"o1") + '</td><td>' + mainStackHtml(MAIN[tian]["2"],"o2") + '</td><td>暂不展示主属性</td></tr>'; }).join("") + '</tbody></table></div></section><section class="ins-reference-block"><h3>遁位副属性</h3><p class="mobile-scroll-hint" aria-hidden="true">左右滑动查看全部说明 →</p><div class="table-wrap mobile-scroll-region" tabindex="0" aria-label="遁位副属性资料表，可左右滑动"><table class="ins-reference-table"><thead><tr><th>遁位</th><th>支持副属性（含合成档）</th><th>备注</th></tr></thead><tbody>' + SHIELDS.map(function (shield) { return '<tr><th>' + shield + extremeNoteHtml(shield) + '</th><td><div class="ins-sub-list">' + SUBS[shield].map(subTagHtml).join("") + '</div></td><td class="ins-shield-note">' + (SHIELD_NOTES[shield] || "—") + '</td></tr>'; }).join("") + '</tbody></table></div><div class="muted-tip">“极致”表示该属性支持高/中/低三档，橙色可分别各选一条，并非可以洗出三条相同档位。紫色最多两条，紫色以上中档来自合成；同一种不分档属性仅一条。具体品质数值与来源见合成路径查询。</div></section>';
   }
 
   document.addEventListener("DOMContentLoaded", init);

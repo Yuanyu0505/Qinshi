@@ -1,4 +1,13 @@
 .ins-crafting { min-width:0; }
+#partition-inscription { --ins-term-blue:#72b8ff; --ins-term-purple:#d0a0ff; --ins-term-orange:#ffb454; }
+#partition-inscription .ins-term-value { font-weight:700; overflow-wrap:anywhere; }
+#partition-inscription .ins-term-value.ins-term-blue { color:var(--ins-term-blue); fill:var(--ins-term-blue); }
+#partition-inscription .ins-term-value.ins-term-purple { color:var(--ins-term-purple); fill:var(--ins-term-purple); }
+#partition-inscription .ins-term-value.ins-term-orange { color:var(--ins-term-orange); fill:var(--ins-term-orange); }
+#partition-inscription .ins-term-tier { color:var(--muted,#b7ad99); font-weight:400; white-space:nowrap; }
+#partition-inscription .craft-flow-svg { --ins-term-blue:#1467b7; --ins-term-purple:#8341b0; --ins-term-orange:#9c5100; }
+#partition-inscription .craft-flow-svg .ins-term-tier { fill:#516172; font-weight:400; }
+.ins-edit-term-preview { display:block; min-width:0; font-size:12px; line-height:1.6; margin-top:4px; }
 .ins-crafting *, .ins-crafting *::before, .ins-crafting *::after { box-sizing:border-box; }
 .ins-crafting [hidden] { display:none !important; }
 .craft-panel { background:var(--panel,#1c1914); border:1px solid var(--line,#443a29); border-radius:12px; padding:16px; margin:12px 0; min-width:0; }

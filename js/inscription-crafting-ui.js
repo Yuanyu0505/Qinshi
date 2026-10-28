@@ -76,7 +76,7 @@
       '<label>弟子天遁位<select data-craft-field="slot"></select></label>'+
       '<label>目标品质<select data-craft-field="quality">'+options(R.qualities,'o2')+'</select></label>'+
       '<label>遁位<select data-craft-field="dun">'+options(R.duns.map(function(d){return d.id;}),'','请选择遁位')+'</select></label></div>'+
-      '<div class="craft-actions">'+button('clear-disciple','不指定弟子')+button('reload','重新读取保存现场')+'</div>'+
+      '<div class="craft-actions">'+button('clear-options','清除所有选项')+'</div>'+
       '<div data-craft-attrs class="craft-attrs"></div>'+
       '<p class="craft-note">属性槽由品质决定，必须选满；同属性同档位不能重复，每枚最多两条高档。</p>'+
       '<div data-craft-analysis></div></section>'+
@@ -290,15 +290,16 @@
   function onClick(v,control) {
     var action=control.dataset.craftAction;
     if(action.indexOf('diagram-')===0){F.zoom(control.closest('[data-flow-viewer]'),action.slice(8));return;}
-    if(action==='reload'){activate(v.mode);return;}
     if(!loaded||currentAccount()!==accountId){status(v,'请重新打开铭文分区后再操作。');return;}
     status(v,'');
     if(action==='choose-disciple'){
       var target=clone(state.target);target.discipleKey=decodeURIComponent(control.dataset.key);target.slot='';
       changeTarget(v,target);return;
     }
-    if(action==='clear-disciple'){
-      var cleared=clone(state.target);cleared.discipleKey='';cleared.slot='';changeTarget(v,cleared);return;
+    if(action==='clear-options'){
+      if(sceneExists(state.simulation)&&!root.confirm('清除所有筛选、当前模拟材料及结果？已保存的个人铭文数据不受影响。'))return;
+      var cleared=clone(state);cleared.target={discipleKey:'',slot:'',dun:'',quality:'o2',attrs:['','','']};cleared.simulation=S.blankSimulation();
+      if(save(v,cleared)){Object.keys(views).forEach(function(key){views[key].generation++;});renderAll(true);}return;
     }
     if(action==='generate'){generate(v);return;}
     var sim=clone(state.simulation);
@@ -329,7 +330,7 @@
     if(!store)store=S.createWorkbench(root.QinshiAccounts);
     var v=views[mode]||init(mode),account=currentAccount(),result=store.inspect();
     if(!result.valid){
-      loaded=false;Object.keys(views).forEach(function(key){views[key].el.querySelectorAll('input,select,button').forEach(function(c){if(c.dataset.craftAction!=='reload')c.disabled=true;});status(views[key],'存档读取失败，已保留原始数据并禁止写入：'+result.errors.join('；'));});return;
+      loaded=false;Object.keys(views).forEach(function(key){views[key].el.querySelectorAll('input,select,button').forEach(function(c){c.disabled=true;});status(views[key],'存档读取失败，已保留原始数据并禁止写入：'+result.errors.join('；'));});return;
     }
     var oldTarget=state&&JSON.stringify(state.target),changedAccount=!loaded||accountId!==account;
     state=result.state;token=result.token;accountId=account;loaded=true;

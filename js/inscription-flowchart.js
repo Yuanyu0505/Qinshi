@@ -76,38 +76,7 @@
       (note?'<p class="craft-note">'+esc(note)+'</p>':'')+'</section>';
   }
   function control(action,label){return '<button type="button" class="seg" data-craft-action="diagram-'+action+'" aria-label="'+esc(action==='reset'?'恢复当前流程图原始大小':label+'当前流程图')+'">'+esc(label)+'</button>';}
-  function identity(node){return node.kind+'|'+R.signature(node.material)+'|'+node.children.map(function(c){return R.signature(c.node.material)+'*'+c.quantity;}).join('|');}
   function letter(index){var result='';do{result=String.fromCharCode(65+index%26)+result;index=Math.floor(index/26)-1;}while(index>=0);return result;}
-  function collect(route){
-    var steps=[],seen=new Map(),results=new Map();
-    function visit(node){
-      if(node.kind==='base'||node.kind==='failure')return null;
-      var key=identity(node);if(seen.has(key))return seen.get(key);
-      node.children.forEach(function(c){visit(c.node);});
-      var number=steps.length+1,step={node:node,number:number,ref:(node.kind==='craft'&&node.probability<1?'S':'M')+number};
-      seen.set(key,step);steps.push(step);
-      if(node.kind==='craft'){
-        var target=R.signature(node.material),failed=0;
-        step.outputs=node.outcomes.slice().sort(function(a,b){return Number(R.signature(b.material)===target)-Number(R.signature(a.material)===target);}).map(function(o){
-          var success=R.signature(o.material)===target,label=success?step.ref:letter(failed++)+number;
-          var output={material:o.material,probability:o.probability,ref:label,success:success,step:number};
-          var sig=R.signature(o.material);if(!results.has(sig))results.set(sig,[]);results.get(sig).push(output);return output;
-        });
-      }
-      return step;
-    }
-    visit(route.tree);
-    return{steps:steps,seen:seen,results:results};
-  }
-  function inputLines(entry,context,x){
-    var node=entry.node,step=context.seen.get(identity(node)),name;
-    if(node.kind==='base')name='洗练准备'+qLabel(node.material.quality)+' × '+entry.quantity;
-    else if(node.kind==='failure'){
-      var refs=context.results.get(R.signature(node.material))||[],failed=refs.find(function(r){return !r.success;});
-      name='保留失败'+qLabel(node.material.quality)+' '+(failed?failed.ref:'未编号')+' × '+entry.quantity;
-    }else name=(entry.quantity>1?'相同':'前述')+qLabel(node.material.quality)+' '+step.ref+' × '+entry.quantity;
-    return [name].concat(terms(node.material,x));
-  }
   function candidateInfo(node){
     if(node.kind==='wash')return ['置换 / 洗练','得到指定词条组合'];
     if(node.children.some(function(c){return c.node.material.terms.some(function(t){return t.tier==='?';});}))return ['蓝二速度特殊合成','按合法结果等概率生成'];
@@ -117,93 +86,84 @@
     var words={1:'一',2:'二',3:'三',4:'四',5:'五',6:'六',7:'七',8:'八',9:'九'};
     return [pool.size+'种候选，'+(words[pool.size]||pool.size)+'选'+(words[count]||count)];
   }
-  function recipeFigure(step,context,x,following){
-    var node=step.node,inputs=node.children.map(function(entry){return inputLines(entry,context,x);});
-    if(node.promotion)inputs.push([node.promotion+'晋升铭文 × 1']);
-    var outputs=node.kind==='wash'?[{material:node.material,probability:null,success:true,ref:step.ref}]:step.outputs;
-    var width=Math.max(360,inputs.length*244+24,outputs.length*230+24),nodes=[],edges=[];
-    var sources=inputs.map(function(lines,i){return box('input-'+i,(width/inputs.length)*i+(width/inputs.length-220)/2,24,220,lines,i===inputs.length-1&&node.promotion?'promotion':'material');});
-    var inputBottom=Math.max.apply(null,sources.map(function(n){return n.y+n.h;}));
-    var operation=box('operation',width/2-135,inputBottom+66,270,candidateInfo(node),'operation');nodes=sources.concat([operation]);
-    sources.forEach(function(source,i){edges.push(edge(source.id,'operation','',{toPort:(i+1)/(sources.length+1)}));});
-    var outputY=operation.y+operation.h+116;
-    outputs.forEach(function(o,i){
-      var label=(o.success?(outputs.length>1?'成功':'产物'):'失败')+qLabel(o.material.quality)+' '+o.ref;
-      var output=box('output-'+i,(width/outputs.length)*i+(width/outputs.length-210)/2,outputY,210,[label].concat(terms(o.material,x)),o.success?'success':'failure');nodes.push(output);
-      edges.push(edge('operation',output.id,o.probability===null?'置换概率未知':percent(o.probability),{fromPort:(i+1)/(outputs.length+1)}));
-    });
-    if(following){
-      var prior=nodes.find(function(n){return n.id==='output-0';}),next=following.node;
-      var nextOutput=box('following',width/2-125,prior.y+prior.h+125,250,['产物'+qLabel(next.material.quality)+' '+following.ref].concat(terms(next.material,x)),'success');
-      nodes.push(nextOutput);edges.push(edge(prior.id,nextOutput.id,'相同'+qLabel(node.material.quality)+' × '+next.children[0].quantity+'，'+percent(next.probability)));
-    }
-    var height=Math.max.apply(null,nodes.map(function(n){return n.y+n.h;}))+30;
-    var title='第 '+step.number+(following?'–'+following.number:'')+' 步｜'+(node.kind==='wash'?'置换准备 '+qLabel(node.material.quality):qLabel(node.children[0].node.material.quality)+' → '+qLabel(node.material.quality))+(following?' → '+qLabel(following.node.material.quality):'');
-    var note=node.kind==='wash'?'低档词条只能通过置换准备；此处不是定向合成。置换概率未知。':
-      outputs.length>1?'成功品按编号继续使用；失败品也按字母编号保留，后面的复用图会引用这些编号。':following?'先按材料框内数量准备蓝二并合成紫一，再备齐 3 枚相同紫一合成 1 枚紫二；蓝二及初级晋升铭文的准备也需重复 3 份。':'本图制作 1 枚所示产物；后续需要多枚时，重复本步骤及其材料准备。';
-    return figure(title,svg(title,nodes,edges,width,height),note);
-  }
-  function groupText(node,context){
-    return node.children.map(function(c){
-      if(c.node.kind==='failure'){
-        var refs=context.results.get(R.signature(c.node.material))||[],ref=refs.find(function(r){return !r.success;});
-        return(ref?ref.ref:'未编号失败品')+(c.quantity>1?' × '+c.quantity:'');
-      }
-      var step=context.seen.get(identity(c.node));return(step?step.ref:qLabel(c.node.material.quality))+(c.quantity>1?' × '+c.quantity:'');
-    }).join(' ＋ ');
-  }
-  function finishFigure(root,reuse,context,x,positionLabel,index){
-    var width=1060,nodes=[],edges=[];
-    var leftLines=['成功品路线：'+groupText(root,context)];
-    root.children.forEach(function(c){leftLines=leftLines.concat(terms(c.node.material,x));});
-    var left=box('ready',45,74,300,leftLines,'material');
-    var group=box('failure-group',675,24,330,['失败品互补分组，每组 3 枚',groupText(reuse,context)],'material');
-    var lowerQuality=reuse.children[0].node.material.quality;
-    var coverage=box('coverage',675,group.y+group.h+75,330,['候选池必须覆盖：'].concat(terms({quality:lowerQuality,terms:reuse.material.terms},x)),'operation');
-    var targetY=Math.max(left.y+left.h,coverage.y+coverage.h)+130;
-    var target=box('target',215,targetY,395,['目标：'+qLabel(root.material.quality)+(positionLabel?' · '+positionLabel:'')].concat(terms(root.material,x)),'success');
-    nodes=[left,group,coverage,target];edges.push(edge('failure-group','coverage',''));
-    edges.push(edge('ready','target',[candidateInfo(root).join('，'),percent(root.probability)],{toPort:0.12,viaY:left.y+left.h+40}));
-    var wanted=new Set(reuse.material.terms.map(function(t){return t.attr+':'+t.tier;}));
-    var extras=reuse.children.flatMap(function(c){return c.node.material.terms;}).filter(function(t){return !wanted.has(t.attr+':'+t.tier);});
-    var sharedX=x&&extras.length&&extras.every(function(t){return t.attr===x&&t.tier==='U';});
-    var condition=sharedX?'杂词条 X 必须相同':'仅限本图所示互补组合';
-    edges.push(edge('coverage','target',[condition,candidateInfo(reuse).join('，')+'，'+percent(reuse.probability)],{fromPort:0.2,toPort:0.88,viaY:coverage.y+coverage.h+32}));
-    if(reuse.probability<1){
-      var failures=reuse.outcomes.filter(function(o){return R.signature(o.material)!==R.signature(reuse.material);});
-      var other=box('other',765,targetY,240,['非目标'+qLabel(reuse.material.quality),'其余 '+failures.length+' 种结果（汇总）'],'failure');nodes.push(other);
-      edges.push(edge('coverage','other',['选中非目标组合','合计 '+percent(1-reuse.probability)],{fromPort:0.78,viaY:coverage.y+coverage.h+32}));
-    }
-    var title='最终合成｜成功品与失败品复用'+(index?' · 分组 '+(index+1):'');
-    return figure(title,svg(title,nodes,edges,width,Math.max.apply(null,nodes.map(function(n){return n.y+n.h;}))+28),
-      '左右两条为备选方法，不是同时投料。右侧只使用前述步骤已得到且覆盖目标的失败品；需备齐所示种类与数量，概率以这些材料已备齐为前提。最终非目标出口按示例合并展示，其概率为非目标结果合计。');
-  }
   function render(route,x,settings){
-    settings=settings||{};var context=collect(route),root=route.tree;
-    var combine=root.kind==='craft'&&root.probability===1&&route.reuse.length>0&&root.material.quality==='o2';
-    var html='<div class="craft-flow-guide">从蓝二开始按步骤阅读。M 为中间产物，S 为成功品，A / B / C 等为各步失败品；数字后缀对应步骤。每张图按制作 1 枚产物展示，后续按框内数量重复准备。</div>';
-    var folded=new Set();
-    context.steps.forEach(function(step,index){
-      if(folded.has(step.number)||(combine&&step.node===root))return;
-      var next=context.steps[index+1],following=null;
-      if(step.node.kind==='craft'&&step.node.probability===1&&step.node.material.quality==='p1'&&next&&next.node.kind==='craft'&&next.node.probability===1&&next.node.material.quality==='p2'&&next.node.children.length===1&&context.seen.get(identity(next.node.children[0].node))===step){following=next;folded.add(next.number);}
-      html+=recipeFigure(step,context,x,following);
-    });
-    if(!context.steps.length){
-      var node=box('base',30,24,300,['准备'+qLabel(root.material.quality)+' × 1'].concat(terms(root.material,x)));
-      html+=figure('蓝二起点',svg('蓝二起点',[node],[],360,node.h+48),'直接收集或置换指定蓝二铭文，获取概率未知。');
+    settings=settings||{};
+    var nodes=[],edges=[],cache=new Map(),outputs=new Map(),column=0,number=0;
+    var levels={b2:0,p1:2,p2:4,o1:6,o2:8};
+    function add(lines,level,kind,center){
+      var id='n'+nodes.length,n=box(id,0,0,240,lines,kind);
+      n.level=level;n.center=center===undefined?140+(column++)*280:center;
+      nodes.push(n);return n;
     }
+    function link(from,to,label,extra){edges.push(edge(from.id,to.id,label,extra));}
+    function remember(material,n){
+      var sig=R.signature(material);if(!outputs.has(sig))outputs.set(sig,[]);
+      outputs.get(sig).push(n);
+    }
+    function build(node){
+      var key=node.kind+'|'+R.signature(node.material);
+      if(cache.has(key))return cache.get(key);
+      var level=levels[node.material.quality],inputs=[];
+      // Washing prepares an independently supplied inscription of this quality.
+      // Its old illustrative base is NOT a consumed output from another branch.
+      if(node.kind!=='wash')inputs=node.children.map(function(c){return {n:build(c.node),quantity:c.quantity};});
+      if(node.kind==='base'||node.kind==='failure'){
+        var leaf=add(['准备'+qLabel(node.material.quality)+' × 1'].concat(terms(node.material,x)),level,'material');
+        cache.set(key,leaf);remember(node.material,leaf);return leaf;
+      }
+      var promotion;
+      if(node.promotion){promotion=add([node.promotion+'晋升铭文 × 1'],level-2,'promotion');}
+      var anchors=inputs.map(function(c){return c.n.center;});if(promotion)anchors.push(promotion.center);
+      var center=anchors.length?anchors.reduce(function(a,b){return a+b;},0)/anchors.length:140+(column++)*280;
+      var operation=add(node.kind==='wash'?['独立置换 / 洗练准备','另备同品质铭文，不消耗其他支线产物']:candidateInfo(node),level-1,'operation',center);
+      inputs.forEach(function(c,i){link(c.n,operation,'× '+c.quantity,{toPort:(i+1)/(inputs.length+(promotion?1:0)+1)});});
+      if(promotion)link(promotion,operation,'',{toPort:(inputs.length+1)/(inputs.length+2)});
+      var ref=(node.kind==='craft'&&node.probability<1?'S':'M')+(++number);
+      var result=add([qLabel(node.material.quality)+' '+ref].concat(terms(node.material,x)),level,'success',center);
+      cache.set(key,result);remember(node.material,result);
+      link(operation,result,node.kind==='wash'?'置换概率未知':percent(node.probability));
+      if(node.kind==='craft'){
+        var wanted=R.signature(node.material),failed=0;
+        node.outcomes.forEach(function(o){
+          if(R.signature(o.material)===wanted)return;
+          var failure=add(['失败'+qLabel(o.material.quality)+' '+letter(failed++)+number].concat(terms(o.material,x)),level,'failure');
+          remember(o.material,failure);link(operation,failure,percent(o.probability));
+        });
+      }
+      return result;
+    }
+    var goal=build(route.tree);
     route.reuse.forEach(function(reuse,index){
-      if(combine)html+=finishFigure(root,reuse,context,x,settings.positionLabel,index);
-      else{
-        var number=context.steps.length+index+1,step={node:reuse,number:number,ref:'R'+(index+1)};
-        var target=R.signature(reuse.material),failed=0;
-        step.outputs=reuse.outcomes.map(function(o){var success=R.signature(o.material)===target;return{material:o.material,probability:o.probability,success:success,ref:success?step.ref:'R'+letter(failed++)};});
-        html+='<h5 class="craft-flow-reuse-title">失败品继续利用｜'+esc(groupText(reuse,context))+'</h5>'+recipeFigure(step,context,x);
+      var chosen=reuse.children.map(function(c){
+        var candidates=outputs.get(R.signature(c.node.material))||[];
+        return {n:candidates.find(function(n){return n.kind==='failure';}),quantity:c.quantity};
+      });
+      // Only connect actual, visible failure outputs. Never invent disconnected
+      // aliases that look like available materials.
+      if(chosen.some(function(c){return !c.n;}))return;
+      var center=chosen.reduce(function(sum,c){return sum+c.n.center;},0)/chosen.length;
+      var operation=add(['失败品互补复用 '+(index+1),'需备齐所连种类和数量'].concat(candidateInfo(reuse)),levels[reuse.material.quality]-1,'operation',center);
+      chosen.forEach(function(c,i){link(c.n,operation,'× '+c.quantity,{toPort:(i+1)/(chosen.length+1)});});
+      link(operation,goal,percent(reuse.probability),{toPort:(index+1)/(route.reuse.length+2)});
+      if(reuse.probability<1){
+        var other=add(['非目标'+qLabel(reuse.material.quality),'其他结果汇总'],levels[reuse.material.quality],'failure');
+        link(operation,other,'合计 '+percent(1-reuse.probability));
       }
     });
-    if(route.kind==='probability'&&!route.reuse.length)html+='<p class="craft-note">本路线没有已知可直接复用成目标的失败品组合，不能把缺少目标词条的材料视为可达。</p>';
-    return html;
+    var y=24,width=360;
+    for(var level=0;level<=8;level++){
+      var row=nodes.filter(function(n){return n.level===level;}).sort(function(a,b){return a.center-b.center;});
+      if(!row.length)continue;
+      var right=-20;
+      row.forEach(function(n){n.x=Math.max(24,n.center-n.w/2,right+40);n.y=y;right=n.x+n.w;width=Math.max(width,right+24);});
+      y+=Math.max.apply(null,row.map(function(n){return n.h;}))+112;
+    }
+    var title='完整合成流程'+(settings.positionLabel?' · '+settings.positionLabel:'');
+    var byId=new Map(nodes.map(function(n){return[n.id,n];}));
+    var sharedGoal=edges.filter(function(e){return e.to===goal.id;}).length>1;
+    edges.forEach(function(e){if((typeof e.label==='string'&&e.label.indexOf('× ')===0)||(sharedGoal&&e.to===goal.id)){var from=byId.get(e.from);e.labelX=from.x+from.w/2;e.labelY=from.y+from.h+38;}});
+    return '<div class="craft-flow-guide">每个方案一图到底。合成材料与独立置换材料并行汇入下一次合成；箭头上的 × 数量表示投料数。成功品和失败品直接连到后续用途，不靠跨图编号衔接。多次尝试需重复准备相应材料。</div>'+
+      figure(title,svg(title,nodes,edges,width,y-80),'置换概率未知；合成与失败品复用概率以所连材料已经备齐为前提。独立置换分支需另备同品质铭文，不是把其他支线的 M 材料继续洗掉。');
   }
   function zoom(viewer,action){
     if(!viewer)return;var drawing=viewer.querySelector('svg');if(!drawing)return;

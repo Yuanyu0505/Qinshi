@@ -11,11 +11,11 @@
   function esc(value){return String(value==null?'':value).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
   function qLabel(id){return R.qualities.find(function(q){return q.id===id;}).label;}
   function percent(value){var n=value*100,i=Math.round(n);return value>0&&i===0?'不足1%':value<1&&i===100?'超过99%':(Math.abs(n-i)>1e-8?'约':'')+i+'%';}
-  function terms(material,x){
+  function terms(material,x,concrete){
     var parts=[];
-    material.terms.forEach(function(t,index){
+    T.sortTerms(material.terms,material.quality).forEach(function(t,index){
       if(index)parts.push({text:'＋'});
-      if(t.attr===x){parts.push({text:'杂词条 X（同一个）'});return;}
+      if(!concrete&&t.attr===x){parts.push({text:'杂词条 X（同一个）'});return;}
       var value=T.describe(t,material.quality);
       parts.push({text:value.body,role:'value',rank:value.rank},{text:value.suffix,role:'tier'});
     });
@@ -79,9 +79,9 @@
       stages.map(function(stage){return '<g class="craft-flow-stage craft-flow-stage-'+stage.kind+'"><rect x="4" y="'+stage.top+'" width="'+(width-8)+'" height="'+(stage.bottom-stage.top)+'" rx="12"/><text x="18" y="'+(stage.top+20)+'">'+stage.label+'</text></g>';}).join('')+connections+
       nodes.map(function(n){return '<g class="craft-flow-box craft-flow-'+n.kind+'"><rect x="'+n.x+'" y="'+n.y+'" width="'+n.w+'" height="'+n.h+'" rx="17"/>'+n.lines.map(function(line,i){return '<text x="'+(n.x+n.w/2)+'" y="'+(n.y+22+i*20)+'">'+lineHtml(line)+'</text>';}).join('')+'</g>';}).join('')+labels.join('')+'</svg>';
   }
-  function figure(title,drawing,note){
+  function figure(title,drawing,note,actions){
     return '<section class="craft-flow-step"><h5>'+esc(title)+'</h5><div class="craft-flow-viewer" data-flow-viewer data-zoom="0.9">'+
-      '<div class="craft-flow-toolbar"><span>同一来源的连线与箭头同色；左右滑动查看</span><div>'+control('out','缩小')+control('reset','90%')+control('in','放大')+'</div></div>'+
+      '<div class="craft-flow-toolbar"><span>同一来源的连线与箭头同色；左右滑动查看</span><div>'+(actions||'')+control('out','缩小')+control('reset','90%')+control('in','放大')+'</div></div>'+
       '<div class="craft-flow-viewport" tabindex="0" role="region" aria-label="'+esc(title)+'，可左右滚动">'+drawing+'</div></div>'+
       (note?'<p class="craft-note">'+esc(note)+'</p>':'')+'</section>';
   }
@@ -98,7 +98,7 @@
   }
   function render(route,x,settings){
     settings=settings||{};
-    var nodes=[],edges=[],cache=new Map(),outputs=new Map(),column=0,number=0;
+    var nodes=[],edges=[],outputs=new Map(),column=0,number=0;
     var levels={b2:0,p1:2,p2:4,o1:6,o2:8};
     function add(lines,level,kind,center){
       var id='n'+nodes.length,n=box(id,0,0,kind==='promotion'?170:kind==='operation'?220:240,lines,kind);
@@ -111,32 +111,30 @@
       outputs.get(sig).push(n);
     }
     function build(node){
-      var key=node.kind+'|'+R.signature(node.material);
-      if(cache.has(key))return cache.get(key);
       var level=levels[node.material.quality],inputs=[];
       // Washing prepares an independently supplied inscription of this quality.
       // Its old illustrative base is NOT a consumed output from another branch.
       if(node.kind!=='wash')inputs=node.children.map(function(c){return {n:build(c.node),quantity:c.quantity};});
       if(node.kind==='base'||node.kind==='failure'){
-        var leaf=add(['准备'+qLabel(node.material.quality)+' × 1'].concat(terms(node.material,x)),level,'material');
-        cache.set(key,leaf);remember(node.material,leaf);return leaf;
+        var leaf=add(['准备'+qLabel(node.material.quality)].concat(terms(node.material,x)),level,'material');
+        remember(node.material,leaf);return leaf;
       }
       var promotion;
       if(node.promotion){var near=inputs.length?inputs.reduce(function(sum,c){return sum+c.n.center;},0)/inputs.length:140;promotion=add([node.promotion+'晋升铭文 × 1'],level-2,'promotion',near+110);}
       var anchors=inputs.map(function(c){return c.n.center;});if(promotion)anchors.push(promotion.center);
       var center=anchors.length?anchors.reduce(function(a,b){return a+b;},0)/anchors.length:140+(column++)*280;
-      var operation=add(node.kind==='wash'?['独立置换 / 洗练准备','另备同品质铭文','当前概率：未知']:candidateInfo(node).concat(['当前概率：'+percent(node.probability)]),level-1,'operation',center);
+      var operation=add(node.kind==='wash'?['另行置换合成素材铭文','当前概率：未知']:candidateInfo(node).concat(['当前概率：'+percent(node.probability)]),level-1,'operation',center);
       inputs.forEach(function(c,i){link(c.n,operation,'× '+c.quantity,{toPort:(i+1)/(inputs.length+(promotion?1:0)+1)});});
       if(promotion)link(promotion,operation,'',{toPort:(inputs.length+1)/(inputs.length+2)});
       var ref=(node.kind==='craft'&&node.probability<1?'S':'M')+(++number);
       var result=add([qLabel(node.material.quality)+' '+ref].concat(terms(node.material,x)),level,'success',center);
-      cache.set(key,result);remember(node.material,result);
+      remember(node.material,result);
       link(operation,result,'');
       if(node.kind==='craft'){
         var wanted=R.signature(node.material),failures=node.outcomes.filter(function(o){return R.signature(o.material)!==wanted;});
         if(failures.length){
           var rows=failures.map(function(o,i){
-            return {parts:[{text:'失败'+qLabel(o.material.quality)+' '+letter(i)+number+'：'}].concat(terms(o.material,x)[0].parts,[{text:' ｜ '+percent(o.probability)}])};
+            return {parts:[{text:'失败'+qLabel(o.material.quality)+' '+letter(i)+number+'：'}].concat(terms(o.material,x,true)[0].parts,[{text:' ｜ '+percent(o.probability)}])};
           });
           var total=failures.reduce(function(sum,o){return sum+o.probability;},0);
           var group=add(['失败结果（合计 '+percent(total)+'）'].concat(settings.showFailures?rows:[failures.length+'种结果已收起，点击上方按钮展开']),level,'failure');
@@ -164,7 +162,7 @@
       link(operation,goal,'',{toPort:(index+1)/(route.reuse.length+2)});
       if(reuse.probability<1){
         var failures=reuse.outcomes.filter(function(o){return R.signature(o.material)!==R.signature(reuse.material);});
-        var rows=failures.map(function(o,i){return {parts:[{text:'复用失败'+qLabel(o.material.quality)+' '+(index+1)+'-'+letter(i)+'：'}].concat(terms(o.material,x)[0].parts,[{text:' ｜ '+percent(o.probability)}])};});
+        var rows=failures.map(function(o,i){return {parts:[{text:'复用失败'+qLabel(o.material.quality)+' '+(index+1)+'-'+letter(i)+'：'}].concat(terms(o.material,x,true)[0].parts,[{text:' ｜ '+percent(o.probability)}])};});
         var other=add(['非目标'+qLabel(reuse.material.quality),'其他结果合计 '+percent(1-reuse.probability)].concat(settings.showFailures?rows:[failures.length+'种结果已收起，点击上方按钮展开']),levels[reuse.material.quality],'failure');
         link(operation,other,'');
       }
@@ -216,8 +214,7 @@
       if(typeof e.label==='string'&&e.label.indexOf('× ')===0){e.labelX=from.x+from.w/2;e.labelY=from.y+from.h+20;}
     });
     return '<div class="craft-flow-guide">每个方案一图到底。合成材料与独立置换材料并行汇入下一次合成；箭头上的 × 数量表示投料数。成功品和失败品直接连到后续用途，不靠跨图编号衔接。多次尝试需重复准备相应材料。</div>'+
-      (nodes.some(function(n){return n.kind==='failure';})?'<div class="craft-actions"><button type="button" class="seg" data-craft-action="diagram-failures" aria-expanded="'+Boolean(settings.showFailures)+'">'+(settings.showFailures?'收起所有失败结果':'展开所有失败结果')+'</button></div>':'')+
-      figure(title,svg(title,nodes,edges,width,y-32,stages),'概率按最终合法组合等概率模型推算，并非游戏实测频率。置换概率未知；合成与失败品复用概率以所连材料已经备齐为前提。独立置换分支需另备同品质铭文，不是把其他支线的 M 材料继续洗掉。');
+      figure(title,svg(title,nodes,edges,width,y-32,stages),'概率按最终合法组合等概率模型推算，并非游戏实测频率。置换概率未知；合成与失败品复用概率以所连材料已经备齐为前提。洗练从当前品质开始，另行准备素材，不消耗其他支线的 M 材料。',nodes.some(function(n){return n.kind==='failure';})?'<button type="button" class="seg" data-craft-action="diagram-failures" aria-expanded="'+Boolean(settings.showFailures)+'">'+(settings.showFailures?'收起所有失败结果':'展开所有失败结果')+'</button>':'');
   }
   function zoom(viewer,action){
     if(!viewer)return;var drawing=viewer.querySelector('svg');if(!drawing)return;

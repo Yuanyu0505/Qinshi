@@ -19,6 +19,10 @@
     return {body:String(amount)+meta.unit+name,suffix:'（'+label+'）',rank:rank(quality)};
   }
   function plain(term,quality){var d=describe(term,quality);return d?d.body+d.suffix:'';}
+  function sortTerms(terms,quality){return terms.slice().sort(function(a,b){
+    var av=R.value(a,quality),bv=R.value(b,quality);
+    return (bv===null?-Infinity:bv)-(av===null?-Infinity:av)||String(a.attr).localeCompare(String(b.attr),'zh-CN')||String(a.tier).localeCompare(String(b.tier));
+  });}
   function coloredValue(text,color){return '<strong class="ins-term-value ins-term-'+color+'">'+esc(text)+'</strong>';}
   function valueHtml(text,quality){return coloredValue(text,rank(quality));}
   function descriptionHtml(d){return '<span class="ins-term">'+coloredValue(d.body,d.rank)+'<span class="ins-term-tier">'+esc(d.suffix)+'</span></span>';}
@@ -41,5 +45,5 @@
       return '<span>'+(match?valueHtml(match[2]+attributeName(match[1].trim()),quality):esc(part.trim()))+'</span>';
     }).join('')+'</span>';
   }
-  return {rank:rank,tierLabel:tierLabel,describe:describe,plain:plain,html:html,savedHtml:savedHtml,valueHtml:valueHtml,mainHtml:mainHtml};
+  return {rank:rank,tierLabel:tierLabel,describe:describe,plain:plain,sortTerms:sortTerms,html:html,savedHtml:savedHtml,valueHtml:valueHtml,mainHtml:mainHtml};
 });

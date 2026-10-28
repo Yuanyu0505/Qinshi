@@ -6,7 +6,7 @@
 })(typeof window !== "undefined" ? window : null, function () {
   "use strict";
 
-  var MODES = ["progress", "query", "reference", "crafting-paths", "crafting-simulator"];
+  var MODES = ["progress", "query", "reference", "crafting-paths", "crafting-simulator", "crafting-favorites"];
 
   function createRenderCoordinator(options) {
     options = options || {};

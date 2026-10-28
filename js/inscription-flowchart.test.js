@@ -3,6 +3,17 @@ const {test}=require('node:test');
 const assert=require('node:assert/strict');
 const Paths=require('./inscription-paths.js');
 const Flow=require('./inscription-flowchart.js');
+const Terms=require('./inscription-terms.js');
+
+test('display values descend and failure lists never hide a concrete term behind X',()=>{
+  assert.deepEqual(Terms.sortTerms([{attr:'速',tier:'L'},{attr:'速',tier:'H'},{attr:'速',tier:'M'}],'o2').map(t=>t.tier),['H','M','L']);
+  const plan=Paths.representative({prefix:'天府',dun:'鬼遁',quality:'p1',attrs:['速','速']});
+  const drawing=Flow.render(plan.strategies.find(s=>s.kind==='probability'),plan.xAttr,{showFailures:true});
+  assert.match(drawing,/3%闪避/);
+  assert.doesNotMatch(drawing,/失败紫一[^<]*杂词条 X/);
+  assert.ok(drawing.indexOf('craft-flow-toolbar')<drawing.indexOf('data-craft-action="diagram-failures"'));
+  assert.doesNotMatch(drawing,/准备蓝二 × 1/);
+});
 
 test('flow failures collapse by default and expand with stage frames',()=>{
   const plan=Paths.representative({prefix:'天府',dun:'鬼遁',quality:'p1',attrs:['速','速']});

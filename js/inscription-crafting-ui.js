@@ -2,6 +2,7 @@
   'use strict';
   var R=root.InscriptionRules, P=root.InscriptionPaths, S=root.InscriptionCraftingState, F=root.InscriptionFlowchart, T=root.InscriptionTerms;
   var views={}, store, state, token, accountId, loaded=false, sequence=0;
+  var favoriteStore, favoriteState=null, favoriteOperation=0, favoriteBusy=false;
   var modelNote='等概率模型，非实测游戏频率。各步骤概率以材料备齐为前提；置换概率未知，不计算整条路线的总成功率。';
   function esc(value) { return String(value==null?'':value).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
   function clone(value) { return JSON.parse(JSON.stringify(value)); }
@@ -28,7 +29,7 @@
   function position(target) { return S.context(target); }
   function sameTarget(a,b) { return JSON.stringify(a)===JSON.stringify(b); }
   function displayTerms(m,x) {
-    return m.terms.map(function(t){return t.attr===x?'杂词条 X':T.html(t,m.quality);}).join(' ＋ ');
+    return T.sortTerms(m.terms,m.quality).map(function(t){return t.attr===x?'杂词条 X':T.html(t,m.quality);}).join(' ＋ ');
   }
   function sceneExists(sim) { return !!sim.pending || sim.inputs.some(function(terms){return terms.some(Boolean);}); }
   function currentAccount() { var a=root.QinshiAccounts.currentAccount(); return a?a.id:null; }
@@ -85,7 +86,9 @@
         '<section class="craft-panel"><h3>本次模拟材料</h3><p class="craft-note">仅填写本次所需材料，不管理剩余数量。手动材料可为合法的洗练或合成产物，系统自动校验。重复合成视为重新备齐本次材料。</p><div data-craft-simulator></div></section>');
     el.addEventListener('change',function(event){onChange(v,event.target);});
     el.addEventListener('click',function(event){
-      var control=event.target.closest('[data-craft-action]'); if(control) onClick(v,control);
+      var control=event.target.closest('[data-craft-action]');
+      if(control&&control.dataset.craftAction==='toggle-favorite'){event.preventDefault();event.stopPropagation();}
+      if(control) onClick(v,control);
     });
     el.addEventListener('input',function(event){if(event.target===field(v,'search')) suggestions(v);});
     field(v,'search').addEventListener('focus',function(){if(!itemFor(state.target)) suggestions(v);});
@@ -170,19 +173,36 @@
   function graphMaterial(m,x,extra) {
     return '<div class="craft-node craft-quality-'+m.quality+' '+(extra||'')+'"><b>'+esc(qLabel(m.quality))+'</b><p>'+displayTerms(m,x)+'</p></div>';
   }
+  function inspectFavorites() {
+    var api=root.InscriptionRouteFavorites;
+    if(!api||!root.QinshiAccounts)return;
+    if(!favoriteStore)favoriteStore=api.createStore(root.QinshiAccounts,{items:root.INSCRIPTION_DATA.items});
+    favoriteState=favoriteStore.inspect();
+  }
+  function favoriteFor(route,target,xAttr) {
+    if(!favoriteState||!favoriteState.valid||favoriteState.accountId!==accountId)return null;
+    return root.InscriptionRouteFavorites.match(favoriteState.entries.filter(function(entry){return entry.valid;}).map(function(entry){return entry.record;}),route,target,xAttr);
+  }
   function renderPlan(v,plan) {
     var host=area(v,'results'),target=state.target;
+    var opened={};host.querySelectorAll('details[data-route-index]').forEach(function(details){opened[details.dataset.routeIndex]=details.open;});
+    v.plan=plan;
     host.innerHTML='<section class="craft-panel"><h3>从蓝二到'+qLabel(target.quality)+'的完整路线</h3><p class="craft-note">'+modelNote+'</p>'+
-      '<p class="craft-note">'+(target.discipleKey?esc(itemFor(target).name+' · '+target.slot.replace('|',' · ')):'通用遁位路线：全部材料必须为同一个前缀、同一个遁位。')+
-      '。杂词条 X 不指定具体属性，默认采用同一种不分档词条；本路线需要一致的 X 不可换成多个不同杂词条。</p><p class="craft-note">展示具有不同中间配料的代表路线，每个目标最多整理21个候选后去重，不穷举所有材料树，也不按投料顺序变化凑方案。</p><div data-route-groups></div></section>';
+      '<p class="craft-note">'+(target.discipleKey?esc(itemFor(target).name+' · '+target.slot.replace('|',' · '))+'。':'通用遁位路线：全部材料必须为同一个前缀、同一个遁位。')+
+      '杂词条 X 不指定具体属性，默认采用同一种词条/不分档词条；本路线需要一致的 X 不可换成多个不同杂词条。</p><p class="craft-note">展示具有不同中间配料的代表路线，每个目标最多整理21个候选后去重，不穷举所有材料树，也不按投料顺序变化凑方案。点击星标收藏当前完整路线，收藏方案统一排在所有未收藏方案之前。</p><div data-route-groups></div></section>';
     var groups=host.querySelector('[data-route-groups]');
-    ['deterministic','probability'].forEach(function(kind){
-      var routes=plan.strategies.filter(function(s){return s.kind===kind;});
-      var heading=document.createElement('h4');heading.textContent=kind==='deterministic'?'必中合成方案（置换准备另计）':'概率合成方案';groups.appendChild(heading);
-      if(!routes.length){var note=document.createElement('p');note.className='craft-note';note.textContent=kind==='deterministic'?'当前目标没有已知的全程必中合成路线，不会把随机补词条当作必中。':'当前目标不需要单独展示额外的概率路线。';groups.appendChild(note);}
-      routes.forEach(function(route,index){
+    var entries=plan.strategies.map(function(route,index){return {route:route,index:index,favorite:favoriteFor(route,target,plan.xAttr)};});
+    ['favorites','deterministic','probability'].forEach(function(kind){
+      var routes=entries.filter(function(entry){return kind==='favorites'?!!entry.favorite:!entry.favorite&&entry.route.kind===kind;});
+      if(kind==='favorites'&&!routes.length)return;
+      var heading=document.createElement('h4');heading.className=kind==='favorites'?'craft-favorite-group-title':'';heading.textContent=kind==='favorites'?'已收藏方案（统一置顶）':kind==='deterministic'?'未收藏 · 必中合成方案（置换准备另计）':'未收藏 · 概率合成方案';groups.appendChild(heading);
+      if(!routes.length){var note=document.createElement('p');note.className='craft-note';note.textContent=entries.some(function(entry){return entry.route.kind===kind;})?'此类方案均已收藏并置顶。':kind==='deterministic'?'当前目标没有已知的全程必中合成路线，不会把随机补词条当作必中。':'当前目标不需要单独展示额外的概率路线。';groups.appendChild(note);}
+      routes.forEach(function(entry,index){
+        var route=entry.route;
         var details=document.createElement('details');details.className='craft-strategy';
-        details.innerHTML='<summary>'+esc((kind==='deterministic'?'必中':'概率')+'路线 '+(index+1))+' · 蓝二 → '+qLabel(target.quality)+'</summary><div class="craft-strategy-body"></div>';
+        details.dataset.routeIndex=String(entry.index);if(entry.favorite)details.classList.add('craft-favorite-pinned');
+        details.innerHTML='<summary class="craft-route-summary"><span>'+esc((route.kind==='deterministic'?'必中':'概率')+'路线 '+(entry.index+1))+' · 蓝二 → '+qLabel(target.quality)+'</span>'+
+          '<button type="button" class="craft-favorite-star'+(entry.favorite?' is-favorite':'')+'" data-craft-action="toggle-favorite" data-route-index="'+entry.index+'" aria-label="'+(entry.favorite?'取消收藏此完整路线':'收藏此完整路线')+'" aria-pressed="'+(entry.favorite?'true':'false')+'" title="'+(entry.favorite?'取消收藏':'收藏完整路线')+'"'+(!favoriteState||!favoriteState.valid||favoriteState.readOnly||favoriteBusy?' disabled':'')+'>'+(entry.favorite?'★':'☆')+'</button></summary><div class="craft-strategy-body"></div>';
         var rendered=false;
         function fill(){if(rendered)return;rendered=true;var body=details.querySelector('.craft-strategy-body');body.renderFlow=function(show){
           var old=body.querySelector('[data-flow-viewer]'),zoom=old?Number(old.dataset.zoom):0.9;
@@ -193,9 +213,29 @@
           viewer.querySelector('[data-craft-action="diagram-reset"]').textContent=Math.round(zoom*100)+'%';
         };body.renderFlow(false);}
         details.addEventListener('toggle',function(){if(details.open)fill();});
-        groups.appendChild(details);if(index===0){fill();details.open=true;}
+        groups.appendChild(details);if(Object.prototype.hasOwnProperty.call(opened,String(entry.index))?opened[String(entry.index)]:index===0){fill();details.open=true;}
       });
     });
+    if(favoriteState&&(!favoriteState.valid||favoriteState.readOnly)){
+      var warning=document.createElement('p');warning.className='craft-legacy-warning';warning.textContent=!favoriteState.valid?'收藏读取失败，原始数据已保留：'+favoriteState.errors.join('；'):'账号当前为只读，仍可查询路线；收藏操作需先取得编辑权。';groups.prepend(warning);
+    }
+  }
+  function toggleFavorite(v,control) {
+    if(favoriteBusy)return;
+    if(!favoriteStore||!favoriteState||!favoriteState.valid||favoriteState.accountId!==accountId){status(v,'收藏存档不可用，请重新打开铭文分区后操作。');return;}
+    if(!v.plan||v.planTarget!==JSON.stringify(state.target)){status(v,'查询目标已变化，请重新查询后收藏。');return;}
+    var route=v.plan.strategies[Number(control.dataset.routeIndex)],account=accountId,operation=++favoriteOperation;
+    if(!route)return;favoriteBusy=true;Object.keys(views).forEach(function(key){views[key].el.querySelectorAll('[data-craft-action="toggle-favorite"]').forEach(function(button){button.disabled=true;});});
+    try{
+      favoriteStore.toggle(route,clone(state.target),v.plan.xAttr,favoriteState.token,account).then(function(result){
+        if(!loaded||accountId!==account||currentAccount()!==account||operation!==favoriteOperation)return;
+        favoriteBusy=false;favoriteState=result;status(v,'');
+        root.dispatchEvent(new CustomEvent('inscription-route-favorites-change'));
+      }).catch(function(error){
+        if(accountId!==account||currentAccount()!==account||operation!==favoriteOperation)return;
+        favoriteBusy=false;status(v,'收藏未成功保存：'+error.message);Object.keys(views).forEach(function(key){views[key].el.querySelectorAll('[data-craft-action="toggle-favorite"]').forEach(function(button){button.disabled=!!favoriteState.readOnly;});});
+      });
+    }catch(error){favoriteBusy=false;status(v,'收藏未成功保存：'+error.message);Object.keys(views).forEach(function(key){views[key].el.querySelectorAll('[data-craft-action="toggle-favorite"]').forEach(function(button){button.disabled=!!favoriteState.readOnly;});});}
   }
   function generate(v) {
     var target=state.target,p=position(target),best=R.bestTargets(p.dun,target.quality,target.attrs);
@@ -262,7 +302,7 @@
     if(!state)return;
     Object.keys(views).forEach(function(key){
       var v=views[key];renderFilters(v);renderSimulator(v);
-      if(clearRoutes && area(v,'results')){area(v,'results').innerHTML='';v.planTarget='';}
+      if(clearRoutes && area(v,'results')){area(v,'results').innerHTML='';v.planTarget='';v.plan=null;}
     });
   }
   function updateSimulation(v,sim) {
@@ -300,6 +340,7 @@
     if(action.indexOf('diagram-')===0){F.zoom(control.closest('[data-flow-viewer]'),action.slice(8));return;}
     if(!loaded||currentAccount()!==accountId){status(v,'请重新打开铭文分区后再操作。');return;}
     status(v,'');
+    if(action==='toggle-favorite'){toggleFavorite(v,control);return;}
     if(action==='choose-disciple'){
       var target=clone(state.target);target.discipleKey=decodeURIComponent(control.dataset.key);target.slot='';
       changeTarget(v,target);return;
@@ -334,6 +375,7 @@
     }
   }
   function activate(mode) {
+    if(mode==='crafting-favorites'){if(root.InscriptionRouteFavorites)root.InscriptionRouteFavorites.activate();return;}
     if(!R||!P||!S||!F||!T||!root.QinshiAccounts||!root.INSCRIPTION_DATA)return;
     if(!store)store=S.createWorkbench(root.QinshiAccounts);
     var v=views[mode]||init(mode),account=currentAccount(),result=store.inspect();
@@ -341,7 +383,8 @@
       loaded=false;Object.keys(views).forEach(function(key){views[key].el.querySelectorAll('input,select,button').forEach(function(c){c.disabled=true;});status(views[key],'存档读取失败，已保留原始数据并禁止写入：'+result.errors.join('；'));});return;
     }
     var oldTarget=state&&JSON.stringify(state.target),changedAccount=!loaded||accountId!==account;
-    state=result.state;token=result.token;accountId=account;loaded=true;
+    state=result.state;token=result.token;accountId=account;loaded=true;if(changedAccount){favoriteOperation++;favoriteBusy=false;}
+    inspectFavorites();
     var normalized=normalizeTarget(state.target);
     // Normalize only in memory on first open. Merely opening never rewrites old data.
     state.target=normalized;
@@ -350,7 +393,12 @@
       if(changedAccount)view.generation++;
     });
     renderAll(changedAccount||oldTarget!==JSON.stringify(state.target));
+    Object.keys(views).forEach(function(key){var view=views[key];if(view.plan&&view.planTarget===JSON.stringify(state.target))renderPlan(view,view.plan);});
   }
   document.addEventListener('click',function(event){Object.keys(views).forEach(function(key){if(!event.target.closest('.craft-search')||!views[key].el.contains(event.target))hideSuggestions(views[key]);});});
-  root.InscriptionCraftingUI={activate:activate,refresh:function(){var keys=Object.keys(views);if(keys.length)activate(keys[0]);}};
+  root.addEventListener('inscription-route-favorites-change',function(){
+    if(!loaded||currentAccount()!==accountId)return;inspectFavorites();
+    Object.keys(views).forEach(function(key){var v=views[key];if(v.plan&&v.planTarget===JSON.stringify(state.target))renderPlan(v,v.plan);});
+  });
+  root.InscriptionCraftingUI={activate:activate,refresh:function(){var keys=Object.keys(views);if(keys.length)activate(keys[0]);if(root.InscriptionRouteFavorites)root.InscriptionRouteFavorites.refresh();}};
 })(window);

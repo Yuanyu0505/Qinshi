@@ -99,6 +99,68 @@
     state.recommendation = null;
   }
 
+  function searchText(value) {
+    return CORE.normalizeName(value).toLocaleLowerCase("zh-CN");
+  }
+
+  function renderSearchResults() {
+    if (!el.search || !el.searchResults) return;
+    var query = searchText(el.search.value);
+    el.searchResults.hidden = !query;
+    if (!query) {
+      el.searchResults.innerHTML = "";
+      return;
+    }
+    var matches = formations().map(function (formation) {
+      return {
+        formation: formation,
+        nameMatches: searchText(formation.name).indexOf(query) !== -1,
+        candidates: (formation.candidates || []).filter(function (candidate) {
+          return searchText(candidate.name).indexOf(query) !== -1;
+        }),
+      };
+    }).filter(function (match) { return match.nameMatches || match.candidates.length; });
+    var status = matches.length ? "找到 " + matches.length + " 个合阵，请选择" : "未找到匹配合阵或弟子，请更换关键词。";
+    el.searchResults.innerHTML = '<div class="formation-search-head"><p role="status">' + escapeHtml(status) +
+      '</p><button type="button" class="link-btn" data-formation-search-clear>清空</button></div>' +
+      (matches.length ? '<ul class="formation-search-list">' + matches.map(function (match) {
+        var formation = match.formation;
+        var detail = match.candidates.length ? "命中弟子：" + match.candidates.map(function (candidate) { return candidate.name; }).join("、") : "合阵名称匹配";
+        return '<li><button type="button" class="formation-search-result' + (formation.id === state.selectedId ? " is-selected" : "") +
+          '" data-formation-id="' + escapeHtml(formation.id) + '" aria-pressed="' + (formation.id === state.selectedId) + '"><strong>' +
+          escapeHtml(formation.name) + '</strong><span>' + escapeHtml(detail) + '</span><small>' + escapeHtml(formation.stone) +
+          ' 阵眼石' + (formation.id === state.selectedId ? " · 当前合阵" : "") + '</small></button></li>';
+      }).join("") + '</ul>' : "");
+  }
+
+  function clearSearch() {
+    el.search.value = "";
+    renderSearchResults();
+    el.search.focus();
+  }
+
+  function handleSearchKeydown(event) {
+    if (event.isComposing) return;
+    if (event.key === "Escape") {
+      event.preventDefault();
+      clearSearch();
+      return;
+    }
+    if (["ArrowDown", "ArrowUp", "Home", "End"].indexOf(event.key) === -1 || el.searchResults.hidden) return;
+    if (event.target === el.search && (event.key === "Home" || event.key === "End")) return;
+    var buttons = Array.prototype.slice.call(el.searchResults.querySelectorAll("button[data-formation-id]"));
+    if (!buttons.length) return;
+    var current = buttons.indexOf(event.target);
+    if (current === -1 && event.target !== el.search) return;
+    var next;
+    if (event.key === "Home") next = 0;
+    else if (event.key === "End") next = buttons.length - 1;
+    else if (event.key === "ArrowDown") next = current === -1 ? 0 : (current + 1) % buttons.length;
+    else next = current === -1 ? buttons.length - 1 : (current - 1 + buttons.length) % buttons.length;
+    event.preventDefault();
+    buttons[next].focus();
+  }
+
   function renderSelector() {
     if (!el.selector) return;
     var groups = {};
@@ -319,7 +381,6 @@
 
   function renderWorkspace() {
     var formation = selectedFormation();
-    renderSelector();
     if (!el.workspace) return;
     el.workspace.hidden = !formation;
     if (!formation) {
@@ -329,14 +390,43 @@
     el.workspace.innerHTML = officialHtml(formation) + personalHtml(formation) + calculatorHtml(formation) + recommendationHtml(formation);
   }
 
+  function progressFingerprint(formation, progress) {
+    progress = progress || {};
+    var members = progress.members || {};
+    return JSON.stringify({
+      mainId: progress.mainId || null,
+      members: formation.candidates.filter(function (candidate) {
+        return members[candidate.id] && members[candidate.id].owned;
+      }).map(function (candidate) {
+        var member = members[candidate.id];
+        return [candidate.id, member.usesReference === true].concat(["level", "attack", "health", "defense"].map(function (field) {
+          var parsed = CORE.parseIntegerInput(member[field], field === "level" ? 1 : 0);
+          return parsed.valid ? parsed.value : (parsed.missing ? null : "invalid:" + String(member[field]));
+        }));
+      }),
+    });
+  }
+
+  function hasUnsavedChanges() {
+    if (state.editing || state.draft) return true;
+    var formation = selectedFormation();
+    return Boolean(formation && state.calculator &&
+      progressFingerprint(formation, state.calculator) !== progressFingerprint(formation, savedProgress(formation)));
+  }
+
   function selectFormation(id) {
-    if (!formations().some(function (formation) { return formation.id === id; })) return;
+    if (!formations().some(function (formation) { return formation.id === id; })) return false;
+    if (id === state.selectedId) return true;
+    if (hasUnsavedChanges() && !root.confirm("当前合阵有未保存的个人进度或自由计算内容。切换后将放弃这些内容，是否继续？")) return false;
     state.selectedId = id;
     state.editing = false;
     state.draft = null;
     state.progressError = "";
     resetCalculator();
+    renderSelector();
     renderWorkspace();
+    renderSearchResults();
+    return true;
   }
 
   function progressForScope(scope) {
@@ -394,9 +484,19 @@
   }
 
   function handleClick(event) {
+    var clearButton = event.target.closest("button[data-formation-search-clear]");
+    if (clearButton && el.searchResults && el.searchResults.contains(clearButton)) {
+      clearSearch();
+      return;
+    }
     var formationButton = event.target.closest("button[data-formation-id]");
-    if (formationButton && el.selector.contains(formationButton)) {
-      selectFormation(formationButton.dataset.formationId);
+    if (formationButton && (el.selector.contains(formationButton) || (el.searchResults && el.searchResults.contains(formationButton)))) {
+      var fromSearch = el.searchResults && el.searchResults.contains(formationButton);
+      if (selectFormation(formationButton.dataset.formationId) && fromSearch) {
+        el.workspace.setAttribute("tabindex", "-1");
+        el.workspace.focus({ preventScroll: true });
+        el.workspace.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
       return;
     }
     var button = event.target.closest("button[data-action]");
@@ -463,6 +563,8 @@
     initialized = true;
     el.selector = document.getElementById("formation-selector");
     el.workspace = document.getElementById("formation-workspace");
+    el.search = document.getElementById("formation-search");
+    el.searchResults = document.getElementById("formation-search-results");
     if (!el.selector || !el.workspace) return;
     if (!DATA || !CORE) {
       el.selector.innerHTML = '<div class="error">合阵数据加载失败。</div>';
@@ -472,6 +574,15 @@
     el.selector.addEventListener("click", handleClick);
     el.workspace.addEventListener("click", handleClick);
     el.workspace.addEventListener("change", handleChange);
+    if (el.search && el.searchResults) {
+      el.search.setAttribute("aria-controls", "formation-search-results");
+      el.search.addEventListener("input", renderSearchResults);
+      el.search.addEventListener("search", renderSearchResults);
+      el.search.addEventListener("keydown", handleSearchKeydown);
+      el.searchResults.addEventListener("click", handleClick);
+      el.searchResults.addEventListener("keydown", handleSearchKeydown);
+      renderSearchResults();
+    }
     renderSelector();
   }
 

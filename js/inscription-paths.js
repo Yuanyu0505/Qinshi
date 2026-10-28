@@ -155,6 +155,15 @@
     if (!Rules.prefixes.includes(prefix)) return { valid:false, errors:["前缀无效"], targets:[], strategies:[] };
     var xAttr = ["闪避", "招架", "治疗效果"].find(function (attr) { return !goal.attrs.includes(attr); });
     var exactCache = new Map(), treeCache = new Map();
+    function inherited(target,inputs){
+      var pool=unique(inputs.flatMap(function(m){return m.terms;})),counts=new Map();
+      target.terms.forEach(function(t){if(!counts.has(t.attr))counts.set(t.attr,[]);counts.get(t.attr).push(t);});
+      return Array.from(counts).every(function(entry){
+        var wanted=entry[1],known=pool.filter(function(t){return t.attr===entry[0]&&t.tier!=='?';});
+        var unknown=inputs.reduce(function(n,m){return n+m.terms.filter(function(t){return t.attr===entry[0]&&t.tier==='?';}).length;},0);
+        return wanted.filter(function(t){return !known.some(function(k){return termKey(k)===termKey(t);});}).length<=unknown;
+      });
+    }
     function material(quality, terms) {
       var m = { prefix:prefix, dun:goal.dun, quality:quality, terms:clone(terms) }, origins = sources(m);
       return origins.length ? Object.assign(m, {origin:origins[0]}) : null;
@@ -170,7 +179,7 @@
           var pool=unique(core.concat(xAttr ? [{attr:xAttr,tier:"U"}] : [])), candidates=[];
           var count=Rules.qualities.find(function(q){return q.id===prev;}).count;
           choose(pool,count,false,function(terms){var m=material(prev,terms);if(m)candidates.push(m);});
-          choose(candidates,metadata.count,true,function(inputs){var route=verifiedRoute(target,inputs);if(route)selected.push(route);});
+          choose(candidates,metadata.count,true,function(inputs){if(!inherited(target,inputs))return;var route=verifiedRoute(target,inputs);if(route)selected.push(route);});
         }
         // Prefer one consistent, ungraded X across the entire diagram. Never
         // manufacture a probability from an unspecified multi-X material pool.
@@ -182,6 +191,9 @@
         selected.sort(function (a,b) {
           return b.probability-a.probability || a.requirements.length-b.requirements.length || (a.id<b.id ? -1 : 1);
         });
+        // Same-slot upgrades have a normal identical-material recipe. Do not
+        // manufacture extra strategies by replacing it with avoidable random picks.
+        if(['p2','o2'].includes(target.quality)&&selected.some(function(r){return r.deterministic;}))selected=selected.filter(function(r){return r.deterministic;});
         exactCache.set(sig, selected);
       }
       return exactCache.get(sig);
@@ -198,23 +210,8 @@
     }
     function washed(target, mode) {
       if (!sources(target).includes("wash")) return null;
-      // A purple low term is prepared by washing an already crafted base, NOT
-      // by inheriting a low tier from blue materials.
-      var terms = target.terms.map(function (t) { return {attr:t.attr,tier:t.tier==="L" ? "M" : t.tier}; });
-      var base = material(target.quality, terms);
-      if (!base || Rules.signature(base)===Rules.signature(target)) {
-        var pool = Rules.termsFor(target.dun,target.quality,"crafted"), count = Rules.qualities.find(function (q) { return q.id===target.quality; }).count;
-        base = null;
-        choose(pool,count,false,function (candidate) {
-          if (base) return;
-          var value = material(target.quality,candidate);
-          if (value && sources(value).includes("crafted") && !candidate.some(function (t) { return t.tier==="L"; })) base=value;
-        });
-      }
-      if (!base || Rules.signature(base)===Rules.signature(target)) return null;
-      var child = build(base,mode,true);
-      return child ? { kind:"wash", material:Object.assign(clone(target),{origin:"wash"}), children:[{quantity:1,node:child}], probability:null, hasChance:child.hasChance,
-        note:"置换至指定词条；低档只能通过置换准备。洗练概率未知，不计入合成成功率。" } : null;
+      return {kind:'wash',material:Object.assign(clone(target),{origin:'wash'}),children:[],probability:null,hasChance:false,
+        note:'另行置换合成素材铭文；从当前品质开始，洗练概率未知。'};
     }
     function build(target, mode, noWash, variant) {
       variant=variant||0;

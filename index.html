@@ -14,6 +14,8 @@
 <link rel="stylesheet" href="css/six-halls.css?v=1.0.65">
 <link rel="stylesheet" href="css/secret-realm.css?v=1.0.65">
 <link rel="stylesheet" href="css/inscription-crafting.css?v=1.0.65">
+<link rel="stylesheet" href="css/inscription-route-favorites.css?v=1.0.65">
+<link rel="stylesheet" href="css/formation-search.css?v=1.0.65">
 </head>
 <body>
 <div id="account-init-overlay" class="account-init-overlay" hidden>
@@ -307,6 +309,7 @@
         <button type="button" class="seg" data-mode="reference">资料图表</button>
         <button type="button" class="seg" data-mode="crafting-paths">合成路径查询</button>
         <button type="button" class="seg" data-mode="crafting-simulator">合成模拟</button>
+        <button type="button" class="seg" data-mode="crafting-favorites">收藏合成路径</button>
       </div>
 
       <div id="ins-common-status" class="error" role="alert" hidden></div>
@@ -314,8 +317,8 @@
         <section class="panel">
           <div class="filter-row ins-progress-toolbar">
             <span class="filter-label">弟子关键词</span>
-            <input id="ins-progress-search" type="search" placeholder="如：将威">
-            <div id="ins-progress-suggestions" class="ins-suggestions" hidden></div>
+            <div class="ins-progress-search-box"><input id="ins-progress-search" type="search" placeholder="如：将威" autocomplete="off">
+            <div id="ins-progress-suggestions" class="ins-suggestions" hidden></div></div>
           </div>
           <div class="muted-tip">选择弟子后自动带出全部天位·遁位；普通橙色为4个天位，红色神将为5个天位。</div>
         </section>
@@ -327,6 +330,7 @@
         <section class="panel">
           <div class="panel-title">查询筛选</div>
           <div class="ins-query-controls">
+            <select id="ins-disciple-group" aria-label="弟子分类"><option value="">全部弟子</option><option value="formation">合阵弟子</option><option value="common">常用弟子</option><option value="other">其他弟子</option></select>
             <select id="ins-quality"><option value="">全部品质</option><option value="普通橙色">普通橙色</option><option value="红色神将" selected>红色神将</option></select>
             <select id="ins-tian"><option value="">全部天位</option><option>天府</option><option>天相</option><option>天同</option><option>天梁</option><option>天机</option></select>
             <select id="ins-shield"><option value="">全部遁位</option><option>天遁</option><option>地遁</option><option>人遁</option><option>神遁</option><option>鬼遁</option><option>龙遁</option><option>虎遁</option><option>风遁</option><option>云遁</option></select>
@@ -339,6 +343,7 @@
       <section id="inscription-reference" hidden></section>
       <section id="inscription-crafting-paths" class="ins-crafting" hidden></section>
       <section id="inscription-crafting-simulator" class="ins-crafting" hidden></section>
+      <section id="inscription-crafting-favorites" class="ins-crafting" hidden></section>
     </section>
 
     <section id="partition-machine-beasts" hidden>
@@ -430,6 +435,7 @@
 
     <section id="partition-formations" hidden>
       <section class="panel formation-selector-panel">
+        <div class="formation-search"><label for="formation-search">搜索合阵或弟子</label><input id="formation-search" type="search" autocomplete="off" placeholder="输入合阵名或弟子名"><div id="formation-search-results" hidden></div></div>
         <div class="filter-row formation-selector-row">
           <span class="filter-label">阵眼石与合阵</span>
           <div id="formation-selector" class="formation-selector"></div>
@@ -950,6 +956,7 @@
 <script defer src="data/2026-09-content-update.js?v=1.0.65"></script>
 <script defer src="data/2026-10-equipment-update.js?v=1.0.65"></script>
 <script defer src="data/2026-10-forging-update.js?v=1.0.65"></script>
+<script defer src="data/2026-10-inscription-update.js?v=1.0.65"></script>
 <script defer src="js/account-edit-lease.js?v=1.0.65"></script>
 <script defer src="js/account-profiles.js?v=1.0.65"></script>
 <script defer src="js/calculation-runner.js?v=1.0.65"></script>
@@ -967,10 +974,12 @@
 <script defer src="js/ui-performance.js?v=1.0.65"></script>
 <script defer src="js/inscription-performance.js?v=1.0.65"></script>
 <script defer src="js/inscription-rules.js?v=1.0.65"></script>
+<script defer src="js/inscription-progress-rules.js?v=1.0.65"></script>
 <script defer src="js/inscription-terms.js?v=1.0.65"></script>
 <script defer src="js/inscription-paths.js?v=1.0.65"></script>
 <script defer src="js/inscription-crafting-state.js?v=1.0.65"></script>
 <script defer src="js/inscription-flowchart.js?v=1.0.65"></script>
+<script defer src="js/inscription-route-favorites.js?v=1.0.65"></script>
 <script defer src="js/inscription-crafting-ui.js?v=1.0.65"></script>
 <script defer src="js/inscription.js?v=1.0.65"></script>
 <script defer src="js/zhulu.js?v=1.0.65"></script>

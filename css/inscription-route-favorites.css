@@ -1,0 +1,13 @@
+.craft-route-summary { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+.craft-route-summary>span { min-width:0; flex:1; }
+.craft-route-summary small { display:block; margin-top:5px; color:var(--muted,#b7ad99); font-size:12px; font-weight:400; }
+.ins-crafting .craft-favorite-star { flex:0 0 auto; min-width:42px; min-height:42px; padding:6px 10px; border:1px solid #8a7343; border-radius:8px; background:transparent; color:#c1b59d; font-size:24px; line-height:1; }
+.ins-crafting .craft-favorite-star.is-favorite { color:#f2c763; border-color:#c99c40; background:#94731a24; }
+.ins-crafting .craft-favorite-star:focus-visible { outline:2px solid #f2c763; outline-offset:3px; }
+.craft-favorite-pinned { border-color:#bd9648; }
+.craft-favorite-group-title { color:#edcf87; }
+.craft-favorite-warning { margin:0 14px 14px; border:1px solid #b17655; border-radius:8px; padding:12px; color:#efc5ad; line-height:1.7; overflow-wrap:anywhere; }
+.craft-favorite-invalid { border-color:#b17655; }
+.craft-favorites-filters { grid-template-columns:repeat(4,minmax(0,1fr)); }
+@media(max-width:900px) { .craft-favorites-filters { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+@media(max-width:650px) { .craft-favorites-filters { grid-template-columns:minmax(0,1fr); } .craft-route-summary { gap:8px; } }

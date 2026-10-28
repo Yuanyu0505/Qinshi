@@ -6,6 +6,27 @@ const Paths = require("./inscription-paths.js");
 const goal = (dun="地遁", attrs=["技能穿透","技能穿透","技能穿透"],quality="o1") => ({prefix:"天同",dun,quality,attrs});
 const has = (m,attr,tier) => m.terms.some(t=>t.attr===attr&&t.tier===tier);
 
+test('normal representative recipes inherit every target instead of fishing for missing terms',()=>{
+  for(const g of [goal('鬼遁',['速','速','防'],'o2'),goal('云遁',['护盾','护盾','技免'],'o2'),goal('人遁',['技能穿透','技能穿透','PVP伤害'],'o2')]){
+    const plan=Paths.representative(g);assert.equal(plan.valid,true);
+    function visit(node){
+      if(node.kind==='wash'){assert.equal(node.children.length,0);return;}
+      if(node.kind==='craft'){
+        const inputs=node.children.flatMap(c=>Array.from({length:c.quantity},()=>c.node.material));
+        for(const attr of new Set(node.material.terms.map(t=>t.attr))){
+          const wanted=node.material.terms.filter(t=>t.attr===attr);
+          const known=new Set(inputs.flatMap(m=>m.terms).filter(t=>t.attr===attr&&t.tier!=='?').map(t=>t.tier));
+          const unknown=inputs.flatMap(m=>m.terms).filter(t=>t.attr===attr&&t.tier==='?').length;
+          assert.ok(wanted.filter(t=>!known.has(t.tier)).length<=unknown);
+        }
+        if(['p2','o2'].includes(node.material.quality))assert.equal(node.probability,1);
+      }
+      node.children.forEach(c=>visit(c.node));
+    }
+    plan.strategies.forEach(s=>visit(s.tree));
+  }
+});
+
 test("representative cloud routes retain multiple complementary intermediate recipes", () => {
   const plan=Paths.representative(goal('云遁',['护盾','护盾','技免'],'o2'));
   assert.equal(plan.valid,true);

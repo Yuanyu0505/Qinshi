@@ -5,11 +5,13 @@
   var PERFORMANCE = window.INSCRIPTION_PERFORMANCE;
   var RULES = window.InscriptionRules;
   var TERMS = window.InscriptionTerms;
+  var PROGRESS_RULES = window.InscriptionProgressRules;
   var ACCOUNT_STORAGE = window.QinshiAccounts;
   var STORE_KEY = "qinshi_inscription_progress_v2";
   var COMMON_STORE_KEY = "qinshi_inscription_common_v1";
   var commonKeys = new Set();
   var commonDefaultApplied = false;
+  var formationNames = new Set();
   var TIANS = ["天府", "天相", "天同", "天梁", "天机"];
   var SHIELDS = ["天遁", "地遁", "人遁", "神遁", "鬼遁", "龙遁", "虎遁", "风遁", "云遁"];
   var MAIN = {
@@ -40,7 +42,12 @@
 
   function init() {
     var partition = document.getElementById("partition-inscription");
-    if (!DATA || !PERFORMANCE || !partition) return;
+    if (!DATA || !PERFORMANCE || !PROGRESS_RULES || !partition) return;
+    // Content patches already normalize this; also guard direct/older data loads.
+    DATA.items.forEach(function (item) {
+      (item.slots || []).forEach(function (slot) { slot.shield = normalizeDunName(slot.shield); });
+    });
+    formationNames = PROGRESS_RULES.formationNames(window.FORMATIONS_DATA);
     el.modes = document.getElementById("inscription-modes");
     el.progressSearch = document.getElementById("ins-progress-search");
     el.suggestions = document.getElementById("ins-progress-suggestions");
@@ -49,6 +56,7 @@
     el.quality = document.getElementById("ins-quality");
     el.tian = document.getElementById("ins-tian");
     el.shield = document.getElementById("ins-shield");
+    el.discipleGroup = document.getElementById("ins-disciple-group");
     el.search = document.getElementById("ins-search");
     el.results = document.getElementById("ins-results");
     el.reference = document.getElementById("inscription-reference");
@@ -61,11 +69,7 @@
     el.progressSearch.addEventListener("input", renderSuggestions);
     el.suggestions.addEventListener("click", selectSuggestion);
     el.editor.addEventListener("click", handleEditorClick);
-    el.editor.addEventListener("change", refreshEditorMain);
-    el.editor.addEventListener("input", function(event) {
-      if (!event.target.matches(".ins-edit-sub-value")) return;
-      updateEditorTerm(event.target.closest(".ins-editor-slot"), event.target.closest("label"));
-    });
+    el.editor.addEventListener("change", handleEditorChange);
     el.progressList.addEventListener("click", handleProgressAction);
     renderCoordinator = PERFORMANCE.createRenderCoordinator({
       renderers: {
@@ -73,13 +77,14 @@
         query: renderQuery,
         reference: renderReference,
         "crafting-paths": function () { window.InscriptionCraftingUI.activate("crafting-paths"); },
+        "crafting-favorites": function () { window.InscriptionCraftingUI.activate("crafting-favorites"); },
         "crafting-simulator": function () { window.InscriptionCraftingUI.activate("crafting-simulator"); }
       },
       schedule: function (callback, delay) { return window.setTimeout(callback, delay); },
       cancel: function (id) { window.clearTimeout(id); },
       queryDelay: 120
     });
-    [el.quality, el.tian, el.shield].forEach(function (control) {
+    [el.quality, el.tian, el.shield, el.discipleGroup].filter(Boolean).forEach(function (control) {
       control.addEventListener("change", function () { renderCoordinator.invalidate("query"); });
     });
     el.search.addEventListener("input", function () { renderCoordinator.scheduleQuery(); });
@@ -107,30 +112,17 @@
   function loadProgress() {
     try {
       var parsed = JSON.parse(ACCOUNT_STORAGE.getItem(STORE_KEY) || "{}");
-      if (!parsed || typeof parsed !== "object") return {};
-      Object.keys(parsed).forEach(function (key) {
-        var saved = parsed[key];
-        if (!saved || !Array.isArray(saved.slots)) { delete parsed[key]; return; }
-        saved.slots.forEach(function (slot) {
-          slot.shield = normalizeDunName(slot.shield);
-          var values = Array.isArray(slot.subs) ? slot.subs.slice(0, 3) : [slot.sub || ""];
-          while (values.length < 3) values.push("");
-          slot.subs = values.map(function (value) { return normalizeAttrName(slot.shield, value); });
-          var subValues = Array.isArray(slot.subValues) ? slot.subValues.slice(0, 3) : [];
-          while (subValues.length < 3) subValues.push("");
-          slot.subValues = subValues.map(function (value) { return String(value == null ? "" : value).trim(); });
-          delete slot.sub;
-        });
-      });
+      if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return {};
+      // Keep raw history intact. Normalize only at display/validation boundaries.
       return parsed;
     } catch (error) { return {}; }
   }
   function normalizeDunName(value) {
-    return RULES.normalizeDun(String(value || ""));
+    return PROGRESS_RULES.normalizeDun(value);
   }
   function normalizeAttrName(shield, value) {
     shield = normalizeDunName(shield);
-    value = String(value || "");
+    value = PROGRESS_RULES.normalizeAttr(value);
     var attrs = SUBS[shield] || [];
     var normalized = RULES.normalizeAttr(value);
     var withoutThree = normalized.replace(/^3/, "");
@@ -219,6 +211,10 @@
       control.title = common ? "点击取消常用" : "设为常用";
       control.textContent = common ? "常用 · 取消" : "设为常用";
     });
+    if (el.discipleGroup && (el.discipleGroup.value === "common" || el.discipleGroup.value === "other")) {
+      renderCoordinator.invalidate("query");
+      return;
+    }
     // 只移动现有卡片，不重建铭文内容，也不清除正在输入的筛选条件。
     var cards = Array.from(el.results.querySelectorAll(".ins-query-card[data-ins-query-key]"));
     cards.sort(function (a, b) {
@@ -237,8 +233,9 @@
     var rendered = renderCoordinator.activate(button.dataset.mode);
     if (!rendered && button.dataset.mode.indexOf("crafting-") === 0) window.InscriptionCraftingUI.activate(button.dataset.mode);
     el.modes.querySelectorAll("button").forEach(function (item) { item.classList.toggle("active", item === button); });
-    ["progress", "query", "reference", "crafting-paths", "crafting-simulator"].forEach(function (mode) {
-      document.getElementById("inscription-" + mode).hidden = mode !== button.dataset.mode;
+    ["progress", "query", "reference", "crafting-paths", "crafting-favorites", "crafting-simulator"].forEach(function (mode) {
+      var panel = document.getElementById("inscription-" + mode);
+      if (panel) panel.hidden = mode !== button.dataset.mode;
     });
   }
 
@@ -264,85 +261,103 @@
   function renderEditor(item) {
     if (!item) { el.editor.innerHTML = ""; return; }
     var saved = progress[keyOf(item)];
-    el.editor.innerHTML = '<section class="ins-editor"><div class="ins-card-head"><div><span class="ins-quality ' + (item.quality === "红色神将" ? "red" : "orange") + '">' + item.quality + '</span><b>' + escapeHtml(item.name) + '</b></div><button type="button" class="link-btn" data-action="cancel">取消</button></div><div class="muted-tip ins-editor-tip">紫色每枚2条、橙色每枚3条；同一种不分档属性只允许1条，同属性同档不能重复，每枚最多2条高档。填写规则内精确数值（如+6%）；紫色以上中档来自合成。全空位置仅存为草稿。历史异常仅提示，调整后才保存。</div>' + item.slots.map(function (slot) {
-      var old = saved && saved.slots && saved.slots.find(function (x) { return x.tian === slot.tian; });
-      var quality = old ? old.quality : "橙色";
-      var star = old ? old.star : "2";
-      var subs = old && Array.isArray(old.subs) ? old.subs : ["", "", ""];
-      var subValues = old && Array.isArray(old.subValues) ? old.subValues : ["", "", ""];
-      return '<div class="ins-editor-slot" data-tian="' + slot.tian + '" data-shield="' + slot.shield + '"><div class="ins-slot-title">' + slot.tian + ' · ' + slot.shield + extremeNoteHtml(slot.shield) + '</div><div class="ins-editor-layout"><div class="ins-core-controls"><label>品质<select class="ins-edit-quality"><option' + (quality === "橙色" ? " selected" : "") + '>橙色</option><option' + (quality === "紫色" ? " selected" : "") + '>紫色</option></select></label><label>星级<select class="ins-edit-star"><option value="2"' + (star === "2" ? " selected" : "") + '>2星</option><option value="1"' + (star === "1" ? " selected" : "") + '>1星</option></select></label><div class="ins-main-preview"></div></div><div class="ins-editor-controls">' + [0, 1, 2].map(function (index) { return subEditorHtml(slot.shield, subs[index], subValues[index], index); }).join("") + '</div></div></div>';
+    var rows = item.slots.map(function (slot) {
+      var old = saved && Array.isArray(saved.slots) && saved.slots.find(function (entry) { return entry && entry.tian === slot.tian; });
+      return { slot: slot, old: old || null, entries: old ? PROGRESS_RULES.entries(old) : [] };
+    });
+    el.editor.innerHTML = '<section class="ins-editor"><div class="ins-card-head"><div><span class="ins-quality ' + (item.quality === "红色神将" ? "red" : "orange") + '">' + item.quality + '</span><b>' + escapeHtml(item.name) + '</b></div><button type="button" class="link-btn" data-action="cancel">取消</button></div><div class="muted-tip ins-editor-tip">蓝色1条、紫色2条、橙色3条；直接选择完整词条，同属性同档不能重复，每枚最多2条高档。紫色以上中档来自合成，不能与仅洗练可得的档位混用。蓝一仅供记录；蓝色同值档位不猜测。全空位置存为草稿。未调整的历史异常原样保留，调整该位置后须选择合法组合。</div>' + rows.map(function (record) {
+      var slot = record.slot, old = record.old, quality = old ? qualityId(old) : "o2";
+      var selectedQuality = quality || "__legacy_quality__";
+      var qualityOptions = (!quality ? '<option selected value="__legacy_quality__">' + escapeHtml(String(old.quality) + String(old.star || "") + '（历史未知品质）') + '</option>' : '') + PROGRESS_RULES.qualities.map(function (entry) {
+        return '<option value="' + entry.id + '"' + (entry.id === selectedQuality ? ' selected' : '') + '>' + entry.label + '</option>';
+      }).join("");
+      var controls = [];
+      for (var index = 0; index < Math.max(3, record.entries.length); index++) controls.push(subEditorHtml(slot.shield, quality, record.entries[index], index));
+      return '<div class="ins-editor-slot" data-tian="' + escapeHtml(slot.tian) + '" data-shield="' + escapeHtml(slot.shield) + '" data-quality="' + selectedQuality + '"><div class="ins-slot-title">' + escapeHtml(slot.tian + ' · ' + slot.shield) + extremeNoteHtml(slot.shield) + '</div><div class="ins-editor-layout"><div class="ins-core-controls"><label><span>品质星级</span><select class="ins-edit-quality">' + qualityOptions + '</select></label><div class="ins-main-preview"></div></div><div class="ins-editor-controls">' + controls.join("") + '</div></div></div>';
     }).join("") + '<div class="ins-editor-actions"><button type="button" class="seg active" data-action="save">保存</button></div></section>';
+    el.editor.querySelectorAll(".ins-editor-slot").forEach(function (row, index) {
+      row._insOriginalSlot = rows[index].old;
+      row._insLegacyEntries = rows[index].entries;
+      row._insInitialValue = JSON.stringify(editorSlot(row));
+    });
     refreshEditorMain();
   }
-  function subOptionsHtml(shield, selected) {
-    return '<option value="">请选择</option>' + (selected && !SUBS[shield].some(function (a) { return a.n === selected; }) ? '<option selected value="' + escapeHtml(selected) + '">' + escapeHtml(selected) + '（历史不支持属性）</option>' : '') + SUBS[shield].map(function (attr) {
-      return '<option value="' + escapeHtml(attr.n) + '"' + (attr.n === selected ? " selected" : "") + '>' + attr.n + (attr.x ? "（极致可三条）" : "") + '</option>';
+  function subOptionsHtml(shield, quality, selected, legacy) {
+    return '<option value="">请选择词条</option>' + (selected === "__legacy__" ? '<option selected value="__legacy__">' + escapeHtml((legacy.attr || "") + (legacy.raw || "") + (legacy.tier ? "（历史档位：" + legacy.tier + "）" : "") + '（历史异常，待修正）') + '</option>' : '') + PROGRESS_RULES.termsFor(shield, quality).map(function (term) {
+      var key = PROGRESS_RULES.identity(term);
+      return '<option value="' + escapeHtml(key) + '"' + (key === selected ? " selected" : "") + '>' + escapeHtml(PROGRESS_RULES.plain(term, quality, shield)) + '</option>';
     }).join("");
   }
-  function subEditorHtml(shield, selected, value, index) {
-    return '<label><span>副属性' + (index + 1) + '</span><span class="ins-sub-editor-fields"><select class="ins-edit-sub">' + subOptionsHtml(shield, selected) + '</select><input class="ins-edit-sub-value" type="text" value="' + escapeHtml(value || "") + '" placeholder="如：+6%" aria-label="副属性' + (index + 1) + '附加内容"></span><span class="ins-edit-term-preview"></span></label>';
+  function subEditorHtml(shield, quality, entry, index) {
+    entry = entry || { attr: "", raw: "", tier: "" };
+    var result = PROGRESS_RULES.resolve(normalizeAttrName(shield, entry.attr), entry.raw, entry.tier, shield, quality);
+    var selected = result.term ? PROGRESS_RULES.identity(result.term) : entry.attr || entry.raw || entry.tier ? "__legacy__" : "";
+    return '<label><span>副属性' + (index + 1) + '</span><select class="ins-edit-sub" data-index="' + index + '">' + subOptionsHtml(shield, quality, selected, entry) + '</select></label>';
   }
   function subDisplayHtml(slot, index) {
-    return TERMS.savedHtml((slot.subs || [])[index], (slot.subValues || [])[index], slot.shield, qualityId(slot));
+    var entry = PROGRESS_RULES.entries(slot)[index];
+    if (!entry || !(entry.attr || entry.raw || entry.tier)) return "";
+    var q = qualityId(slot), result = PROGRESS_RULES.resolve(normalizeAttrName(slot.shield, entry.attr), entry.raw, entry.tier, slot.shield, q);
+    var description = result.term && PROGRESS_RULES.describe(result.term, q, slot.shield);
+    return description ? '<span class="ins-term">' + TERMS.valueHtml(description.body, q) + '<span class="ins-term-tier">' + escapeHtml(description.suffix) + '</span></span>' : escapeHtml(entry.attr + entry.raw + (entry.tier ? '（历史档位：' + entry.tier + '）' : ''));
   }
-  function qualityId(slot) { return (slot.quality === "紫色" ? "p" : "o") + (String(slot.star) === "1" ? "1" : "2"); }
+  function qualityId(slot) { return PROGRESS_RULES.qualityId(slot); }
   function validateSlot(slot) {
-    var quality = qualityId(slot), required = RULES.qualities.find(function (q) { return q.id === quality; }).count;
-    var subs = slot.subs || [], values = slot.subValues || [], errors = [];
-    var nonempty = subs.filter(Boolean).length;
-    if (!nonempty && !values.some(Boolean)) return { valid:true, draft:true, errors:["未填写草稿，不作为有效材料"] };
-    if (nonempty !== required || subs.slice(required).some(Boolean) || values.slice(required).some(Boolean)) errors.push("此品质需恰好" + required + "条副属性，历史条数无效时请明确调整");
-    var candidates = subs.slice(0, required).map(function (attr, i) {
-      var raw = String(values[i] || "").trim();
-      if (!attr || !/^\+?\d+(?:\.\d+)?%?$/.test(raw)) { errors.push("副属性" + (i+1) + "缺失或非标准数值：" + (raw || "未填写")); return []; }
-      var amount = Number(raw.replace(/[+%]/g,""));
-      var info=RULES.attributes.find(function(a){return a.id===RULES.normalizeAttr(attr);});
-      if(raw.endsWith('%')&&info&&info.unit!=='%'){errors.push("副属性"+(i+1)+"不是百分比属性，不能填写百分号");return [];}
-      var choices = RULES.termsFor(slot.shield, quality).filter(function (term) { return term.attr === RULES.normalizeAttr(attr) && RULES.value(term,quality) === amount; });
-      if (!choices.length) errors.push("副属性" + (i+1) + "不支持此属性/数值：" + attr + raw);
-      return choices;
-    });
-    if (errors.length) return { valid:false,errors:errors };
-    var combinations = [[]];candidates.forEach(function (choices) { var next=[];combinations.forEach(function (terms) { choices.forEach(function (term) { next.push(terms.concat([term])); }); });combinations=next; });
-    var valid = combinations.some(function (terms) { return ["wash","crafted"].some(function (origin) { return RULES.validate({prefix:slot.tian,dun:slot.shield,quality:quality,origin:origin,terms:terms}).valid; }); });
-    return {valid:valid,errors:valid?[]:["词条组合无合法洗练/合成来源（同档或不分档重复、高档上限或来源不符）"]};
+    return PROGRESS_RULES.validateSlot(slot);
   }
   function slotWarningHtml(slot) {
     var result=validateSlot(slot);
     return result.valid && !result.draft ? "" : '<div class="craft-legacy-warning">' + (result.draft ? "草稿：" : "历史记录警告：") + escapeHtml(result.errors.join("；")) + '</div>';
   }
   function editorSlot(row) {
-    var subs=Array.from(row.querySelectorAll(".ins-edit-sub")).map(function (select) { return select.value; });
-    // Validation must see orphaned historical text, not silently turn it into a draft.
-    return {tian:row.dataset.tian,shield:row.dataset.shield,quality:row.querySelector(".ins-edit-quality").value,star:row.querySelector(".ins-edit-star").value,subs:subs,subValues:Array.from(row.querySelectorAll(".ins-edit-sub-value")).map(function (input) {return input.value;})};
+    var quality = row.querySelector(".ins-edit-quality").value;
+    var fields = PROGRESS_RULES.qualityFields(quality) || row._insOriginalSlot || {};
+    var slot = { tian: row.dataset.tian, shield: row.dataset.shield, quality: fields.quality, star: fields.star, subs: [], subValues: [], subTiers: [] };
+    var pool = PROGRESS_RULES.termsFor(row.dataset.shield, quality);
+    row.querySelectorAll(".ins-edit-sub").forEach(function (select, index) {
+      var term = pool.find(function (candidate) { return PROGRESS_RULES.identity(candidate) === select.value; });
+      var legacy = (row._insLegacyEntries || [])[index] || {};
+      var meta = term && RULES.attributes.find(function (attr) { return attr.id === term.attr; });
+      slot.subs.push(term ? term.attr : select.value === "__legacy__" ? legacy.attr || "" : "");
+      slot.subValues.push(term ? "+" + PROGRESS_RULES.value(term, quality, row.dataset.shield) + meta.unit : select.value === "__legacy__" ? legacy.raw || "" : "");
+      slot.subTiers.push(term ? term.tier : select.value === "__legacy__" ? legacy.tier || "" : "");
+    });
+    return slot;
   }
-  function updateEditorTerm(row, label) {
-    var q=(row.querySelector(".ins-edit-quality").value === "紫色" ? "p" : "o") + row.querySelector(".ins-edit-star").value;
-    label.querySelector(".ins-edit-term-preview").innerHTML=TERMS.savedHtml(label.querySelector(".ins-edit-sub").value,label.querySelector(".ins-edit-sub-value").value,row.dataset.shield,q);
+  function handleEditorChange(event) {
+    var row = event.target.closest(".ins-editor-slot");
+    if (!row) return;
+    if (event.target.matches(".ins-edit-quality")) {
+      var previous = row.dataset.quality, next = event.target.value;
+      if (previous === next) return;
+      var filled = Array.from(row.querySelectorAll(".ins-edit-sub")).some(function (select) { return Boolean(select.value); });
+      if (filled && !window.confirm("切换品质星级将清空此位置的全部副属性（含历史内容），是否继续？取消会保持原品质和词条。")) {
+        event.target.value = previous;
+        return;
+      }
+      row.dataset.quality = next;
+      row._insLegacyEntries = [];
+      row.querySelector(".ins-editor-controls").innerHTML = [0, 1, 2].map(function (index) { return subEditorHtml(row.dataset.shield, next, null, index); }).join("");
+    }
+    refreshEditorMain();
   }
   function refreshEditorMain() {
-    // Do not silently erase invalid choices; show the reason until corrected.
     el.editor.querySelectorAll(".ins-editor-slot").forEach(function (row) {
-      var quality = row.querySelector(".ins-edit-quality").value;
-      var star = row.querySelector(".ins-edit-star").value;
-      row.querySelector(".ins-main-preview").innerHTML = quality === "紫色" ? "主属性：暂不展示" : "主属性：" + mainStackHtml(MAIN[row.dataset.tian][star],"o"+star);
-      var selects = Array.prototype.slice.call(row.querySelectorAll(".ins-edit-sub"));
-      var selected = selects.map(function (select) { return select.value; });
-      var count = quality === "紫色" ? 2 : 3;
+      var quality = row.querySelector(".ins-edit-quality").value, info = PROGRESS_RULES.qualityInfo(quality);
+      var main = /^o[12]$/.test(quality) && MAIN[row.dataset.tian] && MAIN[row.dataset.tian][quality.charAt(1)];
+      row.querySelector(".ins-main-preview").innerHTML = main ? '主属性：' + mainStackHtml(main, quality) : "主属性：暂无此品质的已知数值";
+      var selects = Array.from(row.querySelectorAll(".ins-edit-sub")), pool = PROGRESS_RULES.termsFor(row.dataset.shield, quality);
+      var selected = selects.map(function (select) { return pool.find(function (term) { return PROGRESS_RULES.identity(term) === select.value; }) || null; });
+      var count = info ? info.count : 3;
+      row.querySelector(".ins-editor-controls").dataset.count = String(count);
       selects.forEach(function (select, currentIndex) {
-        var label=select.closest("label"), input=label.querySelector(".ins-edit-sub-value");
-        label.hidden=currentIndex>=count&&!select.value&&!input.value;
-        Array.prototype.forEach.call(select.options, function (option) {
-          if (!option.value) { option.disabled = false; return; }
-          var attr = SUBS[row.dataset.shield].find(function (item) { return item.n === option.value; });
-          var otherCount = selected.filter(function (value, index) { return index !== currentIndex && value === option.value; }).length;
-          option.disabled = Boolean(attr && select.value !== option.value && otherCount >= (attr.common ? 1 : attr.x ? count : 2));
+        select.closest("label").hidden = currentIndex >= count && !select.value;
+        Array.from(select.options).forEach(function (option) {
+          if (!option.value || option.value === "__legacy__" || option.value === select.value) { option.disabled = false; return; }
+          var candidate = pool.find(function (term) { return PROGRESS_RULES.identity(term) === option.value; });
+          var others = selected.filter(function (term, index) { return term && index !== currentIndex && index < count; });
+          option.disabled = currentIndex >= count || !candidate || !PROGRESS_RULES.canComplete(row.dataset.tian, row.dataset.shield, quality, others.concat([candidate]));
         });
-        var listId="ins-values-"+row.dataset.tian+"-"+currentIndex, list=label.querySelector("datalist");
-        if(!list){list=document.createElement("datalist");label.appendChild(list);}list.id=listId;input.setAttribute("list",listId);
-        var qualityKey=(quality === "紫色" ? "p" : "o")+star;
-        list.innerHTML=RULES.termsFor(row.dataset.shield,qualityKey).filter(function (t) {return t.attr===select.value;}).map(function(t){var meta=RULES.attributes.find(function(a){return a.id===t.attr;}),text=escapeHtml(TERMS.plain(t,qualityKey));return '<option value="+'+RULES.value(t,qualityKey)+meta.unit+'" label="'+text+'">'+text+'</option>';}).join("");
-        updateEditorTerm(row,label);
       });
       var warning=row.querySelector(".craft-legacy-warning");if(warning)warning.remove();row.insertAdjacentHTML("beforeend",slotWarningHtml(editorSlot(row)));
     });
@@ -353,10 +368,29 @@
     if (button.dataset.action === "cancel") { editingKey = ""; el.editor.innerHTML = ""; return; }
     var item = itemByKey(editingKey);
     if (!item) return;
-    var slots=Array.from(el.editor.querySelectorAll(".ins-editor-slot")).map(editorSlot);
-    var invalid=slots.filter(function(slot){return !validateSlot(slot).valid;});
+    var original = progress[editingKey];
+    if (original && !Array.isArray(original.slots)) { commonStatus("铭文未保存：历史记录结构异常，已保留原始内容，请先备份并修正该记录。"); return; }
+    var rows = Array.from(el.editor.querySelectorAll(".ins-editor-slot"));
+    var edited = rows.map(function (row) { return { row: row, slot: editorSlot(row) }; });
+    var invalid = edited.filter(function (entry) {
+      return (!entry.row._insOriginalSlot || JSON.stringify(entry.slot) !== entry.row._insInitialValue) && !validateSlot(entry.slot).valid;
+    });
     if(invalid.length){refreshEditorMain();commonStatus("铭文未保存：请调整无效历史记录或非法数值/条数。");return;}
-    try { saveProgress(editingKey,{name:item.name,quality:item.quality,slots:slots}); }
+    var replacements = new Map();
+    edited.forEach(function (entry) {
+      var unchanged = entry.row._insOriginalSlot && JSON.stringify(entry.slot) === entry.row._insInitialValue;
+      replacements.set(entry.slot.tian, unchanged ? entry.row._insOriginalSlot : Object.assign({}, entry.row._insOriginalSlot || {}, entry.slot));
+    });
+    // Preserve unknown/duplicate historical positions; only the visible first
+    // occurrence for each current position is replaced by an explicit edit.
+    var slots = original ? original.slots.map(function (slot) {
+      if (!slot || !replacements.has(slot.tian)) return slot;
+      var replacement = replacements.get(slot.tian);
+      replacements.delete(slot.tian);
+      return replacement;
+    }) : [];
+    replacements.forEach(function (slot) { slots.push(slot); });
+    try { saveProgress(editingKey, Object.assign({}, original || {}, {name:item.name,quality:item.quality,slots:slots})); }
     catch(error){commonStatus("铭文保存失败："+error.message);return;}
     commonStatus("");
     editingKey = "";
@@ -368,19 +402,28 @@
   function renderProgressList() {
     var entries = Object.keys(progress).map(function (key) { return { key: key, saved: progress[key], item: itemByKey(key) }; }).filter(function (entry) { return entry.item; });
     el.progressList.innerHTML = entries.length ? entries.map(function (entry) {
-      return '<article class="ins-progress-card"><div class="ins-card-head"><div><span class="ins-quality ' + (entry.item.quality === "红色神将" ? "red" : "orange") + '">' + entry.item.quality + '</span><b>' + escapeHtml(entry.item.name) + '</b>' + commonButtonHtml(entry.item) + '</div><div class="ins-progress-actions"><button type="button" class="seg" data-edit-key="' + encodeURIComponent(entry.key) + '">编辑</button><button type="button" class="seg danger" data-delete-key="' + encodeURIComponent(entry.key) + '">删除</button></div></div><div class="ins-saved-slots">' + entry.saved.slots.map(savedSlotHtml).join("") + '</div></article>';
+      var savedSlots = entry.saved && Array.isArray(entry.saved.slots) ? entry.saved.slots.map(savedSlotHtml).join("") : '<div class="craft-legacy-warning">历史记录结构异常，原始内容已保留；请先备份再修正。</div>';
+      return '<article class="ins-progress-card"><div class="ins-card-head"><div><span class="ins-quality ' + (entry.item.quality === "红色神将" ? "red" : "orange") + '">' + entry.item.quality + '</span><b>' + escapeHtml(entry.item.name) + '</b>' + commonButtonHtml(entry.item) + '</div><div class="ins-progress-actions"><button type="button" class="seg" data-edit-key="' + encodeURIComponent(entry.key) + '">编辑</button><button type="button" class="seg danger" data-delete-key="' + encodeURIComponent(entry.key) + '">删除</button></div></div><div class="ins-saved-slots">' + savedSlots + '</div></article>';
     }).join("") : '<div class="empty ins-empty"><p>尚未保存弟子铭文</p></div>';
   }
   function savedSlotHtml(slot) {
-    var main = slot.quality === "紫色" ? "主属性暂不展示" : (MAIN[slot.tian] && MAIN[slot.tian][slot.star] || "未知主属性");
-    var subs = Array.isArray(slot.subs) ? slot.subs : ["", "", ""];
-    return '<div class="ins-saved-slot"><div class="ins-saved-core"><b>' + escapeHtml(slot.tian + ' · ' + slot.shield) + extremeNoteHtml(slot.shield) + '</b>' + starBadgeHtml(slot.quality, slot.star) + mainStackHtml(main,qualityId(slot)) + '</div><div class="ins-saved-substats">' + subs.map(function (sub, index) { var display = subDisplayHtml(slot,index); return '<span class="ins-saved-sub' + (isExtremeAttr(slot.shield, sub) ? " extreme" : "") + '"><small>副属性' + (index + 1) + '</small><span>' + (display || "未设置") + '</span></span>'; }).join("") + '</div>' + slotWarningHtml(slot) + '</div>';
+    if (!slot || typeof slot !== "object" || Array.isArray(slot)) return '<div class="craft-legacy-warning">历史位置结构异常，原始内容已保留。</div>';
+    var quality = qualityId(slot), fields = PROGRESS_RULES.qualityFields(quality), info = PROGRESS_RULES.qualityInfo(quality);
+    var main = /^o[12]$/.test(quality) && MAIN[slot.tian] && MAIN[slot.tian][quality.charAt(1)] || "暂无此品质的已知主属性";
+    var parts = PROGRESS_RULES.entries(slot), displays = [];
+    var count = Math.max(info ? info.count : 3, parts.reduce(function (last, entry, index) { return entry.attr || entry.raw || entry.tier ? index + 1 : last; }, 0));
+    for (var index = 0; index < count; index++) {
+      var part = parts[index] || {}, display = subDisplayHtml(slot, index);
+      displays.push('<span class="ins-saved-sub' + (isExtremeAttr(slot.shield, part.attr) ? " extreme" : "") + '"><small>副属性' + (index + 1) + '</small><span>' + (display || "未设置") + '</span></span>');
+    }
+    return '<div class="ins-saved-slot"><div class="ins-saved-core"><b>' + escapeHtml(slot.tian + ' · ' + normalizeDunName(slot.shield)) + extremeNoteHtml(slot.shield) + '</b>' + starBadgeHtml(fields ? fields.quality : slot.quality, fields ? fields.star : slot.star) + mainStackHtml(main, quality) + '</div><div class="ins-saved-substats" data-count="' + count + '">' + displays.join("") + '</div>' + slotWarningHtml(slot) + '</div>';
   }
   function starBadgeHtml(quality, star) {
-    var normalizedQuality = quality === "紫色" ? "紫色" : "橙色";
-    var count = String(star) === "1" ? 1 : 2;
+    var color = { "蓝色": "blue", "紫色": "purple", "橙色": "orange" }[quality];
+    if (!color || !/^[12]$/.test(String(star))) return '<span class="ins-rank-unknown">未知品质星级</span>';
+    var count = Number(star);
     var stars = Array(count + 1).join('<span class="ins-rank-star" aria-hidden="true">★</span>');
-    return '<span class="ins-rank-stars ' + (normalizedQuality === "紫色" ? "purple" : "orange") + '" aria-label="' + normalizedQuality + count + '星" title="' + normalizedQuality + count + '星">' + stars + '</span>';
+    return '<span class="ins-rank-stars ' + color + '" aria-label="' + quality + count + '星" title="' + quality + count + '星">' + stars + '</span>';
   }
   function mainStackHtml(main, quality) { return TERMS.mainHtml(main,quality); }
   function handleProgressAction(event) {
@@ -405,6 +448,8 @@
     var query = el.search.value.trim().toLowerCase();
     var items = DATA.items.filter(function (item) {
       if (el.quality.value && item.quality !== el.quality.value) return false;
+      var group = el.discipleGroup && el.discipleGroup.value, isFormation = formationNames.has(item.name), isCommon = commonKeys.has(keyOf(item));
+      if (group === "formation" && !isFormation || group === "common" && !isCommon || group === "other" && (isFormation || isCommon)) return false;
       if (query && item.name.toLowerCase().indexOf(query) === -1) return false;
       return item.slots.some(slotMatchesFilter);
     });
@@ -420,34 +465,32 @@
     return a.name.localeCompare(b.name, "zh-CN", { sensitivity: "base" });
   }
   function slotMatchesFilter(slot) {
-    return (!el.tian.value || slot.tian === el.tian.value) && (!el.shield.value || slot.shield === el.shield.value);
+    return (!el.tian.value || slot.tian === el.tian.value) && (!el.shield.value || normalizeDunName(slot.shield) === normalizeDunName(el.shield.value));
   }
   function queryCardHtml(item) {
     var savedProgress = progress[keyOf(item)];
     var saved = Boolean(savedProgress);
     var visibleSlots = item.slots.filter(slotMatchesFilter);
     return '<article class="ins-query-card' + (saved ? " saved" : "") + '" data-ins-query-key="' + encodedKey(item) + '"><div class="ins-card-head"><div><span class="ins-quality ' + (item.quality === "红色神将" ? "red" : "orange") + '">' + item.quality + '</span><b class="' + (saved ? "ins-saved-name" : "") + '">' + escapeHtml(item.name) + '</b>' + commonButtonHtml(item) + (saved ? '<span class="ins-saved-mark">个人进度已保存</span>' : "") + '</div></div><div class="ins-query-slots">' + visibleSlots.map(function (slot) {
-      var savedSlot = savedProgress && savedProgress.slots.find(function (entry) { return entry.tian === slot.tian && entry.shield === slot.shield; });
+      var savedSlot = savedProgress && Array.isArray(savedProgress.slots) && savedProgress.slots.find(function (entry) { return entry && entry.tian === slot.tian && normalizeDunName(entry.shield) === normalizeDunName(slot.shield); });
       return '<div class="ins-query-slot"><div class="ins-slot-title">' + slot.tian + ' · ' + slot.shield + extremeNoteHtml(slot.shield) + '</div>' + queryMainHtml(slot, savedSlot) + '<div class="ins-query-substats"><div class="ins-sub-list"><span class="ins-sub-label">支持副属性（含合成档）</span>' + SUBS[slot.shield].map(subTagHtml).join("") + '</div>' + currentSubstatsHtml(savedSlot) + '</div></div>';
     }).join("") + '</div></article>';
   }
   function queryMainHtml(slot, savedSlot) {
-    var quality = savedSlot && savedSlot.quality === "紫色" ? "紫色" : "橙色";
-    var star = savedSlot && String(savedSlot.star) === "1" ? "1" : "2";
-    var main = quality === "紫色" ? "主属性暂不展示" : MAIN[slot.tian][star];
-    return '<div class="ins-main-line"><span class="ins-main-rank">' + starBadgeHtml(quality, star) + '<small>主属性</small></span>' + mainStackHtml(main,(quality==="紫色"?"p":"o")+star) + '</div>';
+    var quality = savedSlot ? qualityId(savedSlot) : "o2", fields = PROGRESS_RULES.qualityFields(quality);
+    var main = /^o[12]$/.test(quality) && MAIN[slot.tian] && MAIN[slot.tian][quality.charAt(1)] || "暂无此品质的已知主属性";
+    return '<div class="ins-main-line"><span class="ins-main-rank">' + starBadgeHtml(fields ? fields.quality : "", fields ? fields.star : "") + '<small>主属性</small></span>' + mainStackHtml(main, quality) + '</div>';
   }
   function currentSubstatsHtml(savedSlot) {
     if (!savedSlot) return "";
-    var subs = Array.isArray(savedSlot.subs) ? savedSlot.subs : ["", "", ""];
-    var current = subs.map(function (_, index) { return subDisplayHtml(savedSlot,index); }).filter(Boolean);
+    var current = PROGRESS_RULES.entries(savedSlot).map(function (_, index) { return subDisplayHtml(savedSlot,index); }).filter(Boolean);
     var values = current.length ? current.map(function (value) { return '<span class="ins-current-sub-tag">' + value + '</span>'; }).join("") : '<span class="ins-current-sub-tag empty">未设置</span>';
     return '<div class="ins-current-substats"><span class="ins-current-sub-label">当前副属性</span>' + values + '</div>' + slotWarningHtml(savedSlot);
   }
   function subTagHtml(attr) { return '<span class="ins-sub-tag' + (attr.x ? " extreme" : "") + '">' + attr.n + (attr.x ? '<em>可三条</em>' : "") + '</span>'; }
-  function isExtremeAttr(shield, name) { return (SUBS[shield] || []).some(function (attr) { return attr.x && attr.n === name; }); }
+  function isExtremeAttr(shield, name) { return (SUBS[normalizeDunName(shield)] || []).some(function (attr) { return attr.x && attr.n === normalizeAttrName(shield, name); }); }
   function extremeNoteHtml(shield) {
-    var names = (SUBS[shield] || []).filter(function (attr) { return attr.x; }).map(function (attr) { return attr.n; });
+    var names = (SUBS[normalizeDunName(shield)] || []).filter(function (attr) { return attr.x; }).map(function (attr) { return attr.n; });
     return names.length ? '<span class="ins-extreme-note">（极致：' + names.join("、") + '）</span>' : "";
   }
 

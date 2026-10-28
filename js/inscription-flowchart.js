@@ -11,11 +11,14 @@
   function qLabel(id){return R.qualities.find(function(q){return q.id===id;}).label;}
   function percent(value){var n=value*100,i=Math.round(n);return value>0&&i===0?'不足1%':value<1&&i===100?'超过99%':(Math.abs(n-i)>1e-8?'约':'')+i+'%';}
   function terms(material,x){
-    return material.terms.map(function(t,index){
-      if(t.attr===x)return (index?'＋':'')+'杂词条 X（同一个）';
+    var parts=[];
+    material.terms.forEach(function(t,index){
+      if(index)parts.push({text:'＋'});
+      if(t.attr===x){parts.push({text:'杂词条 X（同一个）'});return;}
       var value=T.describe(t,material.quality);
-      return {parts:[{text:index?'＋':''},{text:value.body,role:'value',rank:value.rank},{text:value.suffix,role:'tier'}]};
+      parts.push({text:value.body,role:'value',rank:value.rank},{text:value.suffix,role:'tier'});
     });
+    return [{parts:parts}];
   }
   function lineText(line){return typeof line==='string'?line:line.parts.map(function(part){return part.text;}).join('');}
   function lineHtml(line){
@@ -41,7 +44,12 @@
     });
     return result;
   }
-  function box(id,x,y,width,lines,kind){var text=wrap(lines,width);return{id:id,x:x,y:y,w:width,h:24+text.length*20,lines:text,kind:kind||'material'};}
+  function box(id,x,y,width,lines,kind){
+    // A complete stat combination is indivisible. Widen the local scrollable
+    // canvas instead of splitting a term or placing each stat on another line.
+    lines.forEach(function(line){if(typeof line!=='string')width=Math.max(width,Math.ceil(Array.from(lineText(line)).reduce(function(sum,c){return sum+(/[\u0000-\u00ff]/.test(c)?8.4:14);},0))+48);});
+    var text=wrap(lines,width);return{id:id,x:x,y:y,w:width,h:24+text.length*20,lines:text,kind:kind||'material'};
+  }
   function edge(from,to,label,extra){return Object.assign({from:from,to:to,label:label||''},extra||{});}
   function path(points){
     var a=points[0],b=points[1],c=points[2],d=points[3];
@@ -123,12 +131,15 @@
       cache.set(key,result);remember(node.material,result);
       link(operation,result,node.kind==='wash'?'置换概率未知':percent(node.probability));
       if(node.kind==='craft'){
-        var wanted=R.signature(node.material),failed=0;
-        node.outcomes.forEach(function(o){
-          if(R.signature(o.material)===wanted)return;
-          var failure=add(['失败'+qLabel(o.material.quality)+' '+letter(failed++)+number].concat(terms(o.material,x)),level,'failure');
-          remember(o.material,failure);link(operation,failure,percent(o.probability));
-        });
+        var wanted=R.signature(node.material),failures=node.outcomes.filter(function(o){return R.signature(o.material)!==wanted;});
+        if(failures.length){
+          var rows=failures.map(function(o,i){
+            return {parts:[{text:'失败'+qLabel(o.material.quality)+' '+letter(i)+number+'：'}].concat(terms(o.material,x)[0].parts,[{text:' ｜ '+percent(o.probability)}])};
+          });
+          var group=add(['失败结果（逐项列示）'].concat(rows),level,'failure');
+          failures.forEach(function(o,i){remember(o.material,Object.assign({},group,{ref:letter(i)+number}));});
+          link(operation,group,'失败合计 '+percent(failures.reduce(function(sum,o){return sum+o.probability;},0)));
+        }
       }
       return result;
     }
@@ -142,8 +153,11 @@
       // aliases that look like available materials.
       if(chosen.some(function(c){return !c.n;}))return;
       var center=chosen.reduce(function(sum,c){return sum+c.n.center;},0)/chosen.length;
-      var operation=add(['失败品互补复用 '+(index+1),'需备齐所连种类和数量'].concat(candidateInfo(reuse)),levels[reuse.material.quality]-1,'operation',center);
-      chosen.forEach(function(c,i){link(c.n,operation,'× '+c.quantity,{toPort:(i+1)/(chosen.length+1)});});
+      var operation=add(['失败品互补复用 '+(index+1),'投料：'+chosen.map(function(c){return c.n.ref+' × '+c.quantity;}).join('＋')].concat(candidateInfo(reuse)),levels[reuse.material.quality]-1,'operation',center);
+      var groups=new Map();
+      chosen.forEach(function(c){if(!groups.has(c.n.id))groups.set(c.n.id,{n:c.n,labels:[]});groups.get(c.n.id).labels.push(c.n.ref+' × '+c.quantity);});
+      var grouped=Array.from(groups.values());
+      grouped.forEach(function(g,i){link(g.n,operation,'',{toPort:(i+1)/(grouped.length+1)});});
       link(operation,goal,percent(reuse.probability),{toPort:(index+1)/(route.reuse.length+2)});
       if(reuse.probability<1){
         var other=add(['非目标'+qLabel(reuse.material.quality),'其他结果汇总'],levels[reuse.material.quality],'failure');

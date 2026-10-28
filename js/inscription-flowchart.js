@@ -7,6 +7,7 @@
 })(typeof window!=='undefined'?window:null,function(R,T){
   'use strict';
   var serial=0;
+  var wireColors=['#0072b2','#c45100','#00856a','#a339a3','#b72745','#6351bd','#626b16','#445563'];
   function esc(value){return String(value==null?'':value).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
   function qLabel(id){return R.qualities.find(function(q){return q.id===id;}).label;}
   function percent(value){var n=value*100,i=Math.round(n);return value>0&&i===0?'不足1%':value<1&&i===100?'超过99%':(Math.abs(n-i)>1e-8?'约':'')+i+'%';}
@@ -69,21 +70,21 @@
         var h=lines.length*18+10,x=e.labelX===undefined?d.x:e.labelX,y=e.labelY===undefined?d.y-44:e.labelY;
         labels.push('<g class="craft-flow-label"><rect x="'+(x-w/2)+'" y="'+(y-h/2)+'" width="'+w+'" height="'+h+'" rx="'+Math.min(15,h/2)+'"/>'+lines.map(function(line,i){return '<text x="'+x+'" y="'+(y-(lines.length-1)*9+i*18)+'">'+lineHtml(line)+'</text>';}).join('')+'</g>');
       }
-      return '<path class="craft-flow-connection" d="'+path([a,{x:a.x,y:via},{x:d.x,y:via},d])+'" marker-end="url(#'+id+'-arrow)"/>';
+      return '<path class="craft-flow-connection" style="stroke:'+wireColors[from.wireColor]+'" d="'+path([a,{x:a.x,y:via},{x:d.x,y:via},d])+'" marker-end="url(#'+id+'-arrow-'+from.wireColor+')"/>';
     }).join('');
     var description=nodes.map(function(n){return n.lines.map(lineText).join('，');}).join('；')+'。'+edges.filter(function(e){return e.label;}).map(function(e){return lineText(map.get(e.from).lines[0])+' → '+lineText(map.get(e.to).lines[0])+'：'+[].concat(e.label).join('，');}).join('；');
-    return '<svg xmlns="http://www.w3.org/2000/svg" class="craft-flow-svg" role="img" aria-labelledby="'+id+'-title '+id+'-desc" viewBox="0 0 '+width+' '+height+'" width="'+width+'" height="'+height+'" data-flow-width="'+width+'" data-flow-height="'+height+'">'+
+    return '<svg xmlns="http://www.w3.org/2000/svg" class="craft-flow-svg" role="img" aria-labelledby="'+id+'-title '+id+'-desc" viewBox="0 0 '+width+' '+height+'" width="'+Math.round(width*0.9)+'" height="'+Math.round(height*0.9)+'" data-flow-width="'+width+'" data-flow-height="'+height+'">'+
       '<title id="'+id+'-title">'+esc(title)+'</title><desc id="'+id+'-desc">'+esc(description)+'</desc>'+
-      '<defs><marker id="'+id+'-arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="8" markerHeight="8" orient="auto"><path d="M 1 1 L 7 4 L 1 7" fill="none" stroke="#929aa2" stroke-width="1.2"/></marker></defs>'+connections+
+      '<defs>'+wireColors.map(function(color,i){return '<marker id="'+id+'-arrow-'+i+'" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="8" markerHeight="8" orient="auto"><path d="M 1 1 L 7 4 L 1 7" fill="none" stroke="'+color+'" stroke-width="1.4"/></marker>';}).join('')+'</defs>'+connections+
       nodes.map(function(n){return '<g class="craft-flow-box craft-flow-'+n.kind+'"><rect x="'+n.x+'" y="'+n.y+'" width="'+n.w+'" height="'+n.h+'" rx="17"/>'+n.lines.map(function(line,i){return '<text x="'+(n.x+n.w/2)+'" y="'+(n.y+22+i*20)+'">'+lineHtml(line)+'</text>';}).join('')+'</g>';}).join('')+labels.join('')+'</svg>';
   }
   function figure(title,drawing,note){
-    return '<section class="craft-flow-step"><h5>'+esc(title)+'</h5><div class="craft-flow-viewer" data-flow-viewer data-zoom="1">'+
-      '<div class="craft-flow-toolbar"><span>左右滑动查看连线</span><div>'+control('out','缩小')+control('reset','100%')+control('in','放大')+'</div></div>'+
+    return '<section class="craft-flow-step"><h5>'+esc(title)+'</h5><div class="craft-flow-viewer" data-flow-viewer data-zoom="0.9">'+
+      '<div class="craft-flow-toolbar"><span>同一来源的连线与箭头同色；左右滑动查看</span><div>'+control('out','缩小')+control('reset','90%')+control('in','放大')+'</div></div>'+
       '<div class="craft-flow-viewport" tabindex="0" role="region" aria-label="'+esc(title)+'，可左右滚动">'+drawing+'</div></div>'+
       (note?'<p class="craft-note">'+esc(note)+'</p>':'')+'</section>';
   }
-  function control(action,label){return '<button type="button" class="seg" data-craft-action="diagram-'+action+'" aria-label="'+esc(action==='reset'?'恢复当前流程图原始大小':label+'当前流程图')+'">'+esc(label)+'</button>';}
+  function control(action,label){return '<button type="button" class="seg" data-craft-action="diagram-'+action+'" aria-label="'+esc(action==='reset'?'恢复当前流程图默认比例90%':label+'当前流程图')+'">'+esc(label)+'</button>';}
   function letter(index){var result='';do{result=String.fromCharCode(65+index%26)+result;index=Math.floor(index/26)-1;}while(index>=0);return result;}
   function candidateInfo(node){
     if(node.kind==='wash')return ['置换 / 洗练','得到指定词条组合'];
@@ -174,22 +175,38 @@
       width=Math.max(width,span+32);rows.push({nodes:row,span:span});
     }
     rows.forEach(function(row){
-      row.nodes.forEach(function(n){var incoming=edges.filter(function(e){return e.to===n.id;}).map(function(e){var from=byId.get(e.from);return from.x+from.w/2;});n.desired=incoming.length?incoming.reduce(function(a,b){return a+b;},0)/incoming.length:n.center;});
+      row.nodes.forEach(function(n){
+        var incoming=edges.filter(function(e){return e.to===n.id;}).map(function(e){return byId.get(e.from);});
+        var materials=incoming.filter(function(from){return from.kind!=='promotion';}).map(function(from){return from.x+from.w/2;}).sort(function(a,b){return a-b;});
+        // Keep the primary operation/result chain vertical. For a merge use a
+        // real material as the spine, rather than averaging in its promotion.
+        n.desired=n.kind==='success'&&incoming.length?incoming[0].x+incoming[0].w/2:materials.length?materials[Math.floor(materials.length/2)]:n.center;
+      });
       row.nodes.filter(function(n){return n.kind==='promotion';}).forEach(function(n){
         var consumer=edges.find(function(e){return e.from===n.id;});
         var peers=consumer?edges.filter(function(e){return e.to===consumer.to&&e.from!==n.id;}).map(function(e){return byId.get(e.from);}):[];
-        if(peers.length)n.desired=peers.reduce(function(sum,p){return sum+(p.desired===undefined?p.center:p.desired)+p.w/2;},0)/peers.length+n.w/2+gap;
+        if(peers.length)n.desired=Math.max.apply(null,peers.map(function(p){return (p.desired===undefined?p.center:p.desired)+p.w/2;}))+n.w/2+gap;
       });
       row.nodes.sort(function(a,b){return a.desired-b.desired;});
-      var left=(width-row.span)/2,height=Math.max.apply(null,row.nodes.map(function(n){return n.h;}));
-      row.nodes.forEach(function(n){n.x=left;n.y=y+height-n.h;left+=n.w+gap;});
+      var left=16,height=Math.max.apply(null,row.nodes.map(function(n){return n.h;}));
+      row.nodes.forEach(function(n,i){n.x=Math.max(left,n.desired-n.w/2);n.y=y+height-n.h;n.wireColor=i%wireColors.length;left=n.x+n.w+gap;width=Math.max(width,n.x+n.w+16);});
       y+=height+60;
+    });
+    nodes.forEach(function(n){
+      var incoming=edges.filter(function(e){return e.to===n.id;}).sort(function(a,b){var aa=byId.get(a.from),bb=byId.get(b.from);return aa.x+aa.w/2-bb.x-bb.w/2;});
+      var center=n.x+n.w/2,anchor=-1,distance=Infinity;
+      incoming.forEach(function(e,i){var from=byId.get(e.from),d=Math.abs(from.x+from.w/2-center);if(d<distance){anchor=i;distance=d;}});
+      incoming.forEach(function(e,i){
+        // Left inputs enter on the left, the spine enters at the centre, and
+        // right-side promotion materials enter on the right without swapping.
+        e.toPort=i===anchor?0.5:i<anchor?0.1+0.3*(i+1)/(anchor+1):0.6+0.3*(i-anchor)/(incoming.length-anchor);
+      });
     });
     var title='完整合成流程'+(settings.positionLabel?' · '+settings.positionLabel:'');
     edges.forEach(function(e){
       var from=byId.get(e.from);
       // Reserve separate vertical space for quantity pills and horizontal wires.
-      e.viaY=from.y+from.h+44;
+      e.viaY=from.y+from.h+40+(from.wireColor%4)*4;
       if(typeof e.label==='string'&&e.label.indexOf('× ')===0){e.labelX=from.x+from.w/2;e.labelY=from.y+from.h+20;}
     });
     return '<div class="craft-flow-guide">每个方案一图到底。合成材料与独立置换材料并行汇入下一次合成；箭头上的 × 数量表示投料数。成功品和失败品直接连到后续用途，不靠跨图编号衔接。多次尝试需重复准备相应材料。</div>'+
@@ -197,7 +214,7 @@
   }
   function zoom(viewer,action){
     if(!viewer)return;var drawing=viewer.querySelector('svg');if(!drawing)return;
-    var current=Number(viewer.dataset.zoom)||1,next=action==='reset'?1:Math.max(0.5,Math.min(1.6,Math.round((current+(action==='in'?0.1:-0.1))*10)/10));
+    var current=Number(viewer.dataset.zoom)||0.9,next=action==='reset'?0.9:Math.max(0.5,Math.min(1.6,Math.round((current+(action==='in'?0.1:-0.1))*10)/10));
     viewer.dataset.zoom=String(next);drawing.style.width=Math.round(Number(drawing.dataset.flowWidth)*next)+'px';drawing.style.height=Math.round(Number(drawing.dataset.flowHeight)*next)+'px';
     var reset=viewer.querySelector('[data-craft-action="diagram-reset"]');if(reset)reset.textContent=Math.round(next*100)+'%';
   }

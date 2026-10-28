@@ -51,7 +51,7 @@
 .craft-flow-viewport { overflow:auto; max-width:100%; min-width:0; overscroll-behavior:contain; touch-action:pan-x pan-y; scrollbar-color:#b5c8d8 #f4f8fb; }
 .craft-flow-viewport:focus-visible { outline:2px solid #438ac1; outline-offset:-3px; }
 .craft-flow-svg { display:block; max-width:none; margin:0 auto; background:#fff; }
-.craft-flow-connection { fill:none; stroke:#929aa2; stroke-width:1.2; }
+.craft-flow-connection { fill:none; stroke:#929aa2; stroke-width:1.6; }
 .craft-flow-box rect { fill:#e5f3ff; stroke:#d4dee6; stroke-width:1.1; }
 .craft-flow-success rect { stroke:#a9c8df; stroke-width:1.4; }
 .craft-flow-box text,.craft-flow-label text { fill:#005aab; font:600 14px system-ui,"Microsoft YaHei",sans-serif; text-anchor:middle; dominant-baseline:middle; }

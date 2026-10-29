@@ -47,7 +47,7 @@ test('currency targets and independently claimed rewards never repeat previous d
   assert.equal(core.advance(state,start+14*day,data).realms.gaoyue.currency,50);
 });
 
-test('fixed six-yuan purchases grant three tickets immediately and today purchase prevents another purchase',()=>{
+test('fixed six-yuan purchases grant three tickets immediately and period totals limit remaining purchases',()=>{
   const state=core.updateSource(active(),'gaoyue',2,'pack6',{purchased:1,todayPurchased:1,todayDate:'2026-10-01'},start,data);
   assert.equal(state.realms.gaoyue.periods[2].sources.pack6.obtained,3);
   assert.equal(row(state,'gaoyue',2,'pack6').availableDraws,0);
@@ -177,26 +177,26 @@ test('free source availability subtracts obtained draws and never represents a n
   assert.deepEqual(row(state, 'gaoyue', 2, 'panda'), { id: 'panda', name: '熊猫头', draws: 35, price: 0, maxPurchases: 0, availableDraws: 28, availableCurrency:56, purchaseCurrency:0 });
 });
 
-test('missed daily rewards expire and today already obtained is subtracted only once', () => {
+test('missed daily rewards expire but planning does not interpret legacy today flags', () => {
   let state = active();
   let input = core.buildPlanningInput(state, 'gaoyue', start + 9 * day, data);
   assert.equal(input.periods[0].sources.find(s => s.id === 'daily-free').availableDraws, 5);
   state = core.updateSource(state, 'gaoyue', 2, 'daily-free', { obtained: 2, todayDate: '2026-10-10', todayObtained: 1 }, start + 9 * day, data);
   input = core.buildPlanningInput(state, 'gaoyue', start + 9 * day, data);
-  assert.equal(input.periods[0].sources.find(s => s.id === 'daily-free').availableDraws, 4);
+  assert.equal(input.periods[0].sources.find(s => s.id === 'daily-free').availableDraws, 5);
   assert.equal(core.buildPlanningInput(state, 'gaoyue', start + 10 * day, data).periods[0].sources.find(s => s.id === 'daily-free').availableDraws, 4);
 });
 
-test('today pack6 bought immediately grants tickets and removes today purchase slot', () => {
+test('pack6 grants fixed tickets and remaining availability uses only period totals and days', () => {
   const now = start + 9 * day;
   let state = core.updateSource(active(), 'gaoyue', 2, 'pack6', { purchased: 2, todayDate: '2026-10-10', todayPurchased: 1 }, now, data);
   let source = core.buildPlanningInput(state, 'gaoyue', now, data).periods[0].sources.find(s => s.id === 'pack6');
   assert.equal(source.availableDraws, 0);
-  assert.equal(source.maxPurchases, 4);
+  assert.equal(source.maxPurchases, 5);
   state = core.updateSource(state, 'gaoyue', 2, 'pack6', { purchased: 2, todayDate: '2026-10-10', todayPurchased: 1 }, now, data);
   source = core.buildPlanningInput(state, 'gaoyue', now, data).periods[0].sources.find(s => s.id === 'pack6');
   assert.equal(source.availableDraws, 0);
-  assert.equal(source.maxPurchases, 4);
+  assert.equal(source.maxPurchases, 5);
 });
 
 test('every period retains its configuration and select-all never implicitly enables pack648', () => {

@@ -39,7 +39,7 @@ test('six yuan fixed purchase UI has no independent claim inputs and stores thre
   const {context,page}=await open();try{
     const today=await page.evaluate(()=>new Date(Date.now()+28800000).toISOString().slice(0,10));await page.locator('[name=startDate]').fill(today);await page.locator('[data-realm-form=date] [type=submit]').click();
     const s=page.locator('[data-realm-source=pack6]');assert.equal(await s.locator('[name=obtained]').count(),0);assert.equal(await s.locator('[name=todayObtained]').count(),0);
-    await s.locator('[name=purchased]').fill('1');await s.locator('[name=todayPurchased]').check();await s.locator('[type=submit]').click();
+    await s.locator('[name=purchased]').fill('1');assert.equal(await s.locator('[name=todayPurchased]').count(),0);
     assert.equal(await page.evaluate(()=>JSON.parse(window.QinshiAccounts.getItem('qinshi_secret_realms_v1')).realms.guigu.periods[6].sources.pack6.obtained),3);
   }finally{await context.close();}
 });
@@ -90,9 +90,9 @@ test('existing and future account common defaults are isolated and preserve othe
 
 test('currency balance and independent source receipts persist per realm without crediting predictions',async()=>{
   const {context,page}=await open();try{
-    await page.locator('[name=currency]').fill('80');await page.locator('[data-realm-form=totals] [type=submit]').click();
+    await page.locator('[name=currency]').fill('80');
     const today=await page.evaluate(()=>new Date(Date.now()+28800000).toISOString().slice(0,10));await page.locator('[name=startDate]').fill(today);await page.locator('[data-realm-form=date] [type=submit]').click();
-    const source=page.locator('[data-realm-source=panda]');await source.locator('[name=currencyObtained]').fill('20');await source.locator('[type=submit]').click();
+    const source=page.locator('[data-realm-source=panda]');await source.locator('[name=currencyObtained]').fill('20');
     await page.locator('[data-realm-mode=planner]').click();await page.locator('[name=targetEnabled]').uncheck();await page.locator('[name=currencyTargetEnabled]').check();await page.locator('[name=currencyTarget]').fill('100');await result(page);
     await page.locator('[data-realm-mode=progress]').click();assert.equal(await page.locator('[name=currency]').inputValue(),'80');assert.equal(await page.locator('[data-realm-source=panda] [name=currencyObtained]').inputValue(),'20');
     await page.locator('[data-realm-id=gaoyue]').click();assert.equal(await page.locator('[name=currency]').inputValue(),'0');await page.locator('[data-realm-id=guigu]').click();assert.equal(await page.locator('[name=currency]').inputValue(),'80');

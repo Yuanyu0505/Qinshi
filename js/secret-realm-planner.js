@@ -19,7 +19,7 @@
   function add(left, right, label) { return safe(BigInt(left) + BigInt(right), label); }
 
   // Parse the decimal the user actually supplied, including exponential form.
-  // All monetary arithmetic and discount half-up rounding remain exact.
+  // All monetary arithmetic and whole-yuan ceiling remain exact.
   function decimal(value, label) {
     if (typeof value !== 'number' || !Number.isFinite(value) || value < 0) fail(label + '必须是有效非负数');
     const parts = String(value).toLowerCase().split('e');
@@ -39,8 +39,8 @@
   }
   function cashExact(cents, discount) {
     const numerator = BigInt(cents) * discount.numerator;
-    const denominator = discount.denominator * 10n;
-    return (numerator * 2n + denominator) / (denominator * 2n);
+    const denominator = discount.denominator * 10n * 100n;
+    return ((numerator + denominator - 1n) / denominator) * 100n;
   }
   function cash(cents, discount) { return safe(cashExact(cents, discount), '折后金额'); }
 

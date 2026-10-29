@@ -21,9 +21,55 @@ async function openRealm(options={}){
   await openApp(page,url+'/#secret-realm');await page.locator('#secret-realm-content').waitFor();return {context,page};
 }
 async function saved(page){return page.evaluate(()=>JSON.parse(window.QinshiAccounts.getItem('qinshi_secret_realms_v1')));}
-async function saveTotals(page,cumulative,inventory){const form=page.locator('[data-realm-form="totals"]');await form.locator('[name=cumulative]').fill(String(cumulative));await form.locator('[name=inventory]').fill(String(inventory));await form.locator('[type=submit]').click();}
+async function saveTotals(page,cumulative,inventory){const form=page.locator('[data-realm-form="totals"]');await form.locator('[name=cumulative]').fill(String(cumulative));await form.locator('[name=inventory]').fill(String(inventory));}
 async function setupSixYuan(page){await page.locator('[data-realm-mode=planner]').click();await page.locator('[data-realm-action=none]').click();await page.locator('[data-realm-enable=pack6]').check();await page.locator('[name=target]').fill('3');}
 async function runPlan(page){await page.locator('[data-realm-calculate]').click();await page.waitForFunction(()=>{const h=document.querySelector('#secret-realm-content');return h.getAttribute('aria-busy')==='false'&&document.querySelector('[data-realm-results] .realm-plan');},null,{timeout:10000});}
+
+test('progress auto-saves without save buttons, source switches or input-node replacement',async()=>{
+  const {context,page}=await openRealm();try{
+    assert.equal(await page.locator('.realm-source-tools,[data-realm-enable]').count(),0);
+    assert.equal(await page.locator('[data-realm-form=totals] button,[data-realm-form=source] button').count(),0);
+    await page.locator('[name=cumulative]').evaluate(el=>{window.__realmEditNode=el;});
+    await page.locator('[name=cumulative]').fill('123');await page.locator('[name=inventory]').fill('20');
+    assert.equal(await page.evaluate(()=>window.__realmEditNode===document.querySelector('[name=cumulative]')),true);
+    assert.equal((await saved(page)).realms.guigu.cumulative,123);
+    await page.locator('[name=cumulative]').fill('');assert.equal((await saved(page)).realms.guigu.cumulative,123);
+    await page.locator('[name=cumulative]').fill('124');assert.equal((await saved(page)).realms.guigu.cumulative,124);
+    assert.equal(await page.locator('[data-realm-source=paid-pass] [name=purchased][type=checkbox]').count(),1);
+    assert.equal(await page.locator('[data-realm-source=pack198] [name=obtained]').count(),0);
+  }finally{await context.close();}
+});
+
+test('completed plans survive mode realm and partition navigation but not changed fees',async()=>{
+  const {context,page}=await openRealm({width:1100});try{
+    await setupSixYuan(page);await runPlan(page);const text=await page.locator('[data-realm-results]').innerText();
+    await page.locator('[data-realm-mode=progress]').click();await page.locator('[data-realm-id=gaoyue]').click();await page.locator('[data-realm-id=guigu]').click();await page.locator('[data-realm-mode=planner]').click();
+    assert.equal(await page.locator('[data-realm-results]').innerText(),text);
+    await page.evaluate(()=>document.querySelector('[data-partition=atlas]').click());
+    await page.evaluate(()=>document.querySelector('[data-partition="secret-realm"]').click());
+    assert.equal(await page.locator('[data-realm-results]').innerText(),text);
+    assert.equal(await page.locator('[name=platformId] option').count(),3);
+    assert.match(await page.locator('[name=platformId] option:checked').innerText(),/小7\/果盘.*4折/);
+    assert.equal(await page.locator('[data-realm-form=settings] button').count(),0);
+    assert.equal(await page.locator('.realm-costs').evaluate(el=>getComputedStyle(el).gridTemplateColumns.split(' ').length),5);
+    await page.locator('[name=vouchers]').fill('1');assert.equal(await page.locator('.realm-plan').count(),0);
+  }finally{await context.close();}
+});
+
+test('same-input recalculation interrupted by navigation retains the last completed plan',async()=>{
+  const {context,page}=await openRealm();try{
+    await setupSixYuan(page);
+    await page.evaluate(()=>{const Native=window.Worker;window.__heldRealmResults=[];window.Worker=class{constructor(url){this.worker=new Native(url);this.worker.onmessage=e=>window.__heldRealmResults.push(()=>{if(this.onmessage)this.onmessage(e);});this.worker.onerror=e=>{if(this.onerror)this.onerror(e);};}postMessage(v){this.worker.postMessage(v);}terminate(){this.worker.terminate();}};});
+    await page.locator('[data-realm-calculate]').click();await page.waitForFunction(()=>window.__heldRealmResults.length>0);
+    await page.evaluate(()=>window.__heldRealmResults.splice(0).forEach(fn=>fn()));await page.locator('.realm-plan').waitFor();
+    const previous=await page.locator('[data-realm-results]').innerText();
+    await page.locator('[data-realm-calculate]').click();await page.waitForFunction(()=>window.__heldRealmResults.length>0);
+    await page.locator('[data-realm-mode=progress]').click();await page.locator('[data-realm-mode=planner]').click();
+    assert.equal(await page.locator('[data-realm-results]').innerText(),previous);
+    await page.evaluate(()=>window.__heldRealmResults.splice(0).forEach(fn=>fn()));
+    assert.equal(await page.locator('[data-realm-results]').innerText(),previous);
+  }finally{await context.close();}
+});
 
 test('numeric UI totals save once without inventing source receipts before the event starts',async()=>{
   const {context,page}=await openRealm();try{
@@ -34,21 +80,21 @@ test('numeric UI totals save once without inventing source receipts before the e
 });
 test('real worker plan uses saved vouchers before discount and leaves receipts unchanged',async()=>{
   const {context,page}=await openRealm();try{
-    await setupSixYuan(page);const settings=page.locator('[data-realm-form=settings]');await settings.locator('[name=vouchers]').fill('2');await settings.locator('[type=submit]').click();
+    await setupSixYuan(page);const settings=page.locator('[data-realm-form=settings]');await settings.locator('[name=vouchers]').fill('2');
     await page.locator('[name=target]').fill('3');await runPlan(page);const plans=page.locator('.realm-plan');assert.equal(await plans.count(),1);
-    assert.match(await plans.first().innerText(),/¥1\.60/);assert.match(await plans.first().innerText(),/¥6\.00/);
+    assert.match(await plans.first().innerText(),/¥2(?:\D|$)/);assert.match(await plans.first().innerText(),/¥6(?:\D|$)/);
     const state=await saved(page);assert.equal(state.settings.vouchers,2);assert.equal(state.realms.guigu.periods[6].sources.pack6.purchased,0);
     assert.equal(state.realms.guigu.cumulative,0);assert.equal(state.realms.guigu.inventory,0);
   }finally{await context.close();}
 });
-test('today purchased six-yuan pack immediately grants three tickets',async()=>{
+test('period pack purchase auto-saves fixed tickets without today controls',async()=>{
   const {context,page}=await openRealm({now:'2026-10-23T04:00:00Z'});try{
     const date=page.locator('[data-realm-form=date]');await date.locator('[name=startDate]').fill('2026-10-20');await date.locator('[type=submit]').click();
     assert.match(await page.locator('[data-realm-status]').innerText(),/进行中.*第4天/);
-    const source=page.locator('[data-realm-source=pack6]');await source.locator('[name=purchased]').fill('1');await source.locator('[name=todayPurchased]').check();await source.locator('[type=submit]').click();
-    const record=(await saved(page)).realms.guigu.periods[6].sources.pack6;assert.equal(record.purchased,1);assert.equal(record.obtained,3);assert.equal(record.todayPurchased,1);assert.equal(record.todayObtained,0);
+    const source=page.locator('[data-realm-source=pack6]');await source.locator('[name=purchased]').fill('1');assert.equal(await source.locator('[name=todayPurchased]').count(),0);
+    const record=(await saved(page)).realms.guigu.periods[6].sources.pack6;assert.equal(record.purchased,1);assert.equal(record.obtained,3);assert.equal(record.todayPurchased,0);assert.equal(record.todayObtained,0);
     const input=await page.evaluate(()=>window.SECRET_REALM_CORE.buildPlanningInput(JSON.parse(window.QinshiAccounts.getItem('qinshi_secret_realms_v1')),'guigu',Date.now(),window.SECRET_REALM_DATA));
-    const s=input.periods[0].sources.find(x=>x.id==='pack6');assert.equal(s.availableDraws,0);assert.equal(s.maxPurchases,10);
+    const s=input.periods[0].sources.find(x=>x.id==='pack6');assert.equal(s.availableDraws,0);assert.equal(s.maxPurchases,11);
   }finally{await context.close();}
 });
 test('a Beijing midnight boundary advances to the next planning period and locks expired records',async()=>{
@@ -65,7 +111,7 @@ test('a Beijing midnight boundary advances to the next planning period and locks
 test('paid pass claims do not duplicate free pass or bill an already purchased pass',async()=>{
   const {context,page}=await openRealm({now:'2026-10-23T04:00:00Z'});try{
     const date=page.locator('[data-realm-form=date]');await date.locator('[name=startDate]').fill('2026-10-20');await date.locator('[type=submit]').click();
-    const source=page.locator('[data-realm-source=paid-pass]');await source.locator('[name=purchased]').fill('1');await source.locator('[name=obtained]').fill('30');await source.locator('[type=submit]').click();
+    const source=page.locator('[data-realm-source=paid-pass]');await source.locator('[name=purchased]').check();await source.locator('[name=obtained]').fill('30');
     const state=await saved(page);assert.equal(state.realms.guigu.periods[6].sources['paid-pass'].obtained,30);assert.equal(state.realms.guigu.cumulative,0);
     const rows=await page.evaluate(()=>window.SECRET_REALM_CORE.buildPlanningInput(JSON.parse(window.QinshiAccounts.getItem('qinshi_secret_realms_v1')),'guigu',Date.now(),window.SECRET_REALM_DATA).periods[0].sources);
     assert.equal(rows.find(r=>r.id==='paid-pass').availableDraws,58);assert.equal(rows.find(r=>r.id==='paid-pass').maxPurchases,0);assert.equal(rows.find(r=>r.id==='free-pass').availableDraws,11);
@@ -90,14 +136,14 @@ test('custom platform discount is saved and reused in the other realm including 
 test('target draft survives source toggles before calculation',async()=>{
   const {context,page}=await openRealm();try{
     await page.locator('[data-realm-mode=planner]').click();await page.locator('[name=target]').fill('3');await page.locator('[data-realm-action=none]').click();await page.locator('[data-realm-enable=pack6]').check();
-    assert.equal(await page.locator('[name=target]').inputValue(),'3');await runPlan(page);assert.match(await page.locator('.realm-plan').first().innerText(),/¥2\.40/);
+    assert.equal(await page.locator('[name=target]').inputValue(),'3');await runPlan(page);assert.match(await page.locator('.realm-plan').first().innerText(),/¥3(?:\D|$)/);
   }finally{await context.close();}
 });
 test('saving fee fields preserves profiles added to the current fresh account snapshot',async()=>{
   const {context,page}=await openRealm();try{
-    await page.locator('[data-realm-mode=planner]').click();const form=page.locator('[data-realm-form=settings]');await form.locator('[name=vouchers]').fill('15');
+    await page.locator('[data-realm-mode=planner]').click();const form=page.locator('[data-realm-form=settings]');
     await page.evaluate(()=>{let s=window.SECRET_REALM_CORE.createDefault(window.SECRET_REALM_DATA);s.settings.platforms.push({id:'new-profile',name:'新增加的平台',discount:5});window.QinshiAccounts.setItem('qinshi_secret_realms_v1',JSON.stringify(s));});
-    await form.locator('[type=submit]').click();const state=await saved(page);assert.equal(state.settings.vouchers,15);assert.equal(state.settings.platforms.some(p=>p.id==='new-profile'),true);
+    await form.locator('[name=vouchers]').fill('15');const state=await saved(page);assert.equal(state.settings.vouchers,15);assert.equal(state.settings.platforms.some(p=>p.id==='new-profile'),true);
   }finally{await context.close();}
 });
 test('switching real accounts isolates secret realm totals and fees',async()=>{
@@ -157,7 +203,7 @@ test('installed PWA loads secret realm and calculates on a real worker fully off
     await page.locator('#secret-realm-content').waitFor();
     await context.setOffline(true);await page.reload({waitUntil:'networkidle'});
     await setupSixYuan(page);await page.evaluate(()=>{window.SECRET_REALM_PLANNER={plan:()=>{throw Error('Main-thread fallback forbidden by offline-worker test');}};});
-    await runPlan(page);assert.match(await page.locator('.realm-plan').first().innerText(),/¥2\.40/);
+    await runPlan(page);assert.match(await page.locator('.realm-plan').first().innerText(),/¥3(?:\D|$)/);
   }catch(error){
     try{if(!page.isClosed())console.error('Installed realm fixture failure diagnostics',{pageErrors,registration:await page.evaluate(async()=>{const r=await navigator.serviceWorker.getRegistration();return {active:r?.active?.state??null,installing:r?.installing?.state??null,waiting:r?.waiting?.state??null,controller:navigator.serviceWorker.controller?.state??null};})});}
     catch(diagnosticError){console.error('Fixture diagnostics unavailable',diagnosticError.message,pageErrors);}
@@ -189,18 +235,21 @@ test('ordinary account lease renewal preserves unfinished fee input and its DOM 
     assert.deepEqual(result,{same:true,value:'123.45'});
   }finally{await context.close();}
 });
-test('a daily receipt form rendered yesterday cannot silently save yesterday flags as today',async()=>{
+test('daily totals auto-save across dates without adding a today control',async()=>{
   const {context,page}=await openRealm({now:'2026-10-23T04:00:00Z'});try{
     const date=page.locator('[data-realm-form=date]');await date.locator('[name=startDate]').fill('2026-10-20');await date.locator('[type=submit]').click();
-    const source=page.locator('[data-realm-source=pack6]');await source.locator('[name=purchased]').fill('1');await source.locator('[name=todayPurchased]').check();
+    const source=page.locator('[data-realm-source=pack6]');await source.locator('[name=purchased]').fill('1');
     await page.evaluate(()=>{window.__realmNow=Date.parse('2026-10-24T04:00:00Z');window.QinshiAccounts.claimEditing(window.QinshiAccounts.currentAccount().id);});
-    await source.locator('[type=submit]').click();assert.equal((await saved(page)).realms.guigu.periods[6].sources.pack6.purchased,0);assert.match(await page.locator('[data-realm-error]').innerText(),/日期.*变化|跨日/);
+    await source.locator('[name=purchased]').fill('2');
+    const record=(await saved(page)).realms.guigu.periods[6].sources.pack6;assert.equal(record.purchased,2);assert.equal(record.obtained,6);assert.equal(record.todayDate,null);
+    assert.equal(await source.locator('[name=todayPurchased]').count(),0);
   }finally{await context.close();}
 });
+
 test('old partial pack6 receipts migrate to fixed grants without changing real total inventory',async()=>{
   const {context,page}=await openRealm({now:'2026-10-23T04:00:00Z'});try{
     await page.evaluate(()=>{const d=window.SECRET_REALM_DATA,k=window.SECRET_REALM_CORE;let s=k.createDefault(d);s=k.setStartDate(s,'guigu',6,'2026-10-20',Date.now(),d);s.schemaVersion=1;Object.assign(s.realms.guigu.periods[6].sources.pack6,{purchased:1,obtained:1,todayDate:'2026-10-23',todayPurchased:1,todayObtained:1});window.QinshiAccounts.setItem('qinshi_secret_realms_v1',JSON.stringify(s));});
-    await page.locator('[data-realm-action=reload]').click();const source=page.locator('[data-realm-source=pack6]');assert.equal(await source.locator('[name=todayObtained]').count(),0);await source.locator('[type=submit]').click();
+    await page.locator('[data-realm-action=reload]').click();const source=page.locator('[data-realm-source=pack6]');assert.equal(await source.locator('[name=todayObtained]').count(),0);await source.locator('[name=purchased]').fill('1');
     const state=await saved(page),row=state.realms.guigu.periods[6].sources.pack6;assert.equal(row.todayObtained,0);assert.equal(row.obtained,3);assert.equal(state.realms.guigu.inventory,0);assert.equal(await page.locator('[data-realm-error]').isVisible(),false);
   }finally{await context.close();}
 });
@@ -208,7 +257,7 @@ test('direct local HTML secret realm retains calculation through the file-protoc
   const path=require('node:path'),{pathToFileURL}=require('node:url');const context=await browser.newContext({viewport:{width:768,height:844}}),page=await context.newPage();
   try{
     await openApp(page,pathToFileURL(path.resolve(__dirname,'../index.html')).href+'#secret-realm');await page.locator('#secret-realm-content').waitFor();await setupSixYuan(page);await runPlan(page);
-    assert.match(await page.locator('.realm-plan').first().innerText(),/¥2\.40/);assert.equal((await saved(page)).realms.guigu.periods[6].sources.pack6.purchased,0);
+    assert.match(await page.locator('.realm-plan').first().innerText(),/¥3(?:\D|$)/);assert.equal((await saved(page)).realms.guigu.periods[6].sources.pack6.purchased,0);
   }finally{await context.close();}
 });
 test('current navigation still works when an older page has no optional secret realm section',async()=>{

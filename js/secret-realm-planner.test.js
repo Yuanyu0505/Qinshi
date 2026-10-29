@@ -39,7 +39,7 @@ test('joint currency optimization agrees with an independent exhaustive purchase
     else for(let last=0;last<value.periods.length;last++){
       const rows=value.periods.slice(0,last+1).flatMap(p=>p.sources);
       const free=rows.reduce((n,s)=>n+s.availableDraws,0),gift=rows.reduce((n,s)=>n+s.availableCurrency,0);
-      const walk=(i,t,g,cost)=>{if(i===rows.length){if(!enough(value.inventory+free+t,gift+g))return;const v=value.useVouchers?Math.min(cost,value.vouchers):0;candidates.push([value.periods[last].number,Math.round((cost-v)*100*value.discount/10),v*100,value.cumulative+value.inventory+free+t-target]);return;}const s=rows[i];for(let n=0;n<=s.maxPurchases;n++)walk(i+1,t+n*s.draws,g+n*s.purchaseCurrency,cost+n*s.price);};walk(0,0,0,0);
+      const walk=(i,t,g,cost)=>{if(i===rows.length){if(!enough(value.inventory+free+t,gift+g))return;const v=value.useVouchers?Math.min(cost,value.vouchers):0;candidates.push([value.periods[last].number,Math.ceil((cost-v)*value.discount/10)*100,v*100,value.cumulative+value.inventory+free+t-target]);return;}const s=rows[i];for(let n=0;n<=s.maxPurchases;n++)walk(i+1,t+n*s.draws,g+n*s.purchaseCurrency,cost+n*s.price);};walk(0,0,0,0);
     }
     const best=keys=>candidates.slice().sort((a,b)=>{for(const k of keys)if(a[k]!==b[k])return a[k]-b[k];return 0;})[0]||null;
     const r=planner.plan(value);assert.equal(r.valid,true,JSON.stringify(value));assert.deepEqual(tuple(r.fastest),best([0,1,2,3]),'fast '+JSON.stringify(value));assert.deepEqual(tuple(r.cheapest),best([1,2,0,3]),'cheap '+JSON.stringify(value));
@@ -72,7 +72,7 @@ function oracle(value) {
       if (index === rows.length) {
         if (base + free + draws < value.target) return;
         const voucher = value.useVouchers ? Math.min(cents(value.vouchers), before) : 0;
-        const cash = Math.round((before - voucher) * value.discount / 10);
+        const cash = Math.ceil((before - voucher) * value.discount / 1000) * 100;
         candidates.push([value.periods[last].number, cash, voucher,
           base + free + draws - value.target]);
         return;
@@ -186,16 +186,16 @@ test('voucher ties prefer fewer vouchers; disabled vouchers do not affect rankin
   const value = input([{ number: 1, sources: [source('more', 11, 10, 1), source('exact', 10, 9, 1)] }],
     { vouchers: 100, discount: 4.3 });
   assert.deepEqual(tuple(planner.plan(value).cheapest), [1, 0, 900, 0]);
-  assert.deepEqual(tuple(planner.plan({ ...value, useVouchers: false }).cheapest), [1, 387, 0, 0]);
+  assert.deepEqual(tuple(planner.plan({ ...value, useVouchers: false }).cheapest), [1, 400, 0, 0]);
 });
 
 test('cash rounding ties use least overshoot instead of least original price', () => {
   const value = input([{ number: 1, sources: [source('cheap-extra', 11, 0.01, 1), source('exact', 10, 0.02, 1)] }],
     { discount: 0.1 });
-  assert.deepEqual(tuple(planner.plan(value).cheapest), [1, 0, 0, 0]);
+  assert.deepEqual(tuple(planner.plan(value).cheapest), [1, 100, 0, 0]);
 });
 
-test('fractional discount rounds once and allocates vouchers and residual cents chronologically', () => {
+test('fractional discount rounds up once and allocates integer cash chronologically', () => {
   const value = input([
     { number: 1, sources: [source('a', 1, 0.01, 1), source('b', 1, 0.01, 1)] },
     { number: 2, sources: [source('c', 1, 0.01, 1)] }
@@ -203,8 +203,8 @@ test('fractional discount rounds once and allocates vouchers and residual cents 
   const result = planner.plan(value);
   const rows = result.cheapest.periods.flatMap(period => period.rows);
   assert.deepEqual(rows.map(row => row.voucherUsed), [0.01, 0, 0]);
-  assert.deepEqual(rows.map(row => row.after), [0, 0, 0.01]);
-  assert.equal(result.cheapest.totalAfter, 0.01);
+  assert.deepEqual(rows.map(row => row.after), [0, 1, 0]);
+  assert.equal(result.cheapest.totalAfter, 1);
   checkAccounting(value, result.cheapest);
 });
 

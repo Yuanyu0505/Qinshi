@@ -240,6 +240,16 @@
     boolean(enabled, '来源启用状态'); var next = advance(state, now, data), period = editable(next, id, number, now, data);
     if (!own(period.sources, sourceId)) fail('本期来源不存在'); period.sources[sourceId].enabled = enabled; return next;
   }
+  // Compact actual-progress editor: packs are acquired when purchased; daily
+  // totals no longer require a separate, potentially stale "today" record.
+  function updateSourceProgress(state, id, number, sourceId, values, now, data) {
+    var source = sourceData(data, sourceId), patch = clone(values);
+    if (source.daily) Object.assign(patch, {todayDate:null,todayObtained:0,todayPurchased:0});
+    if (source.price && source.id !== 'paid-pass' && own(patch, 'purchased')) {
+      patch.obtained = multiply(patch.purchased, source.draws);
+    }
+    return updateSource(state, id, number, sourceId, patch, now, data);
+  }
   function setAll(state, id, number, enabled, now, data) {
     boolean(enabled, '全选状态'); var next = advance(state, now, data), period = editable(next, id, number, now, data);
     Object.keys(period.sources).forEach(function(id) { period.sources[id].enabled = enabled && id !== 'pack648'; }); return next;
@@ -278,12 +288,12 @@
       data.sources.forEach(function(source) {
         var record = period.sources[source.id];
         if (!record || !record.enabled || (source.firstOnly && number !== 1)) return;
-        var today = record.todayDate === current.today, remainingDays = current.phase === 'active' ? data.periodDays - current.day + 1 : data.periodDays;
-        var available = source.price ? multiply(record.purchased, source.draws) - record.obtained : multiply(source.limit, source.draws) - record.obtained;
+        var remainingDays = current.phase === 'active' ? data.periodDays - current.day + 1 : data.periodDays;
+        var available = source.price ? (source.id === 'paid-pass' ? multiply(record.purchased, source.draws) - record.obtained : 0) : multiply(source.limit, source.draws) - record.obtained;
         var purchases = !source.price ? 0 : source.limit === null ? null : source.limit - record.purchased;
         if (source.daily) {
-          if (source.price) purchases = Math.min(purchases, remainingDays - (today ? record.todayPurchased : 0));
-          else available = Math.min(available, multiply(remainingDays, source.draws) - (today ? record.todayObtained : 0));
+          if (source.price) purchases = Math.min(purchases, remainingDays);
+          else available = Math.min(available, multiply(remainingDays, source.draws));
         }
         integer(available, '剩余可领抽数'); if (purchases !== null) integer(purchases, '剩余购买份数');
         availableTotal = add(availableTotal, available);
@@ -295,5 +305,5 @@
     }
     return input;
   }
-  return { createDefault: createDefault, normalize: normalize, advance: advance, status: status, setStartDate: setStartDate, updateTotals: updateTotals, updateSource: updateSource, setEnabled: setEnabled, setAll: setAll, applyFollowing: applyFollowing, updateSettings: updateSettings, deletePlatform: deletePlatform, deleteRealm: deleteRealm, buildPlanningInput: buildPlanningInput };
+  return { createDefault: createDefault, normalize: normalize, advance: advance, status: status, setStartDate: setStartDate, updateTotals: updateTotals, updateSource: updateSource, updateSourceProgress: updateSourceProgress, setEnabled: setEnabled, setAll: setAll, applyFollowing: applyFollowing, updateSettings: updateSettings, deletePlatform: deletePlatform, deleteRealm: deleteRealm, buildPlanningInput: buildPlanningInput };
 });

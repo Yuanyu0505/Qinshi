@@ -40,7 +40,12 @@ async function openFormations(width = 900) {
     });
   });
   await openApp(page, url, { waitUntil: 'load' });
-  await page.locator('.tab[data-partition="formations"]').click();
+  const desktopTab=page.locator('.tab[data-partition="formations"]');
+  if(await desktopTab.isVisible())await desktopTab.click();
+  else{
+    await page.locator('#mobile-more-toggle').click();
+    await page.locator('#mobile-more-layer [data-partition="formations"]').click();
+  }
   return page;
 }
 
@@ -73,7 +78,9 @@ for (const width of [390, 900]) test(width + '：键盘选择合阵，取消切�
     await page.locator('#formation-search').press('Enter');
     assert.equal(await page.locator('#formation-workspace').isHidden(), true);
     await page.locator('#formation-search').press('ArrowDown');
+    assert.equal(await page.evaluate(()=>document.activeElement.dataset.formationId),'search-a','first result receives keyboard focus');
     await page.keyboard.press('ArrowDown');
+    assert.equal(await page.evaluate(()=>document.activeElement.dataset.formationId),'search-b','second result receives keyboard focus');
     await page.keyboard.press('Enter');
     assert.equal(await page.locator('.formation-official h2').innerText(), '同门乙阵');
     await page.locator('#formation-workspace [data-action="edit-progress"]').click();
@@ -130,4 +137,17 @@ test('搜索结果转义阵名和弟子名，Escape 清空并返回输入框', a
     assert.equal(await page.locator('#formation-search-results').isHidden(), true);
     assert.equal(await page.locator('#formation-search').evaluate(input => input === document.activeElement), true);
   } finally { await page.close(); }
+});
+
+test('相同关键词的原生search事件不重建结果或打断键盘焦点',async()=>{
+  const page=await openFormations(390);
+  try{
+    const input=page.locator('#formation-search');await input.fill('同门');
+    await input.press('ArrowDown');
+    assert.equal(await page.evaluate(()=>document.activeElement.dataset.formationId),'search-a');
+    await input.dispatchEvent('search');
+    assert.equal(await page.evaluate(()=>document.activeElement.dataset.formationId),'search-a','unchanged native search must retain focused result');
+    await page.keyboard.press('ArrowDown');await page.keyboard.press('Enter');
+    assert.equal(await page.locator('.formation-official h2').innerText(),'同门乙阵');
+  }finally{await page.close();}
 });

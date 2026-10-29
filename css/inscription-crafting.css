@@ -46,7 +46,7 @@
 .craft-flow-step h5,.craft-flow-reuse-title { color:#edcf87; font-size:15px; margin:0 0 10px; line-height:1.6; }
 .craft-flow-viewer { max-width:100%; min-width:0; border:1px solid #cbd8e4; border-radius:12px; overflow:hidden; background:#fff; }
 .craft-flow-toolbar { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px; padding:8px 12px; border-bottom:1px solid #e2e9ef; background:#f7fbff; color:#416580; font-size:12px; }
-.craft-flow-toolbar>div { display:flex; gap:6px; }
+.craft-flow-toolbar>div { display:flex; flex-wrap:wrap; min-width:0; max-width:100%; gap:6px; }
 .ins-crafting .craft-flow-toolbar button { padding:7px 10px; min-height:40px; min-width:52px; border:1px solid #c9d9e7; border-radius:7px; background:#fff; color:#005aab; font-size:12px; }
 .ins-crafting .craft-flow-toolbar button:focus-visible { outline:2px solid #005aab; outline-offset:1px; }
 .craft-flow-viewport { overflow:auto; max-width:100%; min-width:0; overscroll-behavior:contain; touch-action:pan-x pan-y; scrollbar-color:#b5c8d8 #f4f8fb; }
@@ -81,6 +81,9 @@
 @media(max-width:900px) {
   .craft-filters { grid-template-columns:repeat(2,minmax(0,1fr)); }
 }
+@media(max-width:1024px) {
+  .craft-flow-viewport { max-height:min(72vh,800px); }
+}
 @media(max-width:650px) {
   .craft-panel { padding:12px; }
   .craft-controls { grid-template-columns:minmax(0,1fr); }
@@ -90,6 +93,9 @@
   .craft-materials { grid-template-columns:minmax(0,1fr); }
   .craft-strategy-body { padding:0 8px 10px; }
   .craft-flow-toolbar { padding:7px 8px; }
+  .craft-flow-toolbar>div { width:100%; }
+  .ins-crafting .craft-flow-toolbar button { flex:1 1 0; white-space:nowrap; }
+  .ins-crafting .craft-flow-toolbar [data-craft-action="diagram-failures"] { flex-basis:100%; }
   .craft-flow-step { margin:18px 0; }
   .craft-suggestions { max-height:260px; }
 }

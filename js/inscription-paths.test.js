@@ -284,7 +284,7 @@ test("failure reuse presents repeated 2+1 coverage and retains its exact produci
       assert.equal(child.node.xSource,undefined);
       const producer=producers.find(node=>node.sourceKey===child.node.sourceKey);
       assert.ok(producer);
-      assert.ok(producer.outcomes.some(outcome=>Rules.signature(outcome.material)===Rules.signature(child.node.material))));
+      assert.ok(producer.outcomes.some(outcome=>Rules.signature(outcome.material)===Rules.signature(child.node.material)));
     }
   }
 });

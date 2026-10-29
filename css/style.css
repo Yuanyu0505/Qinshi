@@ -469,10 +469,11 @@ header.top {
 .ins-query-slot { display: grid; grid-template-columns: minmax(210px, .75fr) minmax(270px, 1fr) minmax(420px, 2fr); gap: 14px; align-items: start; }
 .ins-query-slot .ins-slot-title { white-space: normal; }
 .ins-query-slot .ins-extreme-note { display: block; margin: 3px 0 0; }
-.ins-saved-slot { display: grid; grid-template-columns: minmax(420px, .9fr) minmax(500px, 1.45fr); gap: 14px; align-items: center; }
-.ins-saved-core { display: grid; grid-template-columns: minmax(140px, .8fr) minmax(90px, .55fr) minmax(190px, 1.2fr); gap: 10px; align-items: center; }
+.ins-saved-slot { display: grid; grid-template-columns: minmax(0, .9fr) minmax(0, 1.45fr); gap: 14px; align-items: center; min-width: 0; }
+.ins-saved-core { display: grid; grid-template-columns: minmax(0, .8fr) minmax(0, .55fr) minmax(0, 1.2fr); gap: 10px; align-items: center; min-width: 0; }
+.ins-saved-core > * { min-width: 0; overflow-wrap: anywhere; }
 .ins-main-stack { display: grid; gap: 2px; line-height: 1.4; }
-.ins-saved-substats { display: grid; grid-template-columns: repeat(3, minmax(120px, 1fr)); gap: 8px; }
+.ins-saved-substats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; min-width: 0; }
 .ins-saved-substats[data-count="1"] { grid-template-columns: minmax(0, 1fr); }
 .ins-saved-substats[data-count="2"] { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .ins-saved-sub {

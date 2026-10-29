@@ -109,6 +109,7 @@
     el.searchResults.hidden = !query;
     if (!query) {
       el.searchResults.innerHTML = "";
+      el.searchResults._formationSearchMarkup = "";
       return;
     }
     var matches = formations().map(function (formation) {
@@ -121,7 +122,7 @@
       };
     }).filter(function (match) { return match.nameMatches || match.candidates.length; });
     var status = matches.length ? "找到 " + matches.length + " 个合阵，请选择" : "未找到匹配合阵或弟子，请更换关键词。";
-    el.searchResults.innerHTML = '<div class="formation-search-head"><p role="status">' + escapeHtml(status) +
+    var markup = '<div class="formation-search-head"><p role="status">' + escapeHtml(status) +
       '</p><button type="button" class="link-btn" data-formation-search-clear>清空</button></div>' +
       (matches.length ? '<ul class="formation-search-list">' + matches.map(function (match) {
         var formation = match.formation;
@@ -131,6 +132,13 @@
           escapeHtml(formation.name) + '</strong><span>' + escapeHtml(detail) + '</span><small>' + escapeHtml(formation.stone) +
           ' 阵眼石' + (formation.id === state.selectedId ? " · 当前合阵" : "") + '</small></button></li>';
       }).join("") + '</ul>' : "");
+    // Enter in a native search field may emit a delayed `search` after input.
+    // Replacing identical results would remove the button currently focused by
+    // ArrowDown and make the next Enter miss its intended formation.
+    if (el.searchResults._formationSearchMarkup !== markup) {
+      el.searchResults.innerHTML = markup;
+      el.searchResults._formationSearchMarkup = markup;
+    }
   }
 
   function clearSearch() {

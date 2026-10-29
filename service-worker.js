@@ -1,7 +1,7 @@
 "use strict";
 
 const CACHE_PREFIX = "qinshi-site-";
-const CACHE_NAME = CACHE_PREFIX + "1.0.65";
+const CACHE_NAME = CACHE_PREFIX + "1.0.66";
 const GALLERY_CACHE_NAME = "qinshi-gallery-v1";
 const PRECACHE_URLS = [
   "./",
@@ -11,6 +11,8 @@ const PRECACHE_URLS = [
   "./css/six-halls.css",
   "./css/secret-realm.css",
   "./css/inscription-crafting.css",
+  "./css/inscription-route-favorites.css",
+  "./css/formation-search.css",
   "./data/secret-realm.js",
   "./js/secret-realm-core.js",
   "./js/secret-realm-planner.js",
@@ -31,6 +33,7 @@ const PRECACHE_URLS = [
   "./data/2026-09-content-update.js",
   "./data/2026-10-equipment-update.js",
   "./data/2026-10-forging-update.js",
+  "./data/2026-10-inscription-update.js",
   "./data/wooden-man-alley.js",
   "./js/account-edit-lease.js",
   "./js/account-profiles.js",
@@ -48,10 +51,12 @@ const PRECACHE_URLS = [
   "./js/quiz.js",
   "./js/inscription-performance.js",
   "./js/inscription-rules.js",
+  "./js/inscription-progress-rules.js",
   "./js/inscription-terms.js",
   "./js/inscription-paths.js",
   "./js/inscription-crafting-state.js",
   "./js/inscription-flowchart.js",
+  "./js/inscription-route-favorites.js",
   "./js/inscription-crafting-ui.js",
   "./js/ui-performance.js",
   "./js/partition-loader.js",

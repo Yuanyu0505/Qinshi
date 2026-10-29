@@ -96,6 +96,19 @@
   line-height: 1.6;
 }
 
+#partition-formations .formation-search-result .formation-search-match {
+  min-width: 0;
+  font-size: 15px;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+#partition-formations .formation-search-result .formation-search-match-name {
+  color: var(--red);
+  font-size: inherit;
+  font-weight: 700;
+}
+
 #partition-formations .formation-search-result:hover,
 #partition-formations .formation-search-result.is-selected {
   border-color: var(--gold-dim);

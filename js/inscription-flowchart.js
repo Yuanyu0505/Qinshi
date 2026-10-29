@@ -97,7 +97,7 @@
     if(node.children.some(function(c){return c.node.material.terms.some(function(t){return t.tier==='?';});}))return ['蓝二速度档位不可辨','按合法结果等概率生成'];
     var pool=new Set();node.children.forEach(function(c){c.node.material.terms.forEach(function(t){pool.add(t.attr+':'+t.tier);});});
     var count=R.qualities.find(function(q){return q.id===node.material.quality;}).count;
-    if(node.coverageReuse&&pool.size===4&&count===3&&node.material.terms.every(function(term){return pool.has(termKey(term));}))return [{parts:[{text:'四个候选词条中必须有三个是所需词条，四选三'}]}];
+    if(node.coverageReuse)return [{parts:[{text:'候选词条池必须覆盖全部目标词条，目前'+pool.size+'选'+count}]}];
     if(pool.size<count)return ['候选不足，随机补词条','按完整合法结果分支'];
     var words={1:'一',2:'二',3:'三',4:'四',5:'五',6:'六',7:'七',8:'八',9:'九'};
     return [pool.size+'种候选，'+(words[pool.size]||pool.size)+'选'+(words[count]||count)];
@@ -171,7 +171,7 @@
       // aliases that look like available materials.
       if(chosen.some(function(c){return !c.n;}))return;
       var center=chosen.reduce(function(sum,c){return sum+c.n.center;},0)/chosen.length;
-      var operation=add(['失败品互补复用 '+(index+1),'三枚合法同品质失败材料，同种可重复','候选池必须覆盖全部目标词条','投料示例（非唯一）：'+chosen.map(function(c){return c.n.ref+' × '+c.quantity;}).join('＋')].concat(candidateInfo(Object.assign({},reuse,{coverageReuse:true})),['当前概率：'+percent(reuse.probability)]),levels[reuse.material.quality]-1,'operation',center);
+      var operation=add(['失败品复用'+(index+1),'三枚失败材料，同种可重复'].concat(candidateInfo(Object.assign({},reuse,{coverageReuse:true})),['当前概率：'+percent(reuse.probability)]),levels[reuse.material.quality]-1,'operation',center);
       var groups=new Map();
       chosen.forEach(function(c){if(!groups.has(c.n.id))groups.set(c.n.id,{n:c.n,labels:[]});groups.get(c.n.id).labels.push(c.n.ref+' × '+c.quantity);});
       var grouped=Array.from(groups.values());

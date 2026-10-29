@@ -151,3 +151,88 @@ test('相同关键词的原生search事件不重建结果或打断键盘焦点',
     assert.equal(await page.locator('.formation-official h2').innerText(),'同门乙阵');
   }finally{await page.close();}
 });
+
+test('命中弟子行15px、姓名红色加粗，阵名和阵眼石保持原有层级', async () => {
+  const page = await openFormations();
+  try {
+    await page.locator('#formation-search').fill('神 同门');
+    const result = page.locator('#formation-search-results [data-formation-id="search-a"]');
+    const detail = result.locator(':scope > span');
+    const name = detail.locator('.formation-search-match-name');
+    const styles = await result.evaluate(node => {
+      const matched = node.querySelector('.formation-search-match-name') || node.querySelector(':scope > span');
+      const title = node.querySelector(':scope > strong');
+      const stone = node.querySelector('small');
+      const probe = document.createElement('i');
+      node.appendChild(probe);
+      probe.style.color = 'var(--red)';
+      const red = getComputedStyle(probe).color;
+      probe.style.color = 'var(--gold)';
+      const gold = getComputedStyle(probe).color;
+      probe.style.color = 'var(--muted)';
+      const muted = getComputedStyle(probe).color;
+      probe.remove();
+      return {
+        nameSize: getComputedStyle(matched).fontSize,
+        nameWeight: Number(getComputedStyle(matched).fontWeight),
+        nameColor: getComputedStyle(matched).color,
+        titleColor: getComputedStyle(title).color,
+        stoneColor: getComputedStyle(stone).color,
+        stoneSize: getComputedStyle(stone).fontSize,
+        red, gold, muted,
+      };
+    });
+    assert.deepEqual(
+      { size: styles.nameSize, bold: styles.nameWeight >= 700, color: styles.nameColor },
+      { size: '15px', bold: true, color: styles.red },
+      'matched name must render at 15px in bold red'
+    );
+    assert.equal(await detail.evaluate(node => getComputedStyle(node).fontSize), '15px');
+    assert.equal(await name.textContent(), '神·同门');
+    assert.notEqual(styles.nameColor, styles.gold);
+    assert.equal(styles.titleColor, styles.gold);
+    assert.equal(styles.stoneColor, styles.muted);
+    assert.equal(styles.stoneSize, '12px');
+  } finally { await page.close(); }
+});
+
+for (const width of [320, 390]) test(width + '：多个长命中姓名自然换行，不超出搜索卡片或页面', async () => {
+  const page = await openFormations(width);
+  try {
+    const longName = '神·同门' + '超长弟子姓名'.repeat(12);
+    await page.evaluate(name => {
+      const formation = window.FORMATIONS_DATA.items[0];
+      formation.candidates = [
+        Object.assign({}, formation.candidates[0], { name }),
+        Object.assign({}, formation.candidates[0], { id: 'candidate-long-second', name: '神·同门第二位' }),
+      ];
+    }, longName);
+    const input = page.locator('#formation-search');
+    await input.fill('神 同门');
+    const result = page.locator('#formation-search-results [data-formation-id="search-a"]');
+    assert.deepEqual(await result.locator('.formation-search-match-name').allTextContents(), [longName, '神·同门第二位']);
+    const layout = await result.evaluate(node => {
+      const detail = node.querySelector(':scope > span');
+      const name = detail.querySelector('.formation-search-match-name');
+      const range = document.createRange();
+      range.selectNodeContents(name);
+      const bounds = detail.getBoundingClientRect();
+      return {
+        wraps: range.getClientRects().length > 1,
+        namesInside: Array.from(range.getClientRects()).every(rect => rect.left >= bounds.left - 1 && rect.right <= bounds.right + 1),
+        cardFits: node.scrollWidth <= node.clientWidth,
+        pageFits: document.documentElement.scrollWidth <= window.innerWidth,
+      };
+    });
+    assert.equal(layout.wraps, true);
+    assert.equal(layout.namesInside, true);
+    assert.equal(layout.cardFits, true);
+    assert.equal(layout.pageFits, true);
+    await input.press('ArrowDown');
+    await result.evaluate(node => { window.focusedFormationResult = node; });
+    await input.dispatchEvent('search');
+    assert.equal(await page.evaluate(() => document.activeElement === window.focusedFormationResult && window.focusedFormationResult.isConnected), true);
+    await page.keyboard.press('Enter');
+    assert.equal(await page.locator('.formation-official h2').innerText(), '同门甲阵');
+  } finally { await page.close(); }
+});

@@ -336,5 +336,42 @@
     if (!strategies.length) return Object.assign(failed(symbolicX ? "没有合法的常规材料准备路线" : "所选具体 X 无法提供合法的常规材料准备路线，请查看来源限制",xTerm),{targets:targets});
     return {valid:true,errors:[],targets:targets,strategies:strategies,xAttr:xAttr,xTerm:clone(xTerm),symbolicX:symbolicX,notes:Array.from(notes)};
   }
-  return {generate:generate,expand:expand,reuseRecipes:reuseRecipes,representative:representative};
+  // A presentation-only projection: recipes, probabilities and favorite identities
+  // stay on the original strategy. Ignore ingredient names/counts, but retain the
+  // nested preparation mechanisms (including washing and unknown blue speed).
+  function groupStrategies(strategies) {
+    var groups=[], byIdea=new Map();
+    function pattern(node, stages) {
+      var speed=node.material.terms.some(function(t){return (t.attr==='速'||t.attr==='PVP速')&&t.tier==='?';});
+      var mode=node.kind==='craft' ? (node.probability<1?'chance':'stable') : node.kind;
+      var stage=node.material.quality;
+      if(node.kind!=='base'){
+        if(!stages.has(stage))stages.set(stage,new Set());
+        stages.get(stage).add(mode);
+      }
+      var children=Array.from(new Set(node.children.map(function(c){return pattern(c.node,stages);}))).sort();
+      var candidates=node.kind==='craft'?unique(node.children.flatMap(function(c){return c.node.material.terms;})).length:null;
+      return JSON.stringify([stage,mode,speed,node.kind==='craft'?node.probability:null,candidates,children]);
+    }
+    strategies.forEach(function(route,index){
+      var stages=new Map(), shape=pattern(route.tree,stages);
+      var id=JSON.stringify([route.kind,Rules.signature(route.tree.material),route.symbolicX,route.xTerm,shape]);
+      // Guaranteed routes deliberately remain independent cards.
+      if(route.kind==='deterministic')id+=':'+index;
+      if(!byIdea.has(id)){
+        var label=Rules.qualities.filter(function(q){return stages.has(q.id);}).map(function(q){
+          var modes=stages.get(q.id), labels=[];
+          if(modes.has('wash'))labels.push('置换准备');
+          if(modes.has('chance'))labels.push('含概率合成');
+          else if(modes.has('stable'))labels.push('稳定合成');
+          return q.label+labels.join('／');
+        }).join(' → ');
+        var group={id:id,kind:route.kind,label:label,variants:[]};
+        byIdea.set(id,group);groups.push(group);
+      }
+      byIdea.get(id).variants.push({route:route,index:index});
+    });
+    return groups;
+  }
+  return {generate:generate,expand:expand,reuseRecipes:reuseRecipes,representative:representative,groupStrategies:groupStrategies};
 });

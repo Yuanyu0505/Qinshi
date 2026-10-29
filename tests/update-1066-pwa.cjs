@@ -10,8 +10,10 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
 const { ensureTestAccount } = require('./browser-test-helpers.cjs');
 
 const ROOT = path.resolve(__dirname, '..');
-const OLD_COMMIT = '46ece3c';
-const OLD_VERSION = '1.0.65';
+// Default preserves the original regression; later releases can exercise the
+// immediately preceding real artifact without duplicating the entire harness.
+const OLD_COMMIT = process.env.QINSHI_PWA_BASE_REF || '46ece3c';
+const OLD_VERSION = JSON.parse(git(['show', OLD_COMMIT + ':version.json']).toString('utf8')).version;
 const PREFIX = 'qinshi-site-';
 const PROGRESS = 'qinshi_inscription_progress_v2';
 const CRAFTING = 'qinshi_inscription_crafting_v1';
@@ -174,7 +176,7 @@ async function seedOldData(page) {
     store.setActual({ prefix: '天府', dun: '鬼遁', quality: 'b2', origin: 'wash', terms: [{ attr: '速', tier: '?' }] }, 7);
     store.copyActual(goalId);
     const stamp = '2026-10-28T12:00:00.000Z';
-    // 1.0.65 has no favorites UI: preload an account-scoped raw record and prove the upgrade preserves it.
+    // Preload an account-scoped raw record and prove the upgrade preserves it.
     const favorite = JSON.stringify({ schemaVersion: 1, accountId: id, revision: 3, updatedAt: stamp, entries: [{
       id: '1066-preserved-raw-favorite', createdAt: stamp, updatedAt: stamp, rulesVersion: 'pre-release-fixture',
       owner: { discipleKey: '', tian: '', dun: '地遁', quality: 'o1', attrs: ['技能穿透', '技能穿透', '闪避'] }, xAttr: '招架',
@@ -248,7 +250,7 @@ test('fresh Pages PWA precaches new assets before first feature entry and runs n
   });
 });
 
-test('actual 1.0.65 Pages installation upgrades to the current artifact preserving account raw data and offline favorites', { timeout: 180000 }, async () => {
+test('actual '+OLD_VERSION+' Pages installation upgrades to the current artifact preserving account raw data and offline favorites', { timeout: 180000 }, async () => {
   await scenario('upgrade-tablet', 'old', 900, async ({ sites, local, page, context, evidence }) => {
     await ensureTestAccount(page);
     const oldResponse = await page.reload({ waitUntil: 'networkidle' });

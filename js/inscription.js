@@ -301,6 +301,19 @@
     var description = result.term && PROGRESS_RULES.describe(result.term, q, slot.shield);
     return description ? '<span class="ins-term">' + TERMS.valueHtml(description.body, q) + '<span class="ins-term-tier">' + escapeHtml(description.suffix) + '</span></span>' : escapeHtml(entry.attr + entry.raw + (entry.tier ? '（历史档位：' + entry.tier + '）' : ''));
   }
+  function subDisplayOrder(slot) {
+    var parts = PROGRESS_RULES.entries(slot), validation = validateSlot(slot), quality = qualityId(slot);
+    var entries = parts.map(function (part, index) { return { attr: part.attr, index: index }; });
+    // Invalid history and drafts retain their original text, indexes and gaps.
+    if (!validation.valid || validation.draft) return entries;
+    return TERMS.sortEntries(entries.filter(function (entry) {
+      var part = parts[entry.index];
+      return part.attr || part.raw || part.tier;
+    }).map(function (entry) {
+      var part = parts[entry.index], term = PROGRESS_RULES.resolve(normalizeAttrName(slot.shield, part.attr), part.raw, part.tier, slot.shield, quality).term;
+      return { attr: term.attr, index: entry.index, value: PROGRESS_RULES.value(term, quality, slot.shield) };
+    }));
+  }
   function qualityId(slot) { return PROGRESS_RULES.qualityId(slot); }
   function validateSlot(slot) {
     return PROGRESS_RULES.validateSlot(slot);
@@ -410,10 +423,11 @@
     if (!slot || typeof slot !== "object" || Array.isArray(slot)) return '<div class="craft-legacy-warning">历史位置结构异常，原始内容已保留。</div>';
     var quality = qualityId(slot), fields = PROGRESS_RULES.qualityFields(quality), info = PROGRESS_RULES.qualityInfo(quality);
     var main = /^o[12]$/.test(quality) && MAIN[slot.tian] && MAIN[slot.tian][quality.charAt(1)] || "暂无此品质的已知主属性";
-    var parts = PROGRESS_RULES.entries(slot), displays = [];
+    var parts = PROGRESS_RULES.entries(slot), order = subDisplayOrder(slot), displays = [];
     var count = Math.max(info ? info.count : 3, parts.reduce(function (last, entry, index) { return entry.attr || entry.raw || entry.tier ? index + 1 : last; }, 0));
     for (var index = 0; index < count; index++) {
-      var part = parts[index] || {}, display = subDisplayHtml(slot, index);
+      var sourceIndex = order[index] ? order[index].index : index;
+      var part = parts[sourceIndex] || {}, display = subDisplayHtml(slot, sourceIndex);
       displays.push('<span class="ins-saved-sub' + (isExtremeAttr(slot.shield, part.attr) ? " extreme" : "") + '"><small>副属性' + (index + 1) + '</small><span>' + (display || "未设置") + '</span></span>');
     }
     return '<div class="ins-saved-slot"><div class="ins-saved-core"><b>' + escapeHtml(slot.tian + ' · ' + normalizeDunName(slot.shield)) + extremeNoteHtml(slot.shield) + '</b>' + starBadgeHtml(fields ? fields.quality : slot.quality, fields ? fields.star : slot.star) + mainStackHtml(main, quality) + '</div><div class="ins-saved-substats" data-count="' + count + '">' + displays.join("") + '</div>' + slotWarningHtml(slot) + '</div>';
@@ -483,7 +497,7 @@
   }
   function currentSubstatsHtml(savedSlot) {
     if (!savedSlot) return "";
-    var current = PROGRESS_RULES.entries(savedSlot).map(function (_, index) { return subDisplayHtml(savedSlot,index); }).filter(Boolean);
+    var current = subDisplayOrder(savedSlot).map(function (entry) { return subDisplayHtml(savedSlot,entry.index); }).filter(Boolean);
     var values = current.length ? current.map(function (value) { return '<span class="ins-current-sub-tag">' + value + '</span>'; }).join("") : '<span class="ins-current-sub-tag empty">未设置</span>';
     return '<div class="ins-current-substats"><span class="ins-current-sub-label">当前副属性</span>' + values + '</div>' + slotWarningHtml(savedSlot);
   }

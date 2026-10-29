@@ -49,7 +49,7 @@ test('expanded failures include failed reuse outcomes and preserve orange stage'
   assert.doesNotMatch(closed,/复用失败橙二/);
   assert.match(open,/复用失败橙二/);
   assert.match(open,/craft-flow-stage-orange/);
-  assert.match(open,/失败品互补复用/);
+  assert.match(open,/失败品复用1/);
 });
 
 test('only deliberate symbolic inputs propagate X into successful and failed descendants',()=>{
@@ -86,7 +86,7 @@ test('a successful random filler is not inferred as X by modern or legacy routes
 test('a reuse branch never binds a failure from a different producing recipe',()=>{
   const route=sourcedRoute(),failure=route.tree.outcomes.find(o=>Rules.signature(o.material)!==Rules.signature(route.tree.material));
   route.reuse=[{...route.tree,children:[{quantity:3,node:{kind:'failure',material:failure.material,children:[],sourceKey:'unrelated-producer'}}],coverageReuse:true}];
-  assert.doesNotMatch(Flow.render(route,'闪避'),/失败品互补复用/);
+  assert.doesNotMatch(Flow.render(route,'闪避'),/失败品复用\d/);
 });
 
 test('legacy failure references are not guessed when several producers yield the same material',()=>{
@@ -100,7 +100,7 @@ test('legacy failure references are not guessed when several producers yield the
   const reuseInputs=[{quantity:2,node:{kind:'failure',material:pair([mid,other]).material,children:[]}},{quantity:1,node:{kind:'failure',material:pair([high,other]).material,children:[]}}];
   const reusePreview=Rules.preview(reuseInputs.flatMap(c=>Array(c.quantity).fill(c.node.material)));
   const reuse={kind:'craft',material:goal.material,children:reuseInputs,promotion:null,outcomes:reusePreview.outcomes,probability:1/3};
-  assert.doesNotMatch(Flow.render({kind:'probability',tree,reuse:[reuse]},'闪避'),/失败品互补复用/);
+  assert.doesNotMatch(Flow.render({kind:'probability',tree,reuse:[reuse]},'闪避'),/失败品复用\d/);
 });
 
 test('coverage reuse describes four choose three and permits repeated material kinds',()=>{
@@ -115,9 +115,51 @@ test('coverage reuse describes four choose three and permits repeated material k
   const tree={kind:'craft',material:output,children:[{quantity:3,node:producer}],promotion:null,outcomes:[{material:output,probability:1}],probability:1};
   const reusePreview=Rules.preview([one,one,two]);
   const drawing=Flow.render({kind:'probability',tree,reuse:[{kind:'craft',material:output,children,outcomes:reusePreview.outcomes,probability:0.25,coverageReuse:true}],xTerm:x,symbolicX:true},'治疗效果');
-  assert.match(drawing,/四个候选词条中必须有三个是所需词条，四选三/);
+  assert.match(drawing,/失败品复用1/);
+  assert.match(drawing,/候选词条池必须覆盖全部目标词条，目前4选3/);
   assert.match(drawing,/当前概率：25%/);
   assert.match(drawing,/同种.*重复/);
-  assert.match(drawing,/投料示例（非唯一）/);
+  assert.doesNotMatch(drawing,/投料示例|候选池必须覆盖|三枚合法同品质/);
   assert.doesNotMatch(drawing,/必须(?:收集)?A[＋+、]B[＋+、]C/);
+});
+
+function reuseWithCandidateCount(count){
+  const a={attr:'技能穿透',tier:'H'},b={attr:'闪避',tier:'U'},c={attr:'招架',tier:'U'},x={attr:'治疗效果',tier:'U'},y={attr:'防',tier:'H'};
+  const make=(quality,terms,origin='crafted')=>({prefix:'天府',dun:'地遁',quality,origin,terms});
+  function producer(pair,goal){
+    const children=pair.map(terms=>({quantity:1,node:{kind:'wash',material:make('p2',terms,'wash'),children:[]}}));
+    children.forEach(child=>assert.equal(Rules.validate(child.node.material).valid,true));
+    const preview=Rules.preview(children.map(child=>child.node.material)),signature=Rules.signature(make('o1',goal));
+    assert.equal(preview.valid,true);
+    const outcome=preview.outcomes.find(outcome=>Rules.signature(outcome.material)===signature);
+    assert.ok(outcome);
+    return {kind:'craft',material:outcome.material,children,promotion:preview.promotion,outcomes:preview.outcomes,probability:outcome.probability,
+      sourceKey:JSON.stringify([signature,children.map(child=>Rules.signature(child.node.material)).sort()])};
+  }
+  const left=producer([[a,b],[c,x]],[a,b,x]),right=producer([[a,b],[c,y]],[a,c,y]);
+  const preview=Rules.preview([left.material,left.material,right.material]),signature=Rules.signature(make('o2',[a,b,c]));
+  const goal=preview.outcomes.find(outcome=>Rules.signature(outcome.material)===signature);
+  assert.ok(goal);
+  const fail=(node,terms,quantity)=>({quantity,node:{kind:'failure',material:node.outcomes.find(outcome=>Rules.signature(outcome.material)===Rules.signature(make('o1',terms))).material,children:[],sourceKey:node.sourceKey}});
+  const children=count===3?[fail(left,[a,b,c],3)]:[fail(left,[a,c,x],2),fail(right,[b,c,y],1)];
+  const reusePreview=Rules.preview(children.flatMap(child=>Array(child.quantity).fill(child.node.material)));
+  assert.equal(reusePreview.valid,true);
+  const reuseGoal=reusePreview.outcomes.find(outcome=>Rules.signature(outcome.material)===signature);
+  assert.ok(reuseGoal);
+  return {kind:'probability',tree:{kind:'craft',material:goal.material,children:[{quantity:2,node:left},{quantity:1,node:right}],promotion:preview.promotion,outcomes:preview.outcomes,probability:goal.probability},
+    reuse:[{kind:'craft',material:goal.material,children,promotion:null,outcomes:reusePreview.outcomes,probability:reuseGoal.probability}],xTerm:x,symbolicX:false};
+}
+
+for(const count of [3,5])test('reuse copy derives the distinct candidate pool rather than hardcoding four: '+count,()=>{
+  const route=reuseWithCandidateCount(count),drawing=Flow.render(route,'治疗效果');
+  const operations=Array.from(drawing.matchAll(/<g class="craft-flow-box craft-flow-operation">([\s\S]*?)<\/g>/g),match=>
+    Array.from(match[1].matchAll(/<text\b[^>]*>([\s\S]*?)<\/text>/g),line=>line[1].replace(/<[^>]*>/g,'')));
+  const operation=operations.find(lines=>lines[0]==='失败品复用1');
+  assert.ok(operation,'The reuse node retains its ordinal');
+  assert.deepEqual(operation,[
+    '失败品复用1',
+    '三枚失败材料，同种可重复',
+    '候选词条池必须覆盖全部目标词条，目前'+count+'选3',
+    '当前概率：'+(count===3?'100%':'10%')
+  ]);
 });

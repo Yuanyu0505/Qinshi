@@ -6,6 +6,88 @@ const Paths = require("./inscription-paths.js");
 const goal = (dun="地遁", attrs=["技能穿透","技能穿透","技能穿透"],quality="o1") => ({prefix:"天同",dun,quality,attrs});
 const has = (m,attr,tier) => m.terms.some(t=>t.attr===attr&&t.tier===tier);
 
+test('display grouping retains all earth trees and original indexes in three probability ideas',()=>{
+  const plan=Paths.representative(goal('地遁',['技能穿透','技能穿透','暴击'],'o2'));
+  const before=JSON.stringify(plan.strategies),groups=Paths.groupStrategies(plan.strategies);
+  assert.equal(plan.strategies.length,12);
+  assert.deepEqual(groups.filter(g=>g.kind==='deterministic').map(g=>g.variants.map(v=>v.index)),[[0],[2],[4]]);
+  assert.deepEqual(groups.filter(g=>g.kind==='probability').map(g=>g.variants.map(v=>v.index)),[[1,3,5],[6,8,10],[7,9,11]]);
+  for(const group of groups)for(const variant of group.variants)assert.equal(variant.route,plan.strategies[variant.index]);
+  assert.equal(JSON.stringify(plan.strategies),before);
+  const reversed=plan.strategies.slice().reverse(),again=Paths.groupStrategies(reversed);
+  for(const group of groups.filter(g=>g.kind==='probability')){
+    const matching=again.find(g=>g.id===group.id);
+    assert.deepEqual(matching.variants.map(v=>v.route),group.variants.map(v=>v.route).reverse());
+    matching.variants.forEach(v=>assert.equal(v.route,reversed[v.index]));
+  }
+  assert.deepEqual(Paths.groupStrategies([]),[]);
+});
+
+test('grouping derives concrete X, washing and blue speed mechanisms from actual trees',()=>{
+  const goals=[goal('鬼遁',['速','速','防'],'o2'),goal('地遁',['技能穿透','技能穿透','暴击'],'o2')];
+  const strategies=goals.flatMap(g=>[Paths.representative(g),Paths.representative({...g,xTerm:{attr:'防',tier:'H'}})].filter(p=>p.valid).flatMap(p=>p.strategies));
+  const groups=Paths.groupStrategies(strategies);
+  assert.equal(groups.flatMap(g=>g.variants).length,strategies.length);
+  for(const group of groups){
+    assert.equal(new Set(group.variants.map(v=>JSON.stringify([v.route.symbolicX,v.route.xTerm]))).size,1);
+    const mechanisms=group.variants.map(({route})=>{
+      const events=new Set();
+      function walk(node){
+        if(node.kind==='wash')events.add('wash:'+node.material.quality);
+        if(node.kind==='craft'&&node.children.some(c=>c.node.material.terms.some(t=>t.attr==='速'&&t.tier==='?')))events.add('speed:'+node.material.quality);
+        node.children.forEach(c=>walk(c.node));
+      }
+      walk(route.tree);return [...events].sort().join('|');
+    });
+    assert.equal(new Set(mechanisms).size,1);
+  }
+  // Identical stage probabilities must not hide a different preparation mechanism.
+  const base={kind:'base',material:{prefix:'天同',dun:'鬼遁',quality:'b2',terms:[{attr:'速',tier:'?'}]},children:[]};
+  const make=child=>({kind:'probability',symbolicX:true,xTerm:{attr:'闪避',tier:'U'},tree:{kind:'craft',probability:0.5,material:{prefix:'天同',dun:'鬼遁',quality:'p1',terms:[{attr:'速',tier:'H'},{attr:'防',tier:'H'}]},children:[{quantity:2,node:child}]}});
+  const washed={...base,kind:'wash',material:{...base.material,quality:'p1',terms:[{attr:'速',tier:'H'},{attr:'防',tier:'H'}]}};
+  assert.equal(Paths.groupStrategies([make(base),make(washed)]).length,2);
+});
+
+test('grouping does not merge equal stage shapes with different actual recipe probabilities',()=>{
+  const make=terms=>({prefix:'天同',dun:'地遁',quality:'o1',origin:'crafted',terms:terms.map(([attr,tier])=>({attr,tier}))});
+  const a=make([['技能穿透','H'],['技能穿透','M'],['闪避','U']]);
+  const b=make([['技能穿透','H'],['暴击','M'],['闪避','U']]);
+  const c=make([['技能穿透','H'],['暴击','M'],['招架','U']]);
+  // Two real operations: four candidates gives 1/4, five gives 1/10.
+  // The supplied material nodes deliberately share one preparation shape.
+  function strategy(inputs){
+    const preview=Rules.preview(inputs);assert.equal(preview.valid,true);
+    const outcome=preview.outcomes.find(o=>has(o.material,'技能穿透','H')&&has(o.material,'技能穿透','M')&&has(o.material,'暴击','M'));
+    return {kind:'probability',symbolicX:false,xTerm:null,tree:{kind:'craft',material:outcome.material,probability:outcome.probability,children:inputs.map(material=>({quantity:1,node:{kind:'material',material,children:[]}}))}};
+  }
+  const strategies=[strategy([a,a,b]),strategy([a,b,c])];
+  assert.deepEqual(strategies.map(s=>s.tree.probability),[0.25,0.1]);
+  assert.equal(Paths.groupStrategies(strategies).length,2);
+  // This pure display API must respect the supplied probability independently
+  // of today's pool-size rule; it must never recalculate it from the shape.
+  const differentProbability={...strategies[1],tree:{...strategies[1].tree,probability:0.2}};
+  assert.equal(Paths.groupStrategies([strategies[1],differentProbability]).length,2);
+});
+
+test('dragon PVP speed is grouped as the same unknown-speed mechanism, never as a known blue term',()=>{
+  const plan=Paths.representative(goal('龙遁',['PVP速','PVP速','暴击'],'o2'));
+  assert.equal(plan.valid,true);assert.equal(plan.strategies.length,12);
+  const groups=Paths.groupStrategies(plan.strategies);
+  assert.deepEqual(groups.map(g=>g.variants.length),[2,1,2,1,2,1,2,1]);
+  assert.ok(groups.every(g=>g.kind==='probability'));
+  const route=plan.strategies[0];let unknownCount=0;
+  function replaceUnknown(node,attr,tier){
+    node.material.terms.forEach(t=>{if(t.attr==='PVP速'&&t.tier==='?'){unknownCount++;t.attr=attr;t.tier=tier;}});
+    node.children.forEach(c=>replaceUnknown(c.node,attr,tier));
+  }
+  // Classification contract fixtures reuse a real Dragon tree and change only
+  // the unknown-source marker; this API does not revalidate or rewrite recipes.
+  const ordinarySpeed=JSON.parse(JSON.stringify(route));replaceUnknown(ordinarySpeed.tree,'速','?');assert.ok(unknownCount>0);
+  assert.equal(Paths.groupStrategies([route,ordinarySpeed]).length,1);
+  const known=JSON.parse(JSON.stringify(route));replaceUnknown(known.tree,'PVP速','H');
+  assert.equal(Paths.groupStrategies([route,known]).length,2);
+});
+
 test('normal representative recipes inherit every target instead of fishing for missing terms',()=>{
   for(const g of [goal('鬼遁',['速','速','防'],'o2'),goal('云遁',['护盾','护盾','技免'],'o2'),goal('人遁',['技能穿透','技能穿透','PVP伤害'],'o2')]){
     const plan=Paths.representative(g);assert.equal(plan.valid,true);

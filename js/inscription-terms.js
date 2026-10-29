@@ -19,10 +19,26 @@
     return {body:String(amount)+meta.unit+name,suffix:'（'+label+'）',rank:rank(quality)};
   }
   function plain(term,quality){var d=describe(term,quality);return d?d.body+d.suffix:'';}
-  function sortTerms(terms,quality){return terms.slice().sort(function(a,b){
-    var av=R.value(a,quality),bv=R.value(b,quality);
-    return (bv===null?-Infinity:bv)-(av===null?-Infinity:av)||String(a.attr).localeCompare(String(b.attr),'zh-CN')||String(a.tier).localeCompare(String(b.tier));
-  });}
+  // Entries carry resolved numeric values and any caller-owned identity (such
+  // as the original saved index). Only display arrays are created and sorted.
+  function sortEntries(entries){
+    var groups=new Map();
+    entries.forEach(function(entry){
+      var attr=attributeName(entry.attr),amount=typeof entry.value==='number'&&Number.isFinite(entry.value)?entry.value:-Infinity;
+      if(!groups.has(attr))groups.set(attr,{attr:attr,max:amount,entries:[]});
+      var group=groups.get(attr);
+      group.max=Math.max(group.max,amount);
+      group.entries.push({entry:entry,value:amount});
+    });
+    return Array.from(groups.values()).sort(function(a,b){
+      return b.max-a.max||String(a.attr).localeCompare(String(b.attr),'zh-CN');
+    }).reduce(function(result,group){
+      return result.concat(group.entries.sort(function(a,b){return b.value-a.value;}).map(function(part){return part.entry;}));
+    },[]);
+  }
+  function sortTerms(terms,quality){
+    return sortEntries(terms.map(function(term){return {attr:term.attr,value:R.value(term,quality),term:term};})).map(function(entry){return entry.term;});
+  }
   function coloredValue(text,color){return '<strong class="ins-term-value ins-term-'+color+'">'+esc(text)+'</strong>';}
   function valueHtml(text,quality){return coloredValue(text,rank(quality));}
   function descriptionHtml(d){return '<span class="ins-term">'+coloredValue(d.body,d.rank)+'<span class="ins-term-tier">'+esc(d.suffix)+'</span></span>';}
@@ -45,5 +61,5 @@
       return '<span>'+(match?valueHtml(match[2]+attributeName(match[1].trim()),quality):esc(part.trim()))+'</span>';
     }).join('')+'</span>';
   }
-  return {rank:rank,tierLabel:tierLabel,describe:describe,plain:plain,sortTerms:sortTerms,html:html,savedHtml:savedHtml,valueHtml:valueHtml,mainHtml:mainHtml};
+  return {rank:rank,tierLabel:tierLabel,describe:describe,plain:plain,sortTerms:sortTerms,sortEntries:sortEntries,html:html,savedHtml:savedHtml,valueHtml:valueHtml,mainHtml:mainHtml};
 });

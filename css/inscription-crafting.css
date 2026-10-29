@@ -41,6 +41,9 @@
 .craft-strategy { border:1px solid #74603b; border-radius:8px; margin:14px 0; min-width:0; }
 .craft-strategy>summary { padding:14px; cursor:pointer; overflow-wrap:anywhere; font-weight:600; }
 .craft-strategy-body { padding:0 12px 12px; min-width:0; }
+.craft-route-picker { padding:0 12px 14px; min-width:0; }
+.craft-route-picker label { display:flex; flex-direction:column; gap:6px; min-width:0; font-size:13px; overflow-wrap:anywhere; }
+.craft-route-picker select { min-height:44px; text-overflow:ellipsis; }
 .craft-flow-guide { color:var(--muted,#b7ad99); font-size:13px; line-height:1.7; padding:8px 0 2px; }
 .craft-flow-step { min-width:0; margin:22px 0; }
 .craft-flow-step h5,.craft-flow-reuse-title { color:#edcf87; font-size:15px; margin:0 0 10px; line-height:1.6; }

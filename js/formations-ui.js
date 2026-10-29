@@ -126,10 +126,12 @@
       '</p><button type="button" class="link-btn" data-formation-search-clear>清空</button></div>' +
       (matches.length ? '<ul class="formation-search-list">' + matches.map(function (match) {
         var formation = match.formation;
-        var detail = match.candidates.length ? "命中弟子：" + match.candidates.map(function (candidate) { return candidate.name; }).join("、") : "合阵名称匹配";
+        var detail = match.candidates.length ? '<span class="formation-search-match">命中弟子：' + match.candidates.map(function (candidate) {
+          return '<b class="formation-search-match-name">' + escapeHtml(candidate.name) + '</b>';
+        }).join("、") + '</span>' : '<span>合阵名称匹配</span>';
         return '<li><button type="button" class="formation-search-result' + (formation.id === state.selectedId ? " is-selected" : "") +
           '" data-formation-id="' + escapeHtml(formation.id) + '" aria-pressed="' + (formation.id === state.selectedId) + '"><strong>' +
-          escapeHtml(formation.name) + '</strong><span>' + escapeHtml(detail) + '</span><small>' + escapeHtml(formation.stone) +
+          escapeHtml(formation.name) + '</strong>' + detail + '<small>' + escapeHtml(formation.stone) +
           ' 阵眼石' + (formation.id === state.selectedId ? " · 当前合阵" : "") + '</small></button></li>';
       }).join("") + '</ul>' : "");
     // Enter in a native search field may emit a delayed `search` after input.

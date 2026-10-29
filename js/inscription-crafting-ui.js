@@ -194,9 +194,22 @@
     if(!favoriteState||!favoriteState.valid||favoriteState.accountId!==accountId)return null;
     return root.InscriptionRouteFavorites.match(favoriteState.entries.filter(function(entry){return entry.valid;}).map(function(entry){return entry.record;}),route,target,xAttr);
   }
+  function variantIngredient(node,route) {
+    var x=route.xTerm;
+    function carriesX(current){
+      if(route.symbolicX===false||!x||!current.material.terms.some(function(t){return t.attr===x.attr&&t.tier===x.tier;}))return false;
+      if(current.kind==='base'||current.kind==='wash')return current.xSource===true;
+      return current.kind==='craft'&&current.children.some(function(c){return carriesX(c.node);});
+    }
+    var symbolic=carriesX(node);
+    return qLabel(node.material.quality)+'：'+T.sortTerms(node.material.terms,node.material.quality).map(function(t){
+      return symbolic&&t.attr===x.attr&&t.tier===x.tier?'杂词条 X（同一个）':T.plain(t,node.material.quality);
+    }).join('＋');
+  }
   function renderPlan(v,plan) {
     var host=area(v,'results'),target=state.target;
-    var opened={};host.querySelectorAll('details[data-route-index]').forEach(function(details){opened[details.dataset.routeIndex]=details.open;});
+    var opened={};host.querySelectorAll('details[data-route-card]').forEach(function(details){opened[details.dataset.routeCard]=details.open;});
+    if(!v.routeSelections)v.routeSelections=new Map();
     v.plan=plan;
     host.innerHTML='<section class="craft-panel"><h3>从蓝二到'+qLabel(target.quality)+'的完整路线</h3><p class="craft-note">'+modelNote+'</p>'+
       '<p class="craft-note">'+(target.discipleKey?esc(itemFor(target).name+' · '+target.slot.replace('|',' · '))+'。':'通用遁位路线：全部材料必须为同一个前缀、同一个遁位。')+
@@ -205,17 +218,37 @@
       '<p class="craft-note">按材料准备方式展示常规代表路线，不穷举所有材料树，也不把投料顺序变化算作新方案。每步概率均以该步材料已经备齐为条件，置换概率未知。点击星标收藏当前完整路线，收藏方案统一排在所有未收藏方案之前。</p><div data-route-groups></div></section>';
     var groups=host.querySelector('[data-route-groups]');
     var entries=plan.strategies.map(function(route,index){return {route:route,index:index,favorite:favoriteFor(route,target,plan.xAttr)};});
+    var ideas=P.groupStrategies(plan.strategies);
     ['favorites','deterministic','probability'].forEach(function(kind){
-      var routes=entries.filter(function(entry){return kind==='favorites'?!!entry.favorite:!entry.favorite&&entry.route.kind===kind;});
+      var routes=kind==='favorites'?entries.filter(function(entry){return !!entry.favorite;}).map(function(entry){return {id:'favorite:'+entry.index,kind:entry.route.kind,variants:[entry]};}):
+        ideas.filter(function(group){return group.kind===kind;}).map(function(group){return {id:group.id,kind:group.kind,label:group.label,variants:group.variants.filter(function(variant){return !entries[variant.index].favorite;}).map(function(variant){return entries[variant.index];})};}).filter(function(group){return group.variants.length;});
       if(kind==='favorites'&&!routes.length)return;
       var heading=document.createElement('h4');heading.className=kind==='favorites'?'craft-favorite-group-title':'';heading.textContent=kind==='favorites'?'已收藏方案（统一置顶）':kind==='deterministic'?'未收藏 · 必中合成方案（置换准备另计）':'未收藏 · 概率合成方案';groups.appendChild(heading);
       if(!routes.length){var note=document.createElement('p');note.className='craft-note';note.textContent=entries.some(function(entry){return entry.route.kind===kind;})?'此类方案均已收藏并置顶。':kind==='deterministic'?'当前目标没有已知的全程必中合成路线，不会把随机补词条当作必中。':'当前目标不需要单独展示额外的概率路线。';groups.appendChild(note);}
-      routes.forEach(function(entry,index){
-        var route=entry.route;
+      routes.forEach(function(group,index){
+        var entry=group.variants.find(function(variant){return variant.index===v.routeSelections.get(group.id);})||group.variants[0],route=entry.route;
         var details=document.createElement('details');details.className='craft-strategy';
+        details.dataset.routeCard=group.id;details.dataset.routeKind=route.kind;
         details.dataset.routeIndex=String(entry.index);if(entry.favorite)details.classList.add('craft-favorite-pinned');
-        details.innerHTML='<summary class="craft-route-summary"><span>'+esc((route.kind==='deterministic'?'必中':'概率')+'路线 '+(entry.index+1))+' · 蓝二 → '+qLabel(target.quality)+(route.label?' · '+esc(route.label):'')+'</span>'+
+        var title=kind==='favorites'?'收藏路线 '+(index+1)+' · '+(route.kind==='deterministic'?'必中':'概率'):(route.kind==='deterministic'?'必中路线 ':'概率思路 ')+(index+1);
+        details.innerHTML='<summary class="craft-route-summary"><span>'+esc(title)+' · 蓝二 → '+qLabel(target.quality)+'</span>'+
           '<button type="button" class="craft-favorite-star'+(entry.favorite?' is-favorite':'')+'" data-craft-action="toggle-favorite" data-route-index="'+entry.index+'" aria-label="'+(entry.favorite?'取消收藏此完整路线':'收藏此完整路线')+'" aria-pressed="'+(entry.favorite?'true':'false')+'" title="'+(entry.favorite?'取消收藏':'收藏完整路线')+'"'+(!favoriteState||!favoriteState.valid||favoriteState.readOnly||favoriteBusy?' disabled':'')+'>'+(entry.favorite?'★':'☆')+'</button></summary><div class="craft-strategy-body"></div>';
+        if(kind==='probability'){
+          var picker=document.createElement('div');picker.className='craft-route-picker';
+          picker.innerHTML='<p class="craft-note">'+esc(group.label)+'</p><label>选择具体配料（仅切换当前完整路线）<select data-route-variant>'+group.variants.map(function(variant,i){
+            var node=variant.route.tree;if(node.material.quality==='o2'&&node.children.length)node=node.children[0].node;
+            var ingredients=node.children.map(function(c){return variantIngredient(c.node,variant.route)+' × '+c.quantity;}).join('；');
+            return '<option value="'+variant.index+'"'+(variant.index===entry.index?' selected':'')+'>'+esc('配料 '+(i+1)+' · '+ingredients)+'</option>';
+          }).join('')+'</select></label>';
+          details.insertBefore(picker,details.querySelector('.craft-strategy-body'));
+          picker.querySelector('select').addEventListener('change',function(event){
+            entry=group.variants.find(function(variant){return variant.index===Number(event.target.value);});route=entry.route;
+            v.routeSelections.set(group.id,entry.index);details.dataset.routeIndex=String(entry.index);
+            details.querySelector('[data-craft-action="toggle-favorite"]').dataset.routeIndex=String(entry.index);
+            rendered=false;fill();
+          });
+        }
+        v.routeSelections.set(group.id,entry.index);
         var rendered=false;
         function fill(){if(rendered)return;rendered=true;var body=details.querySelector('.craft-strategy-body');body.renderFlow=function(show){
           var old=body.querySelector('[data-flow-viewer]'),zoom=old?Number(old.dataset.zoom):0.9;
@@ -226,7 +259,7 @@
           viewer.querySelector('[data-craft-action="diagram-reset"]').textContent=Math.round(zoom*100)+'%';
         };body.renderFlow(false);}
         details.addEventListener('toggle',function(){if(details.open)fill();});
-        groups.appendChild(details);if(Object.prototype.hasOwnProperty.call(opened,String(entry.index))?opened[String(entry.index)]:index===0){fill();details.open=true;}
+        groups.appendChild(details);if(Object.prototype.hasOwnProperty.call(opened,group.id)?opened[group.id]:index===0){fill();details.open=true;}
       });
     });
     if(favoriteState&&(!favoriteState.valid||favoriteState.readOnly)){
@@ -315,7 +348,7 @@
     if(!state)return;
     Object.keys(views).forEach(function(key){
       var v=views[key];renderFilters(v);renderSimulator(v);
-      if(clearRoutes && area(v,'results')){area(v,'results').innerHTML='';v.planTarget='';v.plan=null;}
+      if(clearRoutes && area(v,'results')){area(v,'results').innerHTML='';v.planTarget='';v.plan=null;v.routeSelections=new Map();}
     });
   }
   function updateSimulation(v,sim) {
@@ -323,6 +356,7 @@
     if(save(v,draft))renderSimulator(v);else renderSimulator(v);
   }
   function onChange(v,control) {
+    if(control.matches('[data-route-variant]'))return;
     if(!loaded||currentAccount()!==accountId){status(v,'请重新打开铭文分区后再操作。');return;}
     status(v,'');
     if(control.matches('[data-craft-field]')){

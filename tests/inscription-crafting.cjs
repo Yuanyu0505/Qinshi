@@ -147,7 +147,7 @@ test('地三穿完整代表路线逐图可展开，紫色洗练无中档，失�
       await route.locator('svg.craft-flow-svg').waitFor();
       assert.equal(await route.locator('svg').count(), 1, 'One complete SVG per route');
       assert.ok(await route.locator('.craft-flow-connection').count() > 0);
-      assert.match(await route.innerText(), /失败品互补复用|失败结果/);
+      assert.match(await route.innerText(), /失败品复用\d|失败结果/);
     }
     const audit = await page.evaluate(() => {
       const R = window.InscriptionRules, P = window.InscriptionPaths, F = window.InscriptionRouteFavorites;

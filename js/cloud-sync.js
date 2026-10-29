@@ -267,7 +267,7 @@
     async function requireUnpaired() {
       if (pendingSecurity) throw new Error('请先处理已有同步操作。');
       if (pendingEnrollment) throw new Error('已有配对操作待恢复，请重试恢复或忘记当前设备后再继续。');
-      if (await storage().loadPairing()) throw new Error('本机已配对，请先忘记当前设备。');
+      if (await storage().loadPairing()) throw new Error('本机已配对，无需再次加入。请重试连接／刷新设备列表。');
     }
 
     function detectDeviceName() {
@@ -465,6 +465,11 @@
         var pairing = await storage().loadPairing();
         return pairing ? await dashboard(pairing) : { paired: false, devices: [] };
       } catch (error) { return handleFailure(error); }
+    }
+
+    async function getLocalStatus() {
+      var pairing = await storage().loadPairing();
+      return Object.freeze(pairing ? { paired: true, deviceId: pairing.deviceId, deviceName: pairing.deviceName } : { paired: false });
     }
 
     async function sendUpload(pending) {
@@ -988,6 +993,7 @@
       createSpace: createSpace, joinSpace: joinSpace,
       uploadCurrentDevice: function () { return exclusive(uploadCurrent); },
       getDashboard: getDashboard,
+      getLocalStatus: getLocalStatus,
       renameDevice: renameDevice, revokeDevice: revokeDevice,
       changePassword: function (input) { return securityOperation('changePassword', input); },
       rotateRecoveryKey: function (input) { return securityOperation('rotateRecoveryKey', input); },
@@ -1032,6 +1038,8 @@
       ? '云同步服务尚未配置，本机数据和 JSON 备份不受影响。'
       : runtimeSupport.message;
     var lastResult = '尚无同步操作';
+    var dashboardPromise = null;
+    var actionEpoch = 0;
     var replacing = false;
     var activeModal = null;
     var overwriteTrigger = null;
@@ -1202,14 +1210,18 @@
       var current = dashboard.devices.find(function (device) { return device.deviceId === dashboard.deviceId; });
       setText('cloud-sync-current-device', dashboard.deviceName || (current && current.deviceName) || '当前设备');
       setText('cloud-sync-tool-version', root.QinshiPWA && root.QinshiPWA.version || '未知');
-      setText('cloud-sync-cloud-state', configured ? '已连接' : '服务未配置');
+      setText('cloud-sync-cloud-state', !configured ? '服务未配置' : dashboard.connection === 'loading' ? '本机已配对，正在连接云端…' : dashboard.connection === 'offline' ? '本机已配对，云端暂不可用' : '已连接');
       setText('cloud-sync-last-upload', current && current.lastUploadedAt ? formatDate(current.lastUploadedAt) : '尚未上传');
       setText('cloud-sync-last-result', lastResult);
 
       var sources = element('cloud-sync-source-list');
       sources.replaceChildren();
       state.sources().forEach(function (item) { sources.appendChild(snapshotCard(item)); });
-      if (!state.sources().length) appendLine(sources, 'muted-tip', '暂无其他设备快照。');
+      if (dashboard.connection) appendLine(sources, 'muted-tip', dashboard.connection === 'loading' ? '正在读取云端快照列表，请稍候。无需再次加入同步空间。' : '暂时无法读取云端设备快照，请重试连接。本机配对仍保留，无需再次加入或重置密码。');
+      else {
+        dashboard.devices.filter(function(device){return device.deviceId !== dashboard.deviceId && !device.revoked && !device.latestSnapshot && !(device.historySnapshots || []).length;}).forEach(function(device){appendLine(sources, 'muted-tip', device.deviceName + '：尚未上传快照。请先在该设备点击“上传本机快照”，再在这里刷新。');});
+        if (!state.sources().length && !sources.children.length) appendLine(sources, 'muted-tip', '暂无其他设备快照。请先在 Windows 等来源设备加入同一空间并上传本机快照，再刷新这里。');
+      }
 
       var histories = element('cloud-sync-history-list');
       histories.replaceChildren();
@@ -1235,7 +1247,7 @@
         card.appendChild(button);
         histories.appendChild(card);
       });
-      if (!state.currentHistory().length) appendLine(histories, 'muted-tip', '本设备暂无可恢复历史。');
+      if (!state.currentHistory().length) appendLine(histories, 'muted-tip', dashboard.connection ? '连接云端后可读取历史快照。' : '本设备暂无可恢复历史。');
 
       var select = element('cloud-sync-device-select');
       select.replaceChildren();
@@ -1251,16 +1263,58 @@
       }
       renderActionState();
     }
-    async function refreshDashboard() {
-      var dashboard;
-      if (!configured) {
-        var pairing = root.QinshiCloudSyncStorage ? await root.QinshiCloudSyncStorage.loadPairing() : null;
-        dashboard = pairing ? { paired: true, deviceId: pairing.deviceId, deviceName: pairing.deviceName,
-          devices: [{ deviceId: pairing.deviceId, deviceName: pairing.deviceName, current: true,
-            revoked: false, latestSnapshot: null, historySnapshots: [] }] } : { paired: false, devices: [] };
-      } else dashboard = await syncClient.getDashboard();
-      renderDashboard(dashboard);
-      return dashboard;
+    async function localDashboard(connection) {
+      var local;
+      if (configured && typeof syncClient.getLocalStatus === 'function') local = await syncClient.getLocalStatus();
+      else local = root.QinshiCloudSyncStorage ? await root.QinshiCloudSyncStorage.loadPairing() : null;
+      if (!local || local.paired === false) return { paired: false, devices: [] };
+      if (!local.deviceId) throw new Error('本机配对记录无法读取，请重试；不要重复加入或重置密码。');
+      return { paired: true, deviceId: local.deviceId, deviceName: local.deviceName, connection: connection,
+        devices: [{ deviceId: local.deviceId, deviceName: local.deviceName, current: true, revoked: false, latestSnapshot: null, historySnapshots: [] }] };
+    }
+    function unknownPairing() {
+      state.setDashboard({ paired: false, devices: [] });
+      element('cloud-sync-unbound').hidden = true;
+      element('cloud-sync-paired').hidden = true;
+      renderActionState();
+    }
+    async function restoreLocalDashboard(epoch) {
+      try {
+        var local = await localDashboard('offline');
+        if (epoch !== undefined && epoch !== actionEpoch) return null;
+        renderDashboard(local);
+        return local;
+      } catch (error) {
+        if (epoch !== undefined && epoch !== actionEpoch) return null;
+        unknownPairing();
+        throw error;
+      }
+    }
+    function refreshDashboard() {
+      if (dashboardPromise) return dashboardPromise;
+      var epoch = actionEpoch;
+      var pending = (async function(){
+        try {
+          var local = await localDashboard('loading');
+          if (epoch !== actionEpoch) return null;
+          renderDashboard(local);
+          if (!configured) return local;
+          var dashboard = await syncClient.getDashboard();
+          if (epoch !== actionEpoch) return null;
+          // A different tab may have forgotten/replaced pairing while the GET
+          // was pending. Never display a response for an obsolete device.
+          var current = await localDashboard('offline');
+          if (epoch !== actionEpoch) return null;
+          if (current.paired !== dashboard.paired || current.paired && current.deviceId !== dashboard.deviceId) throw new Error('本机配对状态已变化，请重新刷新设备列表。');
+          renderDashboard(dashboard); return dashboard;
+        } catch (error) {
+          if (epoch !== actionEpoch) return null;
+          try { await restoreLocalDashboard(epoch); } catch (localError) { /* Unknown local state stays fail-closed. */ }
+          throw error;
+        }
+      })().finally(function(){ if (dashboardPromise === pending) dashboardPromise = null; });
+      dashboardPromise = pending;
+      return pending;
     }
     function clearSecrets(form) {
       form.querySelectorAll('[data-cloud-secret]').forEach(function (input) {
@@ -1292,6 +1346,10 @@
         return Promise.resolve(false);
       }
       return state.withWriteLock(async function () {
+        // Responses from reads started before this action must not replace its
+        // state or resume an upload which this action just failed to finish.
+        actionEpoch += 1;
+        dashboardPromise = null;
         setProgress(progressText, true);
         status(progressText, false);
         try {
@@ -1299,9 +1357,10 @@
           try {
             result = await action();
           } catch (error) {
+            setProgress('', false);
             lastResult = '操作失败';
             status('操作失败：' + (error && error.message ? error.message : '未知错误'), true);
-            try { await refreshDashboard(); } catch (refreshError) { /* Keep the actionable operation error. */ }
+            try { await restoreLocalDashboard(); } catch (refreshError) { /* Keep the actionable operation error; never wait for another network call. */ }
             return null;
           }
           lastResult = typeof successText === 'function' ? successText(result) : successText;
@@ -1659,10 +1718,18 @@
     });
 
     renderActionState();
-    refreshDashboard().then(resumePending).catch(function (error) {
-      status('无法读取云同步状态：' + (error && error.message ? error.message : '未知错误'), true);
-      renderDashboard({ paired: false, devices: [] });
+    refreshDashboard().then(function(dashboard){ if (dashboard && actionEpoch === 0) return resumePending(); }).catch(function (error) {
+      if (actionEpoch === 0) status('无法读取云同步状态：' + (error && error.message ? error.message : '未知错误'), true);
     });
+    function refreshOnEntry() {
+      if (!configured || panel.hidden || state.writeInFlight()) return;
+      var epoch = actionEpoch;
+      refreshDashboard().catch(function(error){ if (epoch === actionEpoch) status('无法读取云同步状态：' + (error && error.message ? error.message : '未知错误'), true); });
+    }
+    if (typeof doc.addEventListener === 'function') {
+      doc.addEventListener('qinshi:settingssectionchange', function(event){ if (event.detail && event.detail.section === 'sync') refreshOnEntry(); });
+      doc.addEventListener('qinshi:partitionchange', function(event){ if (event.detail && event.detail.name === 'settings') refreshOnEntry(); });
+    }
     return Object.freeze({ state: state, refresh: refreshDashboard });
   }
 

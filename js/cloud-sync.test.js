@@ -210,7 +210,7 @@ function pairedDashboard(sources = []) {
 
 function uiClient(overrides = {}) {
   return {
-    detectDeviceName: () => '测试设备', getDashboard: async () => pairedDashboard(), resumePendingOperation: async () => ({ status: 'idle' }),
+    detectDeviceName: () => '测试设备', getLocalStatus: async () => ({paired:true,deviceId:'current',deviceName:'当前设备'}), getDashboard: async () => pairedDashboard(), resumePendingOperation: async () => ({ status: 'idle' }),
     createSpace: async () => ({}), joinSpace: async () => ({}), resetPasswordWithRecovery: async () => ({}), uploadCurrentDevice: async () => ({}),
     preparePull: async snapshotId => ({ snapshotId, sourceDeviceName: '来源', currentDeviceName: '当前', serverCreatedAt: 1,
       appVersion: '1.0.39', itemCount: 1, byteSize: 10 }), restoreHistory: async snapshotId => ({ snapshotId, sourceDeviceName: '历史',
@@ -1188,6 +1188,95 @@ test('settings UI reports successful action separately when dashboard refresh fa
     assert.match(message, /本机快照上传完成/);
     assert.match(message, /操作已完成，但状态刷新失败/);
     assert.doesNotMatch(message, /操作失败/);
+  });
+});
+
+test('pairing recovery: local status exposes no credentials and performs no network operation', async()=>{
+  const h=harness();await create(h);h.events.length=0;
+  const status=await h.sync.getLocalStatus();
+  assert.deepEqual(status,{paired:true,deviceId:h.state.pairing.deviceId,deviceName:'Windows 设备'});
+  assert.deepEqual(h.events,[]);assert.ok(!JSON.stringify(status).includes(h.state.pairing.deviceToken));
+  assert.ok(!JSON.stringify(status).includes(h.state.pairing.masterKey));
+});
+test('pairing recovery: failed cloud read keeps paired controls visible and retry restores sources',async()=>{
+  await withCloudGlobals({enabled:true,apiBaseUrl:'https://sync.invalid'},async()=>{
+    const {doc}=createSettingsDom();let offline=true;
+    const ui=moduleApi.bindSettingsUI(uiClient({getDashboard:async()=>{if(offline)throw Object.assign(Error('网络不可用'),{code:'OFFLINE'});return pairedDashboard(['windows-snapshot']);}}),doc);
+    await flushUI();assert.equal(doc.getElementById('cloud-sync-unbound').hidden,true);
+    assert.equal(doc.getElementById('cloud-sync-paired').hidden,false);
+    assert.match(doc.getElementById('cloud-sync-cloud-state').textContent,/已配对.*未连接|连接失败|暂不可用/);
+    assert.equal(ui.state.sources().length,0);assert.equal(doc.getElementById('cloud-sync-refresh').disabled,false);
+    offline=false;doc.getElementById('cloud-sync-refresh').click();await flushUI();
+    assert.equal(ui.state.sources()[0].snapshot.snapshotId,'windows-snapshot');
+  });
+});
+test('pairing recovery: local storage failure is unknown rather than an invitation to join',async()=>{
+  await withCloudGlobals({enabled:true,apiBaseUrl:'https://sync.invalid'},async()=>{
+    const {doc}=createSettingsDom();moduleApi.bindSettingsUI(uiClient({getLocalStatus:async()=>{throw Error('本地存储不可读');},getDashboard:async()=>{throw Error('本地存储不可读');}}),doc);
+    await flushUI();assert.equal(doc.getElementById('cloud-sync-unbound').hidden,true);
+    assert.equal(doc.getElementById('cloud-sync-paired').hidden,true);
+    assert.equal(doc.getElementById('cloud-sync-refresh').disabled,false);
+    assert.match(doc.getElementById('cloud-sync-status').textContent,/本地存储不可读/);
+  });
+});
+test('pairing recovery: failed action stops progress without starting a second held cloud read',async()=>{
+  await withCloudGlobals({enabled:true,apiBaseUrl:'https://sync.invalid'},async()=>{
+    const {doc}=createSettingsDom();let reads=0;
+    moduleApi.bindSettingsUI(uiClient({getDashboard:async()=>{reads++;if(reads>1)return new Promise(()=>{});return pairedDashboard();},uploadCurrentDevice:async()=>{throw Error('上传网络失败');}}),doc);
+    await flushUI();doc.getElementById('cloud-sync-upload').click();await flushUI();
+    assert.equal(doc.getElementById('cloud-sync-progress').hidden,true);
+    assert.equal(doc.getElementById('cloud-sync-refresh').disabled,false);assert.equal(reads,1);
+    assert.match(doc.getElementById('cloud-sync-status').textContent,/上传网络失败/);
+  });
+});
+test('pairing recovery: remote revocation rechecks local status instead of retaining stale pairing',async()=>{
+  await withCloudGlobals({enabled:true,apiBaseUrl:'https://sync.invalid'},async()=>{
+    const {doc}=createSettingsDom();let paired=true;
+    moduleApi.bindSettingsUI(uiClient({getLocalStatus:async()=>paired?{paired:true,deviceId:'current',deviceName:'当前设备'}:{paired:false},getDashboard:async()=>{paired=false;throw Object.assign(Error('配对已撤销'),{code:'DEVICE_REVOKED'});}}),doc);
+    await flushUI();assert.equal(doc.getElementById('cloud-sync-unbound').hidden,false);
+    assert.equal(doc.getElementById('cloud-sync-paired').hidden,true);
+  });
+});
+test('pairing recovery: a device without any snapshot is explained but never selectable',async()=>{
+  await withCloudGlobals({enabled:true,apiBaseUrl:'https://sync.invalid'},async()=>{
+    const {doc}=createSettingsDom();const dashboard=pairedDashboard();dashboard.devices.push({deviceId:'windows',deviceName:'Windows 设备',current:false,revoked:false,latestSnapshot:null,historySnapshots:[]});
+    const ui=moduleApi.bindSettingsUI(uiClient({getDashboard:async()=>dashboard}),doc);await flushUI();
+    assert.equal(ui.state.sources().length,0);assert.equal(doc.getElementById('cloud-sync-prepare').disabled,true);
+    assert.ok(doc.getElementById('cloud-sync-source-list').children.some(node=>/Windows 设备.*尚未上传/.test(node.textContent)));
+  });
+});
+
+test('pairing recovery: concurrent refresh is deduplicated and an obsolete paired response is rejected', async()=>{
+  await withCloudGlobals({enabled:true,apiBaseUrl:'https://sync.invalid'},async()=>{
+    const {doc}=createSettingsDom();const pending=deferredUI();let paired=true;let reads=0;
+    const ui=moduleApi.bindSettingsUI(uiClient({getLocalStatus:async()=>paired?{paired:true,deviceId:'current',deviceName:'当前设备'}:{paired:false},getDashboard:()=>{reads++;return pending.promise;}}),doc);
+    await flushUI();const first=ui.refresh();const second=ui.refresh();assert.equal(first,second);assert.equal(reads,1);
+    paired=false;pending.resolve(pairedDashboard(['obsolete-snapshot']));
+    await assert.rejects(first,/配对状态已变化/);await flushUI();
+    assert.equal(doc.getElementById('cloud-sync-paired').hidden,true);
+    assert.equal(doc.getElementById('cloud-sync-unbound').hidden,false);assert.equal(ui.state.sources().length,0);
+  });
+});
+
+test('pairing recovery: late startup response cannot resume a newly failed upload or erase its error',async()=>{
+  await withCloudGlobals({enabled:true,apiBaseUrl:'https://sync.invalid'},async()=>{
+    const {doc}=createSettingsDom();const pending=deferredUI();let resumes=0;
+    moduleApi.bindSettingsUI(uiClient({getDashboard:()=>pending.promise,uploadCurrentDevice:async()=>{throw Error('本次上传失败');},resumePendingOperation:async()=>{resumes++;return {status:'idle'};}}),doc);
+    await flushUI();doc.getElementById('cloud-sync-upload').click();await flushUI();
+    pending.resolve(pairedDashboard(['stale-snapshot']));await flushUI();
+    assert.equal(resumes,0);assert.match(doc.getElementById('cloud-sync-status').textContent,/本次上传失败/);
+    assert.equal(doc.getElementById('cloud-sync-source-list').querySelectorAll('input').length,0);
+  });
+});
+
+test('pairing recovery: successful action starts a fresh dashboard read instead of reusing startup GET',async()=>{
+  await withCloudGlobals({enabled:true,apiBaseUrl:'https://sync.invalid'},async()=>{
+    const {doc}=createSettingsDom();const pending=deferredUI();let reads=0;
+    const ui=moduleApi.bindSettingsUI(uiClient({getDashboard:()=>++reads===1?pending.promise:Promise.resolve(pairedDashboard(['fresh-snapshot']))}),doc);
+    await flushUI();doc.getElementById('cloud-sync-upload').click();await flushUI();
+    assert.equal(reads,2);assert.equal(ui.state.sources()[0].snapshot.snapshotId,'fresh-snapshot');
+    pending.resolve(pairedDashboard(['stale-snapshot']));await flushUI();
+    assert.equal(ui.state.sources()[0].snapshot.snapshotId,'fresh-snapshot');
   });
 });
 

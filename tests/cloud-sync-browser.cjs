@@ -519,7 +519,7 @@ afterEach(() => {
 async function browserPage(stub, options = {}) {
   stub.allowedOrigin = appUrl;
   const context = await browser.newContext({ serviceWorkers: 'block', acceptDownloads: true,
-    viewport: options.viewport || { width: 1280, height: 900 } });
+    viewport: options.viewport || { width: 1280, height: 900 }, hasTouch: !!options.hasTouch });
   await context.route('**/*', route => {
     const origin = new URL(route.request().url()).origin;
     return origin === appUrl || origin === 'https://sync.test'
@@ -964,6 +964,82 @@ test('3 本机数据未变化时手动上传不新增快照', { timeout: 120000 
   } finally { await session.context.close(); }
 });
 
+for (const viewport of [{ width: 390, height: 844 }, { width: 768, height: 1024 }]) {
+  test(`pairing recovery ${viewport.width}: 离线重进保留配对并可重试看到 Windows 快照`, { timeout: 120000 }, async () => {
+    const stub = new CloudStub();
+    const source = await browserPage(stub);
+    const code = await createSpace(source, 'Windows 设备 1');
+    const target = await browserPage(stub, { viewport, hasTouch: true });
+    try {
+      await joinSpace(target, code, 'iPhone 设备');
+      const before = await target.page.evaluate(() => window.QinshiCloudSync.getLocalStatus());
+      // A joined device is not a source until it uploads its own first snapshot.
+      await source.page.locator('#cloud-sync-refresh').click();
+      await source.page.locator('#cloud-sync-source-list').filter({ hasText: 'iPhone 设备：尚未上传快照' }).waitFor();
+      const requestStart = stub.requests.length;
+      stub.offline = true;
+      await target.page.reload();
+      await target.page.evaluate(() => document.querySelector('.tab[data-partition="settings"]').click());
+      await target.page.locator('#settings-tab-sync').click();
+      await target.page.locator('#cloud-sync-cloud-state').filter({ hasText: '云端暂不可用' }).waitFor();
+      assert.equal(await target.page.locator('#cloud-sync-unbound').isVisible(), false);
+      assert.equal(await target.page.locator('#cloud-sync-paired').isVisible(), true);
+      assert.equal(await target.page.locator('#cloud-sync-sources-title').isVisible(), true);
+      assert.equal(await target.page.locator('#cloud-sync-refresh').isEnabled(), true);
+      assert.equal(await target.page.locator('#cloud-sync-prepare').isEnabled(), false);
+      assert.equal(await target.page.locator('#cloud-sync-progress').isVisible(), false);
+      assert.equal(await target.page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), true);
+      const retryBox = await target.page.locator('#cloud-sync-refresh').boundingBox();
+      assert.ok(retryBox.x >= 0 && retryBox.x + retryBox.width <= viewport.width + 1);
+      stub.offline = false;
+      await target.page.locator('#cloud-sync-refresh').click();
+      await target.page.locator('#cloud-sync-source-list .cloud-sync-source-card', { hasText: 'Windows 设备 1' }).waitFor();
+      assert.deepEqual(await target.page.evaluate(() => window.QinshiCloudSync.getLocalStatus()), before);
+      assert.equal(await target.page.evaluate(() => window.QinshiAccounts.getItem('qinshi_browser_progress')), 'target-progress');
+      // Entering the tab must refresh after visibility changes, by mouse or keyboard.
+      await target.page.locator('#settings-tab-accounts').click();
+      stub.offline = true;
+      await target.page.locator('#settings-tab-sync').click();
+      await target.page.locator('#cloud-sync-cloud-state').filter({ hasText: '云端暂不可用' }).waitFor();
+      await target.page.locator('#settings-tab-accounts').click();
+      stub.offline = false;
+      await target.page.locator('#settings-tab-accounts').focus();
+      await target.page.keyboard.press('ArrowRight');
+      await target.page.locator('#cloud-sync-cloud-state').filter({ hasText: /^已连接$/ }).waitFor();
+      await target.page.locator('#cloud-sync-source-list .cloud-sync-source-card', { hasText: 'Windows 设备 1' }).waitFor();
+      assert.equal(stub.requests.slice(requestStart).some(entry => !['GET', 'OPTIONS'].includes(entry.method)), false, 'recovery only reads; never re-pairs, uploads, or overwrites');
+    } finally { await target.context.close(); await source.context.close(); }
+  });
+}
+
+test('pairing recovery: 创建成功但首次上传失败，保留配对并可手动重试上传', { timeout: 120000 }, async () => {
+  const stub = new CloudStub();
+  const session = await browserPage(stub, { viewport: { width: 390, height: 844 }, hasTouch: true });
+  const { page } = session;
+  try {
+    await page.route('https://sync.test/v1/uploads', route => route.abort('internetdisconnected'));
+    await page.locator('#cloud-sync-create-device').fill('Windows 首次上传失败');
+    await page.locator('#cloud-sync-create-password').fill(PASSWORD);
+    await page.locator('#cloud-sync-create-confirm').fill(PASSWORD);
+    await page.locator('#cloud-sync-create-form button[type="submit"]').click();
+    await page.locator('#cloud-sync-recovery-layer').waitFor({ state: 'visible' });
+    await page.locator('#cloud-sync-recovery-ack').check();
+    await page.locator('#cloud-sync-recovery-confirm').click();
+    await page.locator('#cloud-sync-status').filter({ hasText: '操作失败' }).waitFor();
+    await page.locator('#cloud-sync-upload:not([disabled])').waitFor();
+    assert.equal(await page.locator('#cloud-sync-unbound').isVisible(), false);
+    assert.equal(await page.locator('#cloud-sync-paired').isVisible(), true);
+    assert.equal(await page.locator('#cloud-sync-progress').isVisible(), false);
+    assert.equal((await page.evaluate(() => window.QinshiCloudSync.getLocalStatus())).paired, true);
+    assert.equal(stub.snapshots.size, 0);
+    await page.unroute('https://sync.test/v1/uploads');
+    await page.locator('#cloud-sync-upload').click();
+    await page.locator('#cloud-sync-status').filter({ hasText: '本机快照上传完成' }).waitFor();
+    assert.equal(stub.snapshots.size, 1);
+    assert.equal(stub.requests.filter(entry => entry.method === 'POST' && entry.pathname === '/v1/spaces').length, 1);
+  } finally { await session.context.close(); }
+});
+
 test('4 明确选择来源后显示完整方向并用来源覆盖当前设备', { timeout: 120000 }, async () => {
   const stub = new CloudStub();
   const { source, target } = await pairedDevices(stub);
@@ -1103,6 +1179,9 @@ test('8 缺失或篡改的分块在替换前被拒绝', { timeout: 120000 }, asy
     assert.equal(await readRollback(target.page), null);
     stub.tamperSnapshotId = null;
     stub.snapshots.get(snapshotId).chunks[0] = null;
+    // A failed action now restores local pairing only. Re-read the cloud list
+    // explicitly before attempting a different source download.
+    await target.page.locator('#cloud-sync-refresh').click();
     await target.page.locator('#cloud-sync-source-list .cloud-sync-source-card', { hasText: 'Windows 设备 1' })
       .first().locator('input[type="radio"]').check();
     await target.page.locator('#cloud-sync-prepare').click();

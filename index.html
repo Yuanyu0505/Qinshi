@@ -8,14 +8,14 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Qin">
-<link rel="manifest" href="manifest.webmanifest?v=1.0.69">
-<link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png?v=1.0.69">
-<link rel="stylesheet" href="css/style.css?v=1.0.69">
-<link rel="stylesheet" href="css/six-halls.css?v=1.0.69">
-<link rel="stylesheet" href="css/secret-realm.css?v=1.0.69">
-<link rel="stylesheet" href="css/inscription-crafting.css?v=1.0.69">
-<link rel="stylesheet" href="css/inscription-route-favorites.css?v=1.0.69">
-<link rel="stylesheet" href="css/formation-search.css?v=1.0.69">
+<link rel="manifest" href="manifest.webmanifest?v=1.0.70">
+<link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png?v=1.0.70">
+<link rel="stylesheet" href="css/style.css?v=1.0.70">
+<link rel="stylesheet" href="css/six-halls.css?v=1.0.70">
+<link rel="stylesheet" href="css/secret-realm.css?v=1.0.70">
+<link rel="stylesheet" href="css/inscription-crafting.css?v=1.0.70">
+<link rel="stylesheet" href="css/inscription-route-favorites.css?v=1.0.70">
+<link rel="stylesheet" href="css/formation-search.css?v=1.0.70">
 </head>
 <body>
 <div id="account-init-overlay" class="account-init-overlay" hidden>
@@ -695,7 +695,7 @@
         <div class="panel-title">应用与离线状态</div>
         <div class="settings-list">
           <div><span>应用名称</span><strong>Qin</strong></div>
-          <div><span>当前版本</span><strong id="pwa-version">1.0.69</strong></div>
+          <div><span>当前版本</span><strong id="pwa-version">1.0.70</strong></div>
           <div><span>运行状态</span><strong id="pwa-mode-status">正在检查…</strong></div>
         </div>
         <div class="settings-actions">
@@ -739,7 +739,11 @@
         <p class="muted-tip">工具版本由 PWA 更新；本面板只同步工具内保存的数据。同步开始前会先检查并更新工具版本。</p>
         <p id="cloud-sync-config-notice" class="cloud-sync-notice" hidden>云同步服务尚未配置，本机数据和 JSON 备份不受影响。</p>
 
-        <div id="cloud-sync-unbound">
+        <div class="cloud-sync-actions cloud-sync-connection-tools">
+          <button id="cloud-sync-refresh" type="button" class="seg cloud-sync-action" data-cloud-action>重试连接／刷新设备列表</button>
+          <span class="muted-tip">连接失败不代表未配对，无需重复加入或重置密码。</span>
+        </div>
+        <div id="cloud-sync-unbound" hidden>
           <div class="cloud-sync-form-grid">
             <form id="cloud-sync-create-form" class="cloud-sync-box">
               <h3>创建同步空间</h3>
@@ -778,11 +782,10 @@
           </div>
           <div class="cloud-sync-actions">
             <button id="cloud-sync-upload" type="button" class="seg active cloud-sync-action" data-cloud-action>上传本机快照</button>
-            <button id="cloud-sync-refresh" type="button" class="seg cloud-sync-action" data-cloud-action>刷新设备列表</button>
           </div>
           <section class="cloud-sync-section" aria-labelledby="cloud-sync-sources-title">
             <h3 id="cloud-sync-sources-title">从其他设备同步</h3>
-            <p class="muted-tip">必须手动选择一个来源；当前设备最新版不会出现在这里。</p>
+            <p class="muted-tip">先在 Windows 等来源设备点击“上传本机快照”，再在当前设备刷新并选择其快照，点击“查看覆盖确认”。加入空间不会自动接收数据；当前设备最新版不列为来源。</p>
             <div id="cloud-sync-source-list" class="cloud-sync-device-grid" role="radiogroup" aria-label="来源快照"></div>
             <button id="cloud-sync-prepare" type="button" class="seg active cloud-sync-action" data-cloud-action disabled>查看覆盖确认</button>
           </section>
@@ -940,61 +943,61 @@
   </div>
 </div>
 
-<script defer src="data/tactics.js?v=1.0.69"></script>
-<script defer src="data/formations.js?v=1.0.69"></script>
-<script defer src="data/six-halls.js?v=1.0.69"></script>
-<script defer src="data/machine-beasts.js?v=1.0.69"></script>
-<script defer src="data/battle-box-pill-pouch.js?v=1.0.69"></script>
-<script defer src="data/special-equipment.js?v=1.0.69"></script>
-<script defer src="data/forging.js?v=1.0.69"></script>
-<script defer src="data/drops.js?v=1.0.69"></script>
-<script defer src="data/atlas.js?v=1.0.69"></script>
-<script defer src="data/forbidden.js?v=1.0.69"></script>
-<script defer src="data/quiz.js?v=1.0.69"></script>
-<script defer src="data/inscription.js?v=1.0.69"></script>
-<script defer src="data/zhulu.js?v=1.0.69"></script>
-<script defer src="data/2026-09-content-update.js?v=1.0.69"></script>
-<script defer src="data/2026-10-equipment-update.js?v=1.0.69"></script>
-<script defer src="data/2026-10-forging-update.js?v=1.0.69"></script>
-<script defer src="data/2026-10-inscription-update.js?v=1.0.69"></script>
-<script defer src="js/account-edit-lease.js?v=1.0.69"></script>
-<script defer src="js/account-profiles.js?v=1.0.69"></script>
-<script defer src="js/calculation-runner.js?v=1.0.69"></script>
-<script defer src="js/partition-loader.js?v=1.0.69"></script>
-<script defer src="js/query.js?v=1.0.69"></script>
-<script defer src="js/equipment-compare.js?v=1.0.69"></script>
-<script defer src="js/equipment-forging.js?v=1.0.69"></script>
-<script defer src="js/item-navigation.js?v=1.0.69"></script>
-<script defer src="js/forging.js?v=1.0.69"></script>
-<script defer src="js/drops.js?v=1.0.69"></script>
-<script defer src="js/progress.js?v=1.0.69"></script>
-<script defer src="js/atlas.js?v=1.0.69"></script>
-<script defer src="js/forbidden.js?v=1.0.69"></script>
-<script defer src="js/quiz.js?v=1.0.69"></script>
-<script defer src="js/ui-performance.js?v=1.0.69"></script>
-<script defer src="js/inscription-performance.js?v=1.0.69"></script>
-<script defer src="js/inscription-rules.js?v=1.0.69"></script>
-<script defer src="js/inscription-progress-rules.js?v=1.0.69"></script>
-<script defer src="js/inscription-terms.js?v=1.0.69"></script>
-<script defer src="js/inscription-paths.js?v=1.0.69"></script>
-<script defer src="js/inscription-crafting-state.js?v=1.0.69"></script>
-<script defer src="js/inscription-flow-model.js?v=1.0.69"></script>
-<script defer src="js/inscription-flowchart.js?v=1.0.69"></script>
-<script defer src="js/inscription-route-favorites.js?v=1.0.69"></script>
-<script defer src="js/inscription-crafting-ui.js?v=1.0.69"></script>
-<script defer src="js/inscription.js?v=1.0.69"></script>
-<script defer src="js/zhulu.js?v=1.0.69"></script>
-<script defer src="js/settings.js?v=1.0.69"></script>
-<script defer src="js/account-profiles-ui.js?v=1.0.69"></script>
-<script defer src="js/cloud-sync-config.js?v=1.0.69"></script>
-<script defer src="js/cloud-sync-core.js?v=1.0.69"></script>
-<script defer src="js/cloud-sync-crypto.js?v=1.0.69"></script>
-<script defer src="js/cloud-sync-storage.js?v=1.0.69"></script>
-<script defer src="js/cloud-sync-api.js?v=1.0.69"></script>
-<script defer src="js/pwa.js?v=1.0.69"></script>
-<script defer src="js/cloud-sync.js?v=1.0.69"></script>
-<script defer src="js/forbidden-ui.js?v=1.0.69"></script>
-<script defer src="js/zhulu-ui.js?v=1.0.69"></script>
-<script defer src="js/app.js?v=1.0.69"></script>
+<script defer src="data/tactics.js?v=1.0.70"></script>
+<script defer src="data/formations.js?v=1.0.70"></script>
+<script defer src="data/six-halls.js?v=1.0.70"></script>
+<script defer src="data/machine-beasts.js?v=1.0.70"></script>
+<script defer src="data/battle-box-pill-pouch.js?v=1.0.70"></script>
+<script defer src="data/special-equipment.js?v=1.0.70"></script>
+<script defer src="data/forging.js?v=1.0.70"></script>
+<script defer src="data/drops.js?v=1.0.70"></script>
+<script defer src="data/atlas.js?v=1.0.70"></script>
+<script defer src="data/forbidden.js?v=1.0.70"></script>
+<script defer src="data/quiz.js?v=1.0.70"></script>
+<script defer src="data/inscription.js?v=1.0.70"></script>
+<script defer src="data/zhulu.js?v=1.0.70"></script>
+<script defer src="data/2026-09-content-update.js?v=1.0.70"></script>
+<script defer src="data/2026-10-equipment-update.js?v=1.0.70"></script>
+<script defer src="data/2026-10-forging-update.js?v=1.0.70"></script>
+<script defer src="data/2026-10-inscription-update.js?v=1.0.70"></script>
+<script defer src="js/account-edit-lease.js?v=1.0.70"></script>
+<script defer src="js/account-profiles.js?v=1.0.70"></script>
+<script defer src="js/calculation-runner.js?v=1.0.70"></script>
+<script defer src="js/partition-loader.js?v=1.0.70"></script>
+<script defer src="js/query.js?v=1.0.70"></script>
+<script defer src="js/equipment-compare.js?v=1.0.70"></script>
+<script defer src="js/equipment-forging.js?v=1.0.70"></script>
+<script defer src="js/item-navigation.js?v=1.0.70"></script>
+<script defer src="js/forging.js?v=1.0.70"></script>
+<script defer src="js/drops.js?v=1.0.70"></script>
+<script defer src="js/progress.js?v=1.0.70"></script>
+<script defer src="js/atlas.js?v=1.0.70"></script>
+<script defer src="js/forbidden.js?v=1.0.70"></script>
+<script defer src="js/quiz.js?v=1.0.70"></script>
+<script defer src="js/ui-performance.js?v=1.0.70"></script>
+<script defer src="js/inscription-performance.js?v=1.0.70"></script>
+<script defer src="js/inscription-rules.js?v=1.0.70"></script>
+<script defer src="js/inscription-progress-rules.js?v=1.0.70"></script>
+<script defer src="js/inscription-terms.js?v=1.0.70"></script>
+<script defer src="js/inscription-paths.js?v=1.0.70"></script>
+<script defer src="js/inscription-crafting-state.js?v=1.0.70"></script>
+<script defer src="js/inscription-flow-model.js?v=1.0.70"></script>
+<script defer src="js/inscription-flowchart.js?v=1.0.70"></script>
+<script defer src="js/inscription-route-favorites.js?v=1.0.70"></script>
+<script defer src="js/inscription-crafting-ui.js?v=1.0.70"></script>
+<script defer src="js/inscription.js?v=1.0.70"></script>
+<script defer src="js/zhulu.js?v=1.0.70"></script>
+<script defer src="js/settings.js?v=1.0.70"></script>
+<script defer src="js/account-profiles-ui.js?v=1.0.70"></script>
+<script defer src="js/cloud-sync-config.js?v=1.0.70"></script>
+<script defer src="js/cloud-sync-core.js?v=1.0.70"></script>
+<script defer src="js/cloud-sync-crypto.js?v=1.0.70"></script>
+<script defer src="js/cloud-sync-storage.js?v=1.0.70"></script>
+<script defer src="js/cloud-sync-api.js?v=1.0.70"></script>
+<script defer src="js/pwa.js?v=1.0.70"></script>
+<script defer src="js/cloud-sync.js?v=1.0.70"></script>
+<script defer src="js/forbidden-ui.js?v=1.0.70"></script>
+<script defer src="js/zhulu-ui.js?v=1.0.70"></script>
+<script defer src="js/app.js?v=1.0.70"></script>
 </body>
 </html>

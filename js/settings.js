@@ -171,6 +171,7 @@
         if (active && moveFocus) tab.focus();
       });
       panels.forEach(function (panel) { panel.hidden = panel.dataset.settingsSectionPanel !== section; });
+      document.dispatchEvent(new CustomEvent("qinshi:settingssectionchange", { detail: { section: section } }));
     }
 
     tabs.forEach(function (tab, index) {

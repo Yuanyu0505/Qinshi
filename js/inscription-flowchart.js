@@ -1,10 +1,10 @@
 (function (root, factory) {
   'use strict';
   var common=typeof module==='object'&&module.exports;
-  var api=factory(common?require('./inscription-rules.js'):root.InscriptionRules,common?require('./inscription-terms.js'):root.InscriptionTerms);
+  var api=factory(common?require('./inscription-rules.js'):root.InscriptionRules,common?require('./inscription-terms.js'):root.InscriptionTerms,common?require('./inscription-flow-model.js'):root.InscriptionFlowModel);
   if(typeof module==='object'&&module.exports)module.exports=api;
   if(root)root.InscriptionFlowchart=api;
-})(typeof window!=='undefined'?window:null,function(R,T){
+})(typeof window!=='undefined'?window:null,function(R,T,Model){
   'use strict';
   var serial=0;
   var wireColors=['#0072b2','#c45100','#00856a','#a339a3','#b72745','#6351bd','#626b16','#445563'];
@@ -12,10 +12,6 @@
   function qLabel(id){return R.qualities.find(function(q){return q.id===id;}).label;}
   function percent(value){var n=value*100,i=Math.round(n);return value>0&&i===0?'不足1%':value<1&&i===100?'超过99%':(Math.abs(n-i)>1e-8?'约':'')+i+'%';}
   function termKey(term){return term.attr+':'+term.tier;}
-  function recipeKey(node){
-    var inputs=[];(node.children||[]).forEach(function(child){for(var i=0;i<child.quantity;i++)inputs.push(R.signature(child.node.material));});
-    return JSON.stringify([R.signature(node.material),inputs.sort()]);
-  }
   function terms(material,symbols){
     var parts=[];
     T.sortTerms(material.terms,material.quality).forEach(function(t,index){
@@ -75,171 +71,157 @@
         var h=lines.length*18+10,x=e.labelX===undefined?d.x:e.labelX,y=e.labelY===undefined?d.y-44:e.labelY;
         labels.push('<g class="craft-flow-label"><rect x="'+(x-w/2)+'" y="'+(y-h/2)+'" width="'+w+'" height="'+h+'" rx="'+Math.min(15,h/2)+'"/>'+lines.map(function(line,i){return '<text x="'+x+'" y="'+(y-(lines.length-1)*9+i*18)+'">'+lineHtml(line)+'</text>';}).join('')+'</g>');
       }
-      return '<path class="craft-flow-connection" style="stroke:'+wireColors[from.wireColor]+'" d="'+path([a,{x:a.x,y:via},{x:d.x,y:via},d])+'" marker-end="url(#'+id+'-arrow-'+from.wireColor+')"/>';
+      return '<path class="craft-flow-connection" data-from="'+esc(e.from)+'" data-to="'+esc(e.to)+'" style="stroke:'+wireColors[from.wireColor]+'" d="'+path([a,{x:a.x,y:via},{x:d.x,y:via},d])+'" marker-end="url(#'+id+'-arrow-'+from.wireColor+')"/>';
     }).join('');
     var description=nodes.map(function(n){return n.lines.map(lineText).join('，');}).join('；')+'。'+edges.filter(function(e){return e.label;}).map(function(e){return lineText(map.get(e.from).lines[0])+' → '+lineText(map.get(e.to).lines[0])+'：'+[].concat(e.label).join('，');}).join('；');
     return '<svg xmlns="http://www.w3.org/2000/svg" class="craft-flow-svg" role="img" aria-labelledby="'+id+'-title '+id+'-desc" viewBox="0 0 '+width+' '+height+'" width="'+Math.round(width*0.9)+'" height="'+Math.round(height*0.9)+'" data-flow-width="'+width+'" data-flow-height="'+height+'">'+
       '<title id="'+id+'-title">'+esc(title)+'</title><desc id="'+id+'-desc">'+esc(description)+'</desc>'+
       '<defs>'+wireColors.map(function(color,i){return '<marker id="'+id+'-arrow-'+i+'" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="8" markerHeight="8" orient="auto"><path d="M 1 1 L 7 4 L 1 7" fill="none" stroke="'+color+'" stroke-width="1.8"/></marker>';}).join('')+'</defs>'+
       stages.map(function(stage){return '<g class="craft-flow-stage craft-flow-stage-'+stage.kind+'"><rect x="4" y="'+stage.top+'" width="'+(width-8)+'" height="'+(stage.bottom-stage.top)+'" rx="12"/><text x="18" y="'+(stage.top+20)+'">'+stage.label+'</text></g>';}).join('')+connections+
-      nodes.map(function(n){return '<g class="craft-flow-box craft-flow-'+n.kind+'"><rect x="'+n.x+'" y="'+n.y+'" width="'+n.w+'" height="'+n.h+'" rx="17"/>'+n.lines.map(function(line,i){return '<text x="'+(n.x+n.w/2)+'" y="'+(n.y+22+i*20)+'">'+lineHtml(line)+'</text>';}).join('')+'</g>';}).join('')+labels.join('')+'</svg>';
+      nodes.map(function(n){return '<g class="craft-flow-box craft-flow-'+n.kind+'" data-flow-node="'+esc(n.id)+'" role="button" tabindex="0" aria-label="'+esc(n.lines.map(lineText).join('，'))+'"><rect x="'+n.x+'" y="'+n.y+'" width="'+n.w+'" height="'+n.h+'" rx="17"/>'+n.lines.map(function(line,i){return '<text x="'+(n.x+n.w/2)+'" y="'+(n.y+22+i*20)+'">'+lineHtml(line)+'</text>';}).join('')+'</g>';}).join('')+labels.join('')+'</svg>';
   }
   function figure(title,drawing,note,actions){
     return '<section class="craft-flow-step"><h5>'+esc(title)+'</h5><div class="craft-flow-viewer" data-flow-viewer data-zoom="0.9">'+
-      '<div class="craft-flow-toolbar"><span>同一来源的连线与箭头同色；左右滑动查看</span><div>'+(actions||'')+control('out','缩小')+control('reset','90%')+control('in','放大')+'</div></div>'+
+      '<div class="craft-flow-toolbar"><span>同源连线同色；点选节点突出来源和去向，Esc取消</span><div>'+(actions||'')+control('width','适合宽度')+control('all','完整总览')+control('out','缩小')+control('reset','90%')+control('in','放大')+'</div></div>'+
       '<div class="craft-flow-viewport" tabindex="0" role="region" aria-label="'+esc(title)+'，可左右滚动">'+drawing+'</div></div>'+
       (note?'<p class="craft-note">'+esc(note)+'</p>':'')+'</section>';
   }
   function control(action,label){return '<button type="button" class="seg" data-craft-action="diagram-'+action+'" aria-label="'+esc(action==='reset'?'恢复当前流程图默认比例90%':label+'当前流程图')+'">'+esc(label)+'</button>';}
   function letter(index){var result='';do{result=String.fromCharCode(65+index%26)+result;index=Math.floor(index/26)-1;}while(index>=0);return result;}
-  function candidateInfo(node){
-    if(node.kind==='wash')return ['置换 / 洗练','得到指定词条组合'];
-    if(node.children.some(function(c){return c.node.material.terms.some(function(t){return t.tier==='?';});}))return ['蓝二速度档位不可辨','按合法结果等概率生成'];
-    var pool=new Set();node.children.forEach(function(c){c.node.material.terms.forEach(function(t){pool.add(t.attr+':'+t.tier);});});
-    var count=R.qualities.find(function(q){return q.id===node.material.quality;}).count;
-    if(node.coverageReuse)return [{parts:[{text:'候选词条池必须覆盖全部目标词条，目前'+pool.size+'选'+count}]}];
-    if(pool.size<count)return ['候选不足，随机补词条','按完整合法结果分支'];
-    var words={1:'一',2:'二',3:'三',4:'四',5:'五',6:'六',7:'七',8:'八',9:'九'};
-    return [pool.size+'种候选，'+(words[pool.size]||pool.size)+'选'+(words[count]||count)];
-  }
   function render(route,x,settings){
     settings=settings||{};
-    var nodes=[],edges=[],outputs=new Map(),column=0,number=0;
-    var legacy=route.xTerm===undefined&&route.symbolicX===undefined,xTerm=route.xTerm===undefined?(x?{attr:x,tier:'U'}:null):route.xTerm,symbolic=route.symbolicX!==false;
-    function retained(material,symbols){return new Set(material.terms.filter(function(term){return symbols.has(termKey(term));}).map(termKey));}
-    function inherited(inputs){var symbols=new Set();inputs.forEach(function(input){(input.n.symbols||[]).forEach(function(key){symbols.add(key);});});return symbols;}
+    var graph=Model.project(route,x), nodes=[],edges=[],visual=new Map(),opVisual=new Map(),details=[];
+    var byMaterial=new Map(graph.materials.map(function(m){return [m.id,m];})),byOperation=new Map(graph.operations.map(function(o){return [o.id,o];}));
     var levels={b2:0,p1:2,p2:4,o1:6,o2:8};
-    function add(lines,level,kind,center){
-      var id='n'+nodes.length,n=box(id,0,0,kind==='promotion'?170:kind==='operation'?220:240,lines,kind);
-      n.level=level;n.center=center===undefined?140+(column++)*280:center;
-      nodes.push(n);return n;
+    function add(id,lines,level,kind,width){
+      var n=box(id,0,0,width||240,lines,kind);n.level=level;nodes.push(n);return n;
     }
-    function link(from,to,label,extra){edges.push(edge(from.id,to.id,label,extra));}
-    function remember(material,n){
-      var sig=R.signature(material);if(!outputs.has(sig))outputs.set(sig,[]);
-      outputs.get(sig).push(n);
+    function info(op){
+      var count=R.qualities.find(function(q){return q.id===op.quality;}).count;
+      var unknown=op.inputs.some(function(input){return byMaterial.get(input.id).material.terms.some(function(t){return t.tier==='?';});});
+      if(op.kind==='reuse')return [{parts:[{text:'候选词条池必须覆盖全部目标词条，目前'+op.candidateCount+'选'+count}]}];
+      if(unknown)return ['蓝二速度档位不可辨'];
+      return [op.candidateCount+'种候选，'+op.candidateCount+'选'+count];
     }
-    function build(node){
-      var level=levels[node.material.quality],inputs=[];
-      // Washing prepares an independently supplied inscription of this quality.
-      // Its old illustrative base is NOT a consumed output from another branch.
-      if(node.kind!=='wash')inputs=node.children.map(function(c){return {n:build(c.node),quantity:c.quantity};});
-      if(node.kind==='base'||node.kind==='failure'){
-        var leafSymbols=new Set();
-        if(symbolic&&xTerm&&node.kind==='base'&&(node.xSource===true||legacy&&node.xSource===undefined)&&node.material.terms.some(function(term){return termKey(term)===termKey(xTerm);}))leafSymbols.add(termKey(xTerm));
-        var leaf=add(['准备'+qLabel(node.material.quality)].concat(terms(node.material,leafSymbols)),level,'material');
-        leaf.symbols=leafSymbols;
-        remember(node.material,leaf);return leaf;
+    function drawnTerms(m){return terms(m.material,new Set(m.symbols));}
+    graph.materials.filter(function(m){return m.useful;}).forEach(function(m,index){
+      var op=byOperation.get(m.producer),multi=op&&op.outputs.length>1;
+      var title=qLabel(m.material.quality)+' '+(multi?'可用产物 ':'')+'M'+(index+1);
+      var lines=[title].concat(drawnTerms(m));
+      if(m.kind==='base')lines[0]='准备'+qLabel(m.material.quality);
+      else if(m.kind==='wash')lines=lines.concat(['另行置换合成素材铭文','当前概率：未知']);
+      else if(op&&op.outputs.length===1&&op.kind==='craft')lines=lines.concat(info(op),op.promotion?[op.promotion+'晋升铭文 × 1']:[],['当前概率：100%']);
+      else if(m.probability!==null)lines.push('当前概率：'+percent(m.probability));
+      if(m.kind!=='base')lines.push(m.demand?'本路线需'+m.demand+'枚':'可替代同款材料（不重复计量）');
+      visual.set(m.id,add(m.id,lines,levels[m.material.quality],m.kind==='base'?'material':'success'));
+    });
+    var reuseNumber=0;
+    graph.operations.forEach(function(op){
+      var useful=op.outputs.map(function(out){return byMaterial.get(out.id);}).filter(function(m){return m.useful;});
+      var unused=op.outputs.map(function(out){return byMaterial.get(out.id);}).filter(function(m){return !m.useful;});
+      var folded=op.kind==='wash'||op.kind==='craft'&&op.outputs.length===1&&useful.length===1;
+      var operation;
+      if(folded)operation=visual.get(useful[0].id);
+      else {
+        var lines=op.kind==='reuse'?['失败品复用'+(++reuseNumber),'三枚失败材料，同种可重复'].concat(info(op)):
+          info(op).concat(['每次随机产出一枚'],op.promotion?[op.promotion+'晋升铭文 × 1']:[]);
+        if(op.kind==='reuse'){
+          var hit=op.outputs.find(function(o){return o.id===graph.targetId;});
+          lines.push('当前概率：'+percent(hit?hit.probability:0));
+        }
+        if(unused.length&&op.kind!=='reuse')lines.push('另有'+unused.length+'种产物，见下方明细');
+        operation=add(op.id,lines,levels[op.quality]-1,'operation');
+        useful.forEach(function(m){edges.push(edge(operation.id,visual.get(m.id).id));});
       }
-      var symbols=inherited(inputs);
-      if(node.kind==='wash'&&symbolic&&xTerm&&(node.xSource===true||legacy&&node.xSource===undefined)&&node.material.terms.some(function(term){return termKey(term)===termKey(xTerm);}))symbols.add(termKey(xTerm));
-      var promotion;
-      if(node.promotion){var near=inputs.length?inputs.reduce(function(sum,c){return sum+c.n.center;},0)/inputs.length:140;promotion=add([node.promotion+'晋升铭文 × 1'],level-2,'promotion',near+110);}
-      var anchors=inputs.map(function(c){return c.n.center;});if(promotion)anchors.push(promotion.center);
-      var center=anchors.length?anchors.reduce(function(a,b){return a+b;},0)/anchors.length:140+(column++)*280;
-      var operation=add(node.kind==='wash'?['另行置换合成素材铭文','当前概率：未知']:candidateInfo(node).concat(['当前概率：'+percent(node.probability)]),level-1,'operation',center);
-      inputs.forEach(function(c,i){link(c.n,operation,'× '+c.quantity,{toPort:(i+1)/(inputs.length+(promotion?1:0)+1)});});
-      if(promotion)link(promotion,operation,'',{toPort:(inputs.length+1)/(inputs.length+2)});
-      var ref=(node.kind==='craft'&&node.probability<1?'S':'M')+(++number);
-      var result=add([qLabel(node.material.quality)+' '+ref].concat(terms(node.material,symbols)),level,'success',center);
-      result.symbols=retained(node.material,symbols);
-      remember(node.material,result);
-      link(operation,result,'');
-      if(node.kind==='craft'){
-        var wanted=R.signature(node.material),failures=node.outcomes.filter(function(o){return R.signature(o.material)!==wanted;});
-        if(failures.length){
-          var rows=failures.map(function(o,i){
-            return {parts:[{text:'失败'+qLabel(o.material.quality)+' '+letter(i)+number+'：'}].concat(terms(o.material,symbols)[0].parts,[{text:' ｜ '+percent(o.probability)}])};
-          });
-          var total=failures.reduce(function(sum,o){return sum+o.probability;},0);
-          var group=add(['失败结果（合计 '+percent(total)+'）'].concat(settings.showFailures?rows:[failures.length+'种结果已收起，点击上方按钮展开']),level,'failure');
-          failures.forEach(function(o,i){remember(o.material,Object.assign({},group,{ref:letter(i)+number,sourceKey:node.sourceKey||recipeKey(node),symbols:retained(o.material,symbols)}));});
-          link(operation,group,'');
+      opVisual.set(op.id,operation);
+      if(unused.length){
+        var total=op.outputs.filter(function(out){return !byMaterial.get(out.id).useful;}).reduce(function(sum,out){return sum+out.probability;},0);
+        details.push('<section class="craft-unused-group"><h6>'+esc((op.kind==='reuse'?'复用其他结果':'其他产物（本路线暂不使用）')+' · '+qLabel(op.quality)+' · 合计 '+percent(total))+'</h6>'+
+          unused.map(function(m,i){var prefix=(op.kind==='reuse'?'复用失败':'失败')+qLabel(m.material.quality)+' '+letter(i)+(graph.operations.indexOf(op)+1)+'：';
+            return '<p>'+esc(prefix)+T.sortTerms(m.material.terms,m.material.quality).map(function(t){return m.symbols.includes(termKey(t))?'杂词条 X（同一个）':T.html(t,m.material.quality);}).join(' ＋ ')+' ｜ '+percent(m.probability)+'</p>';
+          }).join('')+'</section>');
+        var usedForReuse=unused.filter(function(m){return graph.operations.some(function(other){return other.kind==='reuse'&&other.inputs.some(function(input){return input.id===m.id;});});});
+        if(usedForReuse.length){
+          var group=add('other-'+op.id,['可复用产物 '+usedForReuse.length+'种','具体词条见下方明细'],levels[op.quality],'failure',200);
+          edges.push(edge(operation.id,group.id));
+          usedForReuse.forEach(function(m){visual.set(m.id,group);});
         }
       }
-      return result;
-    }
-    var goal=build(route.tree);
-    route.reuse.forEach(function(reuse,index){
-      var chosen=reuse.children.map(function(c){
-        var candidates=(outputs.get(R.signature(c.node.material))||[]).filter(function(n){return n.kind==='failure';});
-        if(c.node.sourceKey)candidates=candidates.filter(function(n){return n.sourceKey===c.node.sourceKey;});
-        else if(new Set(candidates.map(function(n){return n.sourceKey;})).size!==1)candidates=[];
-        return {n:candidates[0],quantity:c.quantity};
-      });
-      // Only connect actual, visible failure outputs. Never invent disconnected
-      // aliases that look like available materials.
-      if(chosen.some(function(c){return !c.n;}))return;
-      var center=chosen.reduce(function(sum,c){return sum+c.n.center;},0)/chosen.length;
-      var operation=add(['失败品复用'+(index+1),'三枚失败材料，同种可重复'].concat(candidateInfo(Object.assign({},reuse,{coverageReuse:true})),['当前概率：'+percent(reuse.probability)]),levels[reuse.material.quality]-1,'operation',center);
-      var groups=new Map();
-      chosen.forEach(function(c){if(!groups.has(c.n.id))groups.set(c.n.id,{n:c.n,labels:[]});groups.get(c.n.id).labels.push(c.n.ref+' × '+c.quantity);});
-      var grouped=Array.from(groups.values());
-      grouped.forEach(function(g,i){link(g.n,operation,'',{toPort:(i+1)/(grouped.length+1)});});
-      link(operation,goal,'',{toPort:(index+1)/(route.reuse.length+2)});
-      if(reuse.probability<1){
-        var failures=reuse.outcomes.filter(function(o){return R.signature(o.material)!==R.signature(reuse.material);});
-        var reuseSymbols=inherited(chosen);
-        var rows=failures.map(function(o,i){return {parts:[{text:'复用失败'+qLabel(o.material.quality)+' '+(index+1)+'-'+letter(i)+'：'}].concat(terms(o.material,reuseSymbols)[0].parts,[{text:' ｜ '+percent(o.probability)}])};});
-        var other=add(['非目标'+qLabel(reuse.material.quality),'其他结果合计 '+percent(1-reuse.probability)].concat(settings.showFailures?rows:[failures.length+'种结果已收起，点击上方按钮展开']),levels[reuse.material.quality],'failure');
-        link(operation,other,'');
-      }
     });
-    var y=16,width=360,gap=18,byId=new Map(nodes.map(function(n){return[n.id,n];})),stages=[],stage;
-    var rows=[];
+    graph.operations.forEach(function(op){
+      var to=opVisual.get(op.id),merged=new Map();
+      op.inputs.forEach(function(input){
+        var from=visual.get(input.id);if(!from)return;
+        if(!merged.has(from.id))merged.set(from.id,{from:from,quantity:0});
+        merged.get(from.id).quantity+=input.quantity;
+      });
+      merged.forEach(function(input){edges.push(edge(input.from.id,to.id,'× '+input.quantity));});
+    });
+    var width=360,y=12,gap=18,rows=[],stages=[],stage;
     for(var level=0;level<=8;level++){
       var row=nodes.filter(function(n){return n.level===level;});
       if(!row.length)continue;
       var span=row.reduce(function(sum,n){return sum+n.w;},0)+gap*(row.length-1);
-      width=Math.max(width,span+32);rows.push({nodes:row,span:span,level:level});
+      rows.push({nodes:row,span:span,level:level});width=Math.max(width,span+32);
     }
+    var byId=new Map(nodes.map(function(n){return[n.id,n];}));
     rows.forEach(function(row){
       var kind=row.level<2?'blue':row.level<6?'purple':'orange';
-      if(!stage||stage.kind!==kind){stage={kind:kind,label:kind==='blue'?'蓝色品质流程':kind==='purple'?'紫色品质流程':'橙色品质流程',top:y,bottom:y};stages.push(stage);y+=34;}
+      if(!stage||stage.kind!==kind){stage={kind:kind,label:kind==='blue'?'蓝色品质流程':kind==='purple'?'紫色品质流程':'橙色品质流程',top:y,bottom:y};stages.push(stage);y+=32;}
       row.nodes.forEach(function(n){
-        var incoming=edges.filter(function(e){return e.to===n.id;}).map(function(e){return byId.get(e.from);});
-        var materials=incoming.filter(function(from){return from.kind!=='promotion';}).map(function(from){return from.x+from.w/2;}).sort(function(a,b){return a-b;});
-        // Keep the primary operation/result chain vertical. For a merge use a
-        // real material as the spine, rather than averaging in its promotion.
-        n.desired=n.kind==='success'&&incoming.length?incoming[0].x+incoming[0].w/2:materials.length?materials[Math.floor(materials.length/2)]:n.center;
+        var parents=edges.filter(function(e){return e.to===n.id;}).map(function(e){return byId.get(e.from);}).filter(function(p){return p.level<n.level;});
+        n.order=parents.length?parents.reduce(function(sum,p){return sum+p.x+p.w/2;},0)/parents.length:nodes.indexOf(n)*100;
       });
-      row.nodes.filter(function(n){return n.kind==='promotion';}).forEach(function(n){
-        var consumer=edges.find(function(e){return e.from===n.id;});
-        var peers=consumer?edges.filter(function(e){return e.to===consumer.to&&e.from!==n.id;}).map(function(e){return byId.get(e.from);}):[];
-        if(peers.length)n.desired=Math.max.apply(null,peers.map(function(p){return (p.desired===undefined?p.center:p.desired)+p.w/2;}))+n.w/2+gap;
-      });
-      row.nodes.sort(function(a,b){return a.desired-b.desired;});
-      var left=16,height=Math.max.apply(null,row.nodes.map(function(n){return n.h;}));
-      row.nodes.forEach(function(n,i){n.x=Math.max(left,n.desired-n.w/2);n.y=y+height-n.h;n.wireColor=i%wireColors.length;left=n.x+n.w+gap;width=Math.max(width,n.x+n.w+16);});
-      y+=height+60;
-      stage.bottom=y-48;
+      row.nodes.sort(function(a,b){return a.order-b.order;});
+      var left=(width-row.span)/2,height=Math.max.apply(null,row.nodes.map(function(n){return n.h;}));
+      row.nodes.forEach(function(n,i){n.x=left;n.y=y+height-n.h;n.wireColor=i%wireColors.length;left+=n.w+gap;});
+      y+=height+42;stage.bottom=y-30;
     });
-    nodes.forEach(function(n){
-      var incoming=edges.filter(function(e){return e.to===n.id;}).sort(function(a,b){var aa=byId.get(a.from),bb=byId.get(b.from);return aa.x+aa.w/2-bb.x-bb.w/2;});
-      var center=n.x+n.w/2,anchor=-1,distance=Infinity;
-      incoming.forEach(function(e,i){var from=byId.get(e.from),d=Math.abs(from.x+from.w/2-center);if(d<distance){anchor=i;distance=d;}});
-      incoming.forEach(function(e,i){
-        // Left inputs enter on the left, the spine enters at the centre, and
-        // right-side promotion materials enter on the right without swapping.
-        e.toPort=i===anchor?0.5:i<anchor?0.1+0.3*(i+1)/(anchor+1):0.6+0.3*(i-anchor)/(incoming.length-anchor);
-      });
+    edges.forEach(function(e){
+      var from=byId.get(e.from),to=byId.get(e.to);
+      e.viaY=from.y+from.h+30;
+      if(e.label){e.labelX=from.x+from.w/2;e.labelY=from.y+from.h+18;}
+      var incoming=edges.filter(function(other){return other.to===e.to;}).sort(function(a,b){return byId.get(a.from).x-byId.get(b.from).x;});
+      e.toPort=(incoming.indexOf(e)+1)/(incoming.length+1);
     });
     var title='完整合成流程'+(settings.positionLabel?' · '+settings.positionLabel:'');
-    edges.forEach(function(e){
-      var from=byId.get(e.from);
-      // Reserve separate vertical space for quantity pills and horizontal wires.
-      e.viaY=from.y+from.h+40+(from.wireColor%4)*4;
-      if(typeof e.label==='string'&&e.label.indexOf('× ')===0){e.labelX=from.x+from.w/2;e.labelY=from.y+from.h+20;}
-    });
-    var xNote=!xTerm?'':symbolic?'符号模板 A：X 采用同一种合法不分档词条；图示概率只对这一模板条件成立，不代表任意具体 X。':'具体模式 B：杂词 X 固定为'+xTerm.attr+'（'+T.tierLabel(xTerm.tier)+'），出现时按当前品质实际数值展示，不替换属性或档位。';
-    return '<div class="craft-flow-guide">每个方案一图到底。合成材料与独立置换材料并行汇入下一次合成；箭头上的 × 数量表示投料数。成功品和失败品直接连到后续用途，不靠跨图编号衔接。多次尝试需重复准备相应材料。</div>'+(xNote?'<p class="craft-note">'+esc(xNote)+'</p>':'')+
-      figure(title,svg(title,nodes,edges,width,y-32,stages),'概率按最终合法组合等概率模型推算，并非游戏实测频率。置换概率未知；合成与失败品复用概率以所连材料已经备齐为前提。洗练从当前品质开始，另行准备素材，不消耗其他支线的 M 材料。',nodes.some(function(n){return n.kind==='failure';})?'<button type="button" class="seg" data-craft-action="diagram-failures" aria-expanded="'+Boolean(settings.showFailures)+'">'+(settings.showFailures?'收起所有失败结果':'展开所有失败结果')+'</button>':'');
+    var xTerm=route.xTerm===undefined?(x?{attr:x,tier:'U'}:null):route.xTerm,symbolic=route.symbolicX!==false;
+    var xNote=!xTerm?'':symbolic?'符号模板 A：X 采用同一种合法不分档词条；概率只对该模板条件成立。':'具体模式 B：杂词 X 固定为'+xTerm.attr+'（'+T.tierLabel(xTerm.tier)+'），不替换属性或档位。';
+    var drawing=svg(title,nodes,edges,width,y-22,stages);
+    var actions=details.length?'<button type="button" class="seg" data-craft-action="diagram-failures" aria-expanded="'+Boolean(settings.showFailures)+'">'+(settings.showFailures?'收起所有失败结果':'展开所有失败结果')+'</button>':'';
+    return '<div class="craft-flow-guide">共享入口每次只产出一枚，不会同时获得所有分支。需求按从零制作目标一枚累计，随机步骤需按实际产出收集；箭头×数量是每批投料。</div>'+
+      (xNote?'<p class="craft-note">'+esc(xNote)+'</p>':'')+
+      figure(title,drawing,'概率为原路线等概率模型，非游戏实测频率。置换概率未知。独立洗练另行准备素材；共享入口不代表重复使用同一枚材料。',actions)+
+      (details.length?'<div class="craft-flow-details" data-flow-details'+(settings.showFailures?'':' hidden')+'>'+details.join('')+'</div>':'');
   }
   function zoom(viewer,action){
     if(!viewer)return;var drawing=viewer.querySelector('svg');if(!drawing)return;
     var current=Number(viewer.dataset.zoom)||0.9,next=action==='reset'?0.9:Math.max(0.5,Math.min(1.6,Math.round((current+(action==='in'?0.1:-0.1))*10)/10));
+    var viewport=viewer.querySelector('.craft-flow-viewport');
+    if(action==='width'||action==='all'){
+      next=Math.min(1,(viewport.clientWidth-12)/Number(drawing.dataset.flowWidth));
+      if(action==='all')next=Math.min(next,(Math.min(700,viewport.clientHeight||700)-12)/Number(drawing.dataset.flowHeight));
+      next=Math.max(0.1,next);
+    }
     viewer.dataset.zoom=String(next);drawing.style.width=Math.round(Number(drawing.dataset.flowWidth)*next)+'px';drawing.style.height=Math.round(Number(drawing.dataset.flowHeight)*next)+'px';
     var reset=viewer.querySelector('[data-craft-action="diagram-reset"]');if(reset)reset.textContent=Math.round(next*100)+'%';
   }
-  return{render:render,zoom:zoom};
+  function bind(viewer){
+    if(!viewer||viewer.dataset.flowBound)return;viewer.dataset.flowBound='true';
+    function focus(id){
+      var boxes=Array.from(viewer.querySelectorAll('[data-flow-node]')),wires=Array.from(viewer.querySelectorAll('[data-from]'));
+      var selected=new Set(id?[id]:[]);
+      if(id){
+        // Traverse upstream and downstream separately: a sibling sharing one
+        // input is not automatically part of this material's dependency chain.
+        ['up','down'].forEach(function(direction){var seen=new Set([id]),queue=[id];while(queue.length){var next=queue.pop();wires.forEach(function(wire){var a=wire.dataset.from,b=wire.dataset.to;if((direction==='up'?b:a)===next){var other=direction==='up'?a:b;if(!seen.has(other)){seen.add(other);selected.add(other);queue.push(other);}}});}});
+      }
+      viewer.dataset.flowFocus=id||'';
+      boxes.forEach(function(box){box.classList.toggle('is-focused',box.dataset.flowNode===id);box.classList.toggle('is-dimmed',!!id&&!selected.has(box.dataset.flowNode));box.setAttribute('aria-pressed',String(box.dataset.flowNode===id));});
+      wires.forEach(function(wire){wire.classList.toggle('is-dimmed',!!id&&!(selected.has(wire.dataset.from)&&selected.has(wire.dataset.to)));});
+    }
+    viewer.addEventListener('click',function(event){var box=event.target.closest('[data-flow-node]');if(box)focus(viewer.dataset.flowFocus===box.dataset.flowNode?'':box.dataset.flowNode);else if(event.target.closest('svg'))focus('');});
+    viewer.addEventListener('keydown',function(event){if(event.key==='Escape'){focus('');return;}var box=event.target.closest('[data-flow-node]');if(box&&(event.key==='Enter'||event.key===' ')){event.preventDefault();focus(viewer.dataset.flowFocus===box.dataset.flowNode?'':box.dataset.flowNode);}});
+  }
+  return{render:render,zoom:zoom,bind:bind};
 });

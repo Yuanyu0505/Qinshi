@@ -120,7 +120,7 @@ test('弟子建议支持键盘；改搜索词保留已选弟子、实际位置�
   const page = await pageFor(); try {
     const s = section(page), search = field(s, 'search');
     await search.fill('墨眉天明'); await search.press('ArrowDown');
-    assert.equal(await s.locator('[role="option"][aria-selected="true"]').count(), 1);
+    assert.equal(await s.locator('[data-craft-suggestions] [role="option"][aria-selected="true"]').count(), 1);
     await search.press('Enter'); await field(s, 'slot').selectOption('天府|龙遁');
     const before = (await workbench(page)).target;
     await search.fill('盖聂');
@@ -259,7 +259,8 @@ test('不兼容目标切换须确认，取消保留材料，接受后两页共�
     assert.deepEqual((await workbench(page)).simulation, { stage: 'b2', inputs: [], pending: null });
     await page.locator('[data-mode="crafting-paths"]').click();
     assert.equal(await field(section(page), 'dun').inputValue(), '龙遁');
-    assert.deepEqual(await field(section(page), 'attr').evaluateAll(els => els.map(el => el.value)), ['', '', '']);
+    assert.deepEqual(await field(section(page), 'attr').evaluateAll(els => els.map(el => el.value)), ['速', '速', '速']);
+    assert.match(await section(page).locator('[data-craft-analysis]').innerText(), /无法组成所选搭配.*不支持属性：速/s);
   } finally { await page.close(); }
 });
 
@@ -311,8 +312,9 @@ test('失败结果展开收起及缩放保持单张SVG，重绘保留比例', as
     await body.locator('[data-craft-action="diagram-failures"]').click();
     assert.equal(await body.locator('[data-craft-action="diagram-failures"]').getAttribute('aria-expanded'), 'true');
     assert.equal(await body.locator('[data-flow-viewer]').getAttribute('data-zoom'), '1');
-    assert.ok((await body.locator('svg').textContent()).length > closed.length);
-    assert.match(await body.locator('svg').textContent(), /失败橙一|失败紫一|失败紫二|失败橙二/);
+    assert.equal(await body.locator('svg').textContent(), closed);
+    assert.equal(await body.locator('[data-flow-details]').isVisible(), true);
+    assert.match(await body.locator('[data-flow-details]').innerText(), /失败橙一|失败紫一|失败紫二|失败橙二/);
     assert.equal(await body.locator('svg').count(), 1);
     await body.locator('[data-craft-action="diagram-failures"]').click();
     assert.equal(await body.locator('[data-craft-action="diagram-failures"]').getAttribute('aria-expanded'), 'false');
@@ -404,7 +406,9 @@ for (const width of [360, 390, 768, 1024, 1440]) test(width + ' 真实导航、�
       const r = el.getBoundingClientRect(); return r.width < 1 || r.left < -1 || r.right > innerWidth + 1;
     })), false);
     const viewport = s.locator('.craft-flow-viewport').first();
-    assert.equal(await viewport.evaluate(el => el.scrollWidth > el.clientWidth), true);
+    const geometry=await viewport.evaluate(el=>{const svg=el.querySelector('svg');return {scroll:el.scrollWidth,width:el.clientWidth,drawing:svg.getBoundingClientRect().width,natural:Number(svg.dataset.flowWidth)*0.9};});
+    assert.ok(Math.abs(geometry.drawing-geometry.natural)<=1, 'The default scale preserves the full graph');
+    assert.equal(geometry.scroll>geometry.width+1, geometry.natural>geometry.width+1);
     const output = path.join(__dirname, '../test-results/inscription-crafting');
     fs.mkdirSync(output, { recursive: true });
     await page.screenshot({ path: path.join(output, 'paths-' + width + '.png') });

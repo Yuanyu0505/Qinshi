@@ -45,13 +45,15 @@ for(const [width,height] of [[320,1000],[390,1000],[768,1000],[1024,1000],[1280,
       if(width<=1024){
         const viewport=viewer.locator('.craft-flow-viewport');
         assert.ok((await viewport.boundingBox()).height<=height*.72+1,'phone/tablet diagram should scroll inside a bounded viewport');
-        assert.ok(await viewport.evaluate(node=>node.scrollWidth>node.clientWidth),'wide diagram retains local horizontal scrolling');
+        const geometry=await viewport.evaluate(node=>{const svg=node.querySelector('svg');return {natural:Number(svg.dataset.flowWidth)*0.9,drawn:svg.getBoundingClientRect().width,available:node.clientWidth,scroll:node.scrollWidth};});
+        assert.ok(Math.abs(geometry.drawn-geometry.natural)<=1,'compact drawing retains its readable default scale');
+        assert.equal(geometry.scroll>geometry.available+1,geometry.natural>geometry.available+1,'only diagrams wider than their viewport need local horizontal scrolling');
       }
       if(width<=420){
         const lines=await toolbar.locator('[data-craft-action="diagram-failures"]').evaluate(node=>{const range=document.createRange();range.selectNodeContents(node);return range.getClientRects().length;});
         assert.equal(lines,1,'failure toggle must not become a narrow multi-line column on a phone');
       }
-      const attrs=section.locator('[data-craft-attrs] select');
+      const attrs=section.locator('[data-craft-attr-trigger]');
       const ys=await attrs.evaluateAll(nodes=>nodes.map(node=>node.getBoundingClientRect().top));
       assert.ok(Math.max(...ys)-Math.min(...ys)<2,'target attributes should remain in one row');
       const toggle=toolbar.locator('[data-craft-action="diagram-failures"]');

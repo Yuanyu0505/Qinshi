@@ -232,6 +232,7 @@
       body.innerHTML=(entry.rulesUpdated?'<p class="craft-note">规则版本已更新，已按当前规则重新校验原结构并重算各步骤概率。</p>':'')+root.InscriptionFlowchart.render(entry.route,entry.record.xAttr,{showFailures:show,positionLabel:owner.discipleKey?owner.tian+' · '+owner.dun:owner.dun});
       body.dataset.failures=show?'open':'closed';
       var viewer=body.querySelector('[data-flow-viewer]'),drawing=viewer&&viewer.querySelector('svg');
+      if(viewer&&root.InscriptionFlowchart.bind)root.InscriptionFlowchart.bind(viewer);
       if(viewer&&drawing){viewer.dataset.zoom=String(zoom);drawing.style.width=Math.round(Number(drawing.dataset.flowWidth)*zoom)+'px';drawing.style.height=Math.round(Number(drawing.dataset.flowHeight)*zoom)+'px';var reset=viewer.querySelector('[data-craft-action="diagram-reset"]');if(reset)reset.textContent=Math.round(zoom*100)+'%';}
     };body.renderFlow(false);
   }

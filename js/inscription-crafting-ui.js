@@ -48,8 +48,10 @@
       var actual=item.slots.find(function(s){return next.slot===s.tian+'|'+R.normalizeDun(s.shield);});
       if (!actual) { next.slot=''; next.dun=''; } else next.dun=R.normalizeDun(actual.shield);
     } else next.slot='';
-    var count=quality(next.quality).count, allowed=R.termsFor(position(next).dun,next.quality).map(function(t){return t.attr;});
-    next.attrs=Array.from({length:count},function(_,i){return allowed.includes(next.attrs[i])?next.attrs[i]:'';});
+    var count=quality(next.quality).count;
+    // A changed context can make a saved attribute unsupported. Keep its text so
+    // the user can repair the goal deliberately instead of losing it on reopen.
+    next.attrs=Array.from({length:count},function(_,i){return next.attrs[i]||'';});
     if(!next.xTerm||!S.xOptions(next).some(function(t){return t.attr===next.xTerm.attr&&t.tier===next.xTerm.tier;}))next.xTerm=null;
     return next;
   }
@@ -91,10 +93,13 @@
         '<section class="craft-panel"><h3>本次模拟材料</h3><p class="craft-note">仅填写本次所需材料，不管理剩余数量。手动材料可为合法的洗练或合成产物，系统自动校验。重复合成视为重新备齐本次材料。</p><div data-craft-simulator></div></section>');
     el.addEventListener('change',function(event){onChange(v,event.target);});
     el.addEventListener('click',function(event){
+      var attrControl=event.target.closest('[data-craft-attr-trigger],[data-craft-attr-option]');
+      if(attrControl){onAttrClick(v,attrControl);return;}
       var control=event.target.closest('[data-craft-action]');
       if(control&&control.dataset.craftAction==='toggle-favorite'){event.preventDefault();event.stopPropagation();}
       if(control) onClick(v,control);
     });
+    el.addEventListener('keydown',function(event){if(event.target.matches('[data-craft-attr-trigger]'))onAttrKey(v,event);});
     el.addEventListener('input',function(event){if(event.target===field(v,'search')) suggestions(v);});
     field(v,'search').addEventListener('focus',function(){if(!itemFor(state.target)) suggestions(v);});
     field(v,'search').addEventListener('keydown',function(event){
@@ -126,6 +131,99 @@
     }).join(''):'<span class="craft-note">没有匹配弟子，可使用独立遁位筛选。</span>';
     list.hidden=false; field(v,'search').setAttribute('aria-expanded','true'); v.activeSuggestion=-1;
   }
+  function targetCompletion(target) {
+    var dun=position(target).dun,attrs=target.attrs.slice(),available=Array.from(new Set(R.termsFor(dun,target.quality).map(function(t){return t.attr;})));
+    if(!dun)return {valid:false,reason:'请先选择弟子实际位置或独立遁位。'};
+    // Check complete goals through the rule engine, including common origin and
+    // the two-high limit. A duplicate-count check alone misses e.g. purple M/L.
+    function complete(index) {
+      while(index<attrs.length&&attrs[index])index++;
+      if(index===attrs.length)return R.bestTargets(dun,target.quality,attrs).targets.length>0;
+      for(var i=0;i<available.length;i++){
+        attrs[index]=available[i];
+        if(complete(index+1)){attrs[index]='';return true;}
+      }
+      attrs[index]='';return false;
+    }
+    if(complete(0))return {valid:true,reason:''};
+    var example=target.attrs.slice();
+    // Distinct fillers produce an explanation about the fixed selections, not
+    // an accidental repeated filler introduced only while checking empty slots.
+    example.forEach(function(attr,i){if(!attr)example[i]=available.find(function(a){return !example.includes(a);})||available[0];});
+    var reason=R.bestTargets(dun,target.quality,example).reason;
+    return {valid:false,reason:(target.attrs.some(function(a){return !a;})?'保留其他已选属性后，剩余空槽无法补全合法组合。':'')+reason};
+  }
+  function candidateTarget(index,value) {var next=clone(state.target);next.attrs[index]=value;return next;}
+  function attrTrigger(v,index) {return v.el.querySelector('[data-craft-attr-trigger][data-index="'+index+'"]');}
+  function closeAttrPicker(v) {
+    area(v,'attrs').querySelectorAll('[data-craft-attr-trigger]').forEach(function(trigger){trigger.setAttribute('aria-expanded','false');trigger.removeAttribute('aria-activedescendant');});
+    area(v,'attrs').querySelectorAll('.craft-attr-options').forEach(function(list){list.hidden=true;});
+    v.attrOpen=null;v.attrActive=-1;
+  }
+  function activateAttrOption(v,index,active) {
+    var trigger=attrTrigger(v,index),list=document.getElementById(trigger.getAttribute('aria-controls')),choices=list.querySelectorAll('[data-craft-attr-option]');
+    v.attrActive=(active+choices.length)%choices.length;
+    choices.forEach(function(choice,i){choice.classList.toggle('is-active',i===v.attrActive);});
+    trigger.setAttribute('aria-activedescendant',choices[v.attrActive].id);
+    choices[v.attrActive].scrollIntoView({block:'nearest'});
+  }
+  function openAttrPicker(v,index,active) {
+    closeAttrPicker(v);var trigger=attrTrigger(v,index);if(!trigger||trigger.disabled)return;
+    var list=document.getElementById(trigger.getAttribute('aria-controls'));
+    list.hidden=false;trigger.setAttribute('aria-expanded','true');v.attrOpen=index;
+    list.style.left='0';list.style.right='auto';
+    var bounds=list.getBoundingClientRect(),viewport=document.documentElement.clientWidth;
+    list.style.left=Math.max(12-bounds.left,Math.min(0,viewport-12-bounds.right))+'px';
+    var choices=Array.from(list.querySelectorAll('[data-craft-attr-option]'));
+    activateAttrOption(v,index,active===undefined?Math.max(0,choices.findIndex(function(choice){return choice.dataset.value===state.target.attrs[index];})):active);
+  }
+  function renderAttrFeedback(v) {
+    var feedback=area(v,'attr-feedback'),result=targetCompletion(state.target),message=v.attrRejection;
+    if(!message&&position(state.target).dun&&!result.valid)message='原目标属性已保留，请手动调整。'+result.reason;
+    feedback.hidden=!message;
+    feedback.innerHTML=message?'<b>无法组成所选搭配</b><p>'+esc(friendly(message))+'</p>':'';
+  }
+  function selectAttr(v,index,value) {
+    if(!loaded||currentAccount()!==accountId){status(v,'请重新打开铭文分区后再操作。');return;}
+    var next=candidateTarget(index,value),result=targetCompletion(next);
+    // Clearing a slot is always possible, including when repairing an old goal.
+    if(value&&!result.valid){v.attrRejection=result.reason;renderAttrFeedback(v);attrTrigger(v,index).focus();return;}
+    v.attrRejection='';closeAttrPicker(v);status(v,'');changeTarget(v,next);
+    var trigger=attrTrigger(v,index);if(trigger)trigger.focus();
+  }
+  function onAttrClick(v,control) {
+    var index=Number(control.dataset.index);
+    if(control.hasAttribute('data-craft-attr-option')){selectAttr(v,index,control.dataset.value);return;}
+    if(v.attrOpen===index)closeAttrPicker(v);else openAttrPicker(v,index);
+  }
+  function onAttrKey(v,event) {
+    var trigger=event.target,index=Number(trigger.dataset.index),key=event.key;
+    if(key==='Tab'){closeAttrPicker(v);return;}
+    if(key==='Escape'){event.preventDefault();closeAttrPicker(v);return;}
+    if(!['ArrowDown','ArrowUp','Enter',' '].includes(key))return;
+    event.preventDefault();
+    if(v.attrOpen!==index){openAttrPicker(v,index,key==='ArrowUp'?-1:undefined);return;}
+    if(key==='ArrowDown'||key==='ArrowUp'){activateAttrOption(v,index,v.attrActive+(key==='ArrowDown'?1:-1));return;}
+    var list=document.getElementById(trigger.getAttribute('aria-controls')),choice=list.querySelectorAll('[data-craft-attr-option]')[v.attrActive];
+    if(choice)selectAttr(v,index,choice.dataset.value);
+  }
+  function renderAttrPickers(v,attrs,dun) {
+    var host=area(v,'attrs'),focused=document.activeElement,focusedIndex=focused&&focused.hasAttribute('data-craft-attr-trigger')&&v.el.contains(focused)?Number(focused.dataset.index):null;
+    closeAttrPicker(v);
+    host.style.setProperty('--craft-slots',quality(state.target.quality).count);
+    host.innerHTML=state.target.attrs.map(function(attr,i){
+      var id=v.mode+'-attr-'+i,listId=id+'-options',choices=attrs.slice();if(attr&&!choices.includes(attr))choices.push(attr);
+      return '<div class="craft-attr-picker"><span id="'+id+'-label">目标属性'+(i+1)+'</span>'+
+        '<select class="craft-attr-native" aria-hidden="true" tabindex="-1" data-craft-field="attr" data-index="'+i+'"'+(!dun?' disabled':'')+'>'+options(choices,attr,'请选择属性')+'</select>'+
+        '<button type="button" id="'+id+'" class="craft-attr-trigger" role="combobox" aria-haspopup="listbox" aria-expanded="false" aria-controls="'+listId+'" aria-labelledby="'+id+'-label '+id+'-value" aria-describedby="'+v.mode+'-attr-feedback" data-craft-attr-trigger data-index="'+i+'"'+(!dun?' disabled':'')+'><span id="'+id+'-value">'+esc(attr||'请选择属性')+'</span></button>'+
+        '<div id="'+listId+'" class="craft-attr-options" role="listbox" aria-labelledby="'+id+'-label" hidden>'+[''].concat(choices).map(function(value,j){
+          var result=value?targetCompletion(candidateTarget(i,value)):{valid:true};
+          return '<button type="button" role="option" tabindex="-1" id="'+id+'-option-'+j+'" aria-selected="'+String(value===attr)+'" aria-disabled="'+String(!result.valid)+'" data-craft-attr-option data-index="'+i+'" data-value="'+esc(value)+'">'+esc(value||'请选择属性')+(!result.valid?'<small>不可选 · 点击查看原因</small>':'')+'</button>';
+        }).join('')+'</div></div>';
+    }).join('')+'<div id="'+v.mode+'-attr-feedback" data-craft-attr-feedback class="craft-analysis unavailable craft-attr-feedback" role="status" aria-live="polite" hidden></div>';
+    renderAttrFeedback(v);
+    if(focusedIndex!==null&&attrTrigger(v,focusedIndex))attrTrigger(v,focusedIndex).focus();
+  }
   function renderFilters(v) {
     var target=state.target,item=itemFor(target),dun=position(target).dun;
     field(v,'search').value=item?item.name:''; hideSuggestions(v);
@@ -134,8 +232,7 @@
     field(v,'dun').value=dun||''; field(v,'dun').disabled=!!item;
     field(v,'dun').title=item?'遁位由所选弟子的实际铭文位置确定':'未指定弟子时可独立筛选';
     var attrs=Array.from(new Set(R.termsFor(dun,target.quality).map(function(t){return t.attr;})));
-    area(v,'attrs').style.setProperty('--craft-slots',quality(target.quality).count);
-    area(v,'attrs').innerHTML=target.attrs.map(function(attr,i){return '<label>目标属性'+(i+1)+'<select data-craft-field="attr" data-index="'+i+'"'+(!dun?' disabled':'')+'>'+options(attrs,attr,'请选择属性')+'</select></label>';}).join('');
+    renderAttrPickers(v,attrs,dun);
     if(field(v,'x-term')){
       var chosen=target.xTerm,termId=chosen?chosen.attr+':'+chosen.tier:'';
       field(v,'x-term').innerHTML=options(T.sortTerms(S.xOptions(target),target.quality).map(function(t){return {id:t.attr+':'+t.tier,label:T.plain(t,target.quality)};}),termId,'不指定 X（符号模板）');
@@ -254,7 +351,7 @@
           var old=body.querySelector('[data-flow-viewer]'),zoom=old?Number(old.dataset.zoom):0.9;
           body.innerHTML=F.render(route,plan.xAttr,{showFailures:show,positionLabel:target.discipleKey?target.slot.replace('|',' · '):position(target).dun});
           body.dataset.failures=show?'open':'closed';
-          var viewer=body.querySelector('[data-flow-viewer]'),drawing=viewer.querySelector('svg');viewer.dataset.zoom=String(zoom);
+          var viewer=body.querySelector('[data-flow-viewer]'),drawing=viewer.querySelector('svg');viewer.dataset.zoom=String(zoom);if(F.bind)F.bind(viewer);
           drawing.style.width=Math.round(Number(drawing.dataset.flowWidth)*zoom)+'px';drawing.style.height=Math.round(Number(drawing.dataset.flowHeight)*zoom)+'px';
           viewer.querySelector('[data-craft-action="diagram-reset"]').textContent=Math.round(zoom*100)+'%';
         };body.renderFlow(false);}
@@ -362,7 +459,12 @@
     if(control.matches('[data-craft-field]')){
       var target=clone(state.target),name=control.dataset.craftField;
       if(name==='search')return;
-      if(name==='attr')target.attrs[Number(control.dataset.index)]=control.value;
+      if(name==='attr'){
+        target.attrs[Number(control.dataset.index)]=control.value;
+        // Hidden native selects remain a legacy/script bridge. Validate and
+        // retain invalid drafts with a warning, never silently clear old input.
+        var checked=targetCompletion(target);v.attrRejection=checked.valid?'':'原目标属性已保留，请手动调整。'+checked.reason;
+      }else v.attrRejection='';
       if(name==='quality')target.quality=control.value;
       if(name==='slot')target.slot=control.value;
       if(name==='dun')target.dun=control.value;
@@ -398,6 +500,7 @@
     if(action==='clear-options'){
       if(sceneExists(state.simulation)&&!root.confirm('清除所有筛选、当前模拟材料及结果？已保存的个人铭文数据不受影响。'))return;
       var cleared=clone(state);cleared.target={discipleKey:'',slot:'',dun:'',quality:'o2',attrs:['','',''],xTerm:null};cleared.simulation=S.blankSimulation();
+      Object.keys(views).forEach(function(key){views[key].attrRejection='';});
       if(save(v,cleared)){Object.keys(views).forEach(function(key){views[key].generation++;});renderAll(true);}return;
     }
     if(action==='generate'){generate(v);return;}
@@ -439,13 +542,13 @@
     // Normalize only in memory on first open. Merely opening never rewrites old data.
     state.target=normalized;
     Object.keys(views).forEach(function(key){
-      var view=views[key];view.el.querySelectorAll('button,input,select').forEach(function(c){c.disabled=false;});status(view,'');
+      var view=views[key];view.attrRejection='';view.el.querySelectorAll('button,input,select').forEach(function(c){c.disabled=false;});status(view,'');
       if(changedAccount)view.generation++;
     });
     renderAll(changedAccount||oldTarget!==JSON.stringify(state.target));
     Object.keys(views).forEach(function(key){var view=views[key];if(view.plan&&view.planTarget===JSON.stringify(state.target))renderPlan(view,view.plan);});
   }
-  document.addEventListener('click',function(event){Object.keys(views).forEach(function(key){if(!event.target.closest('.craft-search')||!views[key].el.contains(event.target))hideSuggestions(views[key]);});});
+  document.addEventListener('click',function(event){Object.keys(views).forEach(function(key){var v=views[key];if(!event.target.closest('.craft-search')||!v.el.contains(event.target))hideSuggestions(v);if(!event.target.closest('.craft-attr-picker')||!v.el.contains(event.target))closeAttrPicker(v);});});
   root.addEventListener('inscription-route-favorites-change',function(){
     if(!loaded||currentAccount()!==accountId)return;inspectFavorites();
     Object.keys(views).forEach(function(key){var v=views[key];if(v.plan&&v.planTarget===JSON.stringify(state.target))renderPlan(v,v.plan);});

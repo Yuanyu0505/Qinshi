@@ -32,8 +32,9 @@ test('flow failures collapse by default and expand with stage frames',()=>{
   const route=plan.strategies.find(s=>s.kind==='probability');
   assert.ok(route);
   const collapsed=Flow.render(route,plan.xAttr),expanded=Flow.render(route,plan.xAttr,{showFailures:true});
-  assert.match(collapsed,/种结果已收起/);
-  assert.doesNotMatch(collapsed,/失败紫一 A/);
+  assert.match(collapsed,/data-flow-details hidden/);
+  assert.doesNotMatch(collapsed.split('</svg>')[0],/失败紫一 A/);
+  assert.doesNotMatch(expanded,/data-flow-details hidden/);
   assert.match(expanded,/失败紫一 A/);
   assert.match(collapsed,/craft-flow-stage-blue/);
   assert.match(collapsed,/craft-flow-stage-purple/);
@@ -46,7 +47,8 @@ test('expanded failures include failed reuse outcomes and preserve orange stage'
   const route=plan.strategies.find(s=>s.reuse.some(r=>r.probability<1));
   assert.ok(route);
   const closed=Flow.render(route,plan.xAttr),open=Flow.render(route,plan.xAttr,{showFailures:true});
-  assert.doesNotMatch(closed,/复用失败橙二/);
+  assert.match(closed,/data-flow-details hidden/);
+  assert.doesNotMatch(closed.split('</svg>')[0],/复用失败橙二/);
   assert.match(open,/复用失败橙二/);
   assert.match(open,/craft-flow-stage-orange/);
   assert.match(open,/失败品复用1/);
@@ -95,6 +97,9 @@ test('legacy failure references are not guessed when several producers yield the
   const high={attr:'速',tier:'H'},mid={attr:'速',tier:'M'},x={attr:'闪避',tier:'U'},other={attr:'招架',tier:'U'};
   const produce=output=>({kind:'craft',material:output.material,children:[{quantity:2,node:{kind:'base',material:blue,children:[]}}],promotion:'初级',outcomes:preview.outcomes,probability:output.probability});
   const left=produce(pair([high,mid])),right=produce(pair([high,x]));
+  // Same inputs/outputs alone now correctly share an operation. Keep this
+  // ambiguity test about genuinely distinct owned vs independently washed sources.
+  right.children[0].node={kind:'wash',material:blue,children:[]};
   const rootPreview=Rules.preview([left.material,left.material,right.material]),goal=rootPreview.outcomes.find(o=>o.material.terms.every(t=>t.attr==='速'));
   const tree={kind:'craft',material:goal.material,children:[{quantity:2,node:left},{quantity:1,node:right}],promotion:null,outcomes:rootPreview.outcomes,probability:goal.probability};
   const reuseInputs=[{quantity:2,node:{kind:'failure',material:pair([mid,other]).material,children:[]}},{quantity:1,node:{kind:'failure',material:pair([high,other]).material,children:[]}}];
@@ -152,7 +157,7 @@ function reuseWithCandidateCount(count){
 
 for(const count of [3,5])test('reuse copy derives the distinct candidate pool rather than hardcoding four: '+count,()=>{
   const route=reuseWithCandidateCount(count),drawing=Flow.render(route,'治疗效果');
-  const operations=Array.from(drawing.matchAll(/<g class="craft-flow-box craft-flow-operation">([\s\S]*?)<\/g>/g),match=>
+  const operations=Array.from(drawing.matchAll(/<g class="craft-flow-box craft-flow-operation"[^>]*>([\s\S]*?)<\/g>/g),match=>
     Array.from(match[1].matchAll(/<text\b[^>]*>([\s\S]*?)<\/text>/g),line=>line[1].replace(/<[^>]*>/g,'')));
   const operation=operations.find(lines=>lines[0]==='失败品复用1');
   assert.ok(operation,'The reuse node retains its ordinal');

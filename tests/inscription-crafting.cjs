@@ -259,8 +259,8 @@ test('不兼容目标切换须确认，取消保留材料，接受后两页共�
     assert.deepEqual((await workbench(page)).simulation, { stage: 'b2', inputs: [], pending: null });
     await page.locator('[data-mode="crafting-paths"]').click();
     assert.equal(await field(section(page), 'dun').inputValue(), '龙遁');
-    assert.deepEqual(await field(section(page), 'attr').evaluateAll(els => els.map(el => el.value)), ['速', '速', '速']);
-    assert.match(await section(page).locator('[data-craft-analysis]').innerText(), /无法组成所选搭配.*不支持属性：速/s);
+    assert.deepEqual(await field(section(page), 'attr').evaluateAll(els => els.map(el => el.value)), ['', '', '']);
+    assert.match(await section(page).locator('[data-craft-analysis]').innerText(), /选满当前品质/);
   } finally { await page.close(); }
 });
 

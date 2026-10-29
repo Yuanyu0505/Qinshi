@@ -10,11 +10,17 @@ function visibleBoxes(html){return Array.from(html.matchAll(/<g\b[^>]*class="cra
 
 for(const dun of ['鬼遁','龙遁'])test(dun+' shows one random recipe feeding two useful branches rather than reciprocal failures',()=>{
   const p=plan(dun),before=JSON.stringify(p.strategies[0]),html=F.render(p.strategies[0],p.xAttr),boxes=visibleBoxes(html);
-  assert.equal(boxes.filter(s=>s.includes('蓝二速度档位不可辨')).length,1);
+  assert.equal(boxes.filter(s=>s.includes('蓝二速度档位不可辨')).length,0);
   const useful=boxes.filter(s=>s.includes('可用产物')&&s.includes('紫一'));
   assert.equal(useful.length,2);
-  assert.ok(useful.every(s=>s.includes('50%')&&s.includes('本路线需9枚')));
-  assert.ok(!boxes.some(s=>s.includes('失败紫一')||s.includes('失败结果')));
+  assert.ok(useful.every(s=>!s.includes('概率')&&s.includes('总共需要9枚该铭文')));
+  assert.match(html,/概率50%/);
+  assert.match(html,/该铭文×3、概率100%/);
+  assert.doesNotMatch(html,/craft-flow-stage|蓝色品质流程|紫色品质流程|种候选|\d+选\d+/);
+  assert.match(html,/craft-flow-quality-b2/);
+  assert.match(html,/craft-flow-quality-p1/);
+  assert.match(html,/craft-flow-promotion/);
+  assert.ok(!boxes.some(s=>s.includes('失败紫一')||s.includes('失败产物')));
   assert.match(html,/每次只产出一枚/);
   assert.equal(JSON.stringify(p.strategies[0]),before);
 });
@@ -35,5 +41,19 @@ test('expanded unused outcomes are outside the canvas and do not enlarge its dim
   for(const name of ['width','height'])assert.equal(open.match(new RegExp('data-flow-'+name+'="([^"]+)"'))[1],closed.match(new RegExp('data-flow-'+name+'="([^"]+)"'))[1]);
   assert.match(open,/data-flow-details/);
   assert.match(open,/失败品复用1/);
-  assert.match(open,/目前4选3/);
+  assert.match(open,/候选词条池必须覆盖全部目标词条/);
+  assert.doesNotMatch(open,/目前\d+选\d+/);
+});
+
+test('base materials use one line and failed outcomes are compact peers of useful outcomes',()=>{
+  const p=P.representative({prefix:'天府',dun:'鬼遁',quality:'p1',attrs:['速','速']}),route=p.strategies.find(s=>s.kind==='probability');
+  const html=F.render(route,p.xAttr),svg=html.split('</svg>')[0];
+  const groups=Array.from(svg.matchAll(/<g class="craft-flow-box[^\"]*"[^>]*>([\s\S]*?)<\/g>/g),m=>m[1]);
+  const base=groups.find(s=>s.includes('蓝二')&&s.includes('档位不可辨'));
+  assert.equal((base.match(/<text\b/g)||[]).length,1);
+  assert.doesNotMatch(svg,/每次随机产出一枚|当前概率|准备蓝二|蓝二速度档位不可辨/);
+  const failure=groups.find(s=>s.includes('种失败产物'));
+  const success=groups.find(s=>s.includes('可用产物'));
+  assert.ok(failure&&success);
+  assert.equal(failure.match(/<rect[^>]* y="([^"]+)"/)[1],success.match(/<rect[^>]* y="([^"]+)"/)[1]);
 });

@@ -55,6 +55,7 @@
 
   function tokensForTier(item, tier) {
     if (!item || !tier) return null;
+    if (Array.isArray(item.unknownTiers) && item.unknownTiers.indexOf(tier) >= 0) return null;
     if (item.bookGroup) {
       var finalStage = Q.finalBookStage(item, tier);
       return finalStage ? finalStage.tokens.filter(function (token) { return typeof token.v === "number"; }) : null;

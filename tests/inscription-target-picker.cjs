@@ -73,7 +73,7 @@ test('鬼遁橙二冲突候选可解释但不写入，合法候选保留其他�
   } finally { await page.close(); }
 });
 
-test('品质与遁位重算并检查所有剩余空槽能否补全，原非法目标保留原文', async () => {
+test('品质与遁位切换清空属性，重新选择后检查剩余槽能否补全', async () => {
   const page = await pageFor(); try {
     const s = page.locator('#inscription-crafting-paths');
     await field(s, 'quality').selectOption('p1'); await field(s, 'dun').selectOption('鬼遁');
@@ -81,17 +81,20 @@ test('品质与遁位重算并检查所有剩余空槽能否补全，原非法�
     await choose(s, 0, '暴击伤害'); await trigger(s, 1).click();
     assert.equal(await option(s, 1, '暴击伤害').getAttribute('aria-disabled'), 'true');
     await trigger(s, 1).press('Escape'); await field(s, 'quality').selectOption('p2');
+    assert.deepEqual(await attrs(s),['','']);
+    await choose(s, 0, '暴击伤害');
     assert.equal(await s.locator('[data-craft-attr-trigger]').count(), 2); await trigger(s, 1).click();
     assert.equal(await option(s, 1, '暴击伤害').getAttribute('aria-disabled'), 'true', 'p2 M/L mix has no single legal origin');
     await option(s, 1, '速').click();
     await field(s, 'quality').selectOption('o2');
+    assert.deepEqual(await attrs(s),['','','']);
     assert.equal(await s.locator('[data-craft-attr-trigger]').count(), 3);
     await trigger(s, 2).click();
     assert.equal(await option(s, 2, '暴击伤害').getAttribute('aria-disabled'), 'false');
     await option(s, 2, '暴击伤害').click();
     await field(s, 'dun').selectOption('龙遁');
-    assert.deepEqual(await attrs(s), ['暴击伤害', '速', '暴击伤害']);
-    assert.match(await s.locator('[data-craft-attr-feedback]').innerText(), /无法组成所选搭配.*保留.*暴击伤害/s);
+    assert.deepEqual(await attrs(s), ['', '', '']);
+    assert.equal(await s.locator('[data-craft-attr-feedback]').innerText(),'');
     await field(s, 'dun').selectOption('鬼遁');
     await choose(s, 0, ''); await choose(s, 2, ''); await choose(s, 1, '');
     await trigger(s, 0).click();

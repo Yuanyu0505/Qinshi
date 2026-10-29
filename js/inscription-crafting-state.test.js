@@ -15,6 +15,17 @@ function fixture() {
 }
 function setup() { const f=fixture(); f.id=f.goal(); f.store.setActual(a,2); f.store.setActual(b,2); f.store.copyActual(f.id); f.store.setSelection(f.id,[Rules.signature(a),Rules.signature(b)]); return f; }
 
+test('user context switches clear target attributes to the new quality slot count without mutating saved targets',()=>{
+  const before={discipleKey:'',slot:'',dun:'鬼遁',quality:'o2',attrs:['速','速','血'],xTerm:null};
+  for(const changed of [{discipleKey:'神鬼谷盖聂'},{slot:'天府|人遁'},{dun:'龙遁'},{quality:'p2'}]){
+    const next=State.targetAfterContextChange(before,{...before,...changed});
+    assert.deepEqual(next.attrs,Array(changed.quality==='p2'?2:3).fill(''));
+  }
+  assert.deepEqual(State.targetAfterContextChange(before,{...before}).attrs,before.attrs);
+  assert.deepEqual(before.attrs,['速','速','血']);
+  assert.deepEqual(State.targetAfterContextChange(before,{...before,attrs:['血','血','血']}).attrs,['血','血','血']);
+});
+
 test("optional X choices follow the selected position and exclude exact requested terms", () => {
   const target={discipleKey:'',slot:'',dun:'鬼遁',quality:'o2',attrs:['速','速','速']};
   const choices=State.xOptions(target);

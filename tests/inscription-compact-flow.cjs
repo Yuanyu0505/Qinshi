@@ -20,9 +20,12 @@ async function setup(width,attrs=['暴击伤害','速','速'],dun='鬼遁'){
 for(const width of [320,390,768,1024])test(width+' shared ghost flow keeps useful branches, fitting and keyboard focus usable',async()=>{
   const {page,card}=await setup(width);try{
     const boxes=card.locator('[data-flow-node]');
-    assert.equal(await boxes.filter({hasText:'蓝二速度档位不可辨'}).count(),1);
+    assert.equal(await boxes.filter({hasText:'蓝二速度档位不可辨'}).count(),0);
     const useful=boxes.filter({hasText:/紫一 可用产物/});assert.equal(await useful.count(),2);
-    for(const text of await useful.allTextContents()){assert.match(text,/50%/);assert.match(text,/本路线需9枚/);}
+    for(const text of await useful.allTextContents()){assert.doesNotMatch(text,/概率/);assert.match(text,/总共需要9枚该铭文/);}
+    assert.match(await card.locator('svg').textContent(),/概率50%/);
+    assert.equal(await card.locator('.craft-flow-stage').count(),0);
+    assert.ok(await card.locator('.craft-flow-promotion').count()>0);
     assert.equal(await card.locator('[data-craft-action="diagram-failures"]').count(),0);
     const node=useful.first();await node.scrollIntoViewIfNeeded();await node.focus();await node.press('Enter');
     assert.equal(await card.locator('.craft-flow-box.is-focused').count(),1);assert.ok(await card.locator('.is-dimmed').count()>0);
@@ -31,6 +34,8 @@ for(const width of [320,390,768,1024])test(width+' shared ghost flow keeps usefu
     assert.ok(await card.locator('.craft-flow-viewport').evaluate(el=>el.scrollWidth<=el.clientWidth+2));
     await card.locator('[data-craft-action="diagram-all"]').click();
     assert.ok(await card.locator('[data-flow-viewer]').evaluate(el=>Number(el.dataset.zoom)>0&&Number(el.dataset.zoom)<=1));
+    fs.mkdirSync('test-results/1071-visual',{recursive:true});
+    await card.locator('[data-flow-viewer]').screenshot({path:'test-results/1071-visual/overview-'+width+'.png'});
     await card.locator('[data-craft-action="diagram-reset"]').click();assert.equal(await card.locator('[data-flow-viewer]').getAttribute('data-zoom'),'0.9');
     assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
     fs.mkdirSync('test-results/1068-visual',{recursive:true});await card.screenshot({path:'test-results/1068-visual/shared-'+width+'.png'});
@@ -44,6 +49,34 @@ test('unused details expand below the single canvas without changing graph dimen
     assert.equal(await card.locator('[data-flow-viewer]').getAttribute('data-zoom'),'1');assert.equal(await card.locator('svg').count(),1);
     assert.match(await card.locator('[data-flow-details]').innerText(),/失败橙一|复用失败橙二/);
     await card.locator('[data-craft-action="diagram-failures"]').click();assert.equal(await card.locator('[data-flow-details]').isHidden(),true);
+  }finally{await page.close();}
+});
+
+test('changing crafting context clears target choices while typing search and choosing the same disciple do not',async()=>{
+  const {page,section}=await setup(1024);
+  try{
+    const attrs=()=>section.locator('[data-craft-field="attr"]');
+    const values=()=>attrs().evaluateAll(nodes=>nodes.map(node=>node.value));
+    await section.locator('[data-craft-field="search"]').fill('盖聂');
+    assert.deepEqual(await values(),['暴击伤害','速','速']);
+    await section.locator('[data-craft-field="quality"]').selectOption('p2');
+    assert.deepEqual(await values(),['','']);
+    await attrs().nth(0).selectOption('速');
+    await section.locator('[data-craft-field="dun"]').selectOption('龙遁');
+    assert.deepEqual(await values(),['','']);
+    await attrs().nth(0).selectOption('PVP速');
+    await section.locator('[data-craft-field="search"]').fill('盖聂');
+    const choice=section.locator('[data-craft-action="choose-disciple"]').first();
+    await choice.click();assert.deepEqual(await values(),['','']);
+    const slot=section.locator('[data-craft-field="slot"]');
+    const slots=await slot.locator('option').evaluateAll(nodes=>nodes.map(node=>node.value).filter(Boolean));
+    await slot.selectOption(slots[0]);
+    await attrs().nth(0).selectOption({index:1});
+    if(slots.length>1){await slot.selectOption(slots[1]);assert.deepEqual(await values(),['','']);}
+    await page.locator('[data-mode="crafting-simulator"]').click();
+    const simulator=page.locator('#inscription-crafting-simulator');
+    await simulator.locator('[data-craft-field="quality"]').selectOption('o2');
+    assert.deepEqual(await simulator.locator('[data-craft-field="attr"]').evaluateAll(nodes=>nodes.map(node=>node.value)),['','','']);
   }finally{await page.close();}
 });
 

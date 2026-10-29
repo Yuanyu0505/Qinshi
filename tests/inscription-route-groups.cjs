@@ -188,7 +188,7 @@ test('graded concrete X uses its reduced route count, wash source and actual lab
     assert.match(await chance.locator('.craft-route-picker').innerText(),/紫二置换准备/);
     const description=await chance.locator('svg desc').textContent();
     assert.match(description,/另行置换合成素材铭文/);
-    assert.match(description,/当前概率：未知/);
+    assert.match(description,/概率未知/);
     assert.match(description,/2%技能穿透（低档）/);
     assert.doesNotMatch(description,/杂词条 X（同一个）/);
   }finally{await page.close();}

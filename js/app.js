@@ -3046,15 +3046,27 @@
     return `<span class="equipment-result-name">${name}<button type="button" class="equipment-favorite-toggle${favorite ? " is-favorite" : ""}" data-equipment-favorite="${escapeHtml(item.id)}" aria-pressed="${favorite}" title="${favorite ? "取消收藏" : "收藏装备"}" aria-label="${favorite ? "取消收藏" : "收藏装备"}">${favorite ? "★" : "☆"}</button></span>`;
   }
 
+  function equipmentTierHtml(item, tier) {
+    if (Array.isArray(item.unknownTiers) && item.unknownTiers.includes(tier)) {
+      return '<span class="tier-none">暂无资料</span>';
+    }
+    return tokenHtml(item.tiers[tier]);
+  }
+
+  function equipmentEffectHtml(item) {
+    if (!item.exclusiveEffect) return "";
+    return `<details class="equipment-exclusive-effect"><summary>专属效果</summary><p>${escapeHtml(item.exclusiveEffect)}</p></details>`;
+  }
+
   function equipmentTableHtml(items, tiers, title) {
     const hasFilter = state.filters.length > 0;
     if (!items.length) return "";
     const body = items.map((item) => {
       return `<tr>
       <td class="equipment-category-cell"><span class="cat">${item.cat}</span></td>
-      <td class="name equipment-name-cell">${equipmentResultNameHtml(item)}</td>
+      <td class="name equipment-name-cell">${equipmentResultNameHtml(item)}${equipmentEffectHtml(item)}</td>
       ${state.showMain ? `<td class="main equipment-main-cell">${escapeHtml(Q.mainDisplay(item, state.valueSource))}</td>` : ""}
-      ${tiers.map((tier) => `<td class="equipment-tier-cell${item.bookGroup ? " book-tier-cell" : ""}">${item.bookGroup ? bookTierHtml(item, tier) : tokenHtml(item.tiers[tier])}</td>`).join("")}
+      ${tiers.map((tier) => `<td class="equipment-tier-cell${item.bookGroup ? " book-tier-cell" : ""}">${item.bookGroup ? bookTierHtml(item, tier) : equipmentTierHtml(item, tier)}</td>`).join("")}
       ${hasFilter ? `<td class="badge equipment-sort-cell">${sortBadge(item)}</td>` : ""}
       <td class="equipment-compare-action">${equipmentCompareActionHtml(item)}</td>
     </tr>`;
@@ -3095,7 +3107,7 @@
       const badge = hasFilter ? sortBadge(item) : "";
       const tierHtml = item.bookGroup
         ? bookCardTiersHtml(item)
-        : Q.TIER_ORDER.map((tier) => equipmentMobileTierHtml(item, tier, tokenHtml(item.tiers[tier]), equipmentCardTierExpanded(tier))).join("");
+        : Q.TIER_ORDER.map((tier) => equipmentMobileTierHtml(item, tier, equipmentTierHtml(item, tier), equipmentCardTierExpanded(tier))).join("");
       return `<div class="card${item.bookGroup ? " book-card" : ""}">
         <div class="card-head">
           <span class="cat">${item.cat}</span>
@@ -3104,6 +3116,7 @@
         </div>
         ${state.showMain ? `<div class="card-main">主属性：<b>${escapeHtml(Q.mainDisplay(item, state.valueSource))}</b></div>` : ""}
         ${tierHtml}
+        ${equipmentEffectHtml(item)}
         <div class="equipment-compare-card-action">${equipmentCompareActionHtml(item)}</div>
       </div>`;
     }).join("");

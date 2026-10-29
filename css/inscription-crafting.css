@@ -69,14 +69,19 @@
 .craft-flow-viewport:focus-visible { outline:2px solid #438ac1; outline-offset:-3px; }
 .craft-flow-svg { display:block; max-width:none; margin:0 auto; background:#fff; }
 .craft-flow-connection { fill:none; stroke:#929aa2; stroke-width:2.4; }
-.craft-flow-stage rect { fill:none; stroke-width:3; }
-.craft-flow-stage-blue { stroke:#1467b7; color:#1467b7; }
-.craft-flow-stage-purple { stroke:#8341b0; color:#8341b0; }
-.craft-flow-stage-orange { stroke:#f79646; color:#f79646; }
-.craft-flow-stage text { fill:currentColor; stroke:none; font:700 14px system-ui,"Microsoft YaHei",sans-serif; }
 .craft-flow-box rect { fill:#e5f3ff; stroke:#d4dee6; stroke-width:1.1; }
 .craft-flow-success rect { stroke:#a9c8df; stroke-width:1.4; }
 .craft-flow-box text,.craft-flow-label text { fill:#005aab; font:600 14px system-ui,"Microsoft YaHei",sans-serif; text-anchor:middle; dominant-baseline:middle; }
+.craft-flow-quality-b2 rect { fill:#e6f3ff; stroke:#2583df; }
+.craft-flow-quality-b2 text { fill:#0868ba; }
+.craft-flow-quality-p1 rect,.craft-flow-quality-p2 rect { fill:#f5edff; stroke:#a34ee0; }
+.craft-flow-quality-p1 text,.craft-flow-quality-p2 text { fill:#8736ba; }
+.craft-flow-quality-o1 rect,.craft-flow-quality-o2 rect { fill:#fff1df; stroke:#e99026; }
+.craft-flow-quality-o1 text,.craft-flow-quality-o2 text { fill:#b66300; }
+#partition-inscription .craft-flow-svg .craft-flow-box .ins-term-value,
+#partition-inscription .craft-flow-svg .craft-flow-box .ins-term-tier { fill:inherit; }
+.craft-flow-promotion text { fill:#bd3028; }
+.craft-flow-junction { fill:#c8deee; stroke:#9db9d0; stroke-width:1; }
 .craft-flow-label rect { fill:#f5faff; stroke:#cddfec; stroke-width:1; }
 .craft-flow-label text { font-size:14px; font-weight:700; }
 .craft-flow-details { border:1px solid var(--line); border-radius:8px; padding:12px; margin-top:12px; }

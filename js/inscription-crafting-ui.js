@@ -57,7 +57,7 @@
   }
   function changeTarget(v,next) {
     var previousX=next.xTerm;
-    next=normalizeTarget(next);
+    next=normalizeTarget(S.targetAfterContextChange(state.target,next));
     if (sameTarget(next,state.target)) { renderAll(false); return; }
     var before=position(state.target), after=position(next), sim=state.simulation;
     var incompatible=before.prefix!==after.prefix || before.dun!==after.dun ||
@@ -494,7 +494,9 @@
     status(v,'');
     if(action==='toggle-favorite'){toggleFavorite(v,control);return;}
     if(action==='choose-disciple'){
-      var target=clone(state.target);target.discipleKey=decodeURIComponent(control.dataset.key);target.slot='';
+      var target=clone(state.target),key=decodeURIComponent(control.dataset.key);
+      if(target.discipleKey===key){hideSuggestions(v);return;}
+      target.discipleKey=key;target.slot='';
       changeTarget(v,target);return;
     }
     if(action==='clear-options'){

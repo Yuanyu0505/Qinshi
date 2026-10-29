@@ -185,6 +185,14 @@
   }
   function defaultTarget() { return { discipleKey: "", slot: "", dun: "", quality: "o2", attrs: ["", "", ""], xTerm: null }; }
   function blankSimulation() { return { stage: "b2", inputs: [], pending: null }; }
+  function targetAfterContextChange(previous, next) {
+    var target = copy(next);
+    if (["discipleKey", "slot", "dun", "quality"].some(function (key) { return previous[key] !== target[key]; })) {
+      var quality = Rules.qualities.find(function (item) { return item.id === target.quality; });
+      if (quality) target.attrs = Array(quality.count).fill("");
+    }
+    return target;
+  }
   function context(target) {
     var pair = target.slot.split("|");
     // An unspecified disciple represents any ONE common prefix, never mixed prefixes.
@@ -267,5 +275,5 @@
       save: function (value, expected, accountId) { legacy.saveSimple(value, expected, accountId); return inspect(); }
     };
   }
-  return { KEY: KEY, createStore: createStore, createWorkbench: createWorkbench, blankSimulation: blankSimulation, context: context, xOptions: xOptions, infer: infer, preview: simulationPreview };
+  return { KEY: KEY, createStore: createStore, createWorkbench: createWorkbench, blankSimulation: blankSimulation, targetAfterContextChange: targetAfterContextChange, context: context, xOptions: xOptions, infer: infer, preview: simulationPreview };
 });

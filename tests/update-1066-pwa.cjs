@@ -130,6 +130,10 @@ async function enter(page, partition) {
 }
 
 async function offlineFeatures(page, beforeCount) {
+  const weapons = await page.evaluate(() => window.SPECIAL_EQUIPMENT_DATA.items
+    .filter(item => ['神兵焚天钺', '神兵青岚刀', '神兵听潮笛'].includes(item.name))
+    .map(item => item.name).sort());
+  assert.deepEqual(weapons, ['神兵听潮笛', '神兵焚天钺', '神兵青岚刀'].sort(), 'New weapons remain available offline after installation/upgrade');
   assert.equal(await page.evaluate(() => Boolean(window.InscriptionProgressRules && window.InscriptionRouteFavorites)), true);
   assert.equal(await page.evaluate(() => window.INSCRIPTION_DATA.items.filter(item => item.name === '神镜仙端木蓉').length), 1);
   await enter(page, 'inscription');

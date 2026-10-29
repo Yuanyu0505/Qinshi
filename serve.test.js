@@ -1605,7 +1605,7 @@ test("手机装备结果将品质改为折叠卡片", () => {
 
 test("手机和平板装备卡保持品质顺序且在1024像素内默认展开红色与红金", () => {
   const app = fs.readFileSync(path.join(__dirname, "js", "app.js"), "utf8");
-  assert.match(app, /Q\.TIER_ORDER\.map\(\(tier\) => equipmentMobileTierHtml\(item, tier, tokenHtml\(item\.tiers\[tier\]\), equipmentCardTierExpanded\(tier\)\)\)/);
+  assert.match(app, /Q\.TIER_ORDER\.map\(\(tier\) => equipmentMobileTierHtml\(item, tier, equipmentTierHtml\(item, tier\), equipmentCardTierExpanded\(tier\)\)\)/);
   assert.match(app, /function equipmentCardTierExpanded\(tier\)/);
   assert.match(app, /window\.matchMedia\("\(max-width: 1024px\)"\)/);
   assert.match(app, /return !mobile \|\| tier === "红色" \|\| tier === "红金";/);

@@ -1723,6 +1723,9 @@ figcaption { color: var(--muted); font-size: 13px; margin-top: 8px; }
 .cloud-sync-section input:not([type="checkbox"]):not([type="radio"]),
 .cloud-sync-section select { width: 100%; }
 .cloud-sync-secret { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px; }
+.equipment-exclusive-effect { max-width:100%; margin-top:8px; white-space:normal; overflow-wrap:anywhere; font-size:13px; line-height:1.6; }
+.equipment-exclusive-effect summary { cursor:pointer; color:var(--gold); }
+.equipment-exclusive-effect p { margin:6px 0; }
 .cloud-sync-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
 .cloud-sync-section { margin-top: 14px; }
 .cloud-sync-source-card { display: flex; align-items: flex-start; gap: 10px; cursor: pointer; }

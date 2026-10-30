@@ -16,7 +16,7 @@
     var parts=[];
     T.sortTerms(material.terms,material.quality).forEach(function(t,index){
       if(index)parts.push({text:'＋'});
-      if(symbols&&symbols.has(termKey(t))){parts.push({text:'杂词条 X（同一个）'});return;}
+      if(symbols&&symbols.has(termKey(t))){parts.push({text:'杂词条 X（同一个）',role:'value',rank:T.describe(t,material.quality).rank});return;}
       var value=T.describe(t,material.quality);
       parts.push({text:value.body,role:'value',rank:value.rank},{text:value.suffix,role:'tier'});
     });
@@ -74,7 +74,36 @@
   function endpoints(e,map){
     var from=map.get(e.from),to=map.get(e.to);
     return [{x:from.x+from.w*(e.fromPort===undefined?0.5:e.fromPort),y:from.y+(from.kind==='junction'?from.h/2:from.h)},
-      {x:to.x+to.w*(e.toPort===undefined?0.5:e.toPort),y:to.y+(to.kind==='junction'?to.h/2:0)}];
+      // Leave the complete V-shaped marker outside the subsequently painted
+      // box; an arrow ending on the border loses half of its stroke.
+      {x:to.x+to.w*(e.toPort===undefined?0.5:e.toPort),y:to.kind==='junction'?to.y+to.h/2:to.y-14}];
+  }
+  function labelSize(label){
+    var lines=Array.isArray(label)?label:[label];
+    return {lines:lines,w:Math.max(64,Math.max.apply(null,lines.map(function(s){return Array.from(s).reduce(function(n,c){return n+(/[\u0000-\u00ff]/.test(c)?8.4:14);},0);}))+24),h:lines.length*18+10};
+  }
+  function arrowBounds(start,end){
+    var length=Math.hypot(end.x-start.x,end.y-start.y);
+    if(!length)return null;
+    var ux=(end.x-start.x)/length,uy=(end.y-start.y)/length;
+    // Reserve slightly more than the marker's actual 14.4 x 7.2 wings.
+    var xs=[end.x,end.x-ux*20-uy*10,end.x-ux*20+uy*10];
+    var ys=[end.y,end.y-uy*20+ux*10,end.y-uy*20-ux*10];
+    return {left:Math.min.apply(null,xs)-4,right:Math.max.apply(null,xs)+4,top:Math.min.apply(null,ys)-4,bottom:Math.max.apply(null,ys)+4};
+  }
+  function clearArrowLabels(nodes,edges){
+    var map=new Map(nodes.map(function(n){return[n.id,n];}));
+    var heads=edges.filter(function(e){return map.get(e.to).kind!=='junction';}).map(function(e){return arrowBounds(e.points[e.points.length-2],e.points[e.points.length-1]);}).filter(Boolean);
+    edges.filter(function(e){return e.label;}).forEach(function(e){
+      var size=labelSize(e.label);
+      // All labels are painted after all wires. Check neighbouring batches as
+      // well as this label's own arrow; moving above a blocker is monotonic.
+      for(var attempt=0;attempt<heads.length;attempt++){
+        var hits=heads.filter(function(head){return e.labelX+size.w/2>head.left&&e.labelX-size.w/2<head.right&&e.labelY+size.h/2>head.top&&e.labelY-size.h/2<head.bottom;});
+        if(!hits.length)break;
+        e.labelY=Math.min.apply(null,hits.map(function(head){return head.top;}))-size.h/2-8;
+      }
+    });
   }
   function routeWires(nodes,edges,width){
     var map=new Map(nodes.map(function(n){return[n.id,n];}));
@@ -113,9 +142,8 @@
     var connections=edges.map(function(e){
       var from=map.get(e.from),to=map.get(e.to),d=endpoints(e,map)[1],color=e.wireColor;
       if(e.label){
-        var labelLines=Array.isArray(e.label)?e.label:[e.label];
-        var w=Math.max(64,Math.max.apply(null,labelLines.map(function(s){return Array.from(s).reduce(function(n,c){return n+(/[\u0000-\u00ff]/.test(c)?8.4:14);},0);}))+24),lines=labelLines;
-        var h=lines.length*18+10,x=e.labelX===undefined?d.x:e.labelX,y=e.labelY===undefined?d.y-44:e.labelY;
+        var size=labelSize(e.label),labelLines=size.lines,lines=labelLines,w=size.w,h=size.h;
+        var x=e.labelX===undefined?d.x:e.labelX,y=e.labelY===undefined?d.y-44:e.labelY;
         var labelKey=JSON.stringify([from.id,x,y,labelLines]);
         // Shared source segments may carry identical per-batch labels. Draw
         // that label once while retaining all recipe edges and descriptions.
@@ -130,9 +158,13 @@
     var description=nodes.filter(function(n){return n.lines.length;}).map(function(n){return n.lines.map(lineText).join('，');}).join('；')+'。'+edges.filter(function(e){return e.label;}).map(function(e){return nodeTitle(map.get(e.from))+' → '+nodeTitle(map.get(e.to))+'：'+[].concat(e.label).join('，');}).join('；');
     return '<svg xmlns="http://www.w3.org/2000/svg" class="craft-flow-svg" role="img" aria-labelledby="'+id+'-title '+id+'-desc" viewBox="0 0 '+width+' '+height+'" width="'+Math.round(width*0.9)+'" height="'+Math.round(height*0.9)+'" data-flow-width="'+width+'" data-flow-height="'+height+'">'+
       '<title id="'+id+'-title">'+esc(title)+'</title><desc id="'+id+'-desc">'+esc(description)+'</desc>'+
-      '<defs>'+wireColors.map(function(color,i){return '<marker id="'+id+'-arrow-'+i+'" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="8" markerHeight="8" orient="auto"><path d="M 1 1 L 7 4 L 1 7" fill="none" stroke="'+color+'" stroke-width="1.8"/></marker>';}).join('')+'</defs>'+
+      '<defs>'+wireColors.map(function(color,i){return '<marker id="'+id+'-arrow-'+i+'" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="8" markerHeight="8" orient="auto" overflow="visible"><path d="M 1 1 L 7 4 L 1 7" fill="none" stroke="'+color+'" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/></marker>';}).join('')+'</defs>'+
       connections+nodes.map(function(n){
-        if(n.kind==='junction')return '<circle class="craft-flow-junction" cx="'+(n.x+n.w/2)+'" cy="'+(n.y+n.h/2)+'" r="4"/>';
+        if(n.kind==='junction'){
+          var inputs=new Set(edges.filter(function(e){return e.to===n.id;}).map(function(e){return e.from;}));
+          var outputs=new Set(edges.filter(function(e){return e.from===n.id;}).map(function(e){return e.to;}));
+          return inputs.size>1||outputs.size>1?'<circle class="craft-flow-junction" data-flow-junction="'+esc(n.id)+'" cx="'+(n.x+n.w/2)+'" cy="'+(n.y+n.h/2)+'" r="4"/>':'';
+        }
         return '<g class="craft-flow-box craft-flow-'+n.kind+' craft-flow-quality-'+n.quality+(n.kind==='promotion'?' craft-flow-promotion-'+(n.promotion==='初级'?'initial':'intermediate'):'')+'" data-flow-node="'+esc(n.id)+'" role="button" tabindex="0" aria-label="'+esc(n.lines.map(lineText).join('，'))+'"><rect x="'+n.x+'" y="'+n.y+'" width="'+n.w+'" height="'+n.h+'" rx="17"/>'+n.lines.map(function(line,i){return '<text x="'+(n.x+n.w/2)+'" y="'+(n.y+22+i*20)+'">'+lineHtml(line)+'</text>';}).join('')+'</g>';
       }).join('')+labels.join('')+'</svg>';
   }
@@ -160,9 +192,9 @@
       var lines=[title].concat(drawnTerms(m));
       var initial=m.material.quality==='b2'&&(m.kind==='base'||op&&op.kind==='wash');
       if(initial)lines=[{parts:[{text:qLabel(m.material.quality)}].concat(drawnTerms(m)[0].parts)}];
-      else lines.push(m.demand?'总共需要'+m.demand+'枚该铭文':'可替代同款材料（不重复计量）');
+      else if(m.material.quality!=='o2')lines.push(m.demand?'总共需要'+m.demand+'枚该铭文':'可替代同款材料（不重复计量）');
       var kind=m.kind==='base'?'material':'success';
-      if(op&&op.kind==='wash'){kind='wash';lines=['另行置换合成素材铭文'].concat(lines,['置换概率未知']);}
+      if(op&&op.kind==='wash'){kind='wash';lines=['另行置换合成素材铭文'].concat(lines);}
       var consumers=initial?graph.operations.filter(function(o){return o.inputs.some(function(i){return i.id===m.id;});}):[];
       if(consumers.length>1){
         // These are separate preparation cards for separate consumed batches,
@@ -331,7 +363,12 @@
     width=Math.max.apply(null,nodes.filter(function(n){return n.kind!=='junction';}).map(function(n){return n.x+n.w;}))+44;
     y=18;
     rows.forEach(function(row,i){
-      if(i){var count=graph.operations.filter(function(op){return op.kind==='craft'&&levels[op.quality]===row.level;}).length;y+=110+Math.max(0,count-2)*24;}
+      if(i){
+        var atRow=graph.operations.filter(function(op){return levels[op.quality]===row.level;});
+        var count=atRow.filter(function(op){return op.kind==='craft';}).length;
+        var hasFan=atRow.some(function(op){return op.outputs.length>1;});
+        y+=(hasFan?150:110)+Math.max(0,count-1)*24;
+      }
       var height=Math.max.apply(null,row.nodes.map(function(n){return n.h;}));
       row.nodes.forEach(function(n){n.y=y;n.rowBottom=y+height;});y+=height;
     });
@@ -344,13 +381,18 @@
       var xs=incoming.map(function(n){return n.x+n.w/2;}).sort(function(a,b){return a-b;});
       var center=op.kind==='reuse'?opVisual.get(op.id).x+opVisual.get(op.id).w/2:
         opVisual.get(op.id).folded||!xs.length?outputs[0].x+outputs[0].w/2:xs.length%2?xs[(xs.length-1)/2]:(xs[xs.length/2-1]+xs[xs.length/2])/2;
+      // Two outcomes read as a balanced fork, rather than one almost vertical
+      // leg and one very shallow leg. Reuse retains its source-aligned column.
+      if(op.kind==='craft'&&!opVisual.get(op.id).folded&&outputs.length===2){
+        center=(outputs[0].x+outputs[0].w/2+outputs[1].x+outputs[1].w/2)/2;
+      }
       var lane=0;
       if(op.kind==='craft'){
         var ranges=laneEnds.get(top)||[],left=Math.min.apply(null,xs.concat(center)),right=Math.max.apply(null,xs.concat(center));
         while(ranges.some(function(range){return range.lane===lane&&left<=range.right+16&&right>=range.left-16;}))lane++;
         ranges.push({left:left,right:right,lane:lane});laneEnds.set(top,ranges);
       }
-      junction.x=center-junction.w/2;junction.y=top-68-lane*24-junction.h/2;
+      junction.x=center-junction.w/2;junction.y=top-(opVisual.get(op.id).folded?68:96)-lane*24-junction.h/2;
     });
     edges.forEach(function(e){
       var from=byId.get(e.from),to=byId.get(e.to);
@@ -366,11 +408,12 @@
       e.wireColor=graph.operations.indexOf(operation)%wireColors.length;
       if(e.label){
         var ends=endpoints(e,byId),start=ends[0],end=ends[1];
-        e.labelX=e.output?start.x+(end.x-start.x)*.65:start.x;
-        e.labelY=e.output?start.y+(end.y-start.y)*.65:from.y+from.h+22;
+        e.labelX=e.output?start.x+(end.x-start.x)*.5:start.x;
+        e.labelY=e.output?start.y+(end.y-start.y)*.5:from.y+from.h+22;
       }
     });
     routeWires(nodes,edges,width);
+    clearArrowLabels(nodes,edges);
     var title='完整合成流程'+(settings.positionLabel?' · '+settings.positionLabel:'');
     var xTerm=route.xTerm===undefined?(x?{attr:x,tier:'U'}:null):route.xTerm,symbolic=route.symbolicX!==false;
     var xNote=!xTerm?'':symbolic?'符号模板 A：X 采用同一种合法不分档词条；概率只对该模板条件成立。':'具体模式 B：杂词 X 固定为'+xTerm.attr+'（'+T.tierLabel(xTerm.tier)+'），不替换属性或档位。';

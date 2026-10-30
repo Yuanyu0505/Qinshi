@@ -65,7 +65,7 @@ test('reuse probability belongs to its result leg rather than the shared stem',(
     assert.ok(group,'each result has its own probability label');
     const x=Number(group[2].match(/<text x="([^"]+)"/)[1]);
     const start=wire.points[0],end=wire.points.at(-1);
-    assert.equal(x,start.x+(end.x-start.x)*.65,'probability belongs on its own straight result branch');
+    assert.equal(x,start.x+(end.x-start.x)*.5,'probability belongs midway along its own result branch');
     assert.ok(Number(group[2].match(/<text[^>]+ y="([^"]+)"/)[1])<boxes.get(wire.attrs['data-to']).y);
   }
   for(const wire of wires.filter(w=>w.attrs['data-phase']==='output')){
@@ -90,10 +90,53 @@ test('random outcomes all depart directly from one junction; wash preparation ha
     }
     for(const match of html.matchAll(/<g class="craft-flow-box craft-flow-wash[^\"]*" data-flow-node="([^"]+)"[^>]*>([\s\S]*?)<\/g>/g)){
       assert.ok(match[2].includes('另行置换合成素材铭文'));
-      assert.ok(match[2].includes('置换概率未知'));
+      assert.ok(!match[2].includes('置换概率未知'));
       assert.equal(wires.filter(w=>w.attrs['data-to']===match[1]).length,0,'washed material is independent, not an outcome of an unrelated recipe');
     }
   }
+});
+
+test('only a real merge or split has a visible junction, and arrowheads remain outside boxes',()=>{
+  const plans=Paths.representative({prefix:'天府',dun:'鬼遁',quality:'o2',attrs:['速','速','速']});
+  let junctions=0,arrows=0;
+  for(const route of plans.strategies){
+    const {html,boxes,wires}=drawing(route,plans.xAttr);
+    for(const match of html.matchAll(/<circle class="craft-flow-junction" data-flow-junction="([^"]+)"/g)){
+      const id=match[1],inputs=new Set(wires.filter(w=>w.attrs['data-to']===id).map(w=>w.attrs['data-from']));
+      const outputs=new Set(wires.filter(w=>w.attrs['data-from']===id).map(w=>w.attrs['data-to']));
+      assert.ok(inputs.size>1||outputs.size>1,'single-in/single-out is a line, not a visible node');
+      junctions++;
+    }
+    for(const wire of wires.filter(w=>w.attrs['marker-end'])){
+      const target=boxes.get(wire.attrs['data-to']);assert.ok(target);
+      assert.ok(wire.points.at(-1).y<=target.y-12,'arrowhead must not be hidden under the target border');
+      arrows++;
+    }
+    for(const match of html.matchAll(/<g class="craft-flow-box[^\"]*craft-flow-quality-o2[^\"]*"[^>]*>([\s\S]*?)<\/g>/g)){
+      assert.ok(!match[1].includes('总共需要1枚该铭文'));
+    }
+  }
+  assert.ok(junctions&&arrows,'exercise actual merges, splits and arrows');
+});
+
+test('no connection label covers any complete arrowhead, including neighbouring result branches',()=>{
+  const plans=Paths.representative({prefix:'天府',dun:'鬼遁',quality:'o2',attrs:['暴击伤害','速','速']});
+  let checked=0;
+  for(const route of plans.strategies){
+    const {html,wires}=drawing(route,plans.xAttr);
+    const labels=Array.from(html.matchAll(/<g class="craft-flow-label"([^>]*)>([\s\S]*?)<\/g>/g),label=>Object.fromEntries(Array.from(label[2].match(/<rect\b[^>]*>/)[0].matchAll(/\b(x|y|width|height)="(-?[\d.]+)"/g),m=>[m[1],Number(m[2])])));
+    assert.ok(labels.length);
+    for(const wire of wires.filter(w=>w.attrs['marker-end'])){
+      const start=wire.points.at(-2),end=wire.points.at(-1),length=Math.hypot(end.x-start.x,end.y-start.y),ux=(end.x-start.x)/length,uy=(end.y-start.y)/length;
+      const wings=[-7.2,7.2].map(side=>({x:end.x-ux*14.4-uy*side,y:end.y-uy*14.4+ux*side}));
+      for(const rect of labels){
+        const padded={x:rect.x-2,y:rect.y-2,width:rect.width+4,height:rect.height+4};
+        for(const wing of wings)assert.equal(cuts(wing,end,padded),false,'no label may intersect either full arrow wing, even from a different batch');
+      }
+      checked++;
+    }
+  }
+  assert.ok(checked,'exercise labelled outcome branches');
 });
 
 test('shared blue materials are separately prepared per batch, not one misleading cross-batch bus',()=>{

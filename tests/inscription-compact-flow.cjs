@@ -57,6 +57,26 @@ test('unused details expand below the single canvas without changing graph dimen
   }finally{await page.close();}
 });
 
+test('flow terms use bold quality colours distinct from ordinary box copy',async()=>{
+  const {page,card}=await setup(768);try{
+    const values=await card.locator('.craft-flow-box .ins-term-value').evaluateAll(nodes=>nodes.map(node=>{
+      const text=node.closest('text'),box=node.closest('.craft-flow-box'),tier=text.querySelector('.ins-term-tier');
+      return {body:getComputedStyle(text).fill,value:getComputedStyle(node).fill,weight:Number(getComputedStyle(node).fontWeight),quality:box.getAttribute('class'),tierFill:tier&&getComputedStyle(tier).fill,tierWeight:tier&&Number(getComputedStyle(tier).fontWeight)};
+    }));
+    assert.ok(values.length);
+    for(const value of values){
+      assert.equal(value.body,'rgb(52, 68, 84)');assert.notEqual(value.value,value.body);assert.ok(value.weight>=700);
+      if(value.tierFill){assert.equal(value.tierFill,value.value);assert.ok(value.tierWeight>=700);}
+    }
+    for(const quality of ['b2','p1','o2'])assert.ok(values.some(value=>value.quality.includes('craft-flow-quality-'+quality)),'exercise '+quality+' term emphasis');
+    const markers=await card.locator('marker').evaluateAll(nodes=>nodes.map(node=>({overflow:getComputedStyle(node).overflow,join:getComputedStyle(node.querySelector('path')).strokeLinejoin})));
+    assert.ok(markers.length);
+    for(const marker of markers){assert.equal(marker.overflow,'visible');assert.equal(marker.join,'round');}
+    assert.doesNotMatch(await card.locator('.craft-flow-quality-o2').textContent(),/总共需要1枚该铭文/);
+    for(const copy of await card.locator('.craft-flow-wash').allTextContents())assert.doesNotMatch(copy,/置换概率未知/);
+  }finally{await page.close();}
+});
+
 test('changing crafting context clears target choices while typing search and choosing the same disciple do not',async()=>{
   const {page,section}=await setup(1024);
   try{

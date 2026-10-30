@@ -6,7 +6,7 @@
 #partition-inscription .ins-term-value.ins-term-orange { color:var(--ins-term-orange); fill:var(--ins-term-orange); }
 #partition-inscription .ins-term-tier { color:var(--muted,#b7ad99); font-weight:400; white-space:nowrap; }
 #partition-inscription .craft-flow-svg { --ins-term-blue:#1467b7; --ins-term-purple:#8341b0; --ins-term-orange:#f79646; }
-#partition-inscription .craft-flow-svg .ins-term-tier { fill:#516172; font-weight:400; }
+#partition-inscription .craft-flow-svg .ins-term-tier { font-weight:700; }
 .ins-edit-term-preview { display:block; min-width:0; font-size:12px; line-height:1.6; margin-top:4px; }
 .ins-crafting *, .ins-crafting *::before, .ins-crafting *::after { box-sizing:border-box; }
 .ins-crafting [hidden] { display:none !important; }
@@ -71,17 +71,17 @@
 .craft-flow-connection { fill:none; stroke:#929aa2; stroke-width:2.4; }
 .craft-flow-box rect { fill:#e5f3ff; stroke:#d4dee6; stroke-width:1.1; }
 .craft-flow-success rect { stroke:#a9c8df; stroke-width:1.4; }
-.craft-flow-box text,.craft-flow-label text { fill:#005aab; font:600 14px system-ui,"Microsoft YaHei",sans-serif; text-anchor:middle; dominant-baseline:middle; }
+.craft-flow-box text,.craft-flow-label text { fill:#344454; font:400 14px system-ui,"Microsoft YaHei",sans-serif; text-anchor:middle; dominant-baseline:middle; }
 .craft-flow-quality-b2 rect { fill:#e6f3ff; stroke:#2583df; }
-.craft-flow-quality-b2 text { fill:#0868ba; }
 .craft-flow-quality-p1 rect,.craft-flow-quality-p2 rect { fill:#f5edff; stroke:#a34ee0; }
-.craft-flow-quality-p1 text,.craft-flow-quality-p2 text { fill:#8736ba; }
 .craft-flow-quality-o1 rect,.craft-flow-quality-o2 rect { fill:#fff1df; stroke:#e99026; }
-.craft-flow-quality-o1 text,.craft-flow-quality-o2 text { fill:#b66300; }
-#partition-inscription .craft-flow-svg .craft-flow-box .ins-term-value,
-#partition-inscription .craft-flow-svg .craft-flow-box .ins-term-tier { fill:inherit; }
-.craft-flow-promotion-initial text { fill:#0868ba; }
-.craft-flow-promotion-intermediate text { fill:#8736ba; }
+#partition-inscription .craft-flow-quality-b2 .ins-term-tier { fill:var(--ins-term-blue); }
+#partition-inscription .craft-flow-quality-p1 .ins-term-tier,
+#partition-inscription .craft-flow-quality-p2 .ins-term-tier { fill:var(--ins-term-purple); }
+#partition-inscription .craft-flow-quality-o1 .ins-term-tier,
+#partition-inscription .craft-flow-quality-o2 .ins-term-tier { fill:var(--ins-term-orange); }
+.craft-flow-promotion-initial text { fill:#0868ba; font-weight:600; }
+.craft-flow-promotion-intermediate text { fill:#8736ba; font-weight:600; }
 .craft-flow-junction { fill:#c8deee; stroke:#9db9d0; stroke-width:1; }
 .craft-flow-label rect { fill:#f5faff; stroke:#cddfec; stroke-width:1; }
 .craft-flow-label text { font-size:14px; font-weight:700; }

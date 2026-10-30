@@ -71,30 +71,24 @@
     return a.x===b.x?a.x>left&&a.x<right&&Math.max(a.y,b.y)>top&&Math.min(a.y,b.y)<bottom:
       a.y===b.y&&a.y>top&&a.y<bottom&&Math.max(a.x,b.x)>left&&Math.min(a.x,b.x)<right;
   }
-  function crosses(a,b,c,d){
-    if(a.x===b.x&&c.y===d.y)return a.x>Math.min(c.x,d.x)&&a.x<Math.max(c.x,d.x)&&c.y>Math.min(a.y,b.y)&&c.y<Math.max(a.y,b.y);
-    return a.y===b.y&&c.x===d.x&&crosses(c,d,a,b);
-  }
-  function overlapLength(a,b,c,d){
-    if(a.x===b.x&&c.x===d.x&&a.x===c.x)return Math.max(0,Math.min(Math.max(a.y,b.y),Math.max(c.y,d.y))-Math.max(Math.min(a.y,b.y),Math.min(c.y,d.y)));
-    if(a.y===b.y&&c.y===d.y&&a.y===c.y)return Math.max(0,Math.min(Math.max(a.x,b.x),Math.max(c.x,d.x))-Math.max(Math.min(a.x,b.x),Math.min(c.x,d.x)));
-    return 0;
-  }
   function endpoints(e,map){
     var from=map.get(e.from),to=map.get(e.to);
     return [{x:from.x+from.w*(e.fromPort===undefined?0.5:e.fromPort),y:from.y+(from.kind==='junction'?from.h/2:from.h)},
       {x:to.x+to.w*(e.toPort===undefined?0.5:e.toPort),y:to.y+(to.kind==='junction'?to.h/2:0)}];
   }
   function routeWires(nodes,edges,width){
-    var map=new Map(nodes.map(function(n){return[n.id,n];})),routed=[];
-    // Short local links establish their lanes first. Longer links can then use
-    // an adjacent clear corridor instead of running through unrelated stages.
-    edges.slice().sort(function(a,b){return (map.get(a.to).y-map.get(a.from).y)-(map.get(b.to).y-map.get(b.from).y);}).forEach(function(e){
+    var map=new Map(nodes.map(function(n){return[n.id,n];}));
+    edges.forEach(function(e){
       var ends=endpoints(e,map),a=ends[0],d=ends[1],from=map.get(e.from),to=map.get(e.to),via=e.viaY;
+      // Results fan out from ONE semantic operation, never from a second
+      // horizontal bus. A stable continuation also has no gratuitous elbows.
+      if(e.phase!=='input'){e.points=[a,d];return;}
       var obstacles=nodes.filter(function(n){return n.kind!=='junction'&&n.id!==e.from&&n.id!==e.to&&n.y<=d.y+8&&n.y+n.h>=a.y-8;});
       var exit=from.kind==='junction'?a.y:(from.rowBottom||a.y)+18;
       var entry=via;
       var candidates=[compactPoints([a,{x:a.x,y:via},{x:d.x,y:via},d])];
+      function blocked(points){return points.some(function(p,i){return i&&obstacles.some(function(n){return cutsBox(points[i-1],p,n,8);});});}
+      if(!blocked(candidates[0])){e.points=candidates[0];return;}
       var lanes=[20,width-20,a.x,d.x];
       obstacles.forEach(function(n){lanes.push(n.x-16,n.x+n.w+16);});
       Array.from(new Set(lanes)).filter(function(x){return x>=16&&x<=width-16;}).forEach(function(x){
@@ -108,24 +102,16 @@
           if(obstacles.some(function(n){return cutsBox(p,q,n,8);}))return;
           cost+=Math.abs(p.x-q.x)+Math.abs(p.y-q.y);
           if(cost>=score)return;
-          routed.forEach(function(other){
-            if(other.batch===e.batch||other.from===e.from)return;
-            for(var j=1;j<other.points.length;j++){
-              var overlap=overlapLength(p,q,other.points[j-1],other.points[j]);
-              if(overlap)cost+=160+overlap*2;
-              else if(crosses(p,q,other.points[j-1],other.points[j]))cost+=90;
-            }
-          });
         }
         if(cost<score){best=points;score=cost;}
       });
-      e.points=best||candidates[0];routed.push(e);
+      e.points=best||candidates[0];
     });
   }
   function svg(title,nodes,edges,width,height){
     var id='ins-flow-'+(++serial),map=new Map(nodes.map(function(n){return[n.id,n];})),labels=[],labelKeys=new Set();
     var connections=edges.map(function(e){
-      var from=map.get(e.from),to=map.get(e.to),d=endpoints(e,map)[1];
+      var from=map.get(e.from),to=map.get(e.to),d=endpoints(e,map)[1],color=e.wireColor;
       if(e.label){
         var labelLines=Array.isArray(e.label)?e.label:[e.label];
         var w=Math.max(64,Math.max.apply(null,labelLines.map(function(s){return Array.from(s).reduce(function(n,c){return n+(/[\u0000-\u00ff]/.test(c)?8.4:14);},0);}))+24),lines=labelLines;
@@ -138,7 +124,7 @@
           labels.push('<g class="craft-flow-label" data-from="'+esc(e.from)+'" data-to="'+esc(e.to)+'"><rect x="'+(x-w/2)+'" y="'+(y-h/2)+'" width="'+w+'" height="'+h+'" rx="'+Math.min(15,h/2)+'"/>'+lines.map(function(line,i){return '<text x="'+x+'" y="'+(y-(lines.length-1)*9+i*18)+'">'+lineHtml(line)+'</text>';}).join('')+'</g>');
         }
       }
-      return '<path class="craft-flow-connection" data-from="'+esc(e.from)+'" data-to="'+esc(e.to)+'" data-batch="'+esc(e.batch)+'" data-phase="'+e.phase+'" data-bus-y="'+e.viaY+'" style="stroke:'+wireColors[from.wireColor]+'" d="'+path(e.points)+'"'+(to.kind==='junction'?'':' marker-end="url(#'+id+'-arrow-'+from.wireColor+')"')+'/>';
+      return '<path class="craft-flow-connection" data-from="'+esc(e.from)+'" data-to="'+esc(e.to)+'" data-batch="'+esc(e.batch)+'" data-phase="'+e.phase+'" data-source-quality="'+esc(from.quality)+'" data-bus-y="'+e.viaY+'" style="stroke:'+wireColors[color]+'" d="'+path(e.points)+'"'+(to.kind==='junction'?'':' marker-end="url(#'+id+'-arrow-'+color+')"')+'/>';
     }).join('');
     function nodeTitle(node){return node.lines.length?lineText(node.lines[0]):'合成汇合';}
     var description=nodes.filter(function(n){return n.lines.length;}).map(function(n){return n.lines.map(lineText).join('，');}).join('；')+'。'+edges.filter(function(e){return e.label;}).map(function(e){return nodeTitle(map.get(e.from))+' → '+nodeTitle(map.get(e.to))+'：'+[].concat(e.label).join('，');}).join('；');
@@ -152,7 +138,7 @@
   }
   function figure(title,drawing,note,actions){
     return '<section class="craft-flow-step"><h5>'+esc(title)+'</h5><div class="craft-flow-viewer" data-flow-viewer data-zoom="0.9">'+
-      '<div class="craft-flow-toolbar"><span>同源连线同色；点选节点突出来源和去向，Esc取消</span><div>'+(actions||'')+control('width','适合宽度')+control('all','完整总览')+control('out','缩小')+control('reset','90%')+control('in','放大')+'</div></div>'+
+      '<div class="craft-flow-toolbar"><span>同批投料同色；点选节点突出来源和去向，Esc取消</span><div>'+(actions||'')+control('width','适合宽度')+control('all','完整总览')+control('out','缩小')+control('reset','90%')+control('in','放大')+'</div></div>'+
       '<div class="craft-flow-viewport" tabindex="0" role="region" aria-label="'+esc(title)+'，可左右滚动">'+drawing+'</div></div>'+
       (note?'<p class="craft-note">'+esc(note)+'</p>':'')+'</section>';
   }
@@ -160,20 +146,37 @@
   function letter(index){var result='';do{result=String.fromCharCode(65+index%26)+result;index=Math.floor(index/26)-1;}while(index>=0);return result;}
   function render(route,x,settings){
     settings=settings||{};
-    var graph=Model.project(route,x), nodes=[],edges=[],visual=new Map(),opVisual=new Map(),details=[],operationOutputs=new Map();
+    var graph=Model.project(route,x), nodes=[],edges=[],visual=new Map(),inputVisual=new Map(),opVisual=new Map(),forks=new Map(),details=[],operationOutputs=new Map();
     var byMaterial=new Map(graph.materials.map(function(m){return [m.id,m];})),byOperation=new Map(graph.operations.map(function(o){return [o.id,o];}));
     var levels={b2:0,p1:2,p2:4,o1:6,o2:8};
     function add(id,lines,level,kind,width,quality){
       var n=box(id,0,0,width||240,lines,kind);n.level=level;n.quality=quality;nodes.push(n);return n;
     }
     function drawnTerms(m){return terms(m.material,new Set(m.symbols));}
+    function inputNode(op,id){return inputVisual.get(op.id+':'+id)||visual.get(id);}
     graph.materials.filter(function(m){return m.useful;}).forEach(function(m,index){
       var op=byOperation.get(m.producer),multi=op&&op.outputs.length>1;
       var title=qLabel(m.material.quality)+' '+(multi?'可用产物 ':'')+'M'+(index+1);
       var lines=[title].concat(drawnTerms(m));
-      if(m.kind==='base')lines=[{parts:[{text:qLabel(m.material.quality)}].concat(drawnTerms(m)[0].parts)}];
+      var initial=m.material.quality==='b2'&&(m.kind==='base'||op&&op.kind==='wash');
+      if(initial)lines=[{parts:[{text:qLabel(m.material.quality)}].concat(drawnTerms(m)[0].parts)}];
       else lines.push(m.demand?'总共需要'+m.demand+'枚该铭文':'可替代同款材料（不重复计量）');
-      visual.set(m.id,add(m.id,lines,levels[m.material.quality],m.kind==='base'?'material':'success',240,m.material.quality));
+      var kind=m.kind==='base'?'material':'success';
+      if(op&&op.kind==='wash'){kind='wash';lines=['另行置换合成素材铭文'].concat(lines,['置换概率未知']);}
+      var consumers=initial?graph.operations.filter(function(o){return o.inputs.some(function(i){return i.id===m.id;});}):[];
+      if(consumers.length>1){
+        // These are separate preparation cards for separate consumed batches,
+        // not copies of a produced item or extra inventory/demand entries.
+        consumers.forEach(function(consumer){
+          var n=add(m.id+'-for-'+consumer.id,lines,levels[m.material.quality],kind,240,m.material.quality);
+          n.batch=consumer.id;inputVisual.set(consumer.id+':'+m.id,n);
+          if(!visual.has(m.id))visual.set(m.id,n);
+        });
+      }else{
+        var n=add(m.id,lines,levels[m.material.quality],kind,240,m.material.quality);
+        if(consumers.length)n.batch=consumers[0].id;
+        visual.set(m.id,n);
+      }
     });
     var reuseNumber=0;
     graph.operations.forEach(function(op){
@@ -182,18 +185,23 @@
       var folded=op.kind==='craft'&&op.outputs.length===1&&useful.length===1;
       var operation,qualityLevel=levels[op.quality];
       if(op.kind==='wash'){
-        operation=add(op.id,['另行置换合成素材铭文'],qualityLevel-1,'wash',260,op.quality);
-        useful.forEach(function(m){edges.push(edge(operation.id,visual.get(m.id).id,'概率未知',{output:true,batch:op.id,phase:'output'}));});
-      }else if(folded)operation=visual.get(useful[0].id);
-      else {
+        operation=visual.get(useful[0].id);
+      }else{
+        var fork;
         if(op.kind==='reuse')operation=add(op.id,['失败品复用'+(++reuseNumber),'三枚失败材料，同种可重复','候选词条池必须覆盖全部目标词条'],qualityLevel-1,'operation',330,op.quality);
         else {
           operation={id:op.id,x:0,y:0,w:8,h:8,lines:[],kind:'junction',level:qualityLevel-1};
           nodes.push(operation);
         }
+        operation.folded=folded;
+        if(op.kind==='reuse'){
+          fork={id:op.id+'-fork',x:0,y:0,w:8,h:8,lines:[],kind:'junction',level:qualityLevel-.5};nodes.push(fork);
+          edges.push(edge(operation.id,fork.id,'',{batch:op.id,phase:'stem'}));
+        }else fork=operation;
+        forks.set(op.id,fork);
         useful.forEach(function(m){
           var outcome=op.outputs.find(function(output){return output.id===m.id;});
-          edges.push(edge(operation.id,visual.get(m.id).id,'概率'+percent(outcome.probability),{output:true,batch:op.id,phase:'output'}));
+          edges.push(edge(fork.id,visual.get(m.id).id,folded?'':'概率'+percent(outcome.probability),{output:true,batch:op.id,phase:folded?'continuation':'output'}));
         });
       }
       opVisual.set(op.id,operation);
@@ -201,7 +209,7 @@
       if(op.promotion){
         var source=byMaterial.get(op.inputs[0]&&op.inputs[0].id),inputQuality=source?source.material.quality:op.quality;
         var promotion=add('promotion-'+op.id,[op.promotion+'晋升铭文×1'],qualityLevel-2,'promotion',190,inputQuality);
-        promotion.promotion=op.promotion;
+        promotion.promotion=op.promotion;promotion.batch=op.id;
         edges.push(edge(promotion.id,operation.id,'',{promotion:true,batch:op.id,phase:'input'}));
       }
       if(unused.length){
@@ -211,7 +219,7 @@
             return '<p>'+esc(prefix)+T.sortTerms(m.material.terms,m.material.quality).map(function(t){return m.symbols.includes(termKey(t))?'杂词条 X（同一个）':T.html(t,m.material.quality);}).join(' ＋ ')+' ｜ '+percent(m.probability)+'</p>';
           }).join('')+'</section>');
         var group=add('other-'+op.id,[unused.length+'种失败产物','见下方明细'],qualityLevel,'failure',190,op.quality);
-        edges.push(edge(operation.id,group.id,'概率'+percent(total),{output:true,batch:op.id,phase:'output'}));
+        edges.push(edge(forks.get(op.id).id,group.id,'概率'+percent(total),{output:true,batch:op.id,phase:'output'}));
         operationOutputs.get(op.id).push(group);
         unused.forEach(function(m){visual.set(m.id,group);});
       }
@@ -219,11 +227,11 @@
     graph.operations.forEach(function(op){
       var to=opVisual.get(op.id),merged=new Map();
       op.inputs.forEach(function(input){
-        var from=visual.get(input.id);if(!from)return;
+        var from=inputNode(op,input.id);if(!from)return;
         if(!merged.has(from.id))merged.set(from.id,{from:from,quantity:0});
         merged.get(from.id).quantity+=input.quantity;
       });
-      var folded=to.kind!=='junction'&&to.kind!=='operation'&&op.kind==='craft';
+      var folded=Boolean(to.folded);
       merged.forEach(function(input){
         var label='该铭文×'+input.quantity;
         // A deterministic recipe is folded directly into its product; its
@@ -270,21 +278,79 @@
         row.nodes.forEach(function(n){n.x=left;left+=n.w+gap;});
       });
     }
-    // Wash is a separate preparation directly above its own output; never an
-    // implied continuation from the preceding, unrelated crafted material.
-    rows.forEach(function(row){row.nodes.forEach(function(n,i){
-      if(n.kind!=='wash')return;
-      var target=operationOutputs.get(n.id)[0],desired=target.x+target.w/2-n.w/2;
-      var left=i?row.nodes[i-1].x+row.nodes[i-1].w+gap:44,right=i+1<row.nodes.length?row.nodes[i+1].x-gap-n.w:width-44-n.w;
-      n.x=Math.max(left,Math.min(right,desired));
-    });});
+    // Keep each initial preparation set together, including its promotion.
+    rows.filter(function(row){return row.level===0;}).forEach(function(row){
+      function batchOrder(n){var outputs=operationOutputs.get(n.batch);return outputs&&outputs.length?outputs.reduce(function(sum,p){return sum+p.x+p.w/2;},0)/outputs.length:n.x+n.w/2;}
+      row.nodes.sort(function(a,b){return batchOrder(a)-batchOrder(b)||String(a.batch||a.id).localeCompare(String(b.batch||b.id))||a.x-b.x;});
+      var left=(width-row.span)/2;row.nodes.forEach(function(n){n.x=left;left+=n.w+gap;});
+    });
+    // Stable continuations and one-source reuse form vertical columns. Solve
+    // row separation for whole columns, rather than nudging one box and then
+    // drawing a last-minute dogleg back to its former position.
+    var columns=new Map();
+    nodes.filter(function(n){return n.kind!=='junction';}).forEach(function(n){columns.set(n.id,{id:n.id,members:[n]});});
+    function joinColumns(a,b){
+      var one=columns.get(a.id),two=columns.get(b.id);
+      if(one===two)return;
+      if(one.members.some(function(n){return two.members.some(function(m){return n.level===m.level;});}))return;
+      two.members.forEach(function(n){one.members.push(n);columns.set(n.id,one);});
+    }
     graph.operations.forEach(function(op){
-      var junction=opVisual.get(op.id);
-      if(junction.kind!=='junction')return;
+      var inputs=Array.from(new Set(op.inputs.map(function(i){return inputNode(op,i.id);}))).filter(Boolean),outputs=operationOutputs.get(op.id);
+      if(op.kind==='craft'&&!op.promotion&&inputs.length===1&&op.outputs.length===1)joinColumns(inputs[0],outputs[0]);
+      if(op.kind==='reuse'){
+        if(inputs.length===1)joinColumns(inputs[0],opVisual.get(op.id));
+        var failure=nodes.find(function(n){return n.id==='other-'+op.id;});
+        if(failure)joinColumns(opVisual.get(op.id),failure);
+      }
+    });
+    var groups=Array.from(new Set(columns.values()));
+    groups.forEach(function(group){
+      group.first=Math.min.apply(null,group.members.map(function(n){return n.level;}));
+      group.last=Math.max.apply(null,group.members.map(function(n){return n.level;}));
+      var anchors=group.members.filter(function(n){return n.level===group.first;});
+      group.desired=anchors.reduce(function(sum,n){return sum+n.x+n.w/2;},0)/anchors.length;
+      group.w=Math.max.apply(null,group.members.map(function(n){return n.w;}));group.before=[];
+    });
+    groups.sort(function(a,b){return a.desired-b.desired||a.id.localeCompare(b.id);});
+    groups.forEach(function(group,i){group.rank=i;});
+    rows.forEach(function(row){
+      var occupants=groups.map(function(group){
+        var n=group.members.find(function(item){return item.level===row.level;});
+        // Reserve a narrow straight-through corridor for a stable chain that
+        // skips a reuse row, so another box cannot occupy its vertical rail.
+        return n?{group:group,w:n.w}:group.first<row.level&&group.last>row.level?{group:group,w:32}:null;
+      }).filter(Boolean).sort(function(a,b){return a.group.rank-b.group.rank;});
+      occupants.forEach(function(item,i){if(i)item.group.before.push({group:occupants[i-1].group,distance:(occupants[i-1].w+item.w)/2+gap});});
+    });
+    groups.forEach(function(group){
+      group.center=Math.max(group.desired,44+group.w/2);
+      group.before.forEach(function(rule){group.center=Math.max(group.center,rule.group.center+rule.distance);});
+      group.members.forEach(function(n){n.x=group.center-n.w/2;});
+    });
+    width=Math.max.apply(null,nodes.filter(function(n){return n.kind!=='junction';}).map(function(n){return n.x+n.w;}))+44;
+    y=18;
+    rows.forEach(function(row,i){
+      if(i){var count=graph.operations.filter(function(op){return op.kind==='craft'&&levels[op.quality]===row.level;}).length;y+=110+Math.max(0,count-2)*24;}
+      var height=Math.max.apply(null,row.nodes.map(function(n){return n.h;}));
+      row.nodes.forEach(function(n){n.y=y;n.rowBottom=y+height;});y+=height;
+    });
+    var laneEnds=new Map();
+    graph.operations.forEach(function(op){
+      var junction=forks.get(op.id);
+      if(!junction)return;
       var outputs=operationOutputs.get(op.id),incoming=edges.filter(function(e){return e.to===junction.id;}).map(function(e){return byId.get(e.from);});
       var top=Math.min.apply(null,outputs.map(function(n){return n.y;}));
-      junction.x=outputs.reduce(function(sum,n){return sum+n.x+n.w/2;},0)/outputs.length-junction.w/2;
-      junction.y=top-68-junction.h/2;junction.wireColor=incoming[0]?incoming[0].wireColor:0;
+      var xs=incoming.map(function(n){return n.x+n.w/2;}).sort(function(a,b){return a-b;});
+      var center=op.kind==='reuse'?opVisual.get(op.id).x+opVisual.get(op.id).w/2:
+        opVisual.get(op.id).folded||!xs.length?outputs[0].x+outputs[0].w/2:xs.length%2?xs[(xs.length-1)/2]:(xs[xs.length/2-1]+xs[xs.length/2])/2;
+      var lane=0;
+      if(op.kind==='craft'){
+        var ranges=laneEnds.get(top)||[],left=Math.min.apply(null,xs.concat(center)),right=Math.max.apply(null,xs.concat(center));
+        while(ranges.some(function(range){return range.lane===lane&&left<=range.right+16&&right>=range.left-16;}))lane++;
+        ranges.push({left:left,right:right,lane:lane});laneEnds.set(top,ranges);
+      }
+      junction.x=center-junction.w/2;junction.y=top-68-lane*24-junction.h/2;
     });
     edges.forEach(function(e){
       var from=byId.get(e.from),to=byId.get(e.to);
@@ -293,17 +359,15 @@
       e.viaY=e.phase==='input'?(to.kind==='junction'?to.y+to.h/2:to.y-42):to.y-46;
       var incoming=edges.filter(function(other){return other.to===e.to;}).sort(function(a,b){return byId.get(a.from).x-byId.get(b.from).x;});
       var batches=Array.from(new Set(incoming.map(function(other){return other.batch;})));
-      e.toPort=to.kind==='junction'?0.5:(batches.indexOf(e.batch)+1)/(batches.length+1);
-      if(e.output&&batches.length>1){
-        // Separate the original result and optional reuse near a shared goal:
-        // distinct target ports alone still let their horizontal stems overlap.
-        var latest=Math.max.apply(null,incoming.map(function(other){var n=byId.get(other.from);return n.y+n.h;}));
-        var spacing=Math.min(16,Math.max(0,(to.y-latest-64)/(batches.length-1)));
-        e.viaY-=spacing*batches.indexOf(e.batch);
-      }
+      var operation=byOperation.get(e.batch);
+      e.toPort=e.output&&operation.kind==='reuse'&&batches.length>1?(from.x+from.w/2>=to.x+to.w/2?.82:.18):.5;
+      var uses=Array.from(new Set(edges.filter(function(other){return other.from===e.from&&other.phase==='input';}).map(function(other){return other.batch;})));
+      if(e.phase==='input'&&uses.length>1)e.fromPort=(uses.indexOf(e.batch)+1)/(uses.length+1);
+      e.wireColor=graph.operations.indexOf(operation)%wireColors.length;
       if(e.label){
-        e.labelX=e.output?endpoints(e,byId)[1].x:from.x+from.w/2;
-        e.labelY=e.output?to.y-22:from.y+from.h+22;
+        var ends=endpoints(e,byId),start=ends[0],end=ends[1];
+        e.labelX=e.output?start.x+(end.x-start.x)*.65:start.x;
+        e.labelY=e.output?start.y+(end.y-start.y)*.65:from.y+from.h+22;
       }
     });
     routeWires(nodes,edges,width);
@@ -312,7 +376,7 @@
     var xNote=!xTerm?'':symbolic?'符号模板 A：X 采用同一种合法不分档词条；概率只对该模板条件成立。':'具体模式 B：杂词 X 固定为'+xTerm.attr+'（'+T.tierLabel(xTerm.tier)+'），不替换属性或档位。';
     var drawing=svg(title,nodes,edges,width,Math.max.apply(null,nodes.map(function(n){return n.y+n.h;}))+24);
     var actions=details.length?'<button type="button" class="seg" data-craft-action="diagram-failures" aria-expanded="'+Boolean(settings.showFailures)+'">'+(settings.showFailures?'收起所有失败结果':'展开所有失败结果')+'</button>':'';
-    return '<div class="craft-flow-guide">共享入口每次只产出一枚，不会同时获得所有分支。需求按从零制作目标一枚累计，随机步骤需按实际产出收集；连线数量是每批投料。</div>'+
+    return '<div class="craft-flow-guide">每次只产出一枚；同款蓝二按不同批次分别备料。需求按从零制作一枚目标累计，连线数量是每批投料。</div>'+
       (xNote?'<p class="craft-note">'+esc(xNote)+'</p>':'')+
       figure(title,drawing,'概率为原路线等概率模型，非游戏实测频率。置换概率未知。独立洗练另行准备素材；共享入口不代表重复使用同一枚材料。',actions)+
       (details.length?'<div class="craft-flow-details" data-flow-details'+(settings.showFailures?'':' hidden')+'>'+details.join('')+'</div>':'');

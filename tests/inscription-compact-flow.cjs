@@ -28,6 +28,7 @@ for(const width of [320,390,768,1024])test(width+' shared ghost flow keeps usefu
     assert.ok(await card.locator('.craft-flow-promotion').count()>0);
     for(const [kind,color]of [['initial','rgb(8, 104, 186)'],['intermediate','rgb(135, 54, 186)']]){
       const labels=card.locator('.craft-flow-promotion-'+kind+' text');
+      assert.ok(await labels.count()>0,'fixture must include '+kind+' promotion material');
       for(const fill of await labels.evaluateAll(nodes=>nodes.map(node=>getComputedStyle(node).fill)))assert.equal(fill,color);
     }
     assert.equal(await card.locator('[data-craft-action="diagram-failures"]').count(),0);

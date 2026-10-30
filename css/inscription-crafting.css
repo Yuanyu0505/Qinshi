@@ -80,7 +80,8 @@
 .craft-flow-quality-o1 text,.craft-flow-quality-o2 text { fill:#b66300; }
 #partition-inscription .craft-flow-svg .craft-flow-box .ins-term-value,
 #partition-inscription .craft-flow-svg .craft-flow-box .ins-term-tier { fill:inherit; }
-.craft-flow-promotion text { fill:#bd3028; }
+.craft-flow-promotion-initial text { fill:#0868ba; }
+.craft-flow-promotion-intermediate text { fill:#8736ba; }
 .craft-flow-junction { fill:#c8deee; stroke:#9db9d0; stroke-width:1; }
 .craft-flow-label rect { fill:#f5faff; stroke:#cddfec; stroke-width:1; }
 .craft-flow-label text { font-size:14px; font-weight:700; }

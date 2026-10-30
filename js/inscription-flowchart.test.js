@@ -169,7 +169,7 @@ for(const count of [3,5])test('reuse probability retains the real candidate pool
     '候选词条池必须覆盖全部目标词条'
   ]);
   assert.match(drawing,new RegExp('概率'+(count===3?'100%':'10%')));
-  const probabilityLabels=Array.from(drawing.matchAll(/<g class="craft-flow-label">([\s\S]*?)<\/g>/g),match=>match[1])
+  const probabilityLabels=Array.from(drawing.matchAll(/<g class="craft-flow-label"[^>]*>([\s\S]*?)<\/g>/g),match=>match[1])
     .filter(label=>/概率/.test(label));
   const anchors=probabilityLabels.map(label=>label.match(/<rect x="([^"]+)" y="([^"]+)"/).slice(1).join(','));
   assert.equal(new Set(anchors).size,anchors.length,'Probabilities for main and reuse routes must not cover each other');

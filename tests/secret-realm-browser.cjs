@@ -25,6 +25,18 @@ async function saveTotals(page,cumulative,inventory){const form=page.locator('[d
 async function setupSixYuan(page){await page.locator('[data-realm-mode=planner]').click();await page.locator('[data-realm-action=none]').click();await page.locator('[data-realm-enable=pack6]').check();await page.locator('[name=target]').fill('3');}
 async function runPlan(page){await page.locator('[data-realm-calculate]').click();await page.waitForFunction(()=>{const h=document.querySelector('#secret-realm-content');return h.getAttribute('aria-busy')==='false'&&document.querySelector('[data-realm-results] .realm-plan');},null,{timeout:10000});}
 
+test('plan highlights only voucher cash balance and period draws without bold numeric styling; reference stays neutral',async()=>{
+  const {context,page}=await openRealm({width:1100});try{
+    await setupSixYuan(page);await runPlan(page);
+    const values=await page.locator('.realm-plan [data-realm-metric]').evaluateAll(nodes=>nodes.map(node=>({kind:node.dataset.realmMetric,color:getComputedStyle(node).color,weight:getComputedStyle(node).fontWeight})));
+    assert.ok(values.length);
+    const red='rgb(255, 107, 102)',highlighted=new Set(['voucher','cash','balance','period-draws']);
+    for(const value of values){assert.equal(value.color===red,highlighted.has(value.kind),value.kind);assert.equal(value.weight,'400');}
+    await page.locator('[data-realm-mode=reference]').click();
+    assert.equal(await page.locator('.realm-reference .realm-price').count(),0);
+  }finally{await context.close();}
+});
+
 test('progress auto-saves without save buttons, source switches or input-node replacement',async()=>{
   const {context,page}=await openRealm();try{
     assert.equal(await page.locator('.realm-source-tools,[data-realm-enable]').count(),0);

@@ -54,18 +54,78 @@
   }
   function edge(from,to,label,extra){return Object.assign({from:from,to:to,label:label||''},extra||{});}
   function path(points){
-    var a=points[0],b=points[1],c=points[2],d=points[3];
-    if(a.x===d.x)return 'M '+a.x+' '+a.y+' V '+d.y;
-    var sign=d.x>a.x?1:-1,r=Math.min(9,Math.abs(d.x-a.x)/2,Math.abs(b.y-a.y)/2,Math.abs(d.y-c.y)/2);
-    return 'M '+a.x+' '+a.y+' V '+(b.y-r)+' Q '+b.x+' '+b.y+' '+(b.x+sign*r)+' '+b.y+
-      ' H '+(c.x-sign*r)+' Q '+c.x+' '+c.y+' '+c.x+' '+(c.y+r)+' V '+d.y;
+    return points.map(function(p,i){return (i?'L ':'M ')+p.x+' '+p.y;}).join(' ');
+  }
+  function compactPoints(points){
+    var result=[];
+    points.forEach(function(p){
+      var last=result[result.length-1];if(last&&last.x===p.x&&last.y===p.y)return;
+      var before=result[result.length-2];
+      if(before&&last&&(before.x===last.x&&last.x===p.x||before.y===last.y&&last.y===p.y))result.pop();
+      result.push(p);
+    });
+    return result;
+  }
+  function cutsBox(a,b,n,padding){
+    var left=n.x-padding,right=n.x+n.w+padding,top=n.y-padding,bottom=n.y+n.h+padding;
+    return a.x===b.x?a.x>left&&a.x<right&&Math.max(a.y,b.y)>top&&Math.min(a.y,b.y)<bottom:
+      a.y===b.y&&a.y>top&&a.y<bottom&&Math.max(a.x,b.x)>left&&Math.min(a.x,b.x)<right;
+  }
+  function crosses(a,b,c,d){
+    if(a.x===b.x&&c.y===d.y)return a.x>Math.min(c.x,d.x)&&a.x<Math.max(c.x,d.x)&&c.y>Math.min(a.y,b.y)&&c.y<Math.max(a.y,b.y);
+    return a.y===b.y&&c.x===d.x&&crosses(c,d,a,b);
+  }
+  function overlapLength(a,b,c,d){
+    if(a.x===b.x&&c.x===d.x&&a.x===c.x)return Math.max(0,Math.min(Math.max(a.y,b.y),Math.max(c.y,d.y))-Math.max(Math.min(a.y,b.y),Math.min(c.y,d.y)));
+    if(a.y===b.y&&c.y===d.y&&a.y===c.y)return Math.max(0,Math.min(Math.max(a.x,b.x),Math.max(c.x,d.x))-Math.max(Math.min(a.x,b.x),Math.min(c.x,d.x)));
+    return 0;
+  }
+  function endpoints(e,map){
+    var from=map.get(e.from),to=map.get(e.to);
+    return [{x:from.x+from.w*(e.fromPort===undefined?0.5:e.fromPort),y:from.y+(from.kind==='junction'?from.h/2:from.h)},
+      {x:to.x+to.w*(e.toPort===undefined?0.5:e.toPort),y:to.y+(to.kind==='junction'?to.h/2:0)}];
+  }
+  function routeWires(nodes,edges,width){
+    var map=new Map(nodes.map(function(n){return[n.id,n];})),routed=[];
+    // Short local links establish their lanes first. Longer links can then use
+    // an adjacent clear corridor instead of running through unrelated stages.
+    edges.slice().sort(function(a,b){return (map.get(a.to).y-map.get(a.from).y)-(map.get(b.to).y-map.get(b.from).y);}).forEach(function(e){
+      var ends=endpoints(e,map),a=ends[0],d=ends[1],from=map.get(e.from),to=map.get(e.to),via=e.viaY;
+      var obstacles=nodes.filter(function(n){return n.kind!=='junction'&&n.id!==e.from&&n.id!==e.to&&n.y<=d.y+8&&n.y+n.h>=a.y-8;});
+      var exit=from.kind==='junction'?a.y:(from.rowBottom||a.y)+18;
+      var entry=via;
+      var candidates=[compactPoints([a,{x:a.x,y:via},{x:d.x,y:via},d])];
+      var lanes=[20,width-20,a.x,d.x];
+      obstacles.forEach(function(n){lanes.push(n.x-16,n.x+n.w+16);});
+      Array.from(new Set(lanes)).filter(function(x){return x>=16&&x<=width-16;}).forEach(function(x){
+        candidates.push(compactPoints([a,{x:a.x,y:exit},{x:x,y:exit},{x:x,y:entry},{x:d.x,y:entry},d]));
+      });
+      var best=null,score=Infinity;
+      candidates.forEach(function(points){
+        var cost=(points.length-2)*20;
+        for(var i=1;i<points.length;i++){
+          var p=points[i-1],q=points[i];
+          if(obstacles.some(function(n){return cutsBox(p,q,n,8);}))return;
+          cost+=Math.abs(p.x-q.x)+Math.abs(p.y-q.y);
+          if(cost>=score)return;
+          routed.forEach(function(other){
+            if(other.batch===e.batch||other.from===e.from)return;
+            for(var j=1;j<other.points.length;j++){
+              var overlap=overlapLength(p,q,other.points[j-1],other.points[j]);
+              if(overlap)cost+=160+overlap*2;
+              else if(crosses(p,q,other.points[j-1],other.points[j]))cost+=90;
+            }
+          });
+        }
+        if(cost<score){best=points;score=cost;}
+      });
+      e.points=best||candidates[0];routed.push(e);
+    });
   }
   function svg(title,nodes,edges,width,height){
     var id='ins-flow-'+(++serial),map=new Map(nodes.map(function(n){return[n.id,n];})),labels=[],labelKeys=new Set();
     var connections=edges.map(function(e){
-      var from=map.get(e.from),to=map.get(e.to),a={x:from.x+from.w*(e.fromPort===undefined?0.5:e.fromPort),y:from.y+from.h};
-      var d={x:to.x+to.w*(e.toPort===undefined?0.5:e.toPort),y:to.y};
-      var via=e.viaY===undefined?(a.y+d.y)/2:e.viaY;
+      var from=map.get(e.from),to=map.get(e.to),d=endpoints(e,map)[1];
       if(e.label){
         var labelLines=Array.isArray(e.label)?e.label:[e.label];
         var w=Math.max(64,Math.max.apply(null,labelLines.map(function(s){return Array.from(s).reduce(function(n,c){return n+(/[\u0000-\u00ff]/.test(c)?8.4:14);},0);}))+24),lines=labelLines;
@@ -75,10 +135,10 @@
         // that label once while retaining all recipe edges and descriptions.
         if(!labelKeys.has(labelKey)){
           labelKeys.add(labelKey);
-          labels.push('<g class="craft-flow-label"><rect x="'+(x-w/2)+'" y="'+(y-h/2)+'" width="'+w+'" height="'+h+'" rx="'+Math.min(15,h/2)+'"/>'+lines.map(function(line,i){return '<text x="'+x+'" y="'+(y-(lines.length-1)*9+i*18)+'">'+lineHtml(line)+'</text>';}).join('')+'</g>');
+          labels.push('<g class="craft-flow-label" data-from="'+esc(e.from)+'" data-to="'+esc(e.to)+'"><rect x="'+(x-w/2)+'" y="'+(y-h/2)+'" width="'+w+'" height="'+h+'" rx="'+Math.min(15,h/2)+'"/>'+lines.map(function(line,i){return '<text x="'+x+'" y="'+(y-(lines.length-1)*9+i*18)+'">'+lineHtml(line)+'</text>';}).join('')+'</g>');
         }
       }
-      return '<path class="craft-flow-connection" data-from="'+esc(e.from)+'" data-to="'+esc(e.to)+'" style="stroke:'+wireColors[from.wireColor]+'" d="'+path([a,{x:a.x,y:via},{x:d.x,y:via},d])+'"'+(to.kind==='junction'?'':' marker-end="url(#'+id+'-arrow-'+from.wireColor+')"')+'/>';
+      return '<path class="craft-flow-connection" data-from="'+esc(e.from)+'" data-to="'+esc(e.to)+'" data-batch="'+esc(e.batch)+'" data-phase="'+e.phase+'" data-bus-y="'+e.viaY+'" style="stroke:'+wireColors[from.wireColor]+'" d="'+path(e.points)+'"'+(to.kind==='junction'?'':' marker-end="url(#'+id+'-arrow-'+from.wireColor+')"')+'/>';
     }).join('');
     function nodeTitle(node){return node.lines.length?lineText(node.lines[0]):'合成汇合';}
     var description=nodes.filter(function(n){return n.lines.length;}).map(function(n){return n.lines.map(lineText).join('，');}).join('；')+'。'+edges.filter(function(e){return e.label;}).map(function(e){return nodeTitle(map.get(e.from))+' → '+nodeTitle(map.get(e.to))+'：'+[].concat(e.label).join('，');}).join('；');
@@ -87,7 +147,7 @@
       '<defs>'+wireColors.map(function(color,i){return '<marker id="'+id+'-arrow-'+i+'" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="8" markerHeight="8" orient="auto"><path d="M 1 1 L 7 4 L 1 7" fill="none" stroke="'+color+'" stroke-width="1.8"/></marker>';}).join('')+'</defs>'+
       connections+nodes.map(function(n){
         if(n.kind==='junction')return '<circle class="craft-flow-junction" cx="'+(n.x+n.w/2)+'" cy="'+(n.y+n.h/2)+'" r="4"/>';
-        return '<g class="craft-flow-box craft-flow-'+n.kind+' craft-flow-quality-'+n.quality+'" data-flow-node="'+esc(n.id)+'" role="button" tabindex="0" aria-label="'+esc(n.lines.map(lineText).join('，'))+'"><rect x="'+n.x+'" y="'+n.y+'" width="'+n.w+'" height="'+n.h+'" rx="17"/>'+n.lines.map(function(line,i){return '<text x="'+(n.x+n.w/2)+'" y="'+(n.y+22+i*20)+'">'+lineHtml(line)+'</text>';}).join('')+'</g>';
+        return '<g class="craft-flow-box craft-flow-'+n.kind+' craft-flow-quality-'+n.quality+(n.kind==='promotion'?' craft-flow-promotion-'+(n.promotion==='初级'?'initial':'intermediate'):'')+'" data-flow-node="'+esc(n.id)+'" role="button" tabindex="0" aria-label="'+esc(n.lines.map(lineText).join('，'))+'"><rect x="'+n.x+'" y="'+n.y+'" width="'+n.w+'" height="'+n.h+'" rx="17"/>'+n.lines.map(function(line,i){return '<text x="'+(n.x+n.w/2)+'" y="'+(n.y+22+i*20)+'">'+lineHtml(line)+'</text>';}).join('')+'</g>';
       }).join('')+labels.join('')+'</svg>';
   }
   function figure(title,drawing,note,actions){
@@ -123,7 +183,7 @@
       var operation,qualityLevel=levels[op.quality];
       if(op.kind==='wash'){
         operation=add(op.id,['另行置换合成素材铭文'],qualityLevel-1,'wash',260,op.quality);
-        useful.forEach(function(m){edges.push(edge(operation.id,visual.get(m.id).id,'概率未知',{output:true}));});
+        useful.forEach(function(m){edges.push(edge(operation.id,visual.get(m.id).id,'概率未知',{output:true,batch:op.id,phase:'output'}));});
       }else if(folded)operation=visual.get(useful[0].id);
       else {
         if(op.kind==='reuse')operation=add(op.id,['失败品复用'+(++reuseNumber),'三枚失败材料，同种可重复','候选词条池必须覆盖全部目标词条'],qualityLevel-1,'operation',330,op.quality);
@@ -133,7 +193,7 @@
         }
         useful.forEach(function(m){
           var outcome=op.outputs.find(function(output){return output.id===m.id;});
-          edges.push(edge(operation.id,visual.get(m.id).id,'概率'+percent(outcome.probability),{output:true}));
+          edges.push(edge(operation.id,visual.get(m.id).id,'概率'+percent(outcome.probability),{output:true,batch:op.id,phase:'output'}));
         });
       }
       opVisual.set(op.id,operation);
@@ -141,7 +201,8 @@
       if(op.promotion){
         var source=byMaterial.get(op.inputs[0]&&op.inputs[0].id),inputQuality=source?source.material.quality:op.quality;
         var promotion=add('promotion-'+op.id,[op.promotion+'晋升铭文×1'],qualityLevel-2,'promotion',190,inputQuality);
-        edges.push(edge(promotion.id,operation.id,'',{promotion:true}));
+        promotion.promotion=op.promotion;
+        edges.push(edge(promotion.id,operation.id,'',{promotion:true,batch:op.id,phase:'input'}));
       }
       if(unused.length){
         var total=op.outputs.filter(function(out){return !byMaterial.get(out.id).useful;}).reduce(function(sum,out){return sum+out.probability;},0);
@@ -150,7 +211,7 @@
             return '<p>'+esc(prefix)+T.sortTerms(m.material.terms,m.material.quality).map(function(t){return m.symbols.includes(termKey(t))?'杂词条 X（同一个）':T.html(t,m.material.quality);}).join(' ＋ ')+' ｜ '+percent(m.probability)+'</p>';
           }).join('')+'</section>');
         var group=add('other-'+op.id,[unused.length+'种失败产物','见下方明细'],qualityLevel,'failure',190,op.quality);
-        edges.push(edge(operation.id,group.id,'概率'+percent(total),{output:true}));
+        edges.push(edge(operation.id,group.id,'概率'+percent(total),{output:true,batch:op.id,phase:'output'}));
         operationOutputs.get(op.id).push(group);
         unused.forEach(function(m){visual.set(m.id,group);});
       }
@@ -168,7 +229,7 @@
         // A deterministic recipe is folded directly into its product; its
         // batch quantity and probability share one label, not another row.
         if(folded)label+='、概率'+percent(op.outputs[0].probability);
-        edges.push(edge(input.from.id,to.id,label));
+        edges.push(edge(input.from.id,to.id,label,{batch:op.id,phase:'input'}));
       });
     });
     var width=360,y=18,gap=24,rows=[];
@@ -177,7 +238,7 @@
       var row=nodes.filter(function(n){return n.level===level&&n.kind!=='junction';});
       if(!row.length)continue;
       var span=row.reduce(function(sum,n){return sum+n.w;},0)+gap*(row.length-1);
-      rows.push({nodes:row,span:span,level:level});width=Math.max(width,span+32);
+      rows.push({nodes:row,span:span,level:level});width=Math.max(width,span+88);
     }
     var byId=new Map(nodes.map(function(n){return[n.id,n];}));
     rows.forEach(function(row){
@@ -190,34 +251,66 @@
       });
       row.nodes.sort(function(a,b){return a.order-b.order;});
       var left=(width-row.span)/2,height=Math.max.apply(null,row.nodes.map(function(n){return n.h;}));
-      row.nodes.forEach(function(n,i){n.x=left;n.y=y;n.wireColor=i%wireColors.length;left+=n.w+gap;});
-      y+=height+94;
+      row.nodes.forEach(function(n,i){n.x=left;n.y=y;n.rowBottom=y+height;n.wireColor=i%wireColors.length;left+=n.w+gap;});
+      y+=height+110;
     });
+    // Both halves of a shared recipe influence ordering. Looking only at
+    // parents left independent wash/promotion nodes in arbitrary columns.
+    function neighbours(n,up){
+      return edges.filter(function(e){return(up?e.to:e.from)===n.id;}).flatMap(function(e){
+        var other=byId.get(up?e.from:e.to);
+        return other.kind==='junction'?neighbours(other,up):[other];
+      }).filter(function(other){return up?other.level<n.level:other.level>n.level;});
+    }
+    for(var sweep=0;sweep<4;sweep++){
+      (sweep%2?rows:rows.slice().reverse()).forEach(function(row){
+        row.nodes.forEach(function(n){var linked=neighbours(n,Boolean(sweep%2));n.order=linked.length?linked.reduce(function(sum,p){return sum+p.x+p.w/2;},0)/linked.length:n.x+n.w/2;});
+        row.nodes.sort(function(a,b){return a.order-b.order||a.x-b.x;});
+        var left=(width-row.span)/2;
+        row.nodes.forEach(function(n){n.x=left;left+=n.w+gap;});
+      });
+    }
+    // Wash is a separate preparation directly above its own output; never an
+    // implied continuation from the preceding, unrelated crafted material.
+    rows.forEach(function(row){row.nodes.forEach(function(n,i){
+      if(n.kind!=='wash')return;
+      var target=operationOutputs.get(n.id)[0],desired=target.x+target.w/2-n.w/2;
+      var left=i?row.nodes[i-1].x+row.nodes[i-1].w+gap:44,right=i+1<row.nodes.length?row.nodes[i+1].x-gap-n.w:width-44-n.w;
+      n.x=Math.max(left,Math.min(right,desired));
+    });});
     graph.operations.forEach(function(op){
       var junction=opVisual.get(op.id);
       if(junction.kind!=='junction')return;
       var outputs=operationOutputs.get(op.id),incoming=edges.filter(function(e){return e.to===junction.id;}).map(function(e){return byId.get(e.from);});
-      var bottom=Math.max.apply(null,incoming.map(function(n){return n.y+n.h;})),top=Math.min.apply(null,outputs.map(function(n){return n.y;}));
+      var top=Math.min.apply(null,outputs.map(function(n){return n.y;}));
       junction.x=outputs.reduce(function(sum,n){return sum+n.x+n.w/2;},0)/outputs.length-junction.w/2;
-      junction.y=bottom+(top-bottom)*0.45-junction.h/2;junction.wireColor=incoming[0]?incoming[0].wireColor:0;
+      junction.y=top-68-junction.h/2;junction.wireColor=incoming[0]?incoming[0].wireColor:0;
     });
     edges.forEach(function(e){
       var from=byId.get(e.from),to=byId.get(e.to);
-      e.viaY=(from.y+from.h+to.y)/2;
+      // All inputs of one batch meet at one height, regardless of different
+      // box heights (in particular promotion material vs multi-line products).
+      e.viaY=e.phase==='input'?(to.kind==='junction'?to.y+to.h/2:to.y-42):to.y-46;
       var incoming=edges.filter(function(other){return other.to===e.to;}).sort(function(a,b){return byId.get(a.from).x-byId.get(b.from).x;});
-      e.toPort=to.kind==='junction'?0.5:(incoming.indexOf(e)+1)/(incoming.length+1);
+      var batches=Array.from(new Set(incoming.map(function(other){return other.batch;})));
+      e.toPort=to.kind==='junction'?0.5:(batches.indexOf(e.batch)+1)/(batches.length+1);
+      if(e.output&&batches.length>1){
+        // Separate the original result and optional reuse near a shared goal:
+        // distinct target ports alone still let their horizontal stems overlap.
+        var latest=Math.max.apply(null,incoming.map(function(other){var n=byId.get(other.from);return n.y+n.h;}));
+        var spacing=Math.min(16,Math.max(0,(to.y-latest-64)/(batches.length-1)));
+        e.viaY-=spacing*batches.indexOf(e.batch);
+      }
       if(e.label){
-        // The main recipe and reuse can share a material. Keep probabilities
-        // on separate source segments instead of covering the same target.
-        var besideSource=!e.output||incoming.length>1;
-        e.labelX=besideSource?from.x+from.w/2:to.x+to.w/2;
-        e.labelY=besideSource?from.y+from.h+22:to.y-22;
+        e.labelX=e.output?endpoints(e,byId)[1].x:from.x+from.w/2;
+        e.labelY=e.output?to.y-22:from.y+from.h+22;
       }
     });
+    routeWires(nodes,edges,width);
     var title='完整合成流程'+(settings.positionLabel?' · '+settings.positionLabel:'');
     var xTerm=route.xTerm===undefined?(x?{attr:x,tier:'U'}:null):route.xTerm,symbolic=route.symbolicX!==false;
     var xNote=!xTerm?'':symbolic?'符号模板 A：X 采用同一种合法不分档词条；概率只对该模板条件成立。':'具体模式 B：杂词 X 固定为'+xTerm.attr+'（'+T.tierLabel(xTerm.tier)+'），不替换属性或档位。';
-    var drawing=svg(title,nodes,edges,width,y-76);
+    var drawing=svg(title,nodes,edges,width,Math.max.apply(null,nodes.map(function(n){return n.y+n.h;}))+24);
     var actions=details.length?'<button type="button" class="seg" data-craft-action="diagram-failures" aria-expanded="'+Boolean(settings.showFailures)+'">'+(settings.showFailures?'收起所有失败结果':'展开所有失败结果')+'</button>':'';
     return '<div class="craft-flow-guide">共享入口每次只产出一枚，不会同时获得所有分支。需求按从零制作目标一枚累计，随机步骤需按实际产出收集；连线数量是每批投料。</div>'+
       (xNote?'<p class="craft-note">'+esc(xNote)+'</p>':'')+

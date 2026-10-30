@@ -52,7 +52,7 @@ test('base materials use one line and failed outcomes are compact peers of usefu
   const base=groups.find(s=>s.includes('蓝二')&&s.includes('档位不可辨'));
   assert.equal((base.match(/<text\b/g)||[]).length,1);
   assert.doesNotMatch(svg,/每次随机产出一枚|当前概率|准备蓝二|蓝二速度档位不可辨/);
-  const failure=groups.find(s=>s.includes('种失败产物'));
+  const failure=groups.find(s=>s.includes('种其他紫一'));
   const success=groups.find(s=>s.includes('可用产物'));
   assert.ok(failure&&success);
   assert.equal(failure.match(/<rect[^>]* y="([^"]+)"/)[1],success.match(/<rect[^>]* y="([^"]+)"/)[1]);

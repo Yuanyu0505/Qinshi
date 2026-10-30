@@ -65,7 +65,9 @@ test('reuse probability belongs to its result leg rather than the shared stem',(
     assert.ok(group,'each result has its own probability label');
     const x=Number(group[2].match(/<text x="([^"]+)"/)[1]);
     const start=wire.points[0],end=wire.points.at(-1);
-    assert.equal(x,start.x+(end.x-start.x)*.5,'probability belongs midway along its own result branch');
+    assert.equal(x,end.x,'probability belongs to the vertical leg of its own result branch');
+    const leg=wire.points.at(-2),y=Number(group[2].match(/<text[^>]+ y="([^"]+)"/)[1]);
+    assert.ok(y>leg.y&&y<end.y,'the label stays below the split and above its arrow');
     assert.ok(Number(group[2].match(/<text[^>]+ y="([^"]+)"/)[1])<boxes.get(wire.attrs['data-to']).y);
   }
   for(const wire of wires.filter(w=>w.attrs['data-phase']==='output')){
@@ -84,7 +86,8 @@ test('random outcomes all depart directly from one junction; wash preparation ha
   for(const route of plans.strategies){
     const {html,wires}=drawing(route,plans.xAttr),starts=new Map();
     for(const wire of wires.filter(w=>w.attrs['data-phase']==='output')){
-      assert.equal(wire.points.length,2,'outcome arrows must be straight from one shared point');
+      assert.ok(wire.points.length===2||wire.points.length===3,'outcomes use a direct main leg or one compact orthogonal fork');
+      assert.equal(wire.points.at(-2).x,wire.points.at(-1).x,'outcome arrows point down the actual result leg');
       const start=wire.points[0],key=wire.attrs['data-batch'];
       if(starts.has(key))assert.deepEqual(start,starts.get(key));else starts.set(key,start);
     }

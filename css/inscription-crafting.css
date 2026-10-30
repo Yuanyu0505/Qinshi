@@ -68,13 +68,30 @@
 .craft-flow-viewport { overflow:auto; max-width:100%; min-width:0; overscroll-behavior:contain; touch-action:pan-x pan-y; scrollbar-color:#b5c8d8 #f4f8fb; }
 .craft-flow-viewport:focus-visible { outline:2px solid #438ac1; outline-offset:-3px; }
 .craft-flow-svg { display:block; max-width:none; margin:0 auto; background:#fff; }
-.craft-flow-connection { fill:none; stroke:#929aa2; stroke-width:2.4; }
+.craft-flow-connection { fill:none; stroke:#71889b; stroke-width:1.6; stroke-linejoin:round; }
+.craft-flow-connection[data-flow-wire-role="primary"] { stroke-width:2.4; }
+.craft-flow-connection[data-flow-wire-role="reuse"] { stroke-width:2; stroke-dasharray:6 4; }
+.craft-flow-region rect { fill:#f7f9fc; stroke:none; }
+.craft-flow-region text { fill:#657987; font:500 13px system-ui,"Microsoft YaHei",sans-serif; text-anchor:middle; }
 .craft-flow-box rect { fill:#e5f3ff; stroke:#d4dee6; stroke-width:1.1; }
 .craft-flow-success rect { stroke:#a9c8df; stroke-width:1.4; }
 .craft-flow-box text,.craft-flow-label text { fill:#344454; font:400 14px system-ui,"Microsoft YaHei",sans-serif; text-anchor:middle; dominant-baseline:middle; }
 .craft-flow-quality-b2 rect { fill:#e6f3ff; stroke:#2583df; }
 .craft-flow-quality-p1 rect,.craft-flow-quality-p2 rect { fill:#f5edff; stroke:#a34ee0; }
 .craft-flow-quality-o1 rect,.craft-flow-quality-o2 rect { fill:#fff1df; stroke:#e99026; }
+.craft-flow-failure rect { stroke-width:1.4; }
+.craft-flow-wash.craft-flow-quality-b2>rect { fill:#f3f9ff; }
+.craft-flow-wash.craft-flow-quality-p1>rect,.craft-flow-wash.craft-flow-quality-p2>rect { fill:#fbf7ff; stroke:#b896d0; }
+.craft-flow-wash.craft-flow-quality-o1>rect,.craft-flow-wash.craft-flow-quality-o2>rect { fill:#fff8ee; }
+.craft-flow-box.craft-flow-promotion-initial>rect,.craft-flow-box.craft-flow-promotion-intermediate>rect { fill:#fff; stroke:#d4dee6; }
+.craft-flow-operation>rect { fill:#fff; stroke:#91a2b0; stroke-dasharray:5 4; }
+.craft-flow-box .craft-flow-node-title { font-size:15px; font-weight:650; }
+.craft-flow-box .craft-flow-node-note { fill:#657987; font-size:12px; }
+.craft-flow-box .craft-flow-next { font-size:13px; font-weight:700; }
+.craft-flow-box .craft-flow-next-band { fill:#e2effa; stroke:none; }
+.craft-flow-quality-p1 .craft-flow-next-band,.craft-flow-quality-p2 .craft-flow-next-band { fill:#eadef7; }
+.craft-flow-quality-o1 .craft-flow-next-band,.craft-flow-quality-o2 .craft-flow-next-band { fill:#ffe0b9; }
+.craft-flow-divider { stroke:#dce3ea; stroke-width:1; }
 #partition-inscription .craft-flow-quality-b2 .ins-term-tier { fill:var(--ins-term-blue); }
 #partition-inscription .craft-flow-quality-p1 .ins-term-tier,
 #partition-inscription .craft-flow-quality-p2 .ins-term-tier { fill:var(--ins-term-purple); }
@@ -83,10 +100,13 @@
 .craft-flow-promotion-initial text { fill:#0868ba; font-weight:600; }
 .craft-flow-promotion-intermediate text { fill:#8736ba; font-weight:600; }
 .craft-flow-junction { fill:#c8deee; stroke:#9db9d0; stroke-width:1; }
+.craft-flow-split { fill:#fff; stroke:#71889b; stroke-width:1.4; }
 .craft-flow-label rect { fill:#f5faff; stroke:#cddfec; stroke-width:1; }
 .craft-flow-label text { font-size:14px; font-weight:700; }
 .craft-flow-details { border:1px solid var(--line); border-radius:8px; padding:12px; margin-top:12px; }
 .craft-flow-details[hidden] { display:none; }
+.craft-flow-rules { color:var(--muted,#b7ad99); background:#85704308; border-top:1px solid var(--line,#443a29); padding:12px 12px 12px 30px; font-size:12px; line-height:1.7; }
+.craft-unused-group+.craft-unused-group { border-top:1px solid var(--line,#443a29); padding-top:10px; margin-top:12px; }
 .craft-unused-group h6 { margin:6px 0; color:var(--gold); font-size:14px; }
 .craft-unused-group p { margin:6px 0; line-height:1.7; overflow-wrap:anywhere; }
 .craft-flow-box[role="button"] { cursor:pointer; outline:none; }

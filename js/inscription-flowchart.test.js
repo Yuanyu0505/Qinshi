@@ -57,7 +57,7 @@ test('expanded failures include failed reuse outcomes and preserve orange stage'
 
 test('only deliberate symbolic inputs propagate X into successful and failed descendants',()=>{
   const route=sourcedRoute(),drawing=Flow.render(route,'闪避',{showFailures:true});
-  assert.match(drawing,/失败紫一 A1：[^<]*杂词条 X（同一个）/);
+  assert.match(drawing,/失败紫一 A1：(?:(?!<\/p>).)*<strong class="ins-term-value ins-term-purple">杂词条 X（同一个）/s);
   assert.doesNotMatch(drawing,/3%闪避/);
   assert.match(drawing,/概率只对.*模板条件成立/);
   const concrete=Flow.render(sourcedRoute(false),'闪避',{showFailures:true});

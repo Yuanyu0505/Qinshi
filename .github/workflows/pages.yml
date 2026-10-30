@@ -37,7 +37,7 @@ jobs:
           cp js/partition-loader.js js/calculation-runner.js js/calculation-worker.js _site/js/
           cp js/secret-realm-core.js js/secret-realm-planner.js js/secret-realm-ui.js _site/js/
           cp js/six-halls.js js/six-halls-ui.js _site/js/
-          cp js/inscription-flow-model.js js/inscription-flowchart.js js/inscription-terms.js js/inscription-progress-rules.js js/inscription-route-favorites.js _site/js/
+          cp js/inscription-flow-model.js js/inscription-flow-layout.js js/inscription-flowchart.js js/inscription-terms.js js/inscription-progress-rules.js js/inscription-route-favorites.js _site/js/
           cp js/cloud-sync-config.js js/cloud-sync-core.js js/cloud-sync-crypto.js js/cloud-sync-storage.js js/cloud-sync-api.js js/cloud-sync.js _site/js/
           cp -R css data images icons _site/
           cp js/app.js js/atlas.js js/drops.js js/forging.js js/forbidden.js js/forbidden-ui.js js/inscription-performance.js js/inscription-rules.js js/inscription-paths.js js/inscription-crafting-state.js js/inscription-crafting-ui.js js/inscription.js js/progress.js js/pwa.js js/query.js js/quiz.js js/settings.js js/account-edit-lease.js js/account-profiles.js js/account-profiles-ui.js js/tactics.js js/tactics-ui.js js/formations.js js/formations-ui.js js/machine-beasts.js js/machine-beast-school-planner.js js/machine-beasts-ui.js js/battle-box-pill-pouch.js js/battle-box-pill-pouch-ui.js js/equipment-compare.js js/equipment-forging.js js/item-navigation.js js/zhulu.js js/zhulu-ui.js js/wooden-man-alley.js js/wooden-man-alley-planner.js js/wooden-man-alley-ui.js _site/js/

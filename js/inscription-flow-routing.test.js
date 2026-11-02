@@ -28,6 +28,24 @@ function cuts(a,b,r){
   }
   return low<high;
 }
+test('cloud preparation batches do not merge into a misleading common input bus',()=>{
+  const plan=Paths.representative({prefix:'天府',dun:'云遁',quality:'o2',attrs:['护盾','护盾','技免']});
+  assert.ok(plan.strategies.length);
+  for(const route of plan.strategies){
+    const {html,wires}=drawing(route,plan.xAttr);
+    assert.doesNotMatch(html,/class="craft-flow-next-band"/);
+    const inputs=wires.filter(w=>w.attrs['data-phase']==='input');
+    for(let i=0;i<inputs.length;i++)for(let j=i+1;j<inputs.length;j++){
+      const one=inputs[i],two=inputs[j];
+      if(one.attrs['data-batch']===two.attrs['data-batch']||one.attrs['data-source-quality']!==two.attrs['data-source-quality'])continue;
+      for(let a=1;a<one.points.length;a++)for(let b=1;b<two.points.length;b++){
+        const p=one.points[a-1],q=one.points[a],r=two.points[b-1],s=two.points[b];
+        if(p.y!==q.y||r.y!==s.y||p.y!==r.y)continue;
+        assert.ok(Math.min(Math.max(p.x,q.x),Math.max(r.x,s.x))<=Math.max(Math.min(p.x,q.x),Math.min(r.x,s.x)),'independent input batches must keep separate horizontal buses');
+      }
+    }
+  }
+});
 for(const attrs of [['速','速','速'],['暴击伤害','速','速']])test('ghost routes keep independent wash boxes clear and batch inputs on one bus: '+attrs.join('/'),()=>{
   const plans=Paths.representative({prefix:'天府',dun:'鬼遁',quality:'o2',attrs});
   for(const route of plans.strategies){

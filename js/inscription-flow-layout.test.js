@@ -6,7 +6,7 @@ const Flow=require('./inscription-flowchart.js');
 const Paths=require('./inscription-paths.js');
 const Rules=require('./inscription-rules.js');
 
-test('independent materials stay left, main chains stay vertical, and reuse stays right',()=>{
+test('independent preparations remain near their recipe without covering input descent corridors',()=>{
   const nodes=[
     {id:'b',role:'main',level:0,w:320,h:90,demand:9},
     {id:'p',role:'main',level:2,w:320,h:110,demand:3},
@@ -23,11 +23,11 @@ test('independent materials stay left, main chains stay vertical, and reuse stay
   const result=Layout.arrange(nodes,edges);
   assert.equal(box('b').x,box('p').x);
   assert.equal(box('p').x,box('target').x);
-  assert.ok(box('wash').x+box('wash').w<box('p').x);
+  assert.ok(box('wash').y>=box('p').y+box('p').h+24);
   assert.ok(box('other').x>box('p').x+box('p').w);
-  assert.ok(box('promotion').y>=box('wash').y+box('wash').h+12);
+  assert.ok(box('promotion').x>=box('wash').x+box('wash').w+20);
   assert.equal(box('other').x+box('other').w/2,box('reuse').x+box('reuse').w/2);
-  assert.equal(result.bands.length,3);
+  assert.equal(result.bands.length,2);
   for(const n of nodes)assert.ok(n.x>=0&&n.y>=0&&n.x+n.w<=result.width&&n.y+n.h<=result.height);
 });
 
@@ -60,7 +60,7 @@ test('symbolic failure terms use the same quality formatting as concrete peers',
   assert.doesNotMatch(html,/3%闪避/);
 });
 
-test('different auxiliary batches have separate gutters and same-batch materials stay together',()=>{
+test('parallel auxiliary batches use separate local spaces instead of a distant common column',()=>{
   const nodes=[
     {id:'wash-one',kind:'wash',role:'auxiliary',level:0,w:260,h:90,batch:'op0'},
     {id:'wash-two',kind:'wash',role:'auxiliary',level:0,w:260,h:90,batch:'op1'},
@@ -70,9 +70,7 @@ test('different auxiliary batches have separate gutters and same-batch materials
   ];
   Layout.arrange(nodes,[]);
   const byId=id=>nodes.find(n=>n.id===id);
-  assert.equal(byId('wash-one').auxiliaryGutter,byId('promotion-one').auxiliaryGutter);
-  assert.notEqual(byId('wash-one').auxiliaryGutter,byId('wash-two').auxiliaryGutter);
-  assert.ok(byId('promotion-one').y<byId('wash-two').y);
-  assert.ok(byId('wash-one').auxiliaryGutter>byId('wash-two').auxiliaryGutter);
-  assert.ok(byId('wash-one').auxiliaryGutter<byId('goal').x);
+  assert.equal(byId('wash-one').y,byId('promotion-one').y);
+  assert.ok(byId('promotion-one').x>byId('wash-one').x+byId('wash-one').w);
+  assert.ok(byId('wash-two').x>byId('promotion-one').x+byId('promotion-one').w);
 });

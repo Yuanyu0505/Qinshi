@@ -58,14 +58,11 @@
     }
     var mainTracks=tracksFor('main'),sideTracks=tracksFor('side');
     var auxiliary=visible.filter(function(n){return n.role==='auxiliary';});
-    var auxiliaryWidth=auxiliary.length?Math.max.apply(null,auxiliary.map(function(n){return n.w;})):0;
     auxiliary.forEach(function(n){
       var outgoing=edges.find(function(e){return e.from===n.id&&e.phase==='input';});
       n.batch=n.batch||(outgoing&&outgoing.batch)||n.id;
     });
-    var auxiliaryBatches=Math.max.apply(null,[1].concat(auxiliary.map(function(n){return new Set(auxiliary.filter(function(other){return other.level===n.level;}).map(function(other){return other.batch;})).size;})));
     var gap=36,pad=28,x=pad,bands=[];
-    if(auxiliary.length){bands.push({role:'auxiliary',x:x,w:auxiliaryWidth,label:'辅助材料 / 独立准备'});x+=auxiliaryWidth+gap+(auxiliaryBatches-1)*14;}
     function placeTracks(tracks,role,label){
       if(!tracks.length)return;
       var start=x;
@@ -82,8 +79,6 @@
     var y=68;
     levels.forEach(function(level,index){
       var row=visible.filter(function(n){return n.level===level;}),aux=row.filter(function(n){return n.role==='auxiliary';});
-      // Keep each batch together. Upper batches use outer gutters; later
-      // cards cannot accidentally tee into an earlier batch's vertical wire.
       aux.sort(function(a,b){return String(a.batch).localeCompare(String(b.batch),undefined,{numeric:true});});
       var auxBatchOrder=Array.from(new Set(aux.map(function(n){return n.batch;})));
       if(index){
@@ -93,13 +88,31 @@
         // Space for a material bus, a distinct random fork and full arrowheads.
         y+=(random?160:84)+Math.max(0,batchCount-1)*28;
       }
-      var auxY=y;
-      aux.forEach(function(n){
-        n.x=pad+(auxiliaryWidth-n.w)/2;n.y=auxY;n.auxiliaryRight=pad+auxiliaryWidth;
-        n.auxiliaryGutter=n.auxiliaryRight+18+(auxBatchOrder.length-1-auxBatchOrder.indexOf(n.batch))*14;
-        auxY+=n.h+14;
-      });
       row.filter(function(n){return n.role!=='auxiliary';}).forEach(function(n){n.y=y;});
+      // Put each preparation batch under its own input row, in the gaps
+      // between descent corridors. No remote auxiliary column or shared trunk.
+      var main=row.filter(function(n){return n.role!=='auxiliary';});
+      var auxY=main.length?Math.max.apply(null,main.map(function(n){return n.y+n.h;}))+32:y;
+      var corridors=main.flatMap(function(n){
+        var uses=Array.from(new Set(edges.filter(function(e){return e.from===n.id&&e.phase==='input';}).map(function(e){return e.batch;})));
+        return uses.length>1?uses.map(function(_,i){return n.x+n.w*(i+1)/(uses.length+1);}):[n.x+n.w/2];
+      }),occupied=[];
+      auxBatchOrder.forEach(function(batchId){
+        var group=aux.filter(function(n){return n.batch===batchId;}),batch=batches.get(batchId);
+        var inputCenters=batch?batch.inputs.filter(function(n){return n.role!=='auxiliary'&&n.level===level;}).map(function(n){return n.x+n.w/2;}):[];
+        var desired=inputCenters.length?(Math.min.apply(null,inputCenters)+Math.max.apply(null,inputCenters))/2:pad;
+        group.forEach(function(n,index){
+          var candidates=[Math.max(pad,desired-n.w/2)];
+          corridors.slice().sort(function(a,b){return a-b;}).forEach(function(cx){candidates.push(cx+24);});
+          occupied.forEach(function(rect){candidates.push(rect.right+24);});
+          candidates.push(Math.max.apply(null,[pad].concat(corridors.map(function(cx){return cx+24;}),occupied.map(function(rect){return rect.right+24;}))));
+          function fits(left){return corridors.every(function(cx){return cx<=left-20||cx>=left+n.w+20;})&&occupied.every(function(rect){return left+n.w+20<=rect.left||left>=rect.right+20;});}
+          var picked=candidates.filter(fits).sort(function(a,b){return Math.abs(a+n.w/2-desired)-Math.abs(b+n.w/2-desired);})[0];
+          n.x=picked===undefined?width+24:picked;n.y=auxY;
+          occupied.push({left:n.x,right:n.x+n.w});width=Math.max(width,n.x+n.w+pad);
+          desired=n.x+n.w+24+(group[index+1]?group[index+1].w/2:0);
+        });
+      });
       var bottom=Math.max.apply(null,row.map(function(n){return n.y+n.h;}));
       row.forEach(function(n){n.rowBottom=bottom;});y=bottom;
     });

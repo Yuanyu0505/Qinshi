@@ -1,9 +1,10 @@
 (function (root, factory) {
   "use strict";
-  var api = factory(typeof module === "object" && module.exports ? require("./inscription-rules.js") : root.InscriptionRules);
+  var common = typeof module === "object" && module.exports;
+  var api = factory(common ? require("./inscription-rules.js") : root.InscriptionRules, common ? require("./inscription-simulation.js") : root.InscriptionSimulation);
   if (typeof module === "object" && module.exports) module.exports = api;
   if (root) root.InscriptionCraftingState = api;
-})(typeof window !== "undefined" ? window : null, function (Rules) {
+})(typeof window !== "undefined" ? window : null, function (Rules, Lab) {
   "use strict";
   var KEY = "qinshi_inscription_crafting_v1", sequence = 0;
   function copy(value) { return JSON.parse(JSON.stringify(value)); }
@@ -213,6 +214,7 @@
     fail("此材料不存在合法的洗练或合成来源：" + Array.from(new Set(errors)).join("；"));
   }
   function simulationPreview(value) {
+    if(value.lab)return Lab.preview(value);
     var sim = value.simulation, recipe = Rules.recipes[sim.stage], position = context(value.target);
     if (!recipe) fail("当前阶段没有后续合成配方");
     if (sim.inputs.length !== recipe.count) fail("请填满本次" + recipe.count + "枚材料");
@@ -236,6 +238,7 @@
     sim.inputs.forEach(function (terms) {
       if (!Array.isArray(terms) || terms.length !== stage.count || terms.some(function (t) { return t !== null && (!object(t) || !Rules.attributes.some(function (a) { return a.id === t.attr; }) || !["H", "M", "L", "U", "?"].includes(t.tier)); })) fail("材料草稿格式无效");
     });
+    if(value.lab){Lab.validate(value);return value;}
     if (sim.pending !== null) {
       var pending = sim.pending;
       if (!object(pending) || typeof pending.id !== "string" || !pending.id || !object(pending.material)) fail("模拟结果格式无效");

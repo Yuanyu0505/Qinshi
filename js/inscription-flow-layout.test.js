@@ -25,7 +25,7 @@ test('independent preparations remain near their recipe without covering input d
   assert.equal(box('p').x,box('target').x);
   assert.ok(box('wash').y>=box('p').y+box('p').h+24);
   assert.ok(box('other').x>box('p').x+box('p').w);
-  assert.ok(box('promotion').x>=box('wash').x+box('wash').w+20);
+  assert.ok(box('promotion').x>=box('wash').x+box('wash').w+20||box('wash').x>=box('promotion').x+box('promotion').w+20);
   assert.equal(box('other').x+box('other').w/2,box('reuse').x+box('reuse').w/2);
   assert.equal(result.bands.length,2);
   for(const n of nodes)assert.ok(n.x>=0&&n.y>=0&&n.x+n.w<=result.width&&n.y+n.h<=result.height);
@@ -73,4 +73,30 @@ test('parallel auxiliary batches use separate local spaces instead of a distant 
   assert.equal(byId('wash-one').y,byId('promotion-one').y);
   assert.ok(byId('promotion-one').x>byId('wash-one').x+byId('wash-one').w);
   assert.ok(byId('wash-two').x>byId('promotion-one').x+byId('promotion-one').w);
+});
+
+test('recipe ingredients stay adjacent even when one ingredient continues down a longer chain',()=>{
+  const nodes=[
+    {id:'a-one',role:'main',level:0,w:240,h:44,demand:9,batch:'one'},
+    {id:'a-two',role:'main',level:0,w:240,h:44,demand:9,batch:'two'},
+    {id:'b-one',role:'main',level:0,w:240,h:44,demand:9,batch:'one'},
+    {id:'b-two',role:'main',level:0,w:240,h:44,demand:9,batch:'two'},
+    {id:'p-one',role:'main',level:2,w:320,h:104,demand:3},
+    {id:'p-two',role:'main',level:2,w:320,h:104,demand:3},
+    {id:'goal',role:'main',level:4,w:320,h:64,demand:1},
+    {id:'promotion-one',kind:'promotion',role:'auxiliary',level:0,w:190,h:44,batch:'one'},
+    {id:'promotion-two',kind:'promotion',role:'auxiliary',level:0,w:190,h:44,batch:'two'}
+  ];
+  const edges=[
+    ...['one','two'].flatMap(batch=>['a','b','promotion'].map(kind=>({from:kind+'-'+batch,to:'p-'+batch,phase:'input',batch}))),
+    {from:'p-one',to:'goal',phase:'input',batch:'final'},
+    {from:'p-two',to:'goal',phase:'input',batch:'final'}
+  ];
+  Layout.arrange(nodes,edges);
+  assert.deepEqual(nodes.filter(n=>n.level===0&&n.role==='main').sort((a,b)=>a.x-b.x).map(n=>n.batch),['one','one','two','two']);
+  for(const batch of ['one','two']){
+    const sources=nodes.filter(n=>n.level===0&&n.role==='main'&&n.batch===batch),promotion=nodes.find(n=>n.id==='promotion-'+batch);
+    const center=promotion.x+promotion.w/2;
+    assert.ok(center>=Math.min(...sources.map(n=>n.x))&&center<=Math.max(...sources.map(n=>n.x+n.w)),'promotion stays inside its own recipe span');
+  }
 });

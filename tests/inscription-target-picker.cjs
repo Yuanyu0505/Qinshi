@@ -5,6 +5,7 @@ const { createServer } = require('../serve.js');
 const { openApp, getAccountItem, setAccountItem } = require('./browser-test-helpers.cjs');
 
 const KEY = 'qinshi_inscription_crafting_v1';
+const QUERY_KEY = 'qinshi_inscription_path_query_v1';
 let browser, server, url;
 const scriptErrors = [];
 before(async () => {
@@ -42,9 +43,9 @@ function trigger(s, index) { return s.locator('[data-craft-attr-trigger][data-in
 function option(s, index, value) { return s.locator('[data-craft-attr-option][data-index="' + index + '"][data-value="' + value + '"]'); }
 async function choose(s, index, value) { await trigger(s, index).click(); await option(s, index, value).click(); }
 async function attrs(s) { return field(s, 'attr').evaluateAll(els => els.map(el => el.value)); }
-async function target(page) { return JSON.parse(await getAccountItem(page, KEY)).draft.simpleWorkbench.target; }
+async function target(page) { return page.evaluate(() => window.InscriptionCraftingState.createQueryStore(window.QinshiAccounts).inspect().target); }
 
-test('鬼遁橙二冲突候选可解释但不写入，合法候选保留其他槽并同步模拟页', async () => {
+test('鬼遁橙二冲突候选可解释但不写入，合法候选保留其他槽且不影响模拟页', async () => {
   const page = await pageFor(); try {
     const s = page.locator('#inscription-crafting-paths');
     await field(s, 'dun').selectOption('鬼遁');
@@ -54,22 +55,25 @@ test('鬼遁橙二冲突候选可解释但不写入，合法候选保留其他�
     await trigger(s, 2).click();
     assert.equal(await option(s, 2, '暴击伤害').getAttribute('aria-disabled'), 'true');
     assert.equal(await option(s, 2, '速').getAttribute('aria-disabled'), 'false');
-    const saved = await getAccountItem(page, KEY);
+    const saved = await getAccountItem(page, QUERY_KEY), simulatorRaw = await getAccountItem(page, KEY);
     // aria-disabled communicates rejection without using native disabled: the
     // item still accepts a real click to explain the conflict.
     await option(s, 2, '暴击伤害').click({ force: true });
     assert.deepEqual(await attrs(s), ['暴击伤害', '暴击伤害', '']);
-    assert.equal(await getAccountItem(page, KEY), saved, 'Rejected options never write storage');
+    assert.equal(await getAccountItem(page, QUERY_KEY), saved, 'Rejected options never write query storage');
+    assert.equal(await getAccountItem(page, KEY), simulatorRaw, 'Query changes never write simulation storage');
     assert.match(await s.locator('[data-craft-attr-feedback]').innerText(), /无法组成所选搭配.*暴击伤害.*不同合法档位/s);
     await option(s, 2, '速').click();
     assert.deepEqual(await attrs(s), ['暴击伤害', '暴击伤害', '速']);
     assert.equal(await trigger(s, 2).evaluate(el => el === document.activeElement), true, 'Selection keeps keyboard focus');
     const sim = await openMode(page, 'simulator');
-    assert.deepEqual(await attrs(sim), ['暴击伤害', '暴击伤害', '速']);
+    assert.deepEqual(await attrs(sim), ['', '', '']);
+    await field(sim, 'dun').selectOption('鬼遁');
     await choose(sim, 0, '速');
     await openMode(page);
-    assert.deepEqual(await attrs(s), ['速', '暴击伤害', '速']);
-    assert.deepEqual((await target(page)).attrs, ['速', '暴击伤害', '速']);
+    assert.deepEqual(await attrs(s), ['暴击伤害', '暴击伤害', '速']);
+    assert.deepEqual((await target(page)).attrs, ['暴击伤害', '暴击伤害', '速']);
+    await openMode(page, 'simulator');assert.deepEqual(await attrs(sim), ['速', '', '']);
   } finally { await page.close(); }
 });
 
@@ -130,17 +134,18 @@ test('隐藏native桥兼容旧脚本；历史非法目标重开不丢失、不�
     const s = page.locator('#inscription-crafting-paths');
     await field(s, 'dun').selectOption('鬼遁');
     for (let i = 0; i < 3; i++) await field(s, 'attr').nth(i).selectOption('暴击伤害');
-    const raw = await getAccountItem(page, KEY);
+    const raw = await getAccountItem(page, QUERY_KEY), simulatorRaw = await getAccountItem(page, KEY);
     assert.deepEqual(await attrs(s), ['暴击伤害', '暴击伤害', '暴击伤害']);
     assert.match(await s.locator('[data-craft-attr-feedback]').innerText(), /无法组成所选搭配.*保留/s);
-    const saved = JSON.parse(raw); saved.draft.simpleWorkbench.target.attrs = ['攻', '暴击伤害', '暴击伤害'];
-    await setAccountItem(page, KEY, JSON.stringify(saved));
-    const historical = await getAccountItem(page, KEY);
+    const saved = JSON.parse(raw); saved.attrs = ['攻', '暴击伤害', '暴击伤害'];
+    await setAccountItem(page, QUERY_KEY, JSON.stringify(saved));
+    const historical = await getAccountItem(page, QUERY_KEY);
     await page.reload({ waitUntil: 'load' }); await openMode(page);
     assert.deepEqual(await attrs(s), ['攻', '暴击伤害', '暴击伤害']);
     assert.equal(await trigger(s, 0).innerText(), '攻');
     assert.match(await s.locator('[data-craft-attr-feedback]').innerText(), /无法组成所选搭配.*保留.*攻/s);
-    assert.equal(await getAccountItem(page, KEY), historical);
+    assert.equal(await getAccountItem(page, QUERY_KEY), historical);
+    assert.equal(await getAccountItem(page, KEY), simulatorRaw);
   } finally { await page.close(); }
 });
 

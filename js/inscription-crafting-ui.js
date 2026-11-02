@@ -2,6 +2,8 @@
   'use strict';
   var R=root.InscriptionRules, P=root.InscriptionPaths, S=root.InscriptionCraftingState, F=root.InscriptionFlowchart, T=root.InscriptionTerms, L=root.InscriptionSimulation;
   var views={}, store, state, token, accountId, loaded=false, sequence=0;
+  var queryStore,queryTarget,queryToken,recovery=null;
+  function targetFor(v){return v.mode==='crafting-paths'?queryTarget:state.target;}
   var favoriteStore, favoriteState=null, favoriteOperation=0, favoriteBusy=false;
   var modelNote='等概率模型，非实测游戏频率。各步骤概率以材料备齐为前提；置换概率未知，不计算整条路线的总成功率。';
   function esc(value) { return String(value==null?'':value).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
@@ -55,21 +57,26 @@
     if(!next.xTerm||!S.xOptions(next).some(function(t){return t.attr===next.xTerm.attr&&t.tier===next.xTerm.tier;}))next.xTerm=null;
     return next;
   }
+  function clearPlan(v){v.generation++;if(area(v,'results')){area(v,'results').innerHTML='';v.planTarget='';v.plan=null;v.routeSelections=new Map();}}
   function changeTarget(v,next) {
-    var previousX=next.xTerm;
-    next=normalizeTarget(S.targetAfterContextChange(state.target,next));
-    if (sameTarget(next,state.target)) { renderAll(false); return; }
-    var before=position(state.target), after=position(next), sim=state.simulation;
-    var incompatible=before.prefix!==after.prefix || before.dun!==after.dun ||
-      R.qualities.findIndex(function(q){return q.id===sim.stage;})>=R.qualities.findIndex(function(q){return q.id===next.quality;});
-    var queryOnly=next.discipleKey===state.target.discipleKey&&next.slot===state.target.slot&&next.dun===state.target.dun&&next.quality===state.target.quality&&JSON.stringify(next.attrs)===JSON.stringify(state.target.attrs);
+    var beforeTarget=targetFor(v),previousX=next.xTerm;
+    next=normalizeTarget(S.targetAfterContextChange(beforeTarget,next));
+    if(sameTarget(next,beforeTarget)){renderFilters(v);return;}
+    if(v.mode==='crafting-paths'){
+      try{var q=queryStore.save(next,queryToken,accountId);if(!q.valid)throw new Error(q.errors.join('；'));queryTarget=q.target;queryToken=q.token;clearPlan(v);renderFilters(v);}
+      catch(e){status(v,e.message);renderFilters(v);}
+      return;
+    }
+    if(recovery){status(v,'请先选择保留隔离或清空旧模拟数据；路径查询仍可正常使用。');renderFilters(v);return;}
+    var before=position(beforeTarget),after=position(next),sim=state.simulation;
+    var incompatible=before.prefix!==after.prefix||before.dun!==after.dun||R.qualities.findIndex(function(q){return q.id===sim.stage;})>=R.qualities.findIndex(function(q){return q.id===next.quality;});
+    var queryOnly=next.discipleKey===beforeTarget.discipleKey&&next.slot===beforeTarget.slot&&next.dun===beforeTarget.dun&&next.quality===beforeTarget.quality&&JSON.stringify(next.attrs)===JSON.stringify(beforeTarget.attrs);
     if(queryOnly)incompatible=false;
-    if (incompatible && sceneExists(sim) && !root.confirm('新目标与当前模拟现场不兼容。切换将重置当前材料和结果，旧版保存数据不受影响。是否继续？')) { renderAll(false); return; }
-    var draft;
-    try{draft=incompatible?L.act(state,'reset'):clone(state);}catch(error){status(v,error.message);renderAll(false);return;}
-    draft.target=next;
-    if (save(v,draft)) { Object.keys(views).forEach(function(key){views[key].generation++;}); renderAll(true); if(previousX&&!next.xTerm)status(v,'原具体杂词 X 不再适用于当前选择，已恢复为未指定 X 的符号模板。'); }
-    else renderAll(false);
+    if(incompatible&&sceneExists(sim)&&!root.confirm('切换将重新准备当前模拟材料，已生成的结果保留到虚拟背包。是否继续？')){renderFilters(v);return;}
+    try{var draft=incompatible?L.act(state,'reset'):clone(state);draft.target=next;
+      if(save(v,draft)){v.bagSelection={};renderFilters(v);renderSimulator(v);if(previousX&&!next.xTerm)status(v,'原具体杂词 X 已恢复为未指定。');}
+      else renderFilters(v);
+    }catch(e){status(v,e.message);renderFilters(v);}
   }
   function init(mode) {
     var el=document.getElementById('inscription-'+mode);
@@ -77,7 +84,7 @@
     var searchId=mode+'-disciple-suggestions';
     el.innerHTML='<div data-craft-status class="craft-status" role="alert" hidden></div>'+
       '<section class="craft-panel"><h3>'+(mode==='crafting-paths'?'合成路径查询':'合成模拟')+'</h3>'+
-      '<p class="craft-note">两页共用目标筛选。模拟现场按当前游戏账号自动保存，不关联实际铭文库存。</p>'+
+      '<p class="craft-note">本页筛选独立保存，与另一页互不影响。模拟及背包按当前游戏账号保存，不关联真实铭文库存。</p>'+
       '<div class="craft-controls craft-filters"><label class="craft-search">弟子搜索（可不选）'+
       '<input type="search" data-craft-field="search" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="'+searchId+'" placeholder="输入姓名，例如盖聂">'+
       '<span id="'+searchId+'" class="craft-suggestions" data-craft-suggestions role="listbox" hidden></span></label>'+
@@ -101,8 +108,8 @@
       if(control) onClick(v,control);
     });
     el.addEventListener('keydown',function(event){if(event.target.matches('[data-craft-attr-trigger]'))onAttrKey(v,event);});
-    el.addEventListener('input',function(event){if(event.target===field(v,'search')) suggestions(v);});
-    field(v,'search').addEventListener('focus',function(){if(!itemFor(state.target)) suggestions(v);});
+    el.addEventListener('input',function(event){if(event.target===field(v,'search')) suggestions(v);if(event.target.matches('[data-bag-count]'))updateBagSelection(v,event.target);});
+    field(v,'search').addEventListener('focus',function(){if(!itemFor(targetFor(v))) suggestions(v);});
     field(v,'search').addEventListener('keydown',function(event){
       var list=area(v,'suggestions'), choices=Array.from(list.querySelectorAll('[data-craft-action="choose-disciple"]'));
       if(event.key==='Escape'){hideSuggestions(v);return;}
@@ -154,7 +161,7 @@
     var reason=R.bestTargets(dun,target.quality,example).reason;
     return {valid:false,reason:(target.attrs.some(function(a){return !a;})?'保留其他已选属性后，剩余空槽无法补全合法组合。':'')+reason};
   }
-  function candidateTarget(index,value) {var next=clone(state.target);next.attrs[index]=value;return next;}
+  function candidateTarget(v,index,value) {var next=clone(targetFor(v));next.attrs[index]=value;return next;}
   function attrTrigger(v,index) {return v.el.querySelector('[data-craft-attr-trigger][data-index="'+index+'"]');}
   function closeAttrPicker(v) {
     area(v,'attrs').querySelectorAll('[data-craft-attr-trigger]').forEach(function(trigger){trigger.setAttribute('aria-expanded','false');trigger.removeAttribute('aria-activedescendant');});
@@ -176,17 +183,17 @@
     var bounds=list.getBoundingClientRect(),viewport=document.documentElement.clientWidth;
     list.style.left=Math.max(12-bounds.left,Math.min(0,viewport-12-bounds.right))+'px';
     var choices=Array.from(list.querySelectorAll('[data-craft-attr-option]'));
-    activateAttrOption(v,index,active===undefined?Math.max(0,choices.findIndex(function(choice){return choice.dataset.value===state.target.attrs[index];})):active);
+    activateAttrOption(v,index,active===undefined?Math.max(0,choices.findIndex(function(choice){return choice.dataset.value===targetFor(v).attrs[index];})):active);
   }
   function renderAttrFeedback(v) {
-    var feedback=area(v,'attr-feedback'),result=targetCompletion(state.target),message=v.attrRejection;
-    if(!message&&position(state.target).dun&&!result.valid)message='原目标属性已保留，请手动调整。'+result.reason;
+    var feedback=area(v,'attr-feedback'),result=targetCompletion(targetFor(v)),message=v.attrRejection;
+    if(!message&&position(targetFor(v)).dun&&!result.valid)message='原目标属性已保留，请手动调整。'+result.reason;
     feedback.hidden=!message;
     feedback.innerHTML=message?'<b>无法组成所选搭配</b><p>'+esc(friendly(message))+'</p>':'';
   }
   function selectAttr(v,index,value) {
     if(!loaded||currentAccount()!==accountId){status(v,'请重新打开铭文分区后再操作。');return;}
-    var next=candidateTarget(index,value),result=targetCompletion(next);
+    var next=candidateTarget(v,index,value),result=targetCompletion(next);
     // Clearing a slot is always possible, including when repairing an old goal.
     if(value&&!result.valid){v.attrRejection=result.reason;renderAttrFeedback(v);attrTrigger(v,index).focus();return;}
     v.attrRejection='';closeAttrPicker(v);status(v,'');changeTarget(v,next);
@@ -211,14 +218,14 @@
   function renderAttrPickers(v,attrs,dun) {
     var host=area(v,'attrs'),focused=document.activeElement,focusedIndex=focused&&focused.hasAttribute('data-craft-attr-trigger')&&v.el.contains(focused)?Number(focused.dataset.index):null;
     closeAttrPicker(v);
-    host.style.setProperty('--craft-slots',quality(state.target.quality).count);
-    host.innerHTML=state.target.attrs.map(function(attr,i){
+    host.style.setProperty('--craft-slots',quality(targetFor(v).quality).count);
+    host.innerHTML=targetFor(v).attrs.map(function(attr,i){
       var id=v.mode+'-attr-'+i,listId=id+'-options',choices=attrs.slice();if(attr&&!choices.includes(attr))choices.push(attr);
       return '<div class="craft-attr-picker"><span id="'+id+'-label">目标属性'+(i+1)+'</span>'+
         '<select class="craft-attr-native" aria-hidden="true" tabindex="-1" data-craft-field="attr" data-index="'+i+'"'+(!dun?' disabled':'')+'>'+options(choices,attr,'请选择属性')+'</select>'+
         '<button type="button" id="'+id+'" class="craft-attr-trigger" role="combobox" aria-haspopup="listbox" aria-expanded="false" aria-controls="'+listId+'" aria-labelledby="'+id+'-label '+id+'-value" aria-describedby="'+v.mode+'-attr-feedback" data-craft-attr-trigger data-index="'+i+'"'+(!dun?' disabled':'')+'><span id="'+id+'-value">'+esc(attr||'请选择属性')+'</span></button>'+
         '<div id="'+listId+'" class="craft-attr-options" role="listbox" aria-labelledby="'+id+'-label" hidden>'+[''].concat(choices).map(function(value,j){
-          var result=value?targetCompletion(candidateTarget(i,value)):{valid:true};
+          var result=value?targetCompletion(candidateTarget(v,i,value)):{valid:true};
           return '<button type="button" role="option" tabindex="-1" id="'+id+'-option-'+j+'" aria-selected="'+String(value===attr)+'" aria-disabled="'+String(!result.valid)+'" data-craft-attr-option data-index="'+i+'" data-value="'+esc(value)+'">'+esc(value||'请选择属性')+(!result.valid?'<small>不可选 · 点击查看原因</small>':'')+'</button>';
         }).join('')+'</div></div>';
     }).join('')+'<div id="'+v.mode+'-attr-feedback" data-craft-attr-feedback class="craft-analysis unavailable craft-attr-feedback" role="status" aria-live="polite" hidden></div>';
@@ -226,7 +233,7 @@
     if(focusedIndex!==null&&attrTrigger(v,focusedIndex))attrTrigger(v,focusedIndex).focus();
   }
   function renderFilters(v) {
-    var target=state.target,item=itemFor(target),dun=position(target).dun;
+    var target=targetFor(v),item=itemFor(target),dun=position(target).dun;
     field(v,'search').value=item?item.name:''; hideSuggestions(v);
     field(v,'slot').innerHTML=options(item?item.slots.map(function(s){return{id:s.tian+'|'+R.normalizeDun(s.shield),label:s.tian+' · '+R.normalizeDun(s.shield)};}):[],target.slot,item?'请选择弟子实际位置':'未指定弟子：可独立选择遁位');
     field(v,'slot').disabled=!item; field(v,'quality').value=target.quality;
@@ -243,7 +250,7 @@
     renderAnalysis(v); renderMatrix(v);
   }
   function renderAnalysis(v) {
-    var target=state.target,dun=position(target).dun,host=area(v,'analysis');
+    var target=targetFor(v),dun=position(target).dun,host=area(v,'analysis');
     if(!dun){host.innerHTML='<p class="craft-note">请选择弟子实际位置，或不指定弟子后独立选择遁位。</p>';return;}
     if(target.attrs.some(function(a){return !a;})){host.innerHTML='<p class="craft-note">选满当前品质的'+quality(target.quality).count+'条目标属性后，显示可行性及最优组合。</p>';return;}
     var best=R.bestTargets(dun,target.quality,target.attrs);
@@ -267,7 +274,7 @@
       (replacements.length?'<p>可参考的合法替代（仅建议，不会替换选择）：</p><ul>'+replacements.slice(0,3).map(function(item){return '<li>'+esc(item.attrs.join(' ＋ '))+' → '+displayTerms({terms:item.terms,quality:target.quality})+'</li>';}).join('')+'</ul>':'<p>请减少重复属性，或调整遁位、目标品质。</p>')+'</div>';
   }
   function renderMatrix(v) {
-    var target=state.target,dun=position(target).dun,attrs=Array.from(new Set(target.attrs.filter(Boolean)));
+    var target=targetFor(v),dun=position(target).dun,attrs=Array.from(new Set(target.attrs.filter(Boolean)));
     area(v,'matrix').innerHTML=!attrs.length?'<p class="craft-note">先选择目标属性。</p>':
       '<p class="craft-note">标签说明单条词条的获取方式，整枚材料仍需合法；蓝二速度不区分肉眼无法识别的档位。表格可左右滑动。</p>'+
       '<div class="craft-scroll" tabindex="0" aria-label="所选属性成长数值"><table class="craft-table craft-matrix"><thead><tr><th>属性</th>'+R.qualities.map(function(q){return '<th>'+q.label+'</th>';}).join('')+'</tr></thead><tbody>'+attrs.map(function(attr){
@@ -305,7 +312,7 @@
     }).join('＋');
   }
   function renderPlan(v,plan) {
-    var host=area(v,'results'),target=state.target;
+    var host=area(v,'results'),target=targetFor(v);
     var opened={};host.querySelectorAll('details[data-route-card]').forEach(function(details){opened[details.dataset.routeCard]=details.open;});
     if(!v.routeSelections)v.routeSelections=new Map();
     v.plan=plan;
@@ -367,11 +374,11 @@
   function toggleFavorite(v,control) {
     if(favoriteBusy)return;
     if(!favoriteStore||!favoriteState||!favoriteState.valid||favoriteState.accountId!==accountId){status(v,'收藏存档不可用，请重新打开铭文分区后操作。');return;}
-    if(!v.plan||v.planTarget!==JSON.stringify(state.target)){status(v,'查询目标已变化，请重新查询后收藏。');return;}
+    if(!v.plan||v.planTarget!==JSON.stringify(targetFor(v))){status(v,'查询目标已变化，请重新查询后收藏。');return;}
     var route=v.plan.strategies[Number(control.dataset.routeIndex)],account=accountId,operation=++favoriteOperation;
     if(!route)return;favoriteBusy=true;Object.keys(views).forEach(function(key){views[key].el.querySelectorAll('[data-craft-action="toggle-favorite"]').forEach(function(button){button.disabled=true;});});
     try{
-      favoriteStore.toggle(route,clone(state.target),v.plan.xAttr,favoriteState.token,account).then(function(result){
+      favoriteStore.toggle(route,clone(targetFor(v)),v.plan.xAttr,favoriteState.token,account).then(function(result){
         if(!loaded||accountId!==account||currentAccount()!==account||operation!==favoriteOperation)return;
         favoriteBusy=false;favoriteState=result;status(v,'');
         root.dispatchEvent(new CustomEvent('inscription-route-favorites-change'));
@@ -382,12 +389,12 @@
     }catch(error){favoriteBusy=false;status(v,'收藏未成功保存：'+error.message);Object.keys(views).forEach(function(key){views[key].el.querySelectorAll('[data-craft-action="toggle-favorite"]').forEach(function(button){button.disabled=!!favoriteState.readOnly;});});}
   }
   function generate(v) {
-    var target=state.target,p=position(target),best=R.bestTargets(p.dun,target.quality,target.attrs);
+    var target=targetFor(v),p=position(target),best=R.bestTargets(p.dun,target.quality,target.attrs);
     if(!best.targets.length){status(v,best.reason);return;}
     var request=++v.generation, selected=JSON.stringify(target),account=accountId;
     status(v,'正在整理完整合成路线……');
     root.setTimeout(function(){
-      if(!loaded||currentAccount()!==account||accountId!==account||request!==v.generation||JSON.stringify(state.target)!==selected)return;
+      if(!loaded||currentAccount()!==account||accountId!==account||request!==v.generation||JSON.stringify(targetFor(v))!==selected)return;
       try{
         var result=P.representative({prefix:p.prefix,dun:p.dun,quality:target.quality,attrs:target.attrs,xTerm:target.xTerm||null});
         if(!result.valid)throw new Error(result.errors.concat(result.notes||[]).join('；'));
@@ -396,35 +403,61 @@
       }catch(error){status(v,error.message);}
     },0);
   }
-  function availableStages() {
-    var index=R.qualities.findIndex(function(q){return q.id===state.target.quality;});
+  function availableStages(v) {
+    var index=R.qualities.findIndex(function(q){return q.id===targetFor(v).quality;});
     return R.qualities.slice(0,Math.max(1,index));
   }
   function blankInputs(stage) {
     var recipe=R.recipes[stage];
     return recipe?Array.from({length:recipe.count},function(){return Array(quality(stage).count).fill(null);}):[];
   }
-  function partialAllowed(peers,term,stage) {
+  function partialAllowed(v,peers,term,stage) {
     var selected=peers.filter(Boolean).concat([term]), keys=selected.map(function(t){return t.attr+':'+t.tier;});
     if(new Set(keys).size!==keys.length || selected.filter(function(t){return t.tier==='H';}).length>2)return false;
-    var available=R.termsFor(position(state.target).dun,stage,'wash');
+    var available=R.termsFor(position(targetFor(v)).dun,stage,'wash');
     return selected.every(function(t){return available.some(function(a){return a.attr===t.attr&&a.tier===t.tier;});});
   }
   function renderBag(v){
     if(!v.bagOpen)return '';
-    var p=position(state.target),sim=state.simulation,entries=state.lab.lots.filter(function(l){return l.quantity>0||sim.refs.includes(l.id);});
-    return '<section class="craft-backpack"><h4>虚拟合成背包 · 本账号共用</h4><p class="craft-note">相同词条按来源批次保留。增加数量会另记为手动补充，不继承模拟来源。勾选和数量用于替换本次材料位；灰色批次不符合当前配方。</p>'+
-      (entries.length?'<div class="craft-bag-list">'+entries.map(function(l){
-        var eligible=l.quantity>0&&!sim.pending&&!sim.legacy&&l.material.prefix===p.prefix&&l.material.dun===p.dun&&l.material.quality===sim.stage;
-        var reserved=sim.pending?0:sim.refs.filter(function(id){return id===l.id;}).length;
-        return '<article class="craft-bag-item" data-bag-id="'+esc(l.id)+'"><div><label class="craft-bag-pick"><input type="checkbox" data-bag-check'+(!eligible?' disabled':'')+' aria-label="选用此批次铭文">'+esc(l.material.prefix+' · '+l.material.dun+' · '+qLabel(l.material.quality))+'</label><p>'+displayTerms(l.material)+'</p><p class="craft-note">'+(l.source.type==='simulation'?'模拟合成产物':'手动补充（独立材料起点）')+' · 库存 '+l.quantity+'枚'+(reserved?' · 已占用 '+reserved+'枚':'')+'</p></div>'+
-          '<div class="craft-bag-controls"><label>背包数量<input type="number" min="'+reserved+'" step="1" value="'+l.quantity+'" data-bag-total="'+esc(l.id)+'"></label><label>本次选用<input type="number" min="1" max="'+Math.min(l.quantity,(R.recipes[sim.stage]||{count:1}).count)+'" step="1" value="1" data-bag-count'+(!eligible?' disabled':'')+'></label>'+button('remove-lot','移除',' data-lot="'+esc(l.id)+'"')+(l.source.type==='simulation'?button('actual-route','查看此铭文完整路线',' data-record="'+esc(l.source.recordId)+'"'):'')+'</div></article>';
-      }).join('')+'</div>':'<p class="craft-note">背包暂无铭文。模拟后点击“加入虚拟背包”，或进入下一阶段自动保存。</p>')+
-      '<div class="craft-actions">'+button('use-selected','使用勾选铭文',''+(sim.pending?' disabled':''))+button('clear-bag','一键清空背包')+button('close-bag','收起背包')+'</div></section>';
+    var p=position(targetFor(v)),sim=state.simulation,entries=L.groups(state),capacity=L.selectionCapacity(state);
+    if(!v.bagSelection)v.bagSelection={};
+    return '<section class="craft-backpack"><h4>虚拟合成背包 · 本账号共用</h4><p class="craft-note">相同铭文合并库存，分别保留合成来源。增加数量记为手动补充。勾选铭文只填空材料位，不替换已填写材料。</p><p data-bag-summary role="status">剩余 '+capacity+' 个材料位</p>'+
+      (entries.length?'<div class="craft-bag-list">'+entries.map(function(g){
+        var eligible=g.available>0&&capacity>0&&!sim.pending&&!sim.legacy&&g.material.prefix===p.prefix&&g.material.dun===p.dun&&g.material.quality===sim.stage;
+        var chosen=eligible?Math.min(v.bagSelection[g.id]||0,g.available,capacity):0;
+        var records=Array.from(new Set(g.lots.filter(function(l){return l.quantity>0&&l.source.type==='simulation';}).map(function(l){return l.source.recordId;})));
+        return '<article class="craft-bag-item" data-bag-id="'+esc(g.id)+'" data-available="'+g.available+'" data-eligible="'+String(eligible)+'"><div><label class="craft-bag-pick"><input type="checkbox" data-bag-check'+(chosen?' checked':'')+(!eligible?' disabled':'')+' aria-label="选用此铭文">'+esc(g.material.prefix+' · '+g.material.dun+' · '+qLabel(g.material.quality))+'</label><p>'+displayTerms(g.material)+'</p><p class="craft-note">库存 '+g.quantity+'枚 · 可选 '+g.available+'枚'+(g.reserved?' · 已占用 '+g.reserved+'枚':'')+'</p></div>'+
+          '<div class="craft-bag-controls"><label>背包数量<input type="number" min="'+g.reserved+'" step="1" value="'+g.quantity+'" data-bag-total="'+esc(g.id)+'"></label><label>本次选用<input type="number" min="1" max="'+Math.min(g.available,capacity)+'" step="1" value="'+(chosen||1)+'" data-bag-count'+(!eligible?' disabled':'')+'></label>'+
+          button('remove-lot','移除',' data-lot="'+esc(g.id)+'"')+
+          (records.length?'<label>合成来源<select data-bag-route>'+records.map(function(id,i){return '<option value="'+esc(id)+'">来源 '+(i+1)+'</option>';}).join('')+'</select></label>'+button('actual-route','查看此铭文完整路线'):'<span class="craft-note">手动材料，无模拟制作记录</span>')+'</div></article>';
+      }).join('')+'</div>':'<p class="craft-note">背包暂无铭文。模拟后加入虚拟背包，或进入下一阶段自动保存。</p>')+
+      '<div class="craft-actions">'+button('use-selected','使用勾选铭文',sim.pending||!capacity?' disabled':'')+button('clear-bag','一键清空背包')+button('close-bag','收起背包')+'</div></section>';
+  }
+  function updateBagSelection(v,control){
+    var rows=Array.from(v.el.querySelectorAll('[data-bag-id]')),cap=L.selectionCapacity(state),changed=control&&control.closest('[data-bag-id]');
+    if(!changed){var left=cap;rows.forEach(function(row){var check=row.querySelector('[data-bag-check]'),count=row.querySelector('[data-bag-count]');if(!check.checked)return;var use=Math.min(left,Number(row.dataset.available),Math.max(0,Number(count.value)||0));check.checked=use>0;if(use)count.value=String(use);left-=use;});}
+    if(changed){var check=changed.querySelector('[data-bag-check]'),count=changed.querySelector('[data-bag-count]'),others=rows.reduce(function(n,row){return n+(row!==changed&&row.querySelector('[data-bag-check]').checked?Number(row.querySelector('[data-bag-count]').value)||0:0);},0);
+      var max=Math.min(Number(changed.dataset.available),Math.max(0,cap-others));
+      if(check.checked&&!max){check.checked=false;status(v,'已选满本次剩余材料位。');}
+      if(max>0)count.value=String(Math.min(max,Math.max(1,Math.floor(Number(count.value)||1))));
+    }
+    var total=rows.reduce(function(n,row){return n+(row.querySelector('[data-bag-check]').checked?Number(row.querySelector('[data-bag-count]').value)||0:0);},0);
+    v.bagSelection={};rows.forEach(function(row){var check=row.querySelector('[data-bag-check]'),count=row.querySelector('[data-bag-count]'),own=check.checked?Number(count.value):0;
+      var max=Math.min(Number(row.dataset.available),Math.max(0,cap-total+own)),eligible=row.dataset.eligible==='true';
+      check.disabled=!eligible||(!check.checked&&!max);count.disabled=!eligible||max===0;count.max=String(max);
+      if(check.checked)v.bagSelection[row.dataset.bagId]=own;
+    });
+    var summary=v.el.querySelector('[data-bag-summary]');if(summary)summary.textContent='已选 '+total+'枚 / 剩余空位 '+cap+'个';
+    var apply=v.el.querySelector('[data-craft-action="use-selected"]');if(apply)apply.disabled=total<1||total>cap;
+  }
+  function recoveryPanel(){
+    return '<div class="craft-status"><h4>旧模拟数据需要处理</h4><p>'+esc(recovery.reason)+'</p><p>路径查询、收藏和真实铭文进度不受影响。请选择保留隔离，或清空全部模拟现场、历史及虚拟背包。</p><div class="craft-actions">'+button('isolate-legacy','保留旧档并隔离异常')+button('clear-legacy','一键清空旧档')+'</div></div>';
   }
   function archivedScenes(){
-    if(!state.lab.legacyDrafts.length)return '';
-    return '<details class="craft-backpack"><summary>已保留的旧现场草稿（只读）</summary>'+state.lab.legacyDrafts.map(function(scene,index){
+    var rescue=[];try{rescue=store.archives();}catch(e){}
+    var rescued=rescue.length?'<details class="craft-backpack"><summary>已隔离的旧档（只读） · '+rescue.length+'份</summary>'+rescue.map(function(entry,i){return '<section><p>'+esc(entry.createdAt)+' · '+esc(entry.reason)+'</p>'+button('view-archive','查看旧档内容',' data-archive="'+i+'"')+'<pre class="craft-archive-raw" hidden></pre></section>';}).join('')+'</details>':'';
+    if(!state.lab.legacyDrafts.length)return rescued;
+    return rescued+'<details class="craft-backpack"><summary>已保留的旧现场草稿（只读）</summary>'+state.lab.legacyDrafts.map(function(scene,index){
       return '<section><h4>旧现场 '+(index+1)+' · '+esc(scene.target.slot||scene.target.dun)+' · '+qLabel(scene.simulation.stage)+'</h4>'+scene.simulation.inputs.map(function(terms,i){return '<p>材料 '+(i+1)+'：'+terms.map(function(t){return t?T.html(t,scene.simulation.stage):'未填写';}).join(' ＋ ')+'</p>';}).join('')+'</section>';
     }).join('')+'</details>';
   }
@@ -434,22 +467,23 @@
   }
   function renderSimulator(v) {
     var host=area(v,'simulator');if(!host)return;
-    var sim=state.simulation,recipe=R.recipes[sim.stage],p=position(state.target);
-    if(!p.dun||state.target.quality==='b2'){
-      host.innerHTML='<div class="craft-actions">'+button('open-bag','查看背包')+'</div>'+renderBag(v)+archivedScenes()+'<p class="craft-note">'+(!p.dun?'请先选择弟子实际位置或独立遁位。':'目标为蓝二，直接收集或置换即可，无需合成。')+'</p><div data-craft-actual-route></div>';renderActualRoute(v);return;
+    if(recovery){host.innerHTML=recoveryPanel();return;}
+    var sim=state.simulation,recipe=R.recipes[sim.stage],p=position(targetFor(v));
+    if(!p.dun||targetFor(v).quality==='b2'){
+      host.innerHTML='<div class="craft-actions">'+button('open-bag','查看背包')+'</div>'+renderBag(v)+archivedScenes()+'<p class="craft-note">'+(!p.dun?'请先选择弟子实际位置或独立遁位。':'目标为蓝二，直接收集或置换即可，无需合成。')+'</p><div data-craft-actual-route></div>';renderActualRoute(v);updateBagSelection(v);return;
     }
     var inputs=sim.inputs.length?sim.inputs:blankInputs(sim.stage);
-    host.innerHTML='<div class="craft-controls"><label>当前材料阶段<select data-sim-stage>'+options(availableStages(),sim.stage)+'</select></label></div>'+
+    host.innerHTML='<div class="craft-controls"><label>当前材料阶段<select data-sim-stage>'+options(availableStages(v),sim.stage)+'</select></label></div>'+
       '<div class="craft-actions">'+button('open-bag','查看背包')+button('select-bag','使用背包内铭文',sim.pending?' disabled':'')+button('back','返回上一步',state.lab.undo.length?'':' disabled')+'</div>'+renderBag(v)+
       (sim.legacy?'<div class="craft-status">旧现场已保留。合法完整的合成材料经确认后作为“手动补充”加入背包；未填满的非洗练材料另存为只读草稿，当前材料位重新备料，不虚构完整库存。已有结果保留。'+button('adopt-legacy','确认保留旧现场并继续')+'</div>':'')+archivedScenes()+
-      '<p class="craft-note">'+(state.target.discipleKey?esc(p.prefix+' · '+p.dun):'通用 '+esc(p.dun)+'：本次材料视为同一前缀，不允许跨前缀混合。')+'。'+qLabel(sim.stage)+' × '+recipe.count+' → '+qLabel(recipe.quality)+
+      '<p class="craft-note">'+(targetFor(v).discipleKey?esc(p.prefix+' · '+p.dun):'通用 '+esc(p.dun)+'：本次材料视为同一前缀，不允许跨前缀混合。')+'。'+qLabel(sim.stage)+' × '+recipe.count+' → '+qLabel(recipe.quality)+
       (recipe.promotion?'；自动附加'+esc(recipe.promotion)+'晋升铭文 × 1。':'；无需晋升铭文。')+'</p>'+
       '<div class="craft-materials">'+inputs.map(function(terms,i){
         var ref=sim.refs[i],fromBag=ref&&state.lab.lots.find(function(l){return l.id===ref;});
         if(fromBag)return '<fieldset class="craft-material"><legend>材料 '+(i+1)+' · '+qLabel(sim.stage)+'</legend><p class="craft-note">来自虚拟背包 · '+(sim.pending?'本次已消耗':fromBag.quantity>=sim.refs.filter(function(id){return id===ref;}).length?'当前占用1枚':'数量不足，请补充后重新选材')+'</p>'+graphMaterial(fromBag.material)+button('clear-material','清空本次材料',' data-index="'+i+'"'+(sim.pending||sim.legacy?' disabled':''))+'</fieldset>';
         return '<fieldset class="craft-material"><legend>材料 '+(i+1)+' · '+qLabel(sim.stage)+'</legend>'+terms.map(function(term,j){
           var pool=R.termsFor(p.dun,sim.stage,'wash'),peers=terms.filter(function(_,k){return k!==j;});
-          var choices=pool.filter(function(t){return partialAllowed(peers,t,sim.stage);});
+          var choices=pool.filter(function(t){return partialAllowed(v,peers,t,sim.stage);});
           if(term&&!choices.some(function(t){return t.attr===term.attr&&t.tier===term.tier;}))choices.push(term);
           return '<label>词条 '+(j+1)+'<select data-sim-material="'+i+'" data-sim-term="'+j+'"'+(sim.pending||sim.legacy?' disabled':'')+'>'+options(choices.map(function(t){return{id:t.attr+':'+t.tier,label:T.plain(t,sim.stage)};}),term?term.attr+':'+term.tier:'','请选择合法洗练词条')+'</select></label>';
         }).join('')+button('clear-material','清空本次材料',' data-index="'+i+'"'+(sim.pending||sim.legacy?' disabled':''))+'</fieldset>';
@@ -460,7 +494,7 @@
     }catch(error){area(v,'preview').innerHTML='<p class="craft-note">'+esc(friendly(error.message))+'</p>';}
     host.querySelector('[data-craft-action="roll"]').disabled=!preview||!!sim.pending||!!sim.legacy;
     if(sim.pending){
-      var pending=sim.pending,end=R.qualities.findIndex(function(q){return q.id===pending.material.quality;})>=R.qualities.findIndex(function(q){return q.id===state.target.quality;});
+      var pending=sim.pending,end=R.qualities.findIndex(function(q){return q.id===pending.material.quality;})>=R.qualities.findIndex(function(q){return q.id===targetFor(v).quality;});
       area(v,'pending').innerHTML='<div class="craft-pending"><h4>本次合成结果 · '+probability(pending.probability)+'</h4>'+graphMaterial(pending.material)+
         '<p class="craft-note" role="status">第'+(pending.attempt||1)+'次模拟'+(pending.attempt>1?(pending.same?' · 本次结果与上次相同':' · 已生成新的随机结果'):'')+'。重新模拟会替换本次结果，不重复消耗或累加产物。</p>'+
         '<div class="craft-actions">'+button('next',end?'已到目标品质':'进入下一阶段',' data-token="'+esc(pending.id)+'"'+(end||sim.legacy?' disabled':''))+
@@ -469,7 +503,7 @@
         (end&&pending.recordId?button('actual-route','查看完整合成路线图',' data-record="'+esc(pending.recordId)+'"'):'')+'</div></div>';
     }
     host.insertAdjacentHTML('beforeend','<div data-craft-actual-route></div>');
-    renderActualRoute(v);
+    renderActualRoute(v);updateBagSelection(v);
   }
   function outcomes(list) {
     return '<details class="craft-preview-outcomes"><summary>结果预览 · '+list.length+'种组合（点击展开）</summary><div class="craft-scroll"><table class="craft-table"><thead><tr><th>产物</th><th>概率</th></tr></thead><tbody>'+
@@ -483,7 +517,7 @@
     });
   }
   function labAction(v,action,payload){
-    try{var draft=L.act(state,action,payload);if(save(v,draft)){Object.keys(views).forEach(function(key){renderSimulator(views[key]);});return true;}}
+    try{var draft=L.act(state,action,payload);if(save(v,draft)){if(['select','next','reset','back','clear-bag'].includes(action))v.bagSelection={};Object.keys(views).forEach(function(key){renderSimulator(views[key]);});return true;}}
     catch(error){status(v,error.message);}
     renderSimulator(v);return false;
   }
@@ -491,13 +525,14 @@
     if(control.matches('[data-route-variant]'))return;
     if(!loaded||currentAccount()!==accountId){status(v,'请重新打开铭文分区后再操作。');return;}
     status(v,'');
+    if(control.matches('[data-bag-check],[data-bag-count]')){updateBagSelection(v,control);return;}
     if(control.matches('[data-bag-total]')){
-      var entry=state.lab.lots.find(function(l){return l.id===control.dataset.bagTotal;}),n=Number(control.value);
+      var entry=L.groups(state).find(function(l){return l.id===control.dataset.bagTotal;}),n=Number(control.value);
       if(entry&&n<entry.quantity&&!root.confirm('确认减少这批虚拟铭文数量？这可能使此前的撤销操作无法无损恢复。')){renderSimulator(v);return;}
-      labAction(v,'quantity',{id:control.dataset.bagTotal,quantity:n});return;
+      labAction(v,'group-quantity',{id:control.dataset.bagTotal,quantity:n});return;
     }
     if(control.matches('[data-craft-field]')){
-      var target=clone(state.target),name=control.dataset.craftField;
+      var target=clone(targetFor(v)),name=control.dataset.craftField;
       if(name==='search')return;
       if(name==='attr'){
         target.attrs[Number(control.dataset.index)]=control.value;
@@ -533,17 +568,26 @@
     status(v,'');
     if(action==='toggle-favorite'){toggleFavorite(v,control);return;}
     if(action==='choose-disciple'){
-      var target=clone(state.target),key=decodeURIComponent(control.dataset.key);
+      var target=clone(targetFor(v)),key=decodeURIComponent(control.dataset.key);
       if(target.discipleKey===key){hideSuggestions(v);return;}
       target.discipleKey=key;target.slot='';
       changeTarget(v,target);return;
     }
     if(action==='clear-options'){
-      if(sceneExists(state.simulation)&&!root.confirm('清除筛选和当前材料？已生成的结果保留到虚拟背包，真实铭文进度不受影响。'))return;
-      var cleared;try{cleared=L.act(state,'reset');}catch(error){status(v,error.message);return;}
-      cleared.target={discipleKey:'',slot:'',dun:'',quality:'o2',attrs:['','',''],xTerm:null};
-      Object.keys(views).forEach(function(key){views[key].attrRejection='';});
-      if(save(v,cleared)){Object.keys(views).forEach(function(key){views[key].generation++;});renderAll(true);}return;
+      var blank={discipleKey:'',slot:'',dun:'',quality:'o2',attrs:['','',''],xTerm:null};v.attrRejection='';
+      if(v.mode==='crafting-paths'){changeTarget(v,blank);return;}
+      if(recovery){status(v,'请先处理旧模拟数据，或切换至路径查询。');return;}
+      if(sceneExists(state.simulation)&&!root.confirm('清除本页筛选和当前材料？已生成的结果保留到虚拟背包，路径查询不受影响。'))return;
+      try{var cleared=L.act(state,'reset');cleared.target=blank;if(save(v,cleared)){v.bagSelection={};renderFilters(v);renderSimulator(v);}}catch(e){status(v,e.message);}return;
+    }
+    if(action==='isolate-legacy'||action==='clear-legacy'){
+      var clearing=action==='clear-legacy';
+      if(!recovery)return;
+      if(!root.confirm(clearing?'确认清空全部合成模拟数据？将清空旧现场、模拟历史、虚拟背包及已隔离的旧模拟档；收藏路线、弟子铭文进度和其他模块不受影响。':'保留旧档完整只读副本，恢复可验证的背包与历史，并重新准备模拟现场。是否继续？'))return;
+      try{store.recover(clearing?'clear':'isolate',recovery.raw,accountId);activate(v.mode);}catch(e){status(v,e.message);}return;
+    }
+    if(action==='view-archive'){
+      try{var archive=store.archives()[Number(control.dataset.archive)],pre=control.parentElement.querySelector('pre');pre.textContent=archive.raw;pre.hidden=!pre.hidden;}catch(e){status(v,e.message);}return;
     }
     if(action==='generate'){generate(v);return;}
     if(action==='open-bag'||action==='select-bag'){v.bagOpen=true;renderSimulator(v);var bag=v.el.querySelector('.craft-backpack');if(bag)bag.scrollIntoView({block:'nearest',behavior:'smooth'});return;}
@@ -557,9 +601,9 @@
       if(root.confirm('确认清空本账号的整个虚拟合成背包？将取消当前背包选材，历史合成路线保留。真实个人铭文不受影响。'))labAction(v,action);return;
     }
     if(action==='remove-lot'){
-      if(root.confirm('确认移除这批虚拟铭文？已占用的铭文需先清空材料位。'))labAction(v,'quantity',{id:control.dataset.lot,quantity:0});return;
+      if(root.confirm('确认移除这批虚拟铭文？已占用的铭文需先清空材料位。'))labAction(v,'group-remove',{id:control.dataset.lot});return;
     }
-    if(action==='actual-route'){v.actualRecord=control.dataset.record;renderSimulator(v);return;}
+    if(action==='actual-route'){var row=control.closest('[data-bag-id]'),picker=row&&row.querySelector('[data-bag-route]');v.actualRecord=picker?picker.value:control.dataset.record;renderSimulator(v);return;}
     if(action==='close-actual-route'){v.actualRecord=null;renderSimulator(v);return;}
     if(action==='adopt-legacy'){
       if(root.confirm('确认保留旧现场并继续？合法完整合成材料记为手动补充，未填满的非洗练材料另存只读草稿并重新备料。旧结果保留，不虚构制作过程。'))labAction(v,action);return;
@@ -581,27 +625,34 @@
     if(mode==='crafting-favorites'){if(root.InscriptionRouteFavorites)root.InscriptionRouteFavorites.activate();return;}
     if(!R||!P||!S||!F||!T||!L||!root.QinshiAccounts||!root.INSCRIPTION_DATA)return;
     if(!store)store=S.createWorkbench(root.QinshiAccounts);
-    var v=views[mode]||init(mode),account=currentAccount(),result=store.inspect();
-    if(!result.valid){
-      loaded=false;Object.keys(views).forEach(function(key){views[key].el.querySelectorAll('input,select,button').forEach(function(c){c.disabled=true;});status(views[key],'存档读取失败，已保留原始数据并禁止写入：'+result.errors.join('；'));});return;
-    }
-    var oldTarget=state&&JSON.stringify(state.target),changedAccount=!loaded||accountId!==account;
-    state=L.upgrade(result.state);token=result.token;accountId=account;loaded=true;if(changedAccount){favoriteOperation++;favoriteBusy=false;}
+    if(!queryStore)queryStore=S.createQueryStore(root.QinshiAccounts);
+    var v=views[mode]||init(mode),account=currentAccount(),result=store.inspect(),q=queryStore.inspect();
+    var oldQuery=queryTarget&&JSON.stringify(queryTarget),changedAccount=!loaded||accountId!==account;
+    accountId=account;loaded=true;
+    if(changedAccount){favoriteOperation++;favoriteBusy=false;}
+    if(q.valid){queryTarget=normalizeTarget(q.target);queryToken=q.token;}
+    else {queryTarget=q.target;queryToken=q.token;}
+    recovery=null;
+    if(result.valid){state=L.upgrade(result.state);token=result.token;if(state.simulation.legacy)recovery={reason:'旧现场材料来源或规则需要重新确认',raw:root.QinshiAccounts.getItem(S.KEY)};}
+    else {state=L.upgrade({version:1,target:{discipleKey:'',slot:'',dun:'',quality:'o2',attrs:['','',''],xTerm:null},simulation:S.blankSimulation()});token=null;recovery={reason:result.errors.join('；'),raw:root.QinshiAccounts.getItem(S.KEY)};}
+    state.target=normalizeTarget(state.target);
     inspectFavorites();
-    var normalized=normalizeTarget(state.target);
-    // Normalize only in memory on first open. Merely opening never rewrites old data.
-    state.target=normalized;
     Object.keys(views).forEach(function(key){
-      var view=views[key];view.attrRejection='';view.el.querySelectorAll('button,input,select').forEach(function(c){c.disabled=false;});status(view,'');
-      if(changedAccount){view.generation++;view.bagOpen=false;view.actualRecord=null;}
+      var view=views[key];view.attrRejection='';status(view,'');
+      view.el.querySelectorAll('button,input,select').forEach(function(c){c.disabled=false;});
+      if(changedAccount){view.bagOpen=false;view.actualRecord=null;view.bagSelection={};clearPlan(view);}
+      renderFilters(view);renderSimulator(view);
+      if(view.mode==='crafting-paths'){
+        if(oldQuery!==JSON.stringify(queryTarget))clearPlan(view);
+        else if(view.plan)renderPlan(view,view.plan);
+        if(!q.valid)status(view,'查询筛选读取异常，原始数据保留：'+q.errors.join('；'));
+      }
     });
-    renderAll(changedAccount||oldTarget!==JSON.stringify(state.target));
-    Object.keys(views).forEach(function(key){var view=views[key];if(view.plan&&view.planTarget===JSON.stringify(state.target))renderPlan(view,view.plan);});
   }
   document.addEventListener('click',function(event){Object.keys(views).forEach(function(key){var v=views[key];if(!event.target.closest('.craft-search')||!v.el.contains(event.target))hideSuggestions(v);if(!event.target.closest('.craft-attr-picker')||!v.el.contains(event.target))closeAttrPicker(v);});});
   root.addEventListener('inscription-route-favorites-change',function(){
     if(!loaded||currentAccount()!==accountId)return;inspectFavorites();
-    Object.keys(views).forEach(function(key){var v=views[key];if(v.plan&&v.planTarget===JSON.stringify(state.target))renderPlan(v,v.plan);});
+    Object.keys(views).forEach(function(key){var v=views[key];if(v.plan&&v.planTarget===JSON.stringify(targetFor(v)))renderPlan(v,v.plan);});
   });
   root.InscriptionCraftingUI={activate:activate,refresh:function(){var keys=Object.keys(views);if(keys.length)activate(keys[0]);if(root.InscriptionRouteFavorites)root.InscriptionRouteFavorites.refresh();}};
 })(window);

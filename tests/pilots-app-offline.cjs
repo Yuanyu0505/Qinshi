@@ -1,0 +1,18 @@
+const {test,before,after}=require('node:test'),assert=require('node:assert/strict');
+const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
+const fs=require('node:fs'),path=require('node:path');
+const {createServer}=require('../serve.js'),{openApp,currentAppVersion}=require('./browser-test-helpers.cjs');
+let server,browser,url;
+before(async()=>{server=createServer();await new Promise(r=>server.listen(0,'127.0.0.1',r));url='http://127.0.0.1:'+server.address().port;browser=await chromium.launch({channel:'msedge',headless:true});fs.mkdirSync(path.join(__dirname,'../test-results/pilots-workbench'),{recursive:true});});
+after(async()=>{await browser?.close();if(server)await new Promise(r=>server.close(r));});
+async function navigate(p,id){const tab=p.locator('.tab[data-partition="'+id+'"]');if(await tab.isVisible())await tab.click();else{await p.locator('#mobile-more-toggle').click();await p.locator('#mobile-more-layer [data-partition="'+id+'"]').click();}}
+for(const width of [390,768,1440])test(width+' real navigation lazily opens pilot search and beast reference offline',async()=>{
+ const context=await browser.newContext({viewport:{width,height:950}}),p=await context.newPage(),errors=[];p.on('pageerror',e=>errors.push(e.message));
+ try{await openApp(p,url);await p.waitForFunction(()=>navigator.serviceWorker.controller);const version=currentAppVersion();await p.waitForFunction(async v=>{const cache=await caches.open('qinshi-site-'+v);return Boolean(await cache.match('./js/pilots-ui.js'));},version);
+ await context.setOffline(true);await navigate(p,'pilots');const s=p.locator('#partition-pilots');await s.locator('.pilots-card').first().waitFor();assert.equal(await s.locator('.pilots-card').count(),60);
+ await s.locator('[data-pilots-type="pilot"]').click();await s.locator('[data-pilots-category="traditional"]').click();await s.locator('#pilots-search').fill('神英布');assert.equal(await s.locator('.pilots-card').count(),1);assert.match(await s.locator('.pilots-card').textContent(),/狼王/);
+ assert.equal(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);await p.screenshot({path:path.join(__dirname,'../test-results/pilots-workbench/pilots-'+width+'.png')});
+ await navigate(p,'machine-beasts');await p.locator('[data-machine-beast-mode="reference"]').click();await p.locator('[data-machine-breakthrough-guide]').waitFor();assert.match(await p.locator('[data-machine-breakthrough-guide]').innerText(),/3,856|3856/);
+ assert.deepEqual(errors,[]);
+ }finally{await context.close();}
+});

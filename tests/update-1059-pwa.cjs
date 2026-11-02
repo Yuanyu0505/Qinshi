@@ -31,9 +31,14 @@ test('installed 1.0.58 upgrades to secret realm release and retains progress and
     await Promise.all([page.waitForNavigation({waitUntil:'networkidle',timeout:30000}),page.locator('#pwa-apply-update').click()]);
     assert.equal(await page.locator('#pwa-version').innerText(),currentAppVersion());assert.equal(await page.evaluate(()=>window.QinshiAccounts.currentAccount().id),id);assert.equal(await page.evaluate(()=>window.QinshiAccounts.getItem('qinshi_atlas_target_level_v1')),'15');
     await page.evaluate(()=>document.querySelector('[data-partition=secret-realm]').click());await page.locator('#secret-realm-content').waitFor();
-    const totals=page.locator('[data-realm-form=totals]');await totals.locator('[name=cumulative]').fill('321');await totals.locator('[name=inventory]').fill('7');await totals.locator('[type=submit]').click();
+    const totals=page.locator('[data-realm-form=totals]');
+    assert.equal(await totals.locator('[type=submit]').count(),0,'Actual progress autosaves without a save button');
+    await totals.locator('[name=cumulative]').fill('321');await totals.locator('[name=inventory]').fill('7');
+    await page.waitForFunction(()=>{const s=JSON.parse(window.QinshiAccounts.getItem('qinshi_secret_realms_v1'));return s?.realms.guigu.cumulative===321&&s.realms.guigu.inventory===7;});
+    const actualRaw=await page.evaluate(()=>window.QinshiAccounts.getItem('qinshi_secret_realms_v1'));
     assert.deepEqual(pageErrors,[],'The updated page must not throw runtime errors');
-    await context.setOffline(true);await page.reload({waitUntil:'networkidle'});await page.evaluate(()=>document.querySelector('[data-partition=secret-realm]').click());await page.locator('#secret-realm-content').waitFor();assert.equal(await page.locator('[name=cumulative]').inputValue(),'321');
+    await context.setOffline(true);await page.reload({waitUntil:'networkidle'});await page.evaluate(()=>document.querySelector('[data-partition=secret-realm]').click());await page.locator('#secret-realm-content').waitFor();assert.equal(await page.locator('[name=cumulative]').inputValue(),'321');assert.equal(await page.locator('[name=inventory]').inputValue(),'7');
+    assert.equal(await page.evaluate(()=>window.QinshiAccounts.getItem('qinshi_secret_realms_v1')),actualRaw,'Offline loading must retain the autosaved actual progress verbatim');
     await page.locator('[data-realm-mode=planner]').click();await page.locator('[name=target]').fill('329');await page.evaluate(()=>{window.SECRET_REALM_PLANNER={plan:()=>{throw Error('Fallback forbidden by upgrade regression');}};});await page.locator('[data-realm-calculate]').click();
     await page.locator('[data-realm-results] .realm-plan').first().waitFor();assert.match(await page.locator('.realm-plan').first().innerText(),/第6期达标/);
     assert.equal(await page.evaluate(()=>window.QinshiAccounts.getItem('qinshi_atlas_target_level_v1')),'15');

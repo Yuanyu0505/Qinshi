@@ -7,6 +7,7 @@ const { createServer } = require('../serve.js');
 const { openApp, getAccountItem, setAccountItem } = require('./browser-test-helpers.cjs');
 
 const KEY = 'qinshi_inscription_crafting_v1';
+const QUERY_KEY = 'qinshi_inscription_path_query_v1';
 const FAVORITES_KEY = 'qinshi_inscription_route_favorites_v1';
 const PROGRESS_KEY = 'qinshi_inscription_progress_v2';
 let browser, server, url;
@@ -59,7 +60,8 @@ async function generate(s) {
   await s.locator('[data-craft-action="generate"]').click();
   await s.locator('.craft-strategy').first().waitFor({ state: 'visible' });
 }
-async function workbench(page) { return JSON.parse(await getAccountItem(page, KEY)).draft.simpleWorkbench; }
+async function workbench(page) { return page.evaluate(() => window.InscriptionCraftingState.createWorkbench(window.QinshiAccounts).inspect().state); }
+async function queryTarget(page) { return page.evaluate(() => window.InscriptionCraftingState.createQueryStore(window.QinshiAccounts).inspect().target); }
 async function material(s, index, values) {
   for (let i = 0; i < values.length; i++) await s.locator('[data-sim-material="' + index + '"][data-sim-term="' + i + '"]').selectOption(values[i]);
 }
@@ -116,22 +118,23 @@ test('独立九遁筛选、固定属性槽和弟子实际位置；非法目标�
   } finally { await page.close(); }
 });
 
-test('弟子建议支持键盘；改搜索词保留已选弟子、实际位置和共享存档', async () => {
+test('弟子建议支持键盘；改搜索词保留已选弟子、实际位置和独立查询存档', async () => {
   const page = await pageFor(); try {
     const s = section(page), search = field(s, 'search');
     await search.fill('墨眉天明'); await search.press('ArrowDown');
     assert.equal(await s.locator('[data-craft-suggestions] [role="option"][aria-selected="true"]').count(), 1);
     await search.press('Enter'); await field(s, 'slot').selectOption('天府|龙遁');
-    const before = (await workbench(page)).target;
+    const before = await queryTarget(page), simulatorRaw = await getAccountItem(page, KEY);
     await search.fill('盖聂');
     assert.match(await s.locator('[data-craft-suggestions]').innerText(), /盖聂/);
-    assert.deepEqual((await workbench(page)).target, before);
+    assert.deepEqual(await queryTarget(page), before);
+    assert.equal(await getAccountItem(page, KEY), simulatorRaw);
     assert.equal(await field(s, 'slot').inputValue(), '天府|龙遁');
     await page.locator('[data-mode="query"]').click();
     await page.locator('[data-mode="crafting-paths"]').click();
     assert.equal(await search.inputValue(), '墨眉天明');
     await page.reload({ waitUntil: 'load' }); await openInscription(page);
-    assert.deepEqual((await workbench(page)).target, before);
+    assert.deepEqual(await queryTarget(page), before);
     assert.equal(await field(s, 'slot').inputValue(), '天府|龙遁');
   } finally { await page.close(); }
 });
@@ -151,7 +154,7 @@ test('地三穿完整代表路线逐图可展开，紫色洗练无中档，失�
     }
     const audit = await page.evaluate(() => {
       const R = window.InscriptionRules, P = window.InscriptionPaths, F = window.InscriptionRouteFavorites;
-      const target = window.InscriptionCraftingState.createWorkbench(window.QinshiAccounts).inspect().state.target;
+      const target = window.InscriptionCraftingState.createQueryStore(window.QinshiAccounts).inspect().target;
       const plan = P.representative({ prefix: '天府', dun: target.dun, quality: target.quality, attrs: target.attrs });
       const nodes = [];
       function visit(node) { nodes.push(node); node.children.forEach(child => visit(child.node)); }
@@ -180,7 +183,8 @@ test('模拟材料联动禁止紫色低中混洗、同档重复及三个高档�
     const second = s.locator('[data-sim-material="0"][data-sim-term="1"]');
     assert.equal(await second.locator('option[value="技能穿透:M"]').count(), 0);
     assert.equal(await second.locator('option[value="技能穿透:L"]').count(), 0);
-    await second.selectOption('技能穿透:H'); await material(s, 1, ['技能穿透:M', '技能穿透:H']);
+    await second.selectOption('技能穿透:H'); await material(s, 1, ['防:H', '闪避:U']);
+    assert.equal(await s.locator('[data-sim-material="1"] option[value$=":M"]').count(), 0);
     assert.equal(await s.locator('[data-craft-action="roll"]').isEnabled(), true);
     assert.match(await s.locator('[data-craft-preview]').innerText(), /组合/);
     page.once('dialog', dialog => dialog.accept()); await s.locator('[data-sim-stage]').selectOption('o1');
@@ -216,7 +220,7 @@ for (const [dun, speed] of [['鬼遁', '速'], ['龙遁', 'PVP速']]) test(dun +
   } finally { await page.close(); }
 });
 
-test('两页共享目标，切页重载保留pending；下一阶段只带一枚产物且不改旧库存', async () => {
+test('两页目标独立，切页重载保留pending；下一阶段只带一枚产物且不改旧库存', async () => {
   const page = await pageFor('simulator'); try {
     await page.evaluate(() => {
       const store = window.InscriptionCraftingState.createStore(window.QinshiAccounts);
@@ -225,13 +229,18 @@ test('两页共享目标，切页重载保留pending；下一阶段只带一枚�
       const id = store.saveGoal({ name: '保留旧目标', prefix: '天府', dun: '鬼遁', quality: 'p1', attrs: ['速', '防'] });
       store.copyActual(id);
     });
+    await page.locator('[data-mode="crafting-paths"]').click();
+    await goal(page);
+    const queryBefore = await queryTarget(page);
+    await page.locator('[data-mode="crafting-simulator"]').click();
     const s = await goal(page, { mode: 'simulator', dun: '鬼遁', attrs: ['速', '速', '速'] });
     await material(s, 0, ['速:?']); await material(s, 1, ['防:H']);
     await s.locator('[data-craft-action="roll"]').click();
     const before = await workbench(page), legacy = JSON.parse(await getAccountItem(page, KEY));
     await page.locator('[data-mode="crafting-paths"]').click();
-    assert.equal(await field(section(page), 'dun').inputValue(), '鬼遁');
-    assert.deepEqual(await field(section(page), 'attr').evaluateAll(els => els.map(el => el.value)), ['速', '速', '速']);
+    assert.equal(await field(section(page), 'dun').inputValue(), '地遁');
+    assert.deepEqual(await field(section(page), 'attr').evaluateAll(els => els.map(el => el.value)), ['技能穿透', '技能穿透', '技能穿透']);
+    assert.deepEqual(await queryTarget(page), queryBefore);
     await page.locator('[data-mode="query"]').click(); await page.locator('[data-mode="crafting-simulator"]').click();
     assert.deepEqual((await workbench(page)).simulation, before.simulation);
     await page.reload({ waitUntil: 'load' }); await openInscription(page, 'simulator');
@@ -245,22 +254,27 @@ test('两页共享目标，切页重载保留pending；下一阶段只带一枚�
     assert.equal(await s.locator('[data-craft-action="next"]').count(), 0);
     const saved = JSON.parse(await getAccountItem(page, KEY));
     for (const name of ['actual', 'goals', 'workspaces']) assert.deepEqual(saved[name], legacy[name]);
+    assert.deepEqual(await queryTarget(page), queryBefore);
     assert.equal(await s.locator('[data-craft-material-editor], [data-craft-actual], [data-craft-field="saved-goal"]').count(), 0);
   } finally { await page.close(); }
 });
 
-test('不兼容目标切换须确认，取消保留材料，接受后两页共同重置', async () => {
+test('模拟不兼容目标切换须确认，取消保留材料，接受只重置模拟页', async () => {
   const page = await pageFor('simulator'); try {
+    await page.locator('[data-mode="crafting-paths"]').click(); await goal(page);
+    const queryBefore = await queryTarget(page);
+    await page.locator('[data-mode="crafting-simulator"]').click();
     const s = await goal(page, { mode: 'simulator', dun: '鬼遁', attrs: ['速', '速', '速'] });
     await material(s, 0, ['速:?']); const before = await workbench(page);
     page.once('dialog', d => d.dismiss()); await field(s, 'dun').selectOption('龙遁');
     assert.deepEqual(await workbench(page), before); assert.equal(await field(s, 'dun').inputValue(), '鬼遁');
     page.once('dialog', d => d.accept()); await field(s, 'dun').selectOption('龙遁');
-    assert.deepEqual((await workbench(page)).simulation, { stage: 'b2', inputs: [], pending: null });
+    assert.deepEqual((await workbench(page)).simulation, { stage: 'b2', inputs: [], refs: [], pending: null });
     await page.locator('[data-mode="crafting-paths"]').click();
-    assert.equal(await field(section(page), 'dun').inputValue(), '龙遁');
-    assert.deepEqual(await field(section(page), 'attr').evaluateAll(els => els.map(el => el.value)), ['', '', '']);
-    assert.match(await section(page).locator('[data-craft-analysis]').innerText(), /选满当前品质/);
+    assert.equal(await field(section(page), 'dun').inputValue(), '地遁');
+    assert.deepEqual(await field(section(page), 'attr').evaluateAll(els => els.map(el => el.value)), ['技能穿透', '技能穿透', '技能穿透']);
+    assert.deepEqual(await queryTarget(page), queryBefore);
+    await generate(section(page));
   } finally { await page.close(); }
 });
 
@@ -284,12 +298,14 @@ test('X可选符号A或具体B，改X保留模拟现场，不可用紫色来源�
     await material(simulator, 0, ['速:?']); await material(simulator, 1, ['速:?']);
     const scene = (await workbench(page)).simulation;
     await page.locator('[data-mode="crafting-paths"]').click();
+    await goal(page, { dun: '鬼遁', attrs: ['速', '速', '速'] });
     const s = section(page), x = field(s, 'x-term');
     assert.equal(await x.inputValue(), ''); await generate(s);
     assert.match(await s.locator('[data-craft-results]').innerText(), /符号模板 A|同一种合法不分档/);
     await x.selectOption('防:H'); await generate(s);
     assert.match(await s.locator('[data-craft-results]').innerText(), /具体模式 B|具体杂词 X/);
-    assert.deepEqual((await workbench(page)).target.xTerm, { attr: '防', tier: 'H' });
+    assert.deepEqual((await queryTarget(page)).xTerm, { attr: '防', tier: 'H' });
+    assert.equal((await workbench(page)).target.xTerm, null);
     assert.deepEqual((await workbench(page)).simulation, scene);
     await x.selectOption('血:M'); await s.locator('[data-craft-action="generate"]').click();
     await s.locator('[data-craft-status]').filter({ hasText: '紫二' }).waitFor();
@@ -328,7 +344,7 @@ test('失败结果展开收起及缩放保持单张SVG，重绘保留比例', as
 test('收藏增删筛选、重复属性、统一置顶与账号隔离，不改变目标或模拟', async () => {
   const page = await pageFor(); try {
     const s = await goal(page); await generate(s);
-    const first = await page.evaluate(() => window.QinshiAccounts.currentAccount().id), target = await workbench(page);
+    const first = await page.evaluate(() => window.QinshiAccounts.currentAccount().id), target = await queryTarget(page), simulator = await workbench(page);
     await s.locator('[data-craft-action="toggle-favorite"]').last().click(); await favoriteCount(page, 1);
     assert.equal(await s.locator('.craft-strategy').first().getAttribute('data-route-index'), '1');
     assert.equal(await s.locator('.craft-strategy').first().locator('[aria-pressed="true"]').count(), 1);
@@ -342,16 +358,18 @@ test('收藏增删筛选、重复属性、统一置顶与账号隔离，不改�
     assert.equal(await favorites.locator('.craft-favorite-route').count(), 0);
     await favorites.locator('[data-favorite-clear]').click(); await favorites.locator('.craft-favorite-route summary').click();
     await favorites.locator('svg').waitFor(); assert.equal(await favorites.locator('svg').count(), 1);
-    assert.deepEqual(await workbench(page), target);
-    const original = await getAccountItem(page, FAVORITES_KEY), originalWorkbench = await getAccountItem(page, KEY);
+    assert.deepEqual(await queryTarget(page), target);assert.deepEqual(await workbench(page), simulator);
+    const original = await getAccountItem(page, FAVORITES_KEY), originalWorkbench = await getAccountItem(page, KEY), originalQuery = await getAccountItem(page, QUERY_KEY);
     const second = await page.evaluate(() => window.QinshiAccounts.createAccount({ name: '铭文隔离测试账号', server: '测试服' }).id);
     await switchAccount(page, second);
     assert.equal(await getAccountItem(page, FAVORITES_KEY), null);
     assert.equal(await getAccountItem(page, KEY), null);
+    assert.equal(await getAccountItem(page, QUERY_KEY), null);
     assert.equal(await favorites.locator('.craft-favorite-route').count(), 0);
     await switchAccount(page, first);
     assert.equal(await getAccountItem(page, FAVORITES_KEY), original);
     assert.equal(await getAccountItem(page, KEY), originalWorkbench);
+    assert.equal(await getAccountItem(page, QUERY_KEY), originalQuery);
     assert.equal(await favorites.locator('.craft-favorite-route').count(), 1);
     await favorites.locator('[data-favorite-remove]').click(); await favoriteCount(page, 0);
     assert.equal(await favorites.locator('.craft-favorite-route').count(), 0);
@@ -360,22 +378,28 @@ test('收藏增删筛选、重复属性、统一置顶与账号隔离，不改�
   } finally { await page.close(); }
 });
 
-test('损坏合成存档保留raw并禁写，写入false不悄悄更新共享目标', async () => {
+test('损坏合成存档保留raw并提供恢复且不阻断查询，写入false不更新查询目标', async () => {
   const page = await pageFor(); try {
     await setAccountItem(page, KEY, '{broken'); await page.reload({ waitUntil: 'load' }); await openInscription(page);
     const s = section(page);
-    assert.match(await s.locator('[data-craft-status]').innerText(), /损坏|读取|存档/);
-    assert.equal(await field(s, 'quality').isDisabled(), true);
+    assert.equal(await field(s, 'quality').isDisabled(), false);
+    await goal(page);await generate(s);
     assert.equal(await getAccountItem(page, KEY), '{broken');
-    await setAccountItem(page, KEY, JSON.stringify({ schemaVersion: 1, idSequence: 0, actual: [], goals: [], workspaces: {}, draft: {} }));
-    await page.reload({ waitUntil: 'load' }); await openInscription(page);
-    const before = await getAccountItem(page, KEY);
+    await page.locator('[data-mode="crafting-simulator"]').click();
+    const simulator = section(page, 'simulator');
+    assert.match(await simulator.locator('[data-craft-simulator]').innerText(), /旧模拟数据需要处理/);
+    assert.equal(await simulator.locator('[data-craft-action="isolate-legacy"]').count(), 1);
+    assert.equal(await simulator.locator('[data-craft-action="clear-legacy"]').count(), 1);
+    assert.equal(await getAccountItem(page, KEY), '{broken');
+    await page.locator('[data-mode="crafting-paths"]').click();
+    const before = await getAccountItem(page, QUERY_KEY);
     await page.evaluate(() => { window.craftingWriteAttempts = 0; window.QinshiAccounts.setItem = () => { window.craftingWriteAttempts++; return false; }; });
-    await field(s, 'dun').selectOption('地遁');
+    await field(s, 'dun').selectOption('鬼遁');
     assert.match(await s.locator('[data-craft-status]').innerText(), /保存|写入/);
-    assert.equal(await field(s, 'dun').inputValue(), '');
+    assert.equal(await field(s, 'dun').inputValue(), '地遁');
     assert.ok(await page.evaluate(() => window.craftingWriteAttempts > 0));
-    assert.equal(await getAccountItem(page, KEY), before);
+    assert.equal(await getAccountItem(page, QUERY_KEY), before);
+    assert.equal(await getAccountItem(page, KEY), '{broken');
   } finally { await page.close(); }
 });
 

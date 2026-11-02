@@ -77,6 +77,26 @@ test('flow terms use bold quality colours distinct from ordinary box copy',async
   }finally{await page.close();}
 });
 
+test('flow copy uses its compact original sizes and cards finish close below the last line',async()=>{
+  const {page,card}=await setup(768,['护盾','护盾','技免'],'云遁');try{
+    const sizes=await card.locator('.craft-flow-box text').evaluateAll(nodes=>nodes.map(node=>({
+      kind:node.getAttribute('class'),size:parseFloat(getComputedStyle(node).fontSize)
+    })));
+    for(const [kind,size]of [['craft-flow-node-title',15],['craft-flow-node-note',12],['craft-flow-next',13]]){
+      const matches=sizes.filter(item=>item.kind===kind);assert.ok(matches.length,'exercise '+kind);
+      for(const item of matches)assert.equal(item.size,size,kind+' keeps its original readable size');
+    }
+    const padding=await card.locator('.craft-flow-box').evaluateAll(nodes=>nodes.map(node=>{
+      const rect=node.querySelector('rect'),lines=node.querySelectorAll('text'),last=lines[lines.length-1];
+      return Number(rect.getAttribute('y'))+Number(rect.getAttribute('height'))-Number(last.getAttribute('y'));
+    }));
+    for(const bottom of padding)assert.ok(bottom<=22,'no oversized empty strip below the last line');
+    assert.equal(await card.locator('.craft-flow-next-band').count(),0);
+    fs.mkdirSync('test-results/1071-visual',{recursive:true});
+    await card.locator('[data-flow-viewer]').screenshot({path:'test-results/1071-visual/cloud-grouped-768.png'});
+  }finally{await page.close();}
+});
+
 test('changing crafting context clears target choices while typing search and choosing the same disciple do not',async()=>{
   const {page,section}=await setup(1024);
   try{

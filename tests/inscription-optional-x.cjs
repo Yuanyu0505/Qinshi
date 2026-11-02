@@ -32,6 +32,8 @@ test('empty X remains queryable while concrete X changes preserve the simulation
     assert.match(await section.locator('[data-craft-results]').innerText(),/符号|不分档/);
     await page.locator('[data-mode="crafting-simulator"]').click();
     const simulator=page.locator('#inscription-crafting-simulator');
+    assert.equal(await simulator.locator('[data-craft-field="dun"]').inputValue(),'');
+    await simulator.locator('[data-craft-field="dun"]').selectOption('鬼遁');
     const inputs=simulator.locator('[data-sim-term]');
     await inputs.nth(0).selectOption('速:?');await inputs.nth(1).selectOption('速:?');
     await page.locator('[data-mode="crafting-paths"]').click();

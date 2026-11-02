@@ -188,7 +188,10 @@ test('graded concrete X uses its reduced route count, wash source and actual lab
     assert.match(await chance.locator('.craft-route-picker').innerText(),/紫二置换准备/);
     const description=await chance.locator('svg desc').textContent();
     assert.match(description,/另行置换合成素材铭文/);
-    assert.match(description,/概率未知/);
+    assert.match(await section.locator('.craft-note').filter({hasText:'等概率模型'}).first().innerText(),/置换概率未知.*不计算整条路线的总成功率/);
+    const washes=chance.locator('svg .craft-flow-wash');
+    assert.ok(await washes.count()>0);
+    for(const text of await washes.allTextContents())assert.doesNotMatch(text,/100%|必出|概率未知/,'Wash preparation has no invented guarantee or repeated unknown-probability note');
     assert.match(description,/2%技能穿透（低档）/);
     assert.doesNotMatch(description,/杂词条 X（同一个）/);
   }finally{await page.close();}

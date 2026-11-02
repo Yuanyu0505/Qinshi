@@ -6,7 +6,7 @@
   if (root) root.InscriptionCraftingState = api;
 })(typeof window !== "undefined" ? window : null, function (Rules, Lab) {
   "use strict";
-  var KEY = "qinshi_inscription_crafting_v1", sequence = 0;
+  var KEY = "qinshi_inscription_crafting_v1", QUERY_KEY = "qinshi_inscription_path_query_v1", ARCHIVE_KEY = "qinshi_inscription_simulation_archives_v1", sequence = 0;
   function copy(value) { return JSON.parse(JSON.stringify(value)); }
   function fail(message) { throw new Error(message); }
   function object(value) { return !!value && typeof value === "object" && !Array.isArray(value); }
@@ -186,6 +186,27 @@
   }
   function defaultTarget() { return { discipleKey: "", slot: "", dun: "", quality: "o2", attrs: ["", "", ""], xTerm: null }; }
   function blankSimulation() { return { stage: "b2", inputs: [], pending: null }; }
+  function checkedTarget(target) {
+    var result=copy(target);checkSimple({version:1,target:result,simulation:blankSimulation()});return result;
+  }
+  function accountOf(storage){var a=storage.currentAccount&&storage.currentAccount();return a?a.id:null;}
+  function write(storage,key,value){if(storage.setItem(key,JSON.stringify(value))===false)fail('存储拒绝写入');}
+  // Query filters have their own account-scoped transaction. A damaged simulator
+  // must never prevent a player from querying or favoriting a valid recipe.
+  function createQueryStore(storage){
+    function inspect(){var raw=storage.getItem(QUERY_KEY);try{
+      var target;
+      if(raw!=null)target=checkedTarget(JSON.parse(raw));
+      else {target=defaultTarget();try{var old=JSON.parse(storage.getItem(KEY));target=checkedTarget(old.draft.simpleWorkbench.target);}catch(e){/* optional read-only migration */}}
+      return {valid:true,target:target,token:raw==null?null:raw,errors:[]};
+    }catch(e){return {valid:false,target:defaultTarget(),token:raw,errors:[e.message]};}}
+    return {inspect:inspect,save:function(target,expected,accountId){
+      var valid=checkedTarget(target);
+      if(accountOf(storage)!==accountId)fail('账号已切换，请重新打开铭文分区');
+      if((storage.getItem(QUERY_KEY)??null)!==expected)fail('查询筛选已在其他页面更新，请重新打开分区');
+      write(storage,QUERY_KEY,valid);return inspect();
+    }};
+  }
   function targetAfterContextChange(previous, next) {
     var target = copy(next);
     if (["discipleKey", "slot", "dun", "quality"].some(function (key) { return previous[key] !== target[key]; })) {
@@ -252,6 +273,53 @@
   }
   function createWorkbench(storage) {
     var legacy = createStore(storage);
+    function salvageOuter(old){
+      var safe=empty();if(!object(old))return safe;
+      if(Number.isSafeInteger(old.idSequence)&&old.idSequence>=0)safe.idSequence=old.idSequence;
+      if(object(old.draft))safe.draft=copy(old.draft);
+      (Array.isArray(old.actual)?old.actual:[]).forEach(function(entry){var candidate=copy(safe.actual);candidate.push(copy(entry));try{checkInventory(candidate);safe.actual=candidate;}catch(e){}});
+      (Array.isArray(old.goals)?old.goals:[]).forEach(function(goal){
+        var candidate=copy(safe);try{candidate.goals.push(copy(goal));candidate.workspaces[goal.id]=workspace();checkState(candidate);safe=candidate;}catch(e){}
+      });
+      // A corrupt pending in one former named workspace must not discard real
+      // inventory, saved goals, unrelated drafts or other healthy workspaces.
+      safe.goals.forEach(function(goal){if(!object(old.workspaces)||!Object.hasOwn(old.workspaces,goal.id))return;
+        var candidate=copy(safe);candidate.workspaces[goal.id]=copy(old.workspaces[goal.id]);try{checkState(candidate);safe=candidate;}catch(e){}
+      });return safe;
+    }
+    function archives(){var raw=storage.getItem(ARCHIVE_KEY);if(raw==null)return [];var list=JSON.parse(raw);if(!Array.isArray(list))fail('旧档归档格式无效');return list;}
+    function recover(mode,expectedRaw,accountId){
+      if(!['isolate','clear'].includes(mode))fail('请选择旧档处理方式');
+      if(accountOf(storage)!==accountId)fail('账号已切换，请重新打开铭文分区');
+      if((storage.getItem(KEY)??null)!==expectedRaw)fail('旧档已改变，请重新打开分区');
+      var old,outer;
+      try{old=JSON.parse(expectedRaw);outer=checkState(copy(old));}catch(e){outer=salvageOuter(old);}
+      var saved=old&&old.draft&&old.draft.simpleWorkbench,target=defaultTarget();
+      try{target=checkedTarget(saved.target);}catch(e){/* keep invalid original in archive */}
+      var next=Lab.upgrade({version:1,target:target,simulation:blankSimulation()});
+      if(mode==='isolate'&&saved&&object(saved.lab)){
+        // Recover independently validated history and stock, not an invalid
+        // pending/undo transaction. Rejected entries remain in the raw archive.
+        var source=saved.lab;
+        next.lab.sequence=Number.isSafeInteger(source.sequence)&&source.sequence>=0?source.sequence:0;
+        (Array.isArray(source.records)?source.records:[]).forEach(function(r){var candidate=copy(next);candidate.lab.records.push(copy(r));try{Lab.validate(candidate);next=candidate;}catch(e){}});
+        (Array.isArray(source.lots)?source.lots:[]).forEach(function(l){var candidate=copy(next);candidate.lab.lots.push(copy(l));try{Lab.validate(candidate);next=candidate;}catch(e){}});
+        // Existing ids must not collide with newly allocated record/lot ids.
+        next.lab.records.concat(next.lab.lots).forEach(function(e){var n=Number(String(e.id).split('-').pop());if(Number.isSafeInteger(n))next.lab.sequence=Math.max(next.lab.sequence,n);});
+      }
+      checkSimple(next);
+      var previous=inspect(),list=mode==='isolate'?archives():[];
+      if(mode==='isolate')list.push({raw:expectedRaw,reason:previous.valid?'旧版模拟现场需要隔离':previous.errors.join('；'),createdAt:new Date().toISOString()});
+      // Write the rescue copy first; if the main write fails the original and
+      // archive are still recoverable. Clearing is only called after UI consent.
+      write(storage,ARCHIVE_KEY,list);
+      if(accountOf(storage)!==accountId||(storage.getItem(KEY)??null)!==expectedRaw)fail('当前账号或旧档已改变，未覆盖原始数据');
+      if(mode==='clear'){
+        Object.keys(outer.workspaces).forEach(function(id){outer.workspaces[id]=workspace();});
+        delete outer.draft['crafting-simulator'];
+      }
+      outer.draft.simpleWorkbench=next;checkState(outer);write(storage,KEY,outer);return inspect();
+    }
     function inspect() {
       var found = legacy.inspect();
       if (!found.valid) return found;
@@ -275,8 +343,10 @@
     }
     return {
       inspect: inspect,
+      recover: recover,
+      archives: archives,
       save: function (value, expected, accountId) { legacy.saveSimple(value, expected, accountId); return inspect(); }
     };
   }
-  return { KEY: KEY, createStore: createStore, createWorkbench: createWorkbench, blankSimulation: blankSimulation, targetAfterContextChange: targetAfterContextChange, context: context, xOptions: xOptions, infer: infer, preview: simulationPreview };
+  return { KEY: KEY, QUERY_KEY: QUERY_KEY, createQueryStore: createQueryStore, createStore: createStore, createWorkbench: createWorkbench, blankSimulation: blankSimulation, targetAfterContextChange: targetAfterContextChange, context: context, xOptions: xOptions, infer: infer, preview: simulationPreview };
 });

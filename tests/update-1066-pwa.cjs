@@ -21,7 +21,8 @@ const FAVORITES = 'qinshi_inscription_route_favorites_v1';
 const NEW_ASSETS = [
   'css/formation-search.css', 'css/inscription-route-favorites.css',
   'data/2026-10-inscription-update.js', 'js/inscription-progress-rules.js',
-  'js/inscription-route-favorites.js', 'js/inscription-flow-model.js'
+  'js/inscription-route-favorites.js', 'js/inscription-flow-model.js',
+  'css/pilots.css', 'data/pilots.js', 'js/pilots.js', 'js/pilots-ui.js'
 ];
 let artifacts;
 

@@ -43,6 +43,7 @@
     forging: "橙装锻造",
     inscription: "铭文",
     "machine-beasts": "机关兽",
+    pilots: "机师",
     tactics: "兵法",
     "battle-box-pill-pouch": "战匣丹囊",
     "wooden-man-alley": "木人巷",
@@ -1100,7 +1101,7 @@
     const mobileMoreLayer = document.getElementById("mobile-more-layer");
     const mobileMoreClose = document.getElementById("mobile-more-close");
     const appShell = document.querySelector(".app-shell");
-    const secondaryPartitions = ["forbidden", "secret-realm", "inscription", "machine-beasts", "tactics", "battle-box-pill-pouch", "wooden-man-alley", "formations", "six-halls", "loulan", "zhulu", "quiz", "settings"];
+    const secondaryPartitions = ["forbidden", "secret-realm", "inscription", "machine-beasts", "pilots", "tactics", "battle-box-pill-pouch", "wooden-man-alley", "formations", "six-halls", "loulan", "zhulu", "quiz", "settings"];
     const partitionScrollPositions = Object.create(null);
     let activePartition = "atlas";
     let mobileMoreRestoreTarget = null;
@@ -1120,6 +1121,7 @@
       quiz: document.getElementById("partition-quiz"),
       inscription: document.getElementById("partition-inscription"),
       "machine-beasts": document.getElementById("partition-machine-beasts"),
+      pilots: document.getElementById("partition-pilots"),
       tactics: document.getElementById("partition-tactics"),
       "battle-box-pill-pouch": document.getElementById("partition-battle-box-pill-pouch"),
       "wooden-man-alley": document.getElementById("partition-wooden-man-alley"),

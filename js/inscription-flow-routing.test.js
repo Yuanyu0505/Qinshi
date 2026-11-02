@@ -3,6 +3,8 @@ const assert=require('node:assert/strict');
 const Paths=require('./inscription-paths.js');
 const Flow=require('./inscription-flowchart.js');
 const Model=require('./inscription-flow-model.js');
+const Rules=require('./inscription-rules.js');
+const Simulation=require('./inscription-simulation.js');
 
 function drawing(route,x){
   const html=Flow.render(route,x),boxes=new Map();
@@ -28,6 +30,71 @@ function cuts(a,b,r){
   }
   return low<high;
 }
+
+function assertBatchNeighbours(rendered){
+  const sources=rendered.wires.filter(w=>w.attrs['data-phase']==='input').map(w=>({batch:w.attrs['data-batch'],id:w.attrs['data-from'],box:rendered.boxes.get(w.attrs['data-from'])}));
+  const rows=new Map();
+  for(const source of sources){
+    if(!source.box)continue;
+    if(!rows.has(source.box.y))rows.set(source.box.y,[]);
+    const row=rows.get(source.box.y);if(!row.some(n=>n.id===source.id))row.push(source);
+  }
+  for(const row of rows.values()){
+    row.sort((a,b)=>a.box.x-b.box.x);
+    for(const batch of new Set(row.map(n=>n.batch))){
+      const positions=row.flatMap((n,i)=>n.batch===batch?[i]:[]);
+      assert.equal(positions.at(-1)-positions[0]+1,positions.length,'ingredients of '+batch+' must be adjacent: '+row.map(n=>n.id+'='+n.batch+'@'+n.box.y).join(','));
+    }
+  }
+  const boxes=Array.from(rendered.boxes);
+  for(let i=0;i<boxes.length;i++)for(let j=i+1;j<boxes.length;j++){
+    const [id,a]=boxes[i],[other,b]=boxes[j];
+    assert.ok(a.x+a.width<=b.x||b.x+b.width<=a.x||a.y+a.height<=b.y||b.y+b.height<=a.y,id+' must not overlap '+other);
+  }
+  for(const wire of rendered.wires){
+    for(const [id,rect]of boxes){
+      if(id===wire.attrs['data-from']||id===wire.attrs['data-to'])continue;
+      for(let i=1;i<wire.points.length;i++)assert.equal(cuts(wire.points[i-1],wire.points[i],rect),false,'unrelated node '+id+' must not be crossed by '+wire.attrs['data-from']+' -> '+wire.attrs['data-to']);
+    }
+  }
+}
+
+test('all template, saved wash and actual recipe routes keep recipe ingredients adjacent and geometry clear',()=>{
+  let checked=0;
+  for(const dun of Rules.duns)for(const quality of ['p1','p2','o1','o2']){
+    const attrs=quality==='o2'&&dun.id==='云遁'?['护盾','护盾','技免']:Array(quality==='p1'||quality==='p2'?2:3).fill(dun.high[0]);
+    const plan=Paths.representative({prefix:'天府',dun:dun.id,quality,attrs});
+    for(const original of plan.strategies){
+      const route=JSON.parse(JSON.stringify(original));
+      assertBatchNeighbours(drawing(route,plan.xAttr));
+      function wash(node){if(node.kind==='base'){node.kind='wash';node.material.origin='wash';node.children=[];}else(node.children||[]).forEach(c=>wash(c.node));}
+      wash(route.tree);
+      assertBatchNeighbours(drawing(route,plan.xAttr));
+      // Recorded routes use the public provenance projection, not a template flag.
+      const records=[];
+      function record(node){
+        if(node.kind==='base'||node.kind==='wash')return null;
+        const inputs=(node.children||[]).flatMap(c=>Array.from({length:c.quantity},()=>({material:c.node.material,recordId:record(c.node),source:'wash'})));
+        const id='record-'+records.length;records.push({id,material:node.material,probability:node.probability,promotion:node.promotion,inputs});return id;
+      }
+      const recordId=record(original.tree);
+      if(recordId)assertBatchNeighbours(drawing(Simulation.route({lab:{records}},recordId),null));
+      checked++;
+    }
+  }
+  assert.ok(checked>40,'exercise multiple families, qualities and route kinds');
+});
+
+test('flow cards fit compact line spacing without excess bottom padding',()=>{
+  const plan=Paths.representative({prefix:'天府',dun:'云遁',quality:'o2',attrs:['护盾','护盾','技免']});
+  const html=drawing(plan.strategies[0],plan.xAttr).html;
+  for(const match of html.matchAll(/<g class="craft-flow-box[^\"]*"[^>]*>([\s\S]*?)<\/g>/g)){
+    const rect=match[1].match(/<rect[^>]+ y="([\d.]+)"[^>]+ height="([\d.]+)"/),texts=Array.from(match[1].matchAll(/<text[^>]+ y="([\d.]+)"/g),m=>Number(m[1]));
+    assert.equal(Number(rect[2]),24+texts.length*20,'card height tracks the actual line count');
+    for(let i=1;i<texts.length;i++)assert.equal(texts[i]-texts[i-1],20);
+    assert.ok(Number(rect[1])+Number(rect[2])-texts.at(-1)<=22,'last line leaves only compact bottom padding');
+  }
+});
 test('cloud preparation batches do not merge into a misleading common input bus',()=>{
   const plan=Paths.representative({prefix:'天府',dun:'云遁',quality:'o2',attrs:['护盾','护盾','技免']});
   assert.ok(plan.strategies.length);

@@ -743,8 +743,27 @@
       }).join('') + '</tbody></table></div></section>';
   }
 
+  function breakthroughGuideReference() {
+    var guide = DATA.breakthroughGuide;
+    if (!guide) return '';
+    return '<section class="panel machine-blueprint-guide" data-machine-breakthrough-guide><h2>机关兽突破材料参考（0—10阶）</h2>' +
+      '<p class="muted-tip">来源：' + escapeHtml(guide.source.publisher) + '《' + escapeHtml(guide.source.name) + '》。仅作原图资料参考，不参与计算，不改变现有研究值、资源消耗或优化规则。下表阶数为单只机关兽突破阶数，并非研发等级或流派阶数。</p>' +
+      '<h3>逐阶段所需成品材料</h3><div class="machine-blueprint-guide-scroll" tabindex="0" role="region" aria-label="机关兽突破成品材料表，可横向滚动"><table class="machine-blueprint-guide-table"><thead><tr><th scope="col">突破阶段</th><th scope="col">成品材料</th></tr></thead><tbody>' +
+      guide.stages.map(function (stage) {
+        return '<tr data-breakthrough-stage><th scope="row">' + escapeHtml(stage.from) + '→' + escapeHtml(stage.to) + '阶</th><td>' + stage.materials.map(function (material) {
+          return escapeHtml(material.name) + ' × ' + escapeHtml(material.quantity);
+        }).join('、') + '</td></tr>';
+      }).join('') + '</tbody></table></div><h3>从0阶升至7／8／9／10阶累计材料</h3>' +
+      '<p class="muted-tip">累计表按原图独立列示；上表“玄铁工具箱”与累计表“玄铁箱设计图”保留各自原图名称，不据此新增配方或折算规则。</p>' +
+      '<div class="machine-blueprint-guide-scroll" tabindex="0" role="region" aria-label="机关兽突破累计材料表，可横向滚动"><table class="machine-blueprint-guide-table"><thead><tr><th scope="col">材料</th>' +
+      guide.ranks.map(function (rank) { return '<th scope="col">' + escapeHtml(rank) + '阶</th>'; }).join('') + '</tr></thead><tbody>' +
+      guide.resources.map(function (resource) {
+        return '<tr data-breakthrough-resource><th scope="row">' + escapeHtml(resource.name) + '</th>' + resource.values.map(function (value) { return '<td>' + escapeHtml(value) + '</td>'; }).join('') + '</tr>';
+      }).join('') + '</tbody></table></div></section>';
+  }
+
   function renderReference() {
-    el.referenceContent.innerHTML = beastReference() + materialReference() + blueprintGuideReference() + schoolReference() + thresholdReference() + researchReference();
+    el.referenceContent.innerHTML = beastReference() + materialReference() + blueprintGuideReference() + breakthroughGuideReference() + schoolReference() + thresholdReference() + researchReference();
     rendered.reference = true;
   }
 

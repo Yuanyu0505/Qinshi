@@ -41,16 +41,34 @@
       });
     });
     var groups=Array.from(new Set(columns.values()));
+    var groupOrder=new Map(),visited=new Set();
+    function visit(node){
+      if(visited.has(node.id))return;visited.add(node.id);
+      edges.filter(function(e){return e.to===node.id;}).map(function(e){return byId.get(e.from);}).sort(function(a,b){return (a.role==='auxiliary')-(b.role==='auxiliary');}).forEach(visit);
+      var group=columns.get(node.id);
+      if(group&&!groupOrder.has(group))groupOrder.set(group,groupOrder.size);
+    }
+    // Traverse complete recipe subtrees before the next sibling recipe. This
+    // also handles recorded chains whose independent leaves have distinct IDs.
+    nodes.filter(function(n){return !edges.some(function(e){return e.from===n.id;});}).forEach(visit);
+    nodes.forEach(visit);
     groups.forEach(function(g){
       g.first=Math.min.apply(null,g.members.map(function(n){return n.level;}));
       g.last=Math.max.apply(null,g.members.map(function(n){return n.level;}));
       g.w=Math.max.apply(null,g.members.map(function(n){return n.w;}));
       g.demand=Math.max.apply(null,g.members.map(function(n){return n.demand||0;}));
+      g.order=groupOrder.get(g);
     });
     function tracksFor(role){
       var tracks=[];
-      groups.filter(function(g){return g.role===role;}).sort(function(a,b){return a.first-b.first||b.last-a.last||b.demand-a.demand;}).forEach(function(group){
-        var track=tracks.find(function(t){return t.groups.every(function(other){return group.first>other.last||group.last<other.first;});});
+      groups.filter(function(g){return g.role===role;}).sort(function(a,b){return role==='main'?a.order-b.order:a.first-b.first||b.last-a.last||b.demand-a.demand;}).forEach(function(group){
+        // Reuse a main column only along an actual recipe relationship. Empty
+        // columns in unrelated subtrees would interleave ingredients later on.
+        var track=tracks.find(function(t){
+          if(!t.groups.every(function(other){return group.first>other.last||group.last<other.first;}))return false;
+          if(role!=='main')return true;
+          return Array.from(batches.values()).some(function(batch){return batch.outputs.some(function(n){return columns.get(n.id)===group;})&&batch.inputs.some(function(n){return t.groups.indexOf(columns.get(n.id))>=0;});});
+        });
         if(!track){track={groups:[],w:0};tracks.push(track);}
         track.groups.push(group);track.w=Math.max(track.w,group.w);
       });

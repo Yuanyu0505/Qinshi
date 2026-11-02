@@ -155,8 +155,8 @@ test('installed actual 1.0.61 upgrades to crafting release preserving legacy val
       const m = () => ({ prefix: '天机', dun: '鬼遁', quality: 'b2', origin: 'wash', terms: [{ attr: '速', tier: '?' }] });
       return window.InscriptionRules.preview([m(), m()]).outcomes;
     });
-    assert.equal(outcomes.length, 9);
-    assert.ok(outcomes.every(outcome => outcome.probability === 1 / 9));
+    assert.equal(outcomes.length, 17);
+    assert.ok(outcomes.every(outcome => outcome.probability === 1 / 17));
     assert.equal(await page.evaluate(() => window.QinshiAccounts.getItem('qinshi_inscription_progress_v2')), legacy.raw);
     const names = await page.evaluate(() => caches.keys());
     assert.ok(names.includes('qinshi-site-' + currentAppVersion()));

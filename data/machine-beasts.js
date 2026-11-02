@@ -134,6 +134,36 @@
     ]
   };
 
+  // 用户提供的突破材料原图转录，仅供资料页展示，不接入计算规则。
+  var breakthroughGuide = {
+    source: { name: "满阶机关兽突破所需材料表", publisher: "秦时明月手游频道", file: "codex-clipboard-26a3dea5-564e-40bd-a70b-0a4e182076fb.png" },
+    stages: [
+      { from: 0, to: 1, materials: [{ name: "青铜关节", quantity: 1 }, { name: "青铜底座", quantity: 1 }, { name: "青铜线圈", quantity: 1 }, { name: "青铜螺栓", quantity: 1 }] },
+      { from: 1, to: 2, materials: [{ name: "精钢外壳", quantity: 1 }, { name: "精钢关节", quantity: 1 }, { name: "精钢线圈", quantity: 1 }] },
+      { from: 2, to: 3, materials: [{ name: "精钢关节", quantity: 1 }, { name: "精钢线圈", quantity: 1 }, { name: "精钢螺栓", quantity: 1 }, { name: "精钢底座", quantity: 1 }] },
+      { from: 3, to: 4, materials: [{ name: "精钢底座", quantity: 1 }, { name: "精钢管", quantity: 1 }, { name: "玄铁外壳", quantity: 1 }] },
+      { from: 4, to: 5, materials: [{ name: "玄铁关节", quantity: 1 }, { name: "玄铁底座", quantity: 1 }, { name: "玄铁螺栓", quantity: 1 }] },
+      { from: 5, to: 6, materials: [{ name: "玄铁外壳", quantity: 1 }, { name: "玄铁关节", quantity: 1 }, { name: "玄铁线圈", quantity: 1 }, { name: "玄铁管", quantity: 1 }] },
+      { from: 6, to: 7, materials: [{ name: "玄铁线圈", quantity: 1 }, { name: "玄铁螺栓", quantity: 1 }, { name: "玄铁管", quantity: 1 }, { name: "玄铁工具箱", quantity: 1 }] },
+      { from: 7, to: 8, materials: [{ name: "同名7阶机关兽", quantity: 1 }] },
+      { from: 8, to: 9, materials: [{ name: "同名7阶机关兽", quantity: 2 }] },
+      { from: 9, to: 10, materials: [{ name: "同名7阶机关兽", quantity: 4 }] }
+    ],
+    ranks: [7, 8, 9, 10],
+    resources: [
+      { name: "青铜螺栓设计图", values: [22, 44, 88, 176] },
+      { name: "精钢底座设计图", values: [24, 48, 96, 192] },
+      { name: "精钢管设计图", values: [24, 48, 96, 192] },
+      { name: "玄铁外壳设计图", values: [25, 50, 100, 200] },
+      { name: "玄铁关节设计图", values: [25, 50, 100, 200] },
+      { name: "玄铁箱设计图", values: [5, 10, 20, 40] },
+      { name: "铅块", values: [482, 964, 1928, 3856] },
+      { name: "青铜", values: [333, 666, 1332, 2664] },
+      { name: "精钢", values: [156, 312, 624, 1248] },
+      { name: "玄铁", values: [94, 188, 376, 752] }
+    ]
+  };
+
   var referenceCostRules = {
     blueprintPrice: 70,
     blueprintPrices: [
@@ -229,6 +259,7 @@
     resourceRules: { blueprintDivisor: 500, organPieceDivisor: 100, yuanPerContribution: 1 / 2.7 },
     referenceCostRules: referenceCostRules,
     blueprintGuide: blueprintGuide,
+    breakthroughGuide: breakthroughGuide,
     materialSources: materialSources,
     effectLevels: [10, 15, 20, 25],
     beasts: beasts,

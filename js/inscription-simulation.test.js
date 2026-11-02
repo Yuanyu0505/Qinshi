@@ -32,6 +32,7 @@ test('quantity increments are independent manual lots and invalidate conflicting
 test('backpack use enforces multiplicity and same prefix/dun/quality',()=>{
  let w=Lab.act(fresh(),'roll',{random:()=>0});w=Lab.act(w,'next');const id=w.simulation.refs[0];
  assert.throws(()=>Lab.act(w,'select',{selection:[{id,quantity:2}]}),/不足/);
+ w=Lab.act(w,'edit',{index:0,terms:[null,null]});
  w=Lab.act(w,'select',{selection:[{id,quantity:1}]});assert.equal(w.simulation.refs[0],id);
  w=Lab.act(w,'clear-bag');assert.equal(total(w),0);assert.equal(w.simulation.refs.some(Boolean),false);
 });
@@ -87,10 +88,91 @@ test('manually incremented material is a trace leaf, not a copied simulated chai
  let w=threePurple(),first=w.simulation.refs[0];
  w=Lab.act(w,'quantity',{id:first,quantity:2});const manual=w.lab.lots.find(l=>l.source.type==='manual');
  const others=w.simulation.refs.slice(1).map(id=>({id,quantity:1}));
+ for(let i=0;i<3;i++)w=Lab.act(w,'edit',{index:i,terms:[null,null]});
  w=Lab.act(w,'select',{selection:[{id:manual.id,quantity:1},...others]});w=Lab.act(w,'roll',{random:()=>0});
  const route=Lab.route(w,w.simulation.pending.recordId);
  assert.equal(route.tree.children[0].node.kind,'base');assert.equal(route.tree.children[0].node.material.quality,'p1');
  assert.equal(route.tree.children[0].node.sourceLabel,'手动补充');
+});
+
+test('equivalent backpack materials group without losing separate actual source routes',()=>{
+ let w=threePurple();w=Lab.act(w,'reset',{stage:'p1'});
+ w=Lab.act(w,'quantity',{id:w.lab.lots[0].id,quantity:3});
+ const groups=Lab.groups(w);assert.equal(groups.length,1);
+ const group=groups[0];assert.equal(group.quantity,5);assert.equal(group.available,5);assert.equal(group.reserved,0);
+ assert.equal(group.lots.length,4);assert.equal(group.id,R.signature(group.material));
+ assert.equal(group.lots.filter(l=>l.source.type==='simulation').length,3);
+ group.lots.filter(l=>l.source.type==='simulation').forEach(l=>assert.equal(Lab.route(w,l.source.recordId).tree.sourceKey,l.source.recordId));
+ assert.equal(group.lots.filter(l=>l.source.type==='manual')[0].quantity,2);
+ const before=JSON.stringify(w);group.lots[0].quantity=900;assert.equal(JSON.stringify(w),before);
+});
+
+test('picker fills only empty slots and preserves partial and completed hand entries',()=>{
+ let w=threePurple();w=Lab.act(w,'reset',{stage:'p1'});
+ w=Lab.act(w,'edit',{index:0,terms:[{attr:'速',tier:'H'},null]});
+ w=Lab.act(w,'edit',{index:2,terms:[{attr:'速',tier:'H'},{attr:'防',tier:'H'}]});
+ const before=JSON.parse(JSON.stringify(w.simulation.inputs));
+ w=Lab.act(w,'select',{selection:[{id:w.lab.lots[0].id,quantity:1}]});
+ assert.deepEqual(w.simulation.inputs[0],before[0]);assert.deepEqual(w.simulation.inputs[2],before[2]);
+ assert.equal(w.simulation.refs[1],w.lab.lots[0].id);assert.equal(Lab.selectionCapacity(w),0);
+ const full=JSON.stringify(w);assert.throws(()=>Lab.act(w,'select',{selection:[{id:w.lab.lots[1].id,quantity:1}]}),/空.*材料位|空位/);
+ assert.equal(JSON.stringify(w),full);
+});
+
+test('group picker subtracts existing reserved stock and atomically validates combined selections',()=>{
+ let w=threePurple();w=Lab.act(w,'reset',{stage:'p1'});const id=w.lab.lots[0].id;
+ w=Lab.act(w,'select',{selection:[{id,quantity:1}]});
+ const group=Lab.groups(w)[0];assert.equal(group.available,2);assert.equal(group.reserved,1);assert.equal(Lab.selectionCapacity(w),2);
+ const snapshot=JSON.stringify(w);
+ assert.throws(()=>Lab.act(w,'select',{selection:[{id,quantity:1}]}),/不足/);
+ assert.throws(()=>Lab.act(w,'select',{selection:[{id:group.id,quantity:1},{id:group.id,quantity:2}]}),/不足|空.*材料位|空位/);
+ assert.equal(JSON.stringify(w),snapshot);
+ w=Lab.act(w,'select',{selection:[{id:group.id,quantity:2}]});
+ assert.equal(w.simulation.refs[0],id);assert.equal(new Set(w.simulation.refs).size,3);assert.equal(Lab.groups(w)[0].available,0);
+ w=Lab.act(w,'roll',{random:()=>0});
+ assert.ok(Lab.route(w,w.simulation.pending.recordId).tree.children.every(c=>c.node.kind==='craft'));
+});
+
+test('group quantity additions are manual and reductions respect exact lot reservations',()=>{
+ let w=threePurple();w=Lab.act(w,'reset',{stage:'p1'});const first=w.lab.lots[0].id;
+ w=Lab.act(w,'select',{selection:[{id:first,quantity:1}]});const id=Lab.groups(w)[0].id;
+ w=Lab.act(w,'group-quantity',{id,quantity:6});assert.equal(total(w),6);
+ assert.equal(w.lab.records.length,3);assert.equal(w.lab.lots.find(l=>l.id===first).quantity,1);
+ assert.equal(w.lab.lots.find(l=>l.source.type==='manual').quantity,3);
+ w=Lab.act(w,'group-quantity',{id,quantity:1});assert.equal(total(w),1);
+ assert.equal(w.lab.lots.find(l=>l.id===first).quantity,1);assert.equal(w.simulation.refs[0],first);
+ const snapshot=JSON.stringify(w);assert.throws(()=>Lab.act(w,'group-remove',{id}),/占用/);assert.equal(JSON.stringify(w),snapshot);
+ w=Lab.act(w,'edit',{index:0,terms:[null,null]});w=Lab.act(w,'group-remove',{id});
+ assert.equal(total(w),0);assert.equal(Lab.groups(w).length,0);assert.equal(w.lab.records.length,3);
+});
+
+test('picker keeps legacy source confirmation mandatory',()=>{
+ let w=threePurple();w=Lab.act(w,'reset',{stage:'p1'});w.simulation.legacy=true;
+ const before=JSON.stringify(w);
+ assert.throws(()=>Lab.act(w,'select',{selection:[{id:w.lab.lots[0].id,quantity:1}]}),/旧现场|来源/);
+ assert.equal(JSON.stringify(w),before);
+});
+
+test('group selection keeps manual increments as leaves beside real simulated parents',()=>{
+ let w=Lab.act(fresh(),'roll',{random:()=>0});w=Lab.act(w,'repeat');w=Lab.act(w,'reset',{stage:'p1'});
+ const id=Lab.groups(w)[0].id;w=Lab.act(w,'group-quantity',{id,quantity:3});
+ w=Lab.act(w,'select',{selection:[{id,quantity:3}]});w=Lab.act(w,'roll',{random:()=>0});
+ const children=Lab.route(w,w.simulation.pending.recordId).tree.children;
+ assert.deepEqual(children.map(c=>c.node.kind),['craft','base','base']);
+ assert.ok(children.slice(1).every(c=>c.node.sourceLabel==='手动补充'&&c.node.material.quality==='p1'));
+});
+
+test('picker accepts several grouped kinds and rejects mixed over-allocation without mutation',()=>{
+ let w=fresh();w=Lab.act(w,'roll',{random:()=>0});w=Lab.act(w,'repeat');
+ w=Lab.act(w,'roll',{random:()=>0.999});w=Lab.act(w,'repeat');w=Lab.act(w,'reset',{stage:'p1'});
+ const groups=Lab.groups(w);assert.equal(groups.length,2);
+ const before=JSON.stringify(w),first=w.lab.lots[0].id;
+ assert.throws(()=>Lab.act(w,'select',{selection:[{id:groups[0].id,quantity:1},{id:first,quantity:1}]}),/不足/);
+ assert.equal(JSON.stringify(w),before);
+ w=Lab.act(w,'select',{selection:groups.map(g=>({id:g.id,quantity:1}))});
+ assert.equal(w.simulation.refs.filter(Boolean).length,2);assert.equal(Lab.selectionCapacity(w),1);
+ assert.deepEqual(w.lab.lots.map(l=>l.quantity),[1,1]);
+ assert.throws(()=>Lab.act(w,'select',{selection:[{id:groups[1].id,quantity:-1}]}),/非负整数/);
 });
 test('account storage persists bag and history without touching another account',()=>{
  const State=require('./inscription-crafting-state.js'),accounts={one:new Map(),two:new Map()};let active='one';

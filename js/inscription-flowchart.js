@@ -50,7 +50,7 @@
     // A complete stat combination is indivisible. Widen the local scrollable
     // canvas instead of splitting a term or placing each stat on another line.
     lines.forEach(function(line){if(typeof line!=='string')width=Math.max(width,Math.ceil(Array.from(lineText(line)).reduce(function(sum,c){return sum+(/[\u0000-\u00ff]/.test(c)?8.4:14);},0))+48);});
-    var text=wrap(lines,width);return{id:id,x:x,y:y,w:width,h:28+text.length*23,lines:text,kind:kind||'material'};
+    var text=wrap(lines,width);return{id:id,x:x,y:y,w:width,h:24+text.length*20,lines:text,kind:kind||'material'};
   }
   function edge(from,to,label,extra){return Object.assign({from:from,to:to,label:label||''},extra||{});}
   function path(points){
@@ -172,11 +172,11 @@
           return inputs.size>1?'<circle class="craft-flow-junction" data-flow-junction="'+esc(n.id)+'" cx="'+cx+'" cy="'+cy+'" r="3"/>':'';
         }
         var termIndex=n.lines.findIndex(function(line){return typeof line!=='string'&&line.parts.some(function(part){return part.role==='value';});});
-        var divider=n.role==='main'&&termIndex>=0&&termIndex<n.lines.length-1?'<line class="craft-flow-divider" x1="'+(n.x+10)+'" x2="'+(n.x+n.w-10)+'" y1="'+(n.y+35+termIndex*23)+'" y2="'+(n.y+35+termIndex*23)+'"/>':'';
+        var divider=n.role==='main'&&termIndex>=0&&termIndex<n.lines.length-1?'<line class="craft-flow-divider" x1="'+(n.x+10)+'" x2="'+(n.x+n.w-10)+'" y1="'+(n.y+32+termIndex*20)+'" y2="'+(n.y+32+termIndex*20)+'"/>':'';
         return '<g class="craft-flow-box craft-flow-'+n.kind+' craft-flow-quality-'+n.quality+(n.kind==='promotion'?' craft-flow-promotion-'+(n.promotion==='初级'?'initial':'intermediate'):'')+'" data-flow-node="'+esc(n.id)+'" data-flow-lane="'+n.role+'" role="button" tabindex="0" aria-label="'+esc(n.lines.map(lineText).join('，'))+'"><rect x="'+n.x+'" y="'+n.y+'" width="'+n.w+'" height="'+n.h+'" rx="9"/>'+divider+n.lines.map(function(line,i){
           var next=line.presentation==='next';
           var titleLine=n.kind==='wash'?i===1:i===0;
-          return '<text class="'+(next?'craft-flow-next':titleLine?'craft-flow-node-title':typeof line!=='string'?'craft-flow-node-terms':'craft-flow-node-note')+'" x="'+(n.x+n.w/2)+'" y="'+(n.y+24+i*23)+'">'+lineHtml(line)+'</text>';
+          return '<text class="'+(next?'craft-flow-next':titleLine?'craft-flow-node-title':typeof line!=='string'?'craft-flow-node-terms':'craft-flow-node-note')+'" x="'+(n.x+n.w/2)+'" y="'+(n.y+22+i*20)+'">'+lineHtml(line)+'</text>';
         }).join('')+'</g>';
       }).join('')+labels.join('')+'</svg>';
   }

@@ -19,6 +19,57 @@
   function lot(w,id){var l=w.lab.lots.find(function(l){return l.id===id;});if(!l)fail('背包铭文不存在');return l;}
   function uid(w,type){if(w.lab.sequence>=Number.MAX_SAFE_INTEGER)fail('记录编号已达上限');return type+(++w.lab.sequence);}
   function inputsFor(stage){var recipe=R.recipes[stage],q=R.qualities.find(function(q){return q.id===stage;});return recipe?Array.from({length:recipe.count},function(){return Array(q.count).fill(null);}):[];}
+  function reservations(w){
+    var counts=new Map();if(!w.simulation.pending)w.simulation.refs.forEach(function(id){if(id)counts.set(id,(counts.get(id)||0)+1);});return counts;
+  }
+  function emptySlots(w){
+    var s=w.simulation,recipe=R.recipes[s.stage];if(!recipe||s.pending||s.legacy)return [];
+    var slots=[];for(var i=0;i<recipe.count;i++)if(!s.refs[i]&&(!s.inputs[i]||!s.inputs[i].some(Boolean)))slots.push(i);return slots;
+  }
+  function selectionCapacity(w){return emptySlots(w).length;}
+  function grouped(w){
+    var byId=new Map(),reserved=reservations(w);
+    w.lab.lots.forEach(function(l){var id=R.signature(l.material),g=byId.get(id);if(!g){g={id:id,material:copy(l.material),quantity:0,available:0,reserved:0,lots:[]};byId.set(id,g);}
+      var held=reserved.get(l.id)||0;g.quantity=amount(g.quantity+l.quantity);g.reserved+=held;g.available=amount(g.available+Math.max(0,l.quantity-held));g.lots.push(copy(l));
+    });return Array.from(byId.values());
+  }
+  function groups(w){return grouped(w).filter(function(g){return g.quantity>0;});}
+  function group(w,id){var g=grouped(w).find(function(g){return g.id===id;});if(!g)fail('背包铭文分组不存在');return g;}
+  function select(w,selection){
+    var s=w.simulation,pos=context(w),recipe=R.recipes[s.stage];
+    if(s.pending)fail('已有结果，请先重复当前阶段或返回上一步');
+    if(s.legacy)fail('旧现场含未确认来源的材料，请先确认保留旧现场');
+    if(!recipe)fail('当前阶段无需合成');
+    if(!Array.isArray(selection))fail('背包选择无效');
+    var slots=emptySlots(w),reserved=reservations(w),allocations=[];
+    selection.forEach(function(v){if(!v||typeof v.id!=='string')fail('背包选择无效');
+      var n=amount(v.quantity),single=w.lab.lots.find(function(l){return l.id===v.id;}),lots=single?[single]:group(w,v.id).lots;
+      var available=lots.reduce(function(sum,l){return amount(sum+Math.max(0,l.quantity-(reserved.get(l.id)||0)));},0);
+      if(n>available)fail('背包材料数量不足，已占用材料不能重复选择');
+      if(n>slots.length-allocations.length)fail('所选数量超过剩余空材料位');
+      lots.forEach(function(l){if(!n)return;
+        if(l.material.prefix!==pos.prefix||l.material.dun!==pos.dun||l.material.quality!==s.stage)fail('所选背包铭文不符合当前前缀、遁位或品质');
+        var use=Math.min(n,Math.max(0,l.quantity-(reserved.get(l.id)||0)));reserved.set(l.id,(reserved.get(l.id)||0)+use);n-=use;
+        for(var i=0;i<use;i++)allocations.push(l);
+      });
+    });
+    if(!s.inputs.length)s.inputs=inputsFor(s.stage);
+    allocations.forEach(function(l,i){s.inputs[slots[i]]=copy(l.material.terms);s.refs[slots[i]]=l.id;});
+  }
+  function groupQuantity(w,id,quantity){
+    var g=group(w,id),n=amount(quantity),reserved=reservations(w);
+    if(n<g.reserved)fail('该铭文已被当前材料位占用，请先清空对应材料位');
+    if(n===g.quantity)return;
+    if(n>g.quantity)addLot(w,g.material,n-g.quantity,{type:'manual'});
+    else{
+      // Spend unreserved manual additions first; never reattribute simulated lots.
+      var remaining=g.quantity-n;
+      g.lots.sort(function(a,b){return Number(b.source.type==='manual')-Number(a.source.type==='manual');}).forEach(function(entry){
+        var l=lot(w,entry.id),take=Math.min(remaining,Math.max(0,l.quantity-(reserved.get(l.id)||0)));l.quantity-=take;remaining-=take;
+      });
+    }
+    w.lab.revision++;
+  }
   function hand(w,terms,origin){return valid(Object.assign(context(w),{quality:w.simulation.stage,origin:origin||'wash',terms:terms}));}
   function isWash(w,terms){try{hand(w,terms);return true;}catch(e){return false;}}
   function partialWash(w,terms){
@@ -123,17 +174,9 @@
       if(!Number.isInteger(p.index)||p.index<0||p.index>=s.inputs.length)fail('材料位置无效');
       partialWash(w,p.terms);s.refs[p.index]=null;s.inputs[p.index]=copy(p.terms);if(p.terms.every(Boolean))hand(w,p.terms);
     }else if(action==='select'){
-      if(s.pending)fail('已有结果，请先重复当前阶段或返回上一步');
-      if(!Array.isArray(p.selection))fail('背包选择无效');
-      var refs=[],mats=[],seen=new Map(),pos=context(w),recipe=R.recipes[s.stage];if(!recipe)fail('当前阶段无需合成');
-      p.selection.forEach(function(v){var l=lot(w,v.id),n=amount(v.quantity),count=(seen.get(l.id)||0)+n;seen.set(l.id,count);
-        if(count>l.quantity)fail('背包材料数量不足');
-        if(l.material.prefix!==pos.prefix||l.material.dun!==pos.dun||l.material.quality!==s.stage)fail('所选背包铭文不符合当前前缀、遁位或品质');
-        if(mats.length+n>recipe.count)fail('所选数量超过本次配方所需数量');
-        for(var i=0;i<n;i++){refs.push(l.id);mats.push(copy(l.material.terms));}
-      });
-      while(mats.length<recipe.count)mats.push(Array(R.qualities.find(function(q){return q.id===s.stage;}).count).fill(null));
-      s.inputs=mats;s.refs=refs;
+      select(w,p.selection);
+    }else if(action==='group-quantity'||action==='group-remove'){
+      groupQuantity(w,p.id,action==='group-remove'?0:p.quantity);
     }else if(action==='quantity'){
       var l=lot(w,p.id),n=amount(p.quantity),reserved=s.pending?0:s.refs.filter(function(id){return id===l.id;}).length;
       if(n<reserved)fail('该铭文已被当前材料位占用，请先清空对应材料位');
@@ -189,5 +232,5 @@
     var rec=records.get(id);if(!rec)fail('没有这枚产物的完整记录');
     return {kind:'recorded',recorded:true,symbolicX:false,xTerm:null,tree:build(rec),reuse:[],notes:['仅展示本枚产物实际使用的材料链；手动补充从当前品质起算。概率为抽取当时的模型概率，不代表路线完成率。']};
   }
-  return {upgrade:upgrade,validate:validate,preview:preview,act:act,route:route,inputsFor:inputsFor};
+  return {upgrade:upgrade,validate:validate,preview:preview,act:act,route:route,inputsFor:inputsFor,groups:groups,selectionCapacity:selectionCapacity};
 });

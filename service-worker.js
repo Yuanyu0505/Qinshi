@@ -1,7 +1,7 @@
 "use strict";
 
 const CACHE_PREFIX = "qinshi-site-";
-const CACHE_NAME = CACHE_PREFIX + "1.0.74";
+const CACHE_NAME = CACHE_PREFIX + "1.0.75";
 const GALLERY_CACHE_NAME = "qinshi-gallery-v1";
 const PRECACHE_URLS = [
   "./",
@@ -9,6 +9,10 @@ const PRECACHE_URLS = [
   "./manifest.webmanifest",
   "./css/style.css",
   "./css/six-halls.css",
+  "./css/pilots.css",
+  "./data/pilots.js",
+  "./js/pilots.js",
+  "./js/pilots-ui.js",
   "./css/secret-realm.css",
   "./css/inscription-crafting.css",
   "./css/inscription-route-favorites.css",

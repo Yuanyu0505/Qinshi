@@ -4,7 +4,7 @@ const {createServer}=require('../serve.js'),{openApp}=require('./browser-test-he
 let server,browser,url;
 before(async()=>{server=createServer();await new Promise(r=>server.listen(0,'127.0.0.1',r));url='http://127.0.0.1:'+server.address().port;browser=await chromium.launch({channel:'msedge',headless:true});});
 after(async()=>{await browser?.close();if(server)await new Promise(r=>server.close(r));});
-async function setup(width=1280){const p=await browser.newPage({viewport:{width,height:950},serviceWorkers:'block'});await p.route('**/*',r=>new URL(r.request().url()).hostname==='127.0.0.1'?r.continue():r.abort());await openApp(p,url,{waitUntil:'load'});await p.locator('.tab[data-partition="inscription"]').click();await p.locator('[data-mode="crafting-paths"]').click();return p;}
+async function setup(width=1280){const p=await browser.newPage({viewport:{width:1280,height:950},serviceWorkers:'block'});await p.route('**/*',r=>new URL(r.request().url()).hostname==='127.0.0.1'?r.continue():r.abort());await openApp(p,url,{waitUntil:'load'});await p.locator('.tab[data-partition="inscription"]').click();await p.locator('[data-mode="crafting-paths"]').click();await p.setViewportSize({width,height:950});return p;}
 test('query and simulator filters persist independently through tab switches and query clear',async()=>{
  const p=await setup();try{const q=p.locator('#inscription-crafting-paths'),s=p.locator('#inscription-crafting-simulator');
  await q.locator('[data-craft-field="dun"]').selectOption('鬼遁');await q.locator('[data-craft-field="attr"]').nth(0).selectOption('速');
@@ -78,6 +78,46 @@ for(const width of [390,768,1280])test(width+' material clear action stays in it
  assert.equal(await cards.first().locator('[data-sim-material="0"]').count(),1,'cleared card is a manual material editor');
  assert.equal(await cards.first().locator('.craft-material-header [data-craft-action="clear-material"]').count(),1,'manual material retains the same header action');
  assert.equal(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
+ }finally{await p.close();}
+});
+
+for(const width of [390,768,1280])test(width+' confirmed material is centered and clear-all preserves stock and history',async()=>{
+ const p=await setup(width);try{
+ await p.evaluate(()=>{
+ const target={discipleKey:'',slot:'',dun:'云遁',quality:'o2',attrs:['护盾','护盾','技免'],xTerm:null};
+ let w=InscriptionSimulation.upgrade({version:1,target,simulation:{stage:'p1',inputs:[],pending:null}});
+ const m={prefix:InscriptionRules.prefixes[0],dun:'云遁',quality:'p1',origin:'crafted',terms:[{attr:'护盾',tier:'H'},{attr:'护盾',tier:'M'}]};
+ w.lab.lots=[{id:'center-stock',material:m,quantity:4,source:{type:'manual'}}];
+ w=InscriptionSimulation.act(w,'select',{selection:[{id:'center-stock',quantity:1}]});
+ QinshiAccounts.setItem(InscriptionCraftingState.KEY,JSON.stringify({schemaVersion:1,idSequence:0,actual:[],goals:[],workspaces:{},draft:{simpleWorkbench:w}}));InscriptionCraftingUI.refresh();
+ });
+ await p.locator('[data-mode="crafting-simulator"]').click();const s=p.locator('#inscription-crafting-simulator');
+ const content=s.locator('.craft-material-confirmed .craft-material-content'),node=content.locator('.craft-node');
+ const cb=await content.boundingBox(),nb=await node.boundingBox();assert.ok(Math.abs(nb.y+nb.height/2-cb.y-cb.height/2)<2,'centered in the available material body');
+ const clear=s.locator('[data-craft-action="clear-inputs"]');await clear.waitFor();
+ const toolbar=await s.locator('.craft-material-toolbar').boundingBox(),bb=await clear.boundingBox();assert.ok(Math.abs(bb.x+bb.width-toolbar.x-toolbar.width)<2,'clear-all is right aligned');
+ await s.locator('.craft-materials').screenshot({path:'test-results/1077-material-'+width+'.png'});
+ const before=await p.evaluate(()=>InscriptionCraftingState.createWorkbench(QinshiAccounts).inspect().state);
+ p.once('dialog',d=>d.dismiss());await clear.click();assert.equal(await s.locator('.craft-material-confirmed').count(),1);
+ p.once('dialog',d=>d.accept());await clear.click();const after=await p.evaluate(()=>InscriptionCraftingState.createWorkbench(QinshiAccounts).inspect().state);
+ assert.equal(after.simulation.stage,'p1');assert.ok(after.simulation.inputs.every(a=>a.every(t=>t===null)));assert.equal(after.simulation.refs.filter(Boolean).length,0);
+ assert.deepEqual(after.lab.lots,before.lab.lots);assert.deepEqual(after.lab.records,before.lab.records);assert.equal(await clear.isDisabled(),true);
+ assert.equal(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
+ }finally{await p.close();}
+});
+
+test('refilling a spent group restores material slots and preview after repeat',async()=>{
+ const p=await setup();try{await p.evaluate(()=>{
+ const target={discipleKey:'',slot:'',dun:'云遁',quality:'o2',attrs:['护盾','护盾','技免'],xTerm:null};
+ let w=InscriptionSimulation.upgrade({version:1,target,simulation:{stage:'p2',inputs:[],pending:null}});
+ const m={prefix:InscriptionRules.prefixes[0],dun:'云遁',quality:'p2',origin:'crafted',terms:[{attr:'护盾',tier:'H'},{attr:'护盾',tier:'M'}]};
+ w.lab.lots=[{id:'spent-stock',material:m,quantity:3,source:{type:'manual'}}];
+ w=InscriptionSimulation.act(w,'select',{selection:[{id:'spent-stock',quantity:2}]});w=InscriptionSimulation.act(w,'roll',{random:()=>0});w=InscriptionSimulation.act(w,'repeat');
+ QinshiAccounts.setItem(InscriptionCraftingState.KEY,JSON.stringify({schemaVersion:1,idSequence:0,actual:[],goals:[],workspaces:{},draft:{simpleWorkbench:w}}));InscriptionCraftingUI.refresh();
+ });await p.locator('[data-mode="crafting-simulator"]').click();const s=p.locator('#inscription-crafting-simulator');await s.locator('[data-craft-action="open-bag"]').click();
+ const stock=s.locator('[data-bag-id]').filter({hasText:'紫二'}).first();await stock.locator('[data-bag-total]').fill('4');await stock.locator('[data-bag-total]').dispatchEvent('change');
+ assert.equal(await s.locator('.craft-material-header').filter({hasText:'数量不足'}).count(),0);assert.equal(await s.locator('.craft-material-header').filter({hasText:'当前占用1枚'}).count(),2);
+ assert.equal(await s.locator('[data-craft-action="roll"]').isEnabled(),true);await s.locator('[data-craft-action="roll"]').click();assert.equal(await s.locator('[data-craft-action="clear-inputs"]').isDisabled(),true);
  }finally{await p.close();}
 });
 

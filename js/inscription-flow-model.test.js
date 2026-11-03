@@ -18,6 +18,19 @@ function craft(children,pick=()=>true){
     sourceKey:JSON.stringify([R.signature(outcome.material),children.flatMap(child=>Array(child.quantity).fill(R.signature(child.node.material))).sort()])};
 }
 const route=tree=>({tree,reuse:[],xTerm:term('闪避','U'),symbolicX:true});
+
+test('recorded equivalent leaves compact to one counted material while sources remain traceable',()=>{
+ const leaves=[0,1].map(i=>({...base([term('速','?')],false),sourceKey:'actual-input-'+i,sourceLabel:'洗练备料'}));
+ const tree=craft(leaves.map(node=>({quantity:1,node})));
+ const original={...route(tree),recorded:true},before=JSON.stringify(original),graph=Model.project(original);
+ const sources=graph.materials.filter(m=>m.kind==='base');
+ assert.equal(sources.length,1);assert.equal(sources[0].demand,2);
+ assert.deepEqual(sources[0].sourceKeys,['actual-input-0','actual-input-1']);
+ assert.equal(graph.operations[0].inputs[0].quantity,2);
+ assert.equal(JSON.stringify(original),before);
+ const different=clone(original);different.tree.children[1].node.sourceLabel='手动补充';
+ assert.equal(Model.project(different).materials.filter(m=>m.kind==='base').length,2);
+});
 const byId=graph=>new Map(graph.materials.map(m=>[m.id,m]));
 function sourcedPair(){
   return craft([{quantity:1,node:base([term('速','?')],false)},{quantity:1,node:base([term('闪避','U')],true)}]);

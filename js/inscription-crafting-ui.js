@@ -478,11 +478,12 @@
       (sim.legacy?'<div class="craft-status">旧现场已保留。合法完整的合成材料经确认后作为“手动补充”加入背包；未填满的非洗练材料另存为只读草稿，当前材料位重新备料，不虚构完整库存。已有结果保留。'+button('adopt-legacy','确认保留旧现场并继续')+'</div>':'')+archivedScenes()+
       '<p class="craft-note">'+(targetFor(v).discipleKey?esc(p.prefix+' · '+p.dun):'通用 '+esc(p.dun)+'：本次材料视为同一前缀，不允许跨前缀混合。')+'。'+qLabel(sim.stage)+' × '+recipe.count+' → '+qLabel(recipe.quality)+
       (recipe.promotion?'；自动附加'+esc(recipe.promotion)+'晋升铭文 × 1。':'；无需晋升铭文。')+'</p>'+
+      '<div class="craft-material-toolbar">'+button('clear-inputs','一键清空所有材料',sim.pending||sim.legacy||!inputs.some(function(terms){return terms.some(Boolean);})?' disabled':'')+'</div>'+
       '<div class="craft-materials">'+inputs.map(function(terms,i){
         var ref=sim.refs[i],fromBag=ref&&state.lab.lots.find(function(l){return l.id===ref;});
         var source=fromBag?'来自虚拟背包 · '+(sim.pending?'本次已消耗':fromBag.quantity>=sim.refs.filter(function(id){return id===ref;}).length?'当前占用1枚':'数量不足，请补充后重新选材'):'手动填写洗练材料';
         var header='<div class="craft-material-header"><p class="craft-note">'+esc(source)+'</p>'+button('clear-material','清空本次材料',' data-index="'+i+'"'+(sim.pending||sim.legacy?' disabled':''))+'</div>';
-        if(fromBag)return '<fieldset class="craft-material"><legend>材料 '+(i+1)+' · '+qLabel(sim.stage)+'</legend>'+header+graphMaterial(fromBag.material)+'</fieldset>';
+        if(fromBag)return '<fieldset class="craft-material craft-material-confirmed"><legend>材料 '+(i+1)+' · '+qLabel(sim.stage)+'</legend>'+header+'<div class="craft-material-content">'+graphMaterial(fromBag.material)+'</div></fieldset>';
         return '<fieldset class="craft-material"><legend>材料 '+(i+1)+' · '+qLabel(sim.stage)+'</legend>'+header+terms.map(function(term,j){
           var pool=R.termsFor(p.dun,sim.stage,'wash'),peers=terms.filter(function(_,k){return k!==j;});
           var choices=pool.filter(function(t){return partialAllowed(v,peers,t,sim.stage);});
@@ -519,7 +520,7 @@
     });
   }
   function labAction(v,action,payload){
-    try{var draft=L.act(state,action,payload);if(save(v,draft)){if(['select','next','reset','back','clear-bag'].includes(action))v.bagSelection={};Object.keys(views).forEach(function(key){renderSimulator(views[key]);});return true;}}
+    try{var draft=L.act(state,action,payload);if(save(v,draft)){if(['select','next','reset','back','clear-bag','clear-inputs'].includes(action))v.bagSelection={};Object.keys(views).forEach(function(key){renderSimulator(views[key]);});return true;}}
     catch(error){status(v,error.message);}
     renderSimulator(v);return false;
   }
@@ -613,6 +614,9 @@
     if(action==='back'){labAction(v,action);return;}
     if(action==='credit'){labAction(v,action);return;}
     var sim=clone(state.simulation);
+    if(action==='clear-inputs'){
+      if(root.confirm('确认清空当前所有材料位？背包库存、历史合成记录和当前材料阶段均保留。'))labAction(v,'clear-inputs');return;
+    }
     if(action==='clear-material'){
       if(!root.confirm('清空这一枚材料位？背包中的该铭文不会被删除。'))return;
       if(!sim.inputs.length)sim.inputs=blankInputs(sim.stage);

@@ -6,6 +6,20 @@ const Model=require('./inscription-flow-model.js');
 const Rules=require('./inscription-rules.js');
 const Simulation=require('./inscription-simulation.js');
 
+test('independent washed material carries its per-batch quantity on its outgoing wire',()=>{
+ const plans=Paths.representative({prefix:'天府',dun:'鬼遁',quality:'o2',attrs:['速','速','速']});let checked=0;
+ for(const route of plans.strategies){
+  const {html,wires}=drawing(route,plans.xAttr);
+  for(const match of html.matchAll(/<g class="craft-flow-box craft-flow-wash[^\"]*" data-flow-node="([^"]+)"/g)){
+   const from=match[1];for(const wire of wires.filter(w=>w.attrs['data-from']===from&&w.attrs['data-phase']==='input')){
+    const label=Array.from(html.matchAll(/<g class="craft-flow-label" data-from="([^"]+)" data-to="([^"]+)">([\s\S]*?)<\/g>/g)).find(m=>m[1]===from&&m[2]===wire.attrs['data-to']);
+    assert.ok(label&&/该铭文×/.test(label[3]));checked++;
+   }
+  }
+ }
+ assert.ok(checked>0,'exercise independent washing preparations');
+});
+
 function drawing(route,x){
   const html=Flow.render(route,x),boxes=new Map();
   for(const match of html.matchAll(/<g class="craft-flow-box[^\"]*" data-flow-node="([^"]+)"[^>]*>([\s\S]*?)<\/g>/g)){
@@ -85,13 +99,29 @@ test('all template, saved wash and actual recipe routes keep recipe ingredients 
   assert.ok(checked>40,'exercise multiple families, qualities and route kinds');
 });
 
+test('recorded routes share identical blue materials across consumers with counted outgoing edges',()=>{
+ let w=Simulation.upgrade({version:1,target:{discipleKey:'',slot:'',dun:'鬼遁',quality:'p2',attrs:['速','速'],xTerm:null},simulation:{stage:'b2',inputs:[],pending:null}});
+ for(const random of [0,.999,.999]){
+  w=Simulation.act(w,'edit',{index:0,terms:[{attr:'速',tier:'?'}]});w=Simulation.act(w,'edit',{index:1,terms:[{attr:'闪避',tier:'U'}]});
+  w=Simulation.act(w,'roll',{random:()=>random});w=Simulation.act(w,'repeat');
+ }
+ w=Simulation.act(w,'reset',{stage:'p1'});w=Simulation.act(w,'select',{selection:w.lab.lots.filter(l=>l.quantity).map(l=>({id:l.id,quantity:l.quantity}))});
+ w=Simulation.act(w,'roll',{random:()=>0});const traced=Simulation.route(w,w.simulation.pending.recordId),{html,wires}=drawing(traced,null);
+ const sources=Array.from(html.matchAll(/<g class="craft-flow-box craft-flow-material craft-flow-quality-b2" data-flow-node="([^"]+)"/g),m=>m[1]);
+ assert.equal(sources.length,2,'each identical actual blue material has one counted card');
+ for(const id of sources){const outputs=wires.filter(w=>w.attrs['data-from']===id&&w.attrs['data-phase']==='input');assert.equal(outputs.length,2);}
+ assert.match(html,/总共需要3枚该铭文/);
+});
+
 test('flow cards fit compact line spacing without excess bottom padding',()=>{
   const plan=Paths.representative({prefix:'天府',dun:'云遁',quality:'o2',attrs:['护盾','护盾','技免']});
   const html=drawing(plan.strategies[0],plan.xAttr).html;
   for(const match of html.matchAll(/<g class="craft-flow-box[^\"]*"[^>]*>([\s\S]*?)<\/g>/g)){
     const rect=match[1].match(/<rect[^>]+ y="([\d.]+)"[^>]+ height="([\d.]+)"/),texts=Array.from(match[1].matchAll(/<text[^>]+ y="([\d.]+)"/g),m=>Number(m[1]));
-    assert.equal(Number(rect[2]),24+texts.length*20,'card height tracks the actual line count');
-    for(let i=1;i<texts.length;i++)assert.equal(texts[i]-texts[i-1],20);
+    const termIndex=Array.from(match[1].matchAll(/<text\b[^>]*>/g)).findIndex(m=>m[0].includes('craft-flow-node-terms'));
+    const noteGap=termIndex>=0&&termIndex<texts.length-1?8:0;
+    assert.equal(Number(rect[2]),24+texts.length*20+noteGap,'card height tracks text and the deliberate term-to-note gap');
+    for(let i=1;i<texts.length;i++)assert.equal(texts[i]-texts[i-1],20+(i===termIndex+1?noteGap:0));
     assert.ok(Number(rect[1])+Number(rect[2])-texts.at(-1)<=22,'last line leaves only compact bottom padding');
   }
 });

@@ -107,7 +107,11 @@
       var entry;
       if(node.kind==='base'||node.kind==='failure'){
         var symbols=node.kind==='base'?sourceSymbols(node):[];
-        var key=JSON.stringify([node.kind,physical(node.material),symbols,node.sourceKey||null]);
+        // Actual records keep all provenance aliases, but identical leaves
+        // from the same source class share one counted preparation card.
+        // Different recipes/observed outcomes still have distinct operations.
+        var sourceIdentity=route.recorded?(node.sourceLabel||'手动补充'):node.sourceKey||null;
+        var key=JSON.stringify([node.kind,physical(node.material),symbols,sourceIdentity]);
         entry=material(key,node.material,node.kind,null,null,symbols);
         if(node.sourceKey&&entry.sourceKeys.indexOf(node.sourceKey)<0)entry.sourceKeys.push(node.sourceKey);
       }else{

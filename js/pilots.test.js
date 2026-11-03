@@ -26,6 +26,7 @@ test('pilot reference preserves all four image sources and 47 complete breakthro
 
 test('classification applies to the whole disciple and retains overlapping pilot identities', () => {
   assert.ok(CORE, 'pilot query core must exist');
+  assert.equal(CORE.filterDisciples(DATA, { type: 'all', query: '' }).length, 60);
   const pilots = CORE.filterDisciples(DATA, { type: 'pilot' });
   assert.ok(pilots.find(d => d.name === '神·田仲').effects.some(e => e.rank === 15));
   assert.ok(CORE.filterDisciples(DATA, { type: 'nonPilot' }).every(d => !d.pilotCategories.length));
@@ -54,7 +55,7 @@ test('normal god and mirror disciples remain distinct and contradictions stay co
   const dragon = DATA.disciples.find(d => d.name === '神·龙且');
   assert.ok(dragon.effects.some(e => e.kind === 'pilot' && e.text.includes('30%')));
   assert.ok(dragon.effects.some(e => e.kind === 'breakthrough' && e.rank === 15 && e.text.includes('50%')));
-  assert.ok(dragon.notes.length);
+  assert.deepEqual(dragon.notes, []);
   assert.equal(DATA.costumes.length, 9);
   assert.ok(DATA.costumes.every(c => !Object.hasOwn(c, 'effect')));
 });

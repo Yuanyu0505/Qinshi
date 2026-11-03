@@ -27,6 +27,23 @@
     var slots=[];for(var i=0;i<recipe.count;i++)if(!s.refs[i]&&(!s.inputs[i]||!s.inputs[i].some(Boolean)))slots.push(i);return slots;
   }
   function selectionCapacity(w){return emptySlots(w).length;}
+  function reconcileSelections(w){
+    var s=w.simulation;if(!s||s.pending||s.legacy||!w.lab||!Array.isArray(w.lab.lots))return;
+    var pos=context(w),remaining=new Map(w.lab.lots.map(function(l){return[l.id,l.quantity];})),missing=[];
+    // Reserve every still-valid batch first. Refilling a group must not steal
+    // stock from another selected slot or fill an intentionally empty slot.
+    s.refs.forEach(function(id,index){
+      if(!id)return;var l=w.lab.lots.find(function(l){return l.id===id;});
+      if(!l||l.material.prefix!==pos.prefix||l.material.dun!==pos.dun||l.material.quality!==s.stage||JSON.stringify(l.material.terms)!==JSON.stringify(s.inputs[index]))return;
+      if(remaining.get(id)>0)remaining.set(id,remaining.get(id)-1);else missing.push({index:index,signature:R.signature(l.material)});
+    });
+    missing.forEach(function(slot){
+      var replacement=w.lab.lots.find(function(l){return remaining.get(l.id)>0&&R.signature(l.material)===slot.signature;});
+      if(!replacement)return;
+      s.refs[slot.index]=replacement.id;s.inputs[slot.index]=copy(replacement.material.terms);
+      remaining.set(replacement.id,remaining.get(replacement.id)-1);
+    });
+  }
   function grouped(w){
     var byId=new Map(),reserved=reservations(w);
     w.lab.lots.forEach(function(l){var id=R.signature(l.material),g=byId.get(id);if(!g){g={id:id,material:copy(l.material),quantity:0,available:0,reserved:0,lots:[]};byId.set(id,g);}
@@ -87,6 +104,7 @@
     }
     if(!Array.isArray(w.simulation.refs))w.simulation.refs=[];
     if(!Array.isArray(w.lab.legacyDrafts))w.lab.legacyDrafts=[];
+    reconcileSelections(w);
     return w;
   }
   function selected(w){
@@ -168,6 +186,11 @@
       finish(w,nf);
     }else if(action==='back')undo(w);
     else if(action==='reset')cancelScene(w,p.stage||'b2');
+    else if(action==='clear-inputs'){
+      if(s.pending)fail('已有合成结果，请先处理结果或返回上一步');
+      if(s.legacy)fail('请先确认保留旧现场');
+      s.inputs=inputsFor(s.stage);s.refs=[];
+    }
     else if(action==='edit'){
       if(s.pending)fail('已有合成结果，请先重复当前阶段或返回上一步');
       if(!s.inputs.length)s.inputs=inputsFor(s.stage);
@@ -196,7 +219,7 @@
       w.lab.revision++;w.lab.undo=[];
       if(previous)roll(w,{observed:previous.material});
     }else fail('未知模拟操作');
-    validate(w);return w;
+    reconcileSelections(w);validate(w);return w;
   }
   function validate(w){
     var b=w.lab;if(!b||b.version!==1||!Array.isArray(b.lots)||!Array.isArray(b.records)||!Array.isArray(b.undo))fail('虚拟背包格式无效');

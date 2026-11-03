@@ -5,6 +5,39 @@ const R=require('./inscription-rules.js');
 const Lab=require('./inscription-simulation.js');
 function fresh(){return Lab.upgrade({version:1,target:{discipleKey:'',slot:'',dun:'鬼遁',quality:'o2',attrs:['速','速','速']},simulation:{stage:'b2',inputs:[[{attr:'速',tier:'?'}],[{attr:'速',tier:'?'}]],pending:null}});}
 const total=w=>w.lab.lots.reduce((n,l)=>n+l.quantity,0);
+
+test('refill of an identical group repairs spent slot refs without inventing simulation provenance',()=>{
+ let w=Lab.act(threePurple(),'roll',{random:()=>0});w=Lab.act(w,'repeat');
+ const id=R.signature(w.lab.lots[0].material),records=JSON.stringify(w.lab.records);
+ w=Lab.act(w,'group-quantity',{id,quantity:4});
+ const group=Lab.groups(w).find(g=>g.id===id);
+ assert.deepEqual([group.quantity,group.available,group.reserved],[4,1,3]);
+ assert.ok(w.simulation.refs.every(ref=>w.lab.lots.find(l=>l.id===ref).source.type==='manual'));
+ assert.equal(Lab.preview(w).valid,true);assert.equal(JSON.stringify(w.lab.records),records);
+ w=Lab.act(w,'roll',{random:()=>0});
+ assert.ok(w.lab.records.at(-1).inputs.every(i=>i.source==='manual'&&i.recordId===null));
+});
+
+test('loading a legacy depleted reference uses only identical stock and preserves valid reservations',()=>{
+ const w=fresh(),m={prefix:'天府',dun:'鬼遁',quality:'p2',origin:'crafted',terms:[{attr:'速',tier:'H'},{attr:'速',tier:'M'}]};
+ w.simulation={stage:'p2',inputs:[m.terms,m.terms],refs:['valid','spent'],pending:null};
+ w.lab.lots=[{id:'valid',material:m,quantity:1,source:{type:'manual'}},{id:'spent',material:m,quantity:0,source:{type:'manual'}},{id:'refill',material:m,quantity:3,source:{type:'manual'}}];
+ const before=JSON.stringify(w),upgraded=Lab.upgrade(w);
+ assert.deepEqual(upgraded.simulation.refs,['valid','refill']);assert.equal(JSON.stringify(w),before);
+ assert.equal(Lab.preview(upgraded).valid,true);
+ const wrong=JSON.parse(before);wrong.lab.lots[2].material={...m,prefix:'天同'};
+ assert.throws(()=>Lab.preview(Lab.upgrade(wrong)),/不足/);
+});
+
+test('clear all current inputs frees reservations without removing stock history or current stage',()=>{
+ const w=threePurple(),inventory=JSON.stringify(w.lab.lots),history=JSON.stringify(w.lab.records);
+ const cleared=Lab.act(w,'clear-inputs');
+ assert.equal(cleared.simulation.stage,'p1');assert.equal(cleared.simulation.refs.some(Boolean),false);
+ assert.ok(cleared.simulation.inputs.every(terms=>terms.every(t=>t===null)));
+ assert.equal(JSON.stringify(cleared.lab.lots),inventory);assert.equal(JSON.stringify(cleared.lab.records),history);
+ assert.equal(Lab.selectionCapacity(cleared),3);
+ const pending=Lab.act(w,'roll',{random:()=>0});assert.throws(()=>Lab.act(pending,'clear-inputs'),/结果/);
+});
 test('a credited result is idempotent and retry replaces it without accumulating',()=>{
  let w=Lab.act(fresh(),'roll',{random:()=>0});w=Lab.act(w,'credit');assert.equal(total(w),1);
  w=Lab.act(w,'credit');assert.equal(total(w),1);

@@ -212,7 +212,10 @@
       if(initial)lines=[{parts:[{text:qLabel(m.material.quality)}].concat(drawnTerms(m)[0].parts)}];
       else if(m.material.quality!=='o2')lines.push(m.demand?(flexible?'示例：':'')+'总共需要'+m.demand+'枚该铭文':'可替代同款材料（不重复计量）');
       var kind=m.kind==='base'?'material':'success';
-      if(route.recorded&&m.kind==='base')lines.push(m.material.origin==='wash'?'洗练备料':'手动补充（独立起点）');
+      if(route.recorded&&m.kind==='base'){
+        lines.push(m.material.origin==='wash'?'洗练备料':'手动补充（独立起点）');
+        if(initial&&m.demand>1)lines.push('总共需要'+m.demand+'枚该铭文');
+      }
       if(op&&op.kind==='wash'){kind='wash';lines=['另行置换合成素材铭文'].concat(lines);}
       var allConsumers=graph.operations.filter(function(o){return o.kind==='craft'&&o.inputs.some(function(i){return i.id===m.id;});});
       if(!initial&&kind!=='wash'&&m.demand&&allConsumers.length===1){
@@ -221,7 +224,7 @@
         lines.push({parts:[{text:consumer.allocations?'下步：两种共3枚，各至少1枚':stable?'下步：同款'+quantity+'枚合成 · 必出':'下步：每批'+quantity+'枚，与其他素材合成'}],presentation:'next'});
       }
       var consumers=initial||kind==='wash'?allConsumers:[];
-      if(consumers.length>1){
+      if(consumers.length>1&&!route.recorded){
         // These are separate preparation cards for separate consumed batches,
         // not copies of a produced item or extra inventory/demand entries.
         consumers.forEach(function(consumer,consumerIndex){
@@ -300,7 +303,7 @@
         // A deterministic recipe is folded directly into its product; its
         // batch quantity and probability share one label, not another row.
         if(folded)label+='、概率'+percent(op.outputs[0].probability);
-        edges.push(edge(input.from.id,to.id,input.from.role==='auxiliary'?'':label,{batch:op.id,phase:'input'}));
+        edges.push(edge(input.from.id,to.id,input.from.kind==='promotion'?'':label,{batch:op.id,phase:'input'}));
       });
     });
     var layout=Layout.arrange(nodes,edges),width=layout.width;

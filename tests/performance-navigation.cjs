@@ -18,6 +18,96 @@ async function scenario(run, hash = '') {
   try { await openApp(page, origin + '/' + hash); await run(page); assert.deepEqual(errors, []); }
   finally { await context.close(); }
 }
+
+test('partition navigation sets its scroll position before yielding a frame', async () => scenario(async page => {
+  const result = await page.evaluate(() => {
+    for (const name of ['atlas', 'drops']) {
+      const spacer = document.createElement('div');
+      spacer.style.height = '3000px';
+      document.getElementById('partition-' + name).appendChild(spacer);
+    }
+    window.scrollTo(0, 900);
+    document.querySelector('[data-partition="drops"]').click();
+    return { top: window.scrollY, visible: !document.getElementById('partition-drops').hidden };
+  });
+  assert.equal(result.visible, true);
+  assert.equal(result.top, 0, 'new partition must not spend a frame at the old scroll position');
+}));
+
+test('a completed partition switch cannot reset a later user scroll', async () => scenario(async page => {
+  const top = await page.evaluate(async () => {
+    const spacer = document.createElement('div');
+    spacer.style.height = '3000px';
+    document.getElementById('partition-drops').appendChild(spacer);
+    document.querySelector('[data-partition="drops"]').click();
+    window.scrollTo(0, 500);
+    await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    return window.scrollY;
+  });
+  assert.equal(top, 500, 'no queued navigation callback may pull the viewport back');
+}));
+
+test('lazy loading feedback does not resize the visible page', async () => scenario(async page => {
+  let release;
+  const gate = new Promise(resolve => { release = resolve; });
+  await page.route('**/js/tactics-ui.js*', async route => { await gate; await route.continue(); });
+  try {
+    const dimensions = await page.evaluate(() => {
+      const spacer = document.createElement('div');
+      spacer.style.height = '3000px';
+      document.getElementById('partition-atlas').appendChild(spacer);
+      window.scrollTo(0, 600);
+      const before = document.documentElement.scrollHeight;
+      document.querySelector('[data-partition="tactics"]').click();
+      return { before, after: document.documentElement.scrollHeight, top: window.scrollY };
+    });
+    assert.equal(dimensions.after, dimensions.before);
+    assert.equal(dimensions.top, 600);
+    assert.equal(await page.locator('#partition-atlas').isVisible(), true);
+  } finally { release(); }
+}));
+
+test('closing the mobile menu cancels its queued focus move', async () => scenario(async page => {
+  const focused = await page.evaluate(async () => {
+    const toggle = document.getElementById('mobile-more-toggle');
+    toggle.focus({ preventScroll: true });
+    toggle.click();
+    document.getElementById('mobile-more-close').click();
+    await new Promise(resolve => requestAnimationFrame(resolve));
+    return document.activeElement.id;
+  });
+  assert.equal(focused, 'mobile-more-toggle');
+}));
+
+test('selecting a mobile menu partition restores a visible keyboard focus without scrolling', async () => scenario(async page => {
+  await page.locator('#mobile-more-toggle').focus();
+  await page.keyboard.press('Enter');
+  const item = page.locator('#mobile-more-layer [data-partition="inscription"]');
+  await item.focus();
+  await page.keyboard.press('Enter');
+  await page.locator('#partition-inscription').waitFor();
+  assert.equal(await page.evaluate(() => document.activeElement.id), 'mobile-more-toggle');
+  assert.equal(await page.evaluate(() => window.scrollY), 0);
+}));
+
+test('history back and forward restore partition positions without a queued reset', async () => scenario(async page => {
+  await page.evaluate(() => {
+    for (const name of ['atlas', 'drops']) {
+      const spacer = document.createElement('div');
+      spacer.style.height = '3000px';
+      document.getElementById('partition-' + name).appendChild(spacer);
+    }
+    window.scrollTo(0, 700);
+    document.querySelector('[data-partition="drops"]').click();
+    window.scrollTo(0, 400);
+  });
+  await page.goBack();
+  await page.waitForFunction(() => !document.getElementById('partition-atlas').hidden);
+  assert.equal(await page.evaluate(() => window.scrollY), 700);
+  await page.goForward();
+  await page.waitForFunction(() => !document.getElementById('partition-drops').hidden);
+  assert.equal(await page.evaluate(() => window.scrollY), 400);
+}));
 for (const [name, selector] of [
   ['machine-beasts', '#machine-beast-progress-content'], ['wooden-man-alley', '[data-wooden-cell]'],
   ['tactics', '[data-tactic-id]'], ['six-halls', '[data-six-halls-mode]'],

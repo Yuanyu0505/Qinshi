@@ -1105,6 +1105,7 @@
     const partitionScrollPositions = Object.create(null);
     let activePartition = "atlas";
     let mobileMoreRestoreTarget = null;
+    let mobileMoreFocusRequest = 0;
     let partitionRequest = 0;
     const loadStatus = document.createElement("div");
     loadStatus.className = "panel partition-load-status";
@@ -1155,6 +1156,7 @@
 
     function setMoreOpen(open) {
       if (!mobileMoreLayer || !mobileMoreToggle) return;
+      const focusRequest = ++mobileMoreFocusRequest;
       const wasOpen = !mobileMoreLayer.hidden;
       if (open && !wasOpen) mobileMoreRestoreTarget = document.activeElement;
       mobileMoreLayer.hidden = !open;
@@ -1163,11 +1165,14 @@
       if (appShell) appShell.inert = open;
       if (open) {
         requestAnimationFrame(function () {
+          if (focusRequest !== mobileMoreFocusRequest || mobileMoreLayer.hidden) return;
           const focusable = mobileMoreFocusable();
-          if (focusable.length) focusable[0].focus();
+          if (focusable.length) focusable[0].focus({ preventScroll: true });
         });
-      } else if (wasOpen && mobileMoreRestoreTarget && typeof mobileMoreRestoreTarget.focus === "function") {
-        mobileMoreRestoreTarget.focus();
+      } else if (wasOpen) {
+        if (mobileMoreRestoreTarget && typeof mobileMoreRestoreTarget.focus === "function") {
+          mobileMoreRestoreTarget.focus({ preventScroll: true });
+        }
         mobileMoreRestoreTarget = null;
       }
     }
@@ -1245,11 +1250,11 @@
       }));
       if (source === "user") {
         if (window.location.hash !== "#" + name) window.history.pushState({ partition: name }, "", "#" + name);
-        requestAnimationFrame(function () { window.scrollTo({ top: 0, behavior: "auto" }); });
+        // Commit visibility, rendering and scroll in one task. A queued scroll
+        // can paint the destination at the old offset or affect a newer view.
+        window.scrollTo({ top: 0, behavior: "instant" });
       } else if (source === "history") {
-        requestAnimationFrame(function () {
-          window.scrollTo({ top: partitionScrollPositions[name] || 0, behavior: "auto" });
-        });
+        window.scrollTo({ top: partitionScrollPositions[name] || 0, behavior: "instant" });
       }
       return true;
     };

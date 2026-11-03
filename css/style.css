@@ -43,6 +43,17 @@ header.top {
 .meta { color: var(--muted); font-size: 13px; }
 .app-shell { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 24px; align-items: start; }
 .app-content { min-width: 0; }
+/* Loading feedback must not push the still-visible partition down and back up. */
+.panel.partition-load-status {
+  position: fixed;
+  top: calc(14px + env(safe-area-inset-top));
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(620px, calc(100% - 32px));
+  margin: 0;
+  z-index: 1000;
+  pointer-events: none;
+}
 .tabs {
   position: sticky;
   top: 18px;

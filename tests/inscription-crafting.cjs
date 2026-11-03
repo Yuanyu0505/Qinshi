@@ -214,9 +214,12 @@ for (const [dun, speed] of [['鬼遁', '速'], ['龙遁', 'PVP速']]) test(dun +
     assert.notEqual(after.simulation.pending.id, before.simulation.pending.id);
     assert.equal(await s.locator('[data-craft-action="next"]').isDisabled(), true);
     await s.locator('[data-craft-action="repeat"]').click();
-    assert.equal((await workbench(page)).simulation.pending, null);
+    const repeated = await workbench(page);
+    assert.ok(repeated.simulation.pending);
+    assert.notEqual(repeated.simulation.pending.id, after.simulation.pending.id);
+    assert.equal(repeated.lab.lots.reduce((n,l)=>n+l.quantity,0),2);
     assert.deepEqual((await workbench(page)).simulation.inputs, before.simulation.inputs);
-    assert.equal(await s.locator('[data-craft-action="roll"]').isEnabled(), true);
+    assert.equal(await s.locator('[data-craft-action="repeat"]').isEnabled(), true);
   } finally { await page.close(); }
 });
 

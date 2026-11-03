@@ -104,6 +104,7 @@
     }
     if(!Array.isArray(w.simulation.refs))w.simulation.refs=[];
     if(!Array.isArray(w.lab.legacyDrafts))w.lab.legacyDrafts=[];
+    if(w.lab.autoCredit===undefined)w.lab.autoCredit=true;
     reconcileSelections(w);
     return w;
   }
@@ -146,17 +147,24 @@
     w.simulation=copy(f.before);w.lab.undo.pop();w.lab.revision++;
     if(w.lab.undo.length&&w.lab.undo[w.lab.undo.length-1].revision===f.beforeRevision)w.lab.undo[w.lab.undo.length-1].revision=w.lab.revision;
   }
-  function roll(w,payload,attempt,priorSignature){
+  function roll(w,payload,attempt,priorSignature,frame){
     if(w.simulation.pending)fail('请先处理当前结果');
     var inputs=selected(w),r=R.preview(inputs.map(function(i){return i.material;}));if(!r.valid)fail(r.errors.join('；'));
     var o=payload.observed?r.outcomes.find(function(o){return R.signature(o.material)===R.signature(payload.observed);}):R.sample(r.outcomes,payload.random);
     if(!o)fail('旧结果与原投料不一致，已保留旧现场');
-    var f=checkpoint(w,'roll'),counts=new Map();inputs.forEach(function(i){if(i.lotId)counts.set(i.lotId,(counts.get(i.lotId)||0)+1);});
+    var f=frame||checkpoint(w,'roll'),counts=new Map();inputs.forEach(function(i){if(i.lotId)counts.set(i.lotId,(counts.get(i.lotId)||0)+1);});
     counts.forEach(function(n,id){lot(w,id).quantity-=n;f.consumed.push({id:id,quantity:n});});
     var rId=uid(w,'record-'),rec={id:rId,material:copy(o.material),probability:o.probability,promotion:r.promotion||null,inputs:copy(inputs)};
     w.lab.records.push(rec);f.recordId=rId;
     w.simulation.pending={id:uid(w,'result-'),recordId:rId,material:copy(o.material),probability:o.probability,attempt:attempt||1,same:!!priorSignature&&priorSignature===R.signature(o.material),creditedLot:null};
+    if(payload.autoCredit)credit(w,f);
     finish(w,f);
+  }
+  function prepare(w,clear){
+    var s=w.simulation;if(s.legacy)fail('请先确认保留旧现场');
+    if(s.pending){var f=checkpoint(w,'prepare');if(w.lab.autoCredit&&!s.pending.creditedLot)credit(w,f);s.pending=null;finish(w,f);}
+    if(clear){s.inputs=inputsFor(s.stage);s.refs=[];}
+    reconcileSelections(w);
   }
   function cancelScene(w,stage){
     // Accepted outputs are never lost when a user starts a different scene.
@@ -166,12 +174,33 @@
   function act(value,action,payload){
     var w=upgrade(value),s=w.simulation,p=payload||{};
     if(action==='roll')roll(w,p);
+    else if(action==='simulate')roll(w,Object.assign({},p,{autoCredit:w.lab.autoCredit}));
+    else if(action==='auto-credit'){
+      if(typeof p.enabled!=='boolean')fail('自动入包设置无效');w.lab.autoCredit=p.enabled;
+    }else if(action==='prepare')prepare(w,!!p.clear);
+    else if(action==='repeat-simulate'){
+      if(!s.pending||!s.pending.recordId)fail('请先模拟合成');
+      if(s.legacy)fail('请先确认保留旧现场');
+      var repeated=checkpoint(w,'roll');
+      if(w.lab.autoCredit&&!s.pending.creditedLot)credit(w,repeated);
+      s.pending=null;reconcileSelections(w);
+      roll(w,Object.assign({},p,{autoCredit:w.lab.autoCredit}),1,null,repeated);
+    }
     else if(action==='retry'){
       if(!s.pending||!s.pending.recordId)fail('没有可重新模拟的结果');
       var old=copy(s.pending),last=w.lab.undo[w.lab.undo.length-1];
       if(!last||last.kind!=='roll'||last.recordId!==old.recordId)fail('该结果已用于后续步骤，请先返回上一步');
-      undo(w);roll(w,p,old.attempt+1,R.signature(old.material));
-      if(old.creditedLot){var cf=w.lab.undo[w.lab.undo.length-1];credit(w,cf);cf.revision=++w.lab.revision;}
+      undo(w);
+      var replay=checkpoint(w,'roll');
+      // A repeated synthesis is one undoable transaction whose before-state
+      // may contain the previous batch's result. Preserve that accepted batch
+      // while replacing only the most recent random draw.
+      if(w.simulation.pending){
+        if(!w.simulation.pending.creditedLot&&last.added.some(function(id){return id!==old.creditedLot;}))credit(w,replay);
+        w.simulation.pending=null;
+      }
+      reconcileSelections(w);
+      roll(w,Object.assign({},p,{autoCredit:w.lab.autoCredit||!!old.creditedLot}),old.attempt+1,R.signature(old.material),replay);
     }else if(action==='credit'){
       if(s.pending&&s.pending.creditedLot)return w;
       var frame=w.lab.undo[w.lab.undo.length-1];if(!frame||frame.kind!=='roll'||!s.pending||frame.recordId!==s.pending.recordId)fail('当前结果无法入包');
@@ -191,7 +220,8 @@
       if(s.legacy)fail('请先确认保留旧现场');
       s.inputs=inputsFor(s.stage);s.refs=[];
     }
-    else if(action==='edit'){
+    else if(action==='edit'||action==='edit-material'){
+      if(action==='edit-material')prepare(w,false);
       if(s.pending)fail('已有合成结果，请先重复当前阶段或返回上一步');
       if(!s.inputs.length)s.inputs=inputsFor(s.stage);
       if(!Number.isInteger(p.index)||p.index<0||p.index>=s.inputs.length)fail('材料位置无效');
@@ -224,6 +254,7 @@
   function validate(w){
     var b=w.lab;if(!b||b.version!==1||!Array.isArray(b.lots)||!Array.isArray(b.records)||!Array.isArray(b.undo))fail('虚拟背包格式无效');
     amount(b.sequence);amount(b.revision);
+    if(b.autoCredit!==undefined&&typeof b.autoCredit!=='boolean')fail('自动入包设置无效');
     var ids=new Set(),records=new Map();
     b.records.forEach(function(r){if(!r||typeof r.id!=='string'||!r.id||ids.has(r.id)||!Array.isArray(r.inputs)||!Number.isFinite(r.probability)||r.probability<=0||r.probability>1)fail('合成记录格式无效');
       ids.add(r.id);valid(r.material);if(r.material.origin!=='crafted')fail('模拟产物必须来自合成');

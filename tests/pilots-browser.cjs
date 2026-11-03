@@ -24,6 +24,7 @@ for (const width of [375, 768, 1280]) {
       assert.equal(await page.locator('.pilots-card').count(), 0);
       assert.equal(await page.locator('.pilots-result-count').isVisible(), false);
       assert.equal(await page.locator('.pilots-grid').isVisible(), false);
+      assert.equal(await page.locator('[data-pilots-category-notes]').isVisible(), false);
       assert.doesNotMatch(await page.locator('.pilots-heading').textContent(), /机师 · 神将突破参考/);
       assert.equal(await page.locator('.pilots-reference h3').textContent(), '机师时装图名称');
       assert.equal(await page.locator('.pilots-reference .pilots-badge').count(), 9);
@@ -36,6 +37,13 @@ for (const width of [375, 768, 1280]) {
       await page.locator('#pilots-search').fill('');
       assert.equal(await page.locator('.pilots-card').count(), 0);
       await page.locator('[data-pilots-type="nonPilot"]').click();
+      const rankLayout = await page.evaluate(() => {
+        const bounds = selector => document.querySelector(selector).getBoundingClientRect().toJSON();
+        return { type: bounds('[aria-label="弟子分类"]'), ranks: bounds('[data-pilots-ranks]'), search: bounds('#pilots-search') };
+      });
+      assert.ok(rankLayout.ranks.y >= rankLayout.type.bottom && rankLayout.ranks.y - rankLayout.type.bottom <= 14, 'rank filters immediately follow type filters');
+      assert.ok(rankLayout.search.y > rankLayout.ranks.bottom, 'rank filters precede search');
+      assert.equal(await page.locator('[data-pilots-category-notes]').isVisible(), false);
       const selectedStyle = await page.locator('[data-pilots-type="nonPilot"]').evaluate(el => {
         const sample = document.createElement('button'); sample.className = 'seg active'; document.body.append(sample);
         const actual = getComputedStyle(el), expected = getComputedStyle(sample);
@@ -50,15 +58,38 @@ for (const width of [375, 768, 1280]) {
       assert.equal(await page.locator('.pilots-effect-title').textContent(), '20阶突破');
       assert.equal(await page.locator('[data-pilots-categories]').isVisible(), false);
       await page.locator('[data-pilots-type="pilot"]').click();
+      assert.equal(await page.locator('[data-pilots-category-notes]').isVisible(), true);
+      assert.equal(await page.locator('[data-pilots-category-notes] > p').count(), 3);
       for (const [category, condition] of [['backpack', /25阶.*不在机师位/], ['god25', /25阶.*在机师位置/], ['traditional', /技能.*机师位置.*进化.*时装/]]) {
-        const option = page.locator('.pilots-category-option').filter({ has: page.locator('[data-pilots-category="' + category + '"]') });
-        assert.match(await option.locator('.pilots-category-hint').textContent(), condition);
+        const note = page.locator('[data-pilots-category-note="' + category + '"]');
+        assert.match(await note.textContent(), condition);
+        assert.equal(await note.evaluate((el, id) => el.textContent.includes(window.PILOTS_DATA.categories.find(category => category.id === id).condition), category), true);
+      }
+      const categoryLayout = await page.evaluate(() => {
+        const bounds = selector => document.querySelector(selector).getBoundingClientRect().toJSON();
+        const row = document.querySelector('[data-pilots-categories]');
+        return {
+          type: bounds('[aria-label="弟子分类"]'), categories: bounds('[data-pilots-categories]'), search: bounds('#pilots-search'), notes: bounds('[data-pilots-category-notes]'),
+          buttons: Array.from(row.querySelectorAll('button'), button => button.getBoundingClientRect().toJSON()),
+          directButtons: Array.from(row.children).every(child => child.matches('button'))
+        };
+      });
+      assert.equal(categoryLayout.directButtons, true, 'category buttons share one compact row without expanding hint wrappers');
+      assert.ok(categoryLayout.categories.y >= categoryLayout.type.bottom && categoryLayout.categories.y - categoryLayout.type.bottom <= 14, 'category filters immediately follow type filters');
+      assert.ok(categoryLayout.search.y > categoryLayout.categories.bottom, 'category filters precede search');
+      assert.ok(categoryLayout.notes.y >= categoryLayout.search.bottom && categoryLayout.notes.y - categoryLayout.search.bottom <= 14, 'one shared note block immediately follows search');
+      for (let i = 1; i < categoryLayout.buttons.length; i++) {
+        const previous = categoryLayout.buttons[i - 1], current = categoryLayout.buttons[i];
+        if (Math.abs(current.y - previous.y) < 1) assert.ok(current.x - previous.right <= 10, 'adjacent category buttons stay tightly spaced');
       }
       await page.locator('#pilots-search').fill('神典庆 80%');
       await page.locator('[data-pilots-category="traditional"]').click();
       assert.equal(await page.locator('.pilots-card').count(), 1);
       assert.match(await page.locator('.pilots-card').textContent(), /15阶突破/);
       assert.match(await page.locator('.pilots-card').textContent(), /80%/);
+      const effectStyle = await page.locator('.pilots-effects p').first().evaluate(el => ({ fontSize: parseFloat(getComputedStyle(el).fontSize), lineHeight: parseFloat(getComputedStyle(el).lineHeight) }));
+      assert.ok(effectStyle.fontSize >= 14 && effectStyle.lineHeight >= effectStyle.fontSize * 1.75, 'effect paragraphs remain comfortably readable');
+      assert.equal(await page.locator('.pilots-effect-title:not(h4)').count(), 0);
       assert.equal(await page.locator('[data-pilots-ranks]').isVisible(), false);
       await page.locator('#pilots-search').fill('不应存在的关键词');
       assert.equal(await page.locator('.pilots-card').count(), 0);
@@ -68,6 +99,7 @@ for (const width of [375, 768, 1280]) {
       assert.equal(await page.locator('.pilots-card').count(), 0);
       assert.equal(await page.locator('.pilots-result-count').isVisible(), false);
       assert.equal(await page.locator('.pilots-grid').isVisible(), false);
+      assert.equal(await page.locator('[data-pilots-category-notes]').isVisible(), false);
       await page.locator('[data-pilots-type="pilot"]').click();
       assert.equal(await page.locator('.pilots-card').count(), 32);
       await page.locator('[data-pilots-type="nonPilot"]').click();

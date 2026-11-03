@@ -27,7 +27,7 @@
         (disciple.notes.length ? '<div class="pilots-notes">' + disciple.notes.map(function (note) { return '<p>' + escape(note) + '</p>'; }).join('') + '</div>' : '') +
         '<ul class="pilots-effects">' + core.visibleEffects(disciple, filters).map(function (effect) {
           var title = effect.kind === 'breakthrough' ? effect.rank + '阶突破' : categoryName(data, effect.category);
-          return '<li><div class="pilots-effect-title">' + escape(title) + '</div>' +
+          return '<li><h4 class="pilots-effect-title">' + escape(title) + '</h4>' +
             escape(effect.text).split(/(?=技能进化[：:]|猎人时装[：:]|时装(?:圣言|蛇姬|狼王)[：:])/).filter(Boolean).map(function (paragraph) {
               return '<p>' + paragraph + '</p>';
             }).join('') +
@@ -37,10 +37,6 @@
   }
   function button(attribute, value, label, active) {
     return '<button type="button" class="seg' + (active ? ' active' : '') + '" ' + attribute + '="' + escape(value) + '" aria-pressed="' + (active ? 'true' : 'false') + '">' + escape(label) + '</button>';
-  }
-  function categoryOption(value, label, condition, active) {
-    return '<div class="pilots-category-option">' + button('data-pilots-category', value, label, active) +
-      '<small class="pilots-category-hint">' + escape(condition) + '</small></div>';
   }
   function init(root) {
     root = root || global.document && global.document.getElementById('partition-pilots');
@@ -57,14 +53,18 @@
       '<p>按弟子身份归类。任一机师身份的弟子，其全部突破资料均归入机师；机师类别可重叠。</p></div>' +
       '<div class="pilots-toolbar"><div class="pilots-filter-row" role="group" aria-label="弟子分类">' +
       button('data-pilots-type', 'all', '全部', true) + button('data-pilots-type', 'nonPilot', '非机师', false) + button('data-pilots-type', 'pilot', '机师', false) + '</div>' +
-      '<label class="pilots-search-label" for="pilots-search">搜索名字、条件或效果</label>' +
-      '<input id="pilots-search" class="pilots-search" type="search" placeholder="如：端木蓉、护盾、夜之信条" autocomplete="off">' +
       '<div class="pilots-filter-row" data-pilots-categories role="group" aria-label="机师类别" hidden>' +
-      categoryOption('', '全部类别', '各类别生效条件见对应说明。', true) + data.categories.map(function (category) {
-        return categoryOption(category.id, category.name, category.condition, false);
+      button('data-pilots-category', '', '全部类别', true) + data.categories.map(function (category) {
+        return button('data-pilots-category', category.id, category.name, false);
       }).join('') + '</div>' +
       '<div class="pilots-filter-row" data-pilots-ranks role="group" aria-label="非机师突破阶数" hidden>' +
-      button('data-pilots-rank', '', '全部阶数', true) + [15, 20, 25].map(function (rank) { return button('data-pilots-rank', rank, rank + '阶', false); }).join('') + '</div></div>' +
+      button('data-pilots-rank', '', '全部阶数', true) + [15, 20, 25].map(function (rank) { return button('data-pilots-rank', rank, rank + '阶', false); }).join('') + '</div>' +
+      '<div class="pilots-search-field"><label class="pilots-search-label" for="pilots-search">搜索名字、条件或效果</label>' +
+      '<input id="pilots-search" class="pilots-search" type="search" placeholder="如：端木蓉、护盾、夜之信条" autocomplete="off"></div>' +
+      '<div class="pilots-category-notes" data-pilots-category-notes role="note" aria-label="机师类别生效说明" hidden>' +
+      data.categories.map(function (category) {
+        return '<p data-pilots-category-note="' + escape(category.id) + '"><strong>' + escape(category.name) + '：</strong>' + escape(category.condition) + '</p>';
+      }).join('') + '</div></div>' +
       '<p class="pilots-result-count" role="status" aria-live="polite" aria-atomic="true"></p><div class="pilots-grid"></div>' +
       '<section class="pilots-reference"><h3>机师时装图名称</h3><div class="pilots-costumes">' +
       data.costumes.map(function (costume) { return '<span class="pilots-badge">' + escape(costume.name) + '</span>'; }).join('') + '</div></section></div>';
@@ -80,6 +80,7 @@
       count.textContent = showResults ? selected.length + ' 位弟子 · ' + effectCount + ' 条资料' : '';
       results.innerHTML = showResults ? renderResults(data, state) : '';
       root.querySelector('[data-pilots-categories]').hidden = state.type !== 'pilot';
+      root.querySelector('[data-pilots-category-notes]').hidden = state.type !== 'pilot';
       root.querySelector('[data-pilots-ranks]').hidden = state.type !== 'nonPilot';
       [['data-pilots-type', 'type'], ['data-pilots-category', 'category'], ['data-pilots-rank', 'rank']].forEach(function (pair) {
         root.querySelectorAll('[' + pair[0] + ']').forEach(function (element) {

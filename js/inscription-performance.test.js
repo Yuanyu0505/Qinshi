@@ -1,6 +1,6 @@
 const { test } = require("node:test");
 const assert = require("node:assert/strict");
-const { createRenderCoordinator } = require("./inscription-performance.js");
+const { createRenderCoordinator, createQueryBatchRenderer } = require("./inscription-performance.js");
 
 function createManualScheduler() {
   let nextId = 1;
@@ -99,4 +99,66 @@ test("离开查询页会取消尚未执行的搜索刷新并保留失效状态",
   assert.equal(calls.query, 1);
   coordinator.activate("query");
   assert.equal(calls.query, 2);
+});
+
+test("查询分批安装且保持所有结果顺序", () => {
+  const scheduler = createManualScheduler(), batches = [];
+  const renderer = createQueryBatchRenderer({
+    batchSize: 2, schedule: scheduler.schedule, cancel: scheduler.cancel,
+    renderBatch(items, replace) { batches.push({ items, replace }); }
+  });
+  renderer.render(["a", "b", "c", "d", "e"]);
+  assert.deepEqual(batches, [{ items: ["a", "b"], replace: true }]);
+  scheduler.flush();
+  assert.deepEqual(batches[1], { items: ["c", "d"], replace: false });
+  scheduler.flush();
+  assert.deepEqual(batches[2], { items: ["e"], replace: false });
+  assert.equal(renderer.cancel(), false, "completed results are reusable");
+});
+
+test("取消或新查询不会继续追加旧批次", () => {
+  const scheduler = createManualScheduler(), batches = [];
+  const renderer = createQueryBatchRenderer({
+    batchSize: 1, schedule: scheduler.schedule, cancel: scheduler.cancel,
+    renderBatch(items, replace) { batches.push({ items, replace }); }
+  });
+  renderer.render(["old-1", "old-2"]);
+  assert.equal(renderer.cancel(), true);
+  scheduler.flush();
+  assert.equal(batches.length, 1);
+  renderer.render(["next-1", "next-2"]);
+  renderer.render(["latest"]);
+  scheduler.flush();
+  assert.deepEqual(batches.map(row => row.items), [["old-1"], ["next-1"], ["latest"]]);
+});
+
+test("账号上下文改变时停止追加并失效查询", () => {
+  const scheduler = createManualScheduler(), batches = [];
+  let current = true, invalidated = 0;
+  const renderer = createQueryBatchRenderer({
+    batchSize: 1, schedule: scheduler.schedule, cancel: scheduler.cancel,
+    isCurrent() { return current; }, onCancel() { invalidated += 1; },
+    renderBatch(items) { batches.push(items); }
+  });
+  renderer.render(["account-a-1", "account-a-2"]);
+  current = false;
+  scheduler.flush();
+  assert.deepEqual(batches, [["account-a-1"]]);
+  assert.equal(invalidated, 1);
+});
+
+test("离开分区取消未完成批次后返回会重新查询，已完成查询不重绘", () => {
+  let incomplete = true, calls = 0, cancellations = 0;
+  const coordinator = createRenderCoordinator({
+    renderers: { query() { calls += 1; }, progress() {} },
+    cancelQueryRender() { cancellations += 1; const pending = incomplete; incomplete = false; return pending; }
+  });
+  coordinator.activate("query");
+  coordinator.cancelPendingQuery();
+  coordinator.activate("query");
+  assert.equal(calls, 2);
+  coordinator.activate("progress");
+  coordinator.activate("query");
+  assert.equal(calls, 2);
+  assert.equal(cancellations, 2);
 });

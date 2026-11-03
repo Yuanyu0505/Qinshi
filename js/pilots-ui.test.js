@@ -69,3 +69,12 @@ test('pilot identity badges carry four stable category classes', () => {
     assert.match(UI.renderResults(DATA, { query }), new RegExp('pilots-badge-' + badge));
   }
 });
+
+test('effect groups expose rank and category headings below each disciple heading', () => {
+  const html = UI.renderResults(DATA, { query: '神端木蓉' });
+  assert.match(html, /<h3>神·端木蓉<\/h3>/);
+  for (const heading of ['15阶突破', '20阶突破', '25阶突破', '背包机师']) {
+    assert.ok(html.includes('<h4 class="pilots-effect-title">' + heading + '</h4>'), heading);
+  }
+  assert.equal((html.match(/<h4 /g) || []).length, 4);
+});

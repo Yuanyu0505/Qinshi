@@ -132,7 +132,10 @@
 .craft-quality-o1,.craft-quality-o2 { border-color:#c2954c; background:#94672c16; }
 .craft-materials { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:14px; }
 .craft-material { border:1px solid #76613d; border-radius:9px; padding:12px; min-width:0; margin:0; }
-.craft-material-toolbar { display:flex; justify-content:flex-end; margin:8px 0 12px; }
+.craft-material-toolbar { display:flex; align-items:center; flex-wrap:wrap; gap:10px; justify-content:space-between; margin:8px 0 12px; }
+.craft-material-toolbar>button { margin-left:auto; }
+.craft-auto-credit { display:flex; align-items:center; gap:8px; font-size:13px; }
+.ins-crafting .craft-auto-credit input { width:18px; height:18px; flex:0 0 18px; }
 .craft-material-confirmed { display:flex; flex-direction:column; }
 .craft-material-confirmed .craft-material-header { flex:0 0 auto; }
 .craft-material-content { flex:1; display:flex; align-items:center; min-height:110px; }

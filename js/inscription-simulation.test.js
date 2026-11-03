@@ -6,6 +6,52 @@ const Lab=require('./inscription-simulation.js');
 function fresh(){return Lab.upgrade({version:1,target:{discipleKey:'',slot:'',dun:'鬼遁',quality:'o2',attrs:['速','速','速']},simulation:{stage:'b2',inputs:[[{attr:'速',tier:'?'}],[{attr:'速',tier:'?'}]],pending:null}});}
 const total=w=>w.lab.lots.reduce((n,l)=>n+l.quantity,0);
 
+test('interactive synthesis defaults to automatic credit and repeat immediately adds one fresh result',()=>{
+ let w=Lab.act(fresh(),'simulate',{random:()=>0});assert.equal(w.lab.autoCredit,true);assert.equal(total(w),1);
+ const first=w.simulation.pending.recordId;w=Lab.act(w,'repeat-simulate',{random:()=>.999});
+ assert.ok(w.simulation.pending);assert.notEqual(w.simulation.pending.recordId,first);assert.equal(total(w),2);assert.equal(w.lab.records.length,2);
+ w=Lab.act(w,'retry',{random:()=>0});assert.equal(total(w),2);assert.equal(w.lab.records.length,2);
+ w=Lab.act(w,'back');assert.equal(total(w),1);
+});
+
+test('automatic credit can be disabled without forced saving while starting another batch',()=>{
+ let w=Lab.act(fresh(),'auto-credit',{enabled:false});w=Lab.act(w,'simulate',{random:()=>0});assert.equal(total(w),0);
+ w=Lab.act(w,'repeat-simulate',{random:()=>0});assert.equal(total(w),0);assert.equal(w.lab.records.length,2);
+ w=Lab.act(w,'credit');assert.equal(total(w),1);w=Lab.act(w,'retry',{random:()=>0});assert.equal(total(w),1);
+ assert.equal(Lab.upgrade(w).lab.autoCredit,false);
+});
+
+test('editing material after a result starts a new batch and retains the prior credited result',()=>{
+ let w=Lab.act(fresh(),'simulate',{random:()=>0}),record=w.simulation.pending.recordId;
+ w=Lab.act(w,'edit-material',{index:0,terms:[{attr:'防',tier:'H'}]});
+ assert.equal(w.simulation.pending,null);assert.equal(w.simulation.inputs[0][0].attr,'防');assert.equal(total(w),1);
+ assert.equal(w.lab.records[0].id,record);assert.equal(Lab.preview(w).valid,true);
+});
+
+test('repeated backpack synthesis with insufficient remaining stock is atomic',()=>{
+ let w=Lab.act(threePurple(),'simulate',{random:()=>0});const before=JSON.stringify(w);
+ assert.throws(()=>Lab.act(w,'repeat-simulate',{random:()=>0}),/不足/);assert.equal(JSON.stringify(w),before);assert.equal(total(w),1);
+ w=Lab.act(w,'prepare',{clear:true});assert.equal(w.simulation.stage,'p1');assert.equal(w.simulation.pending,null);assert.equal(w.simulation.refs.length,0);
+ assert.ok(w.simulation.inputs.every(a=>a.every(t=>t===null)));assert.equal(total(w),1);
+});
+
+test('retry of a repeated batch reuses returned equivalent stock without charging the spent lot',()=>{
+ let w=fresh();const m={prefix:'天府',dun:'鬼遁',quality:'p1',origin:'crafted',terms:[{attr:'速',tier:'H'},{attr:'速',tier:'M'}]};
+ w.simulation={stage:'p1',inputs:[],refs:[],pending:null};w.lab.lots=['A','B'].map(id=>({id,material:m,quantity:3,source:{type:'manual'}}));
+ w=Lab.act(w,'select',{selection:[{id:'A',quantity:3}]});w=Lab.act(w,'simulate',{random:()=>0});w=Lab.act(w,'repeat-simulate',{random:()=>0});
+ assert.deepEqual(w.lab.records.at(-1).inputs.map(i=>i.lotId),['B','B','B']);
+ w=Lab.act(w,'retry',{random:()=>0});assert.deepEqual(w.lab.records.at(-1).inputs.map(i=>i.lotId),['B','B','B']);
+ assert.equal(w.lab.lots.find(l=>l.id==='A').quantity,0);assert.equal(w.lab.lots.find(l=>l.id==='B').quantity,0);assert.equal(total(w),2);
+ w=Lab.act(w,'back');assert.equal(w.lab.lots.find(l=>l.id==='B').quantity,3);assert.ok(w.simulation.pending);assert.equal(w.lab.records.length,1);
+});
+
+test('enabling automatic credit before retry saves its replacement exactly once',()=>{
+ let w=Lab.act(fresh(),'auto-credit',{enabled:false});w=Lab.act(w,'simulate',{random:()=>0});
+ assert.equal(total(w),0);w=Lab.act(w,'auto-credit',{enabled:true});w=Lab.act(w,'retry',{random:()=>0});
+ assert.equal(total(w),1);assert.ok(w.simulation.pending.creditedLot);w=Lab.act(w,'retry',{random:()=>.999});assert.equal(total(w),1);assert.equal(w.lab.records.length,1);
+ w=Lab.act(w,'back');assert.equal(total(w),0);assert.equal(w.lab.records.length,0);
+});
+
 test('refill of an identical group repairs spent slot refs without inventing simulation provenance',()=>{
  let w=Lab.act(threePurple(),'roll',{random:()=>0});w=Lab.act(w,'repeat');
  const id=R.signature(w.lab.lots[0].material),records=JSON.stringify(w.lab.records);

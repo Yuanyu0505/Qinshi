@@ -8,6 +8,42 @@
 
   var MODES = ["progress", "query", "reference", "crafting-paths", "crafting-simulator", "crafting-favorites"];
 
+  function createQueryBatchRenderer(options) {
+    var schedule = options.schedule || function (callback) { return setTimeout(callback, 16); };
+    var cancelJob = options.cancel || function (id) { clearTimeout(id); };
+    var batchSize = options.batchSize || 12;
+    var pending = null, generation = 0, running = false;
+    function cancel() {
+      if (!running) return false;
+      generation += 1;
+      if (pending !== null) cancelJob(pending);
+      pending = null;
+      running = false;
+      if (options.onCancel) options.onCancel();
+      return true;
+    }
+    function render(items) {
+      cancel();
+      var version = ++generation, index = 0;
+      running = true;
+      function append() {
+        pending = null;
+        if (version !== generation) return;
+        if (options.isCurrent && !options.isCurrent()) { cancel(); return; }
+        var end = Math.min(index + batchSize, items.length);
+        options.renderBatch(items.slice(index, end), index === 0);
+        index = end;
+        if (index < items.length) pending = schedule(append, 16);
+        else {
+          running = false;
+          if (options.onComplete) options.onComplete();
+        }
+      }
+      append();
+    }
+    return { render: render, cancel: cancel };
+  }
+
   function createRenderCoordinator(options) {
     options = options || {};
     var renderers = options.renderers || {};
@@ -34,9 +70,11 @@
     }
 
     function cancelPendingQuery() {
-      if (pendingQuery === null) return;
-      cancel(pendingQuery);
-      pendingQuery = null;
+      if (pendingQuery !== null) {
+        cancel(pendingQuery);
+        pendingQuery = null;
+      }
+      if (options.cancelQueryRender && options.cancelQueryRender()) dirty.query = true;
     }
 
     function activate(mode) {
@@ -48,6 +86,7 @@
 
     function markDirty(mode) {
       assertMode(mode);
+      if (mode === "query") cancelPendingQuery();
       dirty[mode] = true;
     }
 
@@ -75,5 +114,5 @@
     };
   }
 
-  return { createRenderCoordinator: createRenderCoordinator };
+  return { createRenderCoordinator: createRenderCoordinator, createQueryBatchRenderer: createQueryBatchRenderer };
 });

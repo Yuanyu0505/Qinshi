@@ -39,6 +39,8 @@
   var editingKey = "";
   var el = {};
   var renderCoordinator;
+  var queryBatches, queryAccountId, queryOrderChanged = false;
+  var queryNameCollator = new Intl.Collator("zh-CN", { sensitivity: "base" });
 
   function init() {
     var partition = document.getElementById("partition-inscription");
@@ -82,12 +84,31 @@
       },
       schedule: function (callback, delay) { return window.setTimeout(callback, delay); },
       cancel: function (id) { window.clearTimeout(id); },
+      cancelQueryRender: function () { return queryBatches ? queryBatches.cancel() : false; },
       queryDelay: 120
     });
     [el.quality, el.tian, el.shield, el.discipleGroup].filter(Boolean).forEach(function (control) {
       control.addEventListener("change", function () { renderCoordinator.invalidate("query"); });
     });
     el.search.addEventListener("input", function () { renderCoordinator.scheduleQuery(); });
+    queryBatches = PERFORMANCE.createQueryBatchRenderer({
+      batchSize: 4,
+      isCurrent: function () {
+        var account = ACCOUNT_STORAGE.currentAccount();
+        return (account && account.id) === queryAccountId;
+      },
+      renderBatch: function (items, replace) {
+        var html = items.length ? items.map(queryCardHtml).join("") : '<div class="empty"><p>未找到匹配弟子</p></div>';
+        if (replace) el.results.innerHTML = html;
+        else el.results.insertAdjacentHTML("beforeend", html);
+        if (queryOrderChanged) reorderQueryCards();
+      },
+      onCancel: function () {
+        el.results.setAttribute("aria-busy", "false");
+        renderCoordinator.markDirty("query");
+      },
+      onComplete: function () { queryOrderChanged = false; el.results.setAttribute("aria-busy", "false"); }
+    });
 
     function activatePartition(event) {
       if (event && (!event.detail || event.detail.name !== "inscription")) {
@@ -215,6 +236,11 @@
       renderCoordinator.invalidate("query");
       return;
     }
+    // Later batches also need the new priority, without replacing existing cards.
+    queryOrderChanged = true;
+    reorderQueryCards(button);
+  }
+  function reorderQueryCards(button) {
     // 只移动现有卡片，不重建铭文内容，也不清除正在输入的筛选条件。
     var cards = Array.from(el.results.querySelectorAll(".ins-query-card[data-ins-query-key]"));
     cards.sort(function (a, b) {
@@ -459,6 +485,9 @@
   }
 
   function renderQuery() {
+    var account = ACCOUNT_STORAGE.currentAccount();
+    queryAccountId = account && account.id;
+    queryOrderChanged = false;
     var query = el.search.value.trim().toLowerCase();
     var items = DATA.items.filter(function (item) {
       if (el.quality.value && item.quality !== el.quality.value) return false;
@@ -468,7 +497,8 @@
       return item.slots.some(slotMatchesFilter);
     });
     items.sort(compareQueryItems);
-    el.results.innerHTML = items.length ? items.map(queryCardHtml).join("") : '<div class="empty"><p>未找到匹配弟子</p></div>';
+    el.results.setAttribute("aria-busy", "true");
+    queryBatches.render(items);
   }
   function compareQueryItems(a, b) {
     var aGroup = progress[keyOf(a)] ? 0 : commonKeys.has(keyOf(a)) ? 1 : 2;
@@ -476,7 +506,7 @@
     if (aGroup !== bGroup) return aGroup - bGroup;
     var qualityDifference = Number(b.quality === "红色神将") - Number(a.quality === "红色神将");
     if (qualityDifference) return qualityDifference;
-    return a.name.localeCompare(b.name, "zh-CN", { sensitivity: "base" });
+    return queryNameCollator.compare(a.name, b.name);
   }
   function slotMatchesFilter(slot) {
     return (!el.tian.value || slot.tian === el.tian.value) && (!el.shield.value || normalizeDunName(slot.shield) === normalizeDunName(el.shield.value));

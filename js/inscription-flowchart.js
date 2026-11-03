@@ -50,7 +50,11 @@
     // A complete stat combination is indivisible. Widen the local scrollable
     // canvas instead of splitting a term or placing each stat on another line.
     lines.forEach(function(line){if(typeof line!=='string')width=Math.max(width,Math.ceil(Array.from(lineText(line)).reduce(function(sum,c){return sum+(/[\u0000-\u00ff]/.test(c)?8.4:14);},0))+48);});
-    var text=wrap(lines,width);return{id:id,x:x,y:y,w:width,h:24+text.length*20,lines:text,kind:kind||'material'};
+    var text=wrap(lines,width),termIndex=text.findIndex(function(line){return typeof line!=='string'&&line.parts.some(function(part){return part.role==='value';});});
+    // Keep term typography unchanged, and move only the following notes down.
+    // The added height participates in the shared layout/wire routing.
+    var offsets=text.map(function(_,i){return 22+i*20+(termIndex>=0&&i>termIndex?8:0);});
+    return{id:id,x:x,y:y,w:width,h:24+text.length*20+(termIndex>=0&&termIndex<text.length-1?8:0),lines:text,lineOffsets:offsets,kind:kind||'material'};
   }
   function edge(from,to,label,extra){return Object.assign({from:from,to:to,label:label||''},extra||{});}
   function path(points){
@@ -172,11 +176,11 @@
           return inputs.size>1?'<circle class="craft-flow-junction" data-flow-junction="'+esc(n.id)+'" cx="'+cx+'" cy="'+cy+'" r="3"/>':'';
         }
         var termIndex=n.lines.findIndex(function(line){return typeof line!=='string'&&line.parts.some(function(part){return part.role==='value';});});
-        var divider=n.role==='main'&&termIndex>=0&&termIndex<n.lines.length-1?'<line class="craft-flow-divider" x1="'+(n.x+10)+'" x2="'+(n.x+n.w-10)+'" y1="'+(n.y+32+termIndex*20)+'" y2="'+(n.y+32+termIndex*20)+'"/>':'';
+        var divider=n.role==='main'&&termIndex>=0&&termIndex<n.lines.length-1?'<line class="craft-flow-divider" x1="'+(n.x+10)+'" x2="'+(n.x+n.w-10)+'" y1="'+(n.y+34+termIndex*20)+'" y2="'+(n.y+34+termIndex*20)+'"/>':'';
         return '<g class="craft-flow-box craft-flow-'+n.kind+' craft-flow-quality-'+n.quality+(n.kind==='promotion'?' craft-flow-promotion-'+(n.promotion==='初级'?'initial':'intermediate'):'')+'" data-flow-node="'+esc(n.id)+'" data-flow-lane="'+n.role+'" role="button" tabindex="0" aria-label="'+esc(n.lines.map(lineText).join('，'))+'"><rect x="'+n.x+'" y="'+n.y+'" width="'+n.w+'" height="'+n.h+'" rx="9"/>'+divider+n.lines.map(function(line,i){
           var next=line.presentation==='next';
           var titleLine=n.kind==='wash'?i===1:i===0;
-          return '<text class="'+(next?'craft-flow-next':titleLine?'craft-flow-node-title':typeof line!=='string'?'craft-flow-node-terms':'craft-flow-node-note')+'" x="'+(n.x+n.w/2)+'" y="'+(n.y+22+i*20)+'">'+lineHtml(line)+'</text>';
+          return '<text class="'+(next?'craft-flow-next':titleLine?'craft-flow-node-title':typeof line!=='string'?'craft-flow-node-terms':'craft-flow-node-note')+'" x="'+(n.x+n.w/2)+'" y="'+(n.y+n.lineOffsets[i])+'">'+lineHtml(line)+'</text>';
         }).join('')+'</g>';
       }).join('')+labels.join('')+'</svg>';
   }
@@ -192,6 +196,8 @@
     settings=settings||{};
     var graph=Model.project(route,x), nodes=[],edges=[],visual=new Map(),inputVisual=new Map(),opVisual=new Map(),forks=new Map(),details=[],operationOutputs=new Map();
     var byMaterial=new Map(graph.materials.map(function(m){return [m.id,m];})),byOperation=new Map(graph.operations.map(function(o){return [o.id,o];}));
+    var flexible=graph.operations.some(function(o){return o.allocations;});
+    var materialNames=new Map(graph.materials.filter(function(m){return m.useful;}).map(function(m,i){return [m.id,qLabel(m.material.quality)+' M'+(i+1)];}));
     var levels={b2:0,p1:2,p2:4,o1:6,o2:8};
     function add(id,lines,level,kind,width,quality){
       var n=box(id,0,0,width||240,lines,kind);n.level=level;n.quality=quality;n.role=kind==='promotion'||kind==='wash'?'auxiliary':kind==='failure'||kind==='operation'?'side':'main';nodes.push(n);return n;
@@ -204,7 +210,7 @@
       var lines=[title].concat(drawnTerms(m));
       var initial=m.material.quality==='b2'&&(m.kind==='base'||op&&op.kind==='wash');
       if(initial)lines=[{parts:[{text:qLabel(m.material.quality)}].concat(drawnTerms(m)[0].parts)}];
-      else if(m.material.quality!=='o2')lines.push(m.demand?'总共需要'+m.demand+'枚该铭文':'可替代同款材料（不重复计量）');
+      else if(m.material.quality!=='o2')lines.push(m.demand?(flexible?'示例：':'')+'总共需要'+m.demand+'枚该铭文':'可替代同款材料（不重复计量）');
       var kind=m.kind==='base'?'material':'success';
       if(route.recorded&&m.kind==='base')lines.push(m.material.origin==='wash'?'洗练备料':'手动补充（独立起点）');
       if(op&&op.kind==='wash'){kind='wash';lines=['另行置换合成素材铭文'].concat(lines);}
@@ -212,7 +218,7 @@
       if(!initial&&kind!=='wash'&&m.demand&&allConsumers.length===1){
         var consumer=allConsumers[0],quantity=consumer.inputs.find(function(i){return i.id===m.id;}).quantity;
         var stable=consumer.inputs.length===1&&consumer.outputs.length===1&&consumer.outputs[0].probability===1&&!consumer.promotion;
-        lines.push({parts:[{text:stable?'下步：同款'+quantity+'枚合成 · 必出':'下步：每批'+quantity+'枚，与其他素材合成'}],presentation:'next'});
+        lines.push({parts:[{text:consumer.allocations?'下步：两种共3枚，各至少1枚':stable?'下步：同款'+quantity+'枚合成 · 必出':'下步：每批'+quantity+'枚，与其他素材合成'}],presentation:'next'});
       }
       var consumers=initial||kind==='wash'?allConsumers:[];
       if(consumers.length>1){
@@ -221,15 +227,15 @@
         consumers.forEach(function(consumer,consumerIndex){
           var prepared=lines.slice();
           if(kind==='wash'){
-            if(consumerIndex)prepared=prepared.map(function(line){return typeof line==='string'&&line.indexOf('总共需要')===0?'同款另批备料（不重复计总数）':line;});
-            prepared.push('本批用'+consumer.inputs.find(function(i){return i.id===m.id;}).quantity+'枚');
+            if(consumerIndex)prepared=prepared.map(function(line){return typeof line==='string'&&/^(示例：)?总共需要/.test(line)?'同款另批备料（不重复计总数）':line;});
+            prepared.push(consumer.allocations?'本批用1～2枚，两种共3枚':'本批用'+consumer.inputs.find(function(i){return i.id===m.id;}).quantity+'枚');
           }
           var n=add(m.id+'-for-'+consumer.id,prepared,levels[m.material.quality],kind,kind==='wash'?280:240,m.material.quality);n.demand=m.demand;
           n.batch=consumer.id;inputVisual.set(consumer.id+':'+m.id,n);
           if(!visual.has(m.id))visual.set(m.id,n);
         });
       }else{
-        if(kind==='wash'&&consumers.length)lines.push('本批用'+consumers[0].inputs.find(function(i){return i.id===m.id;}).quantity+'枚');
+        if(kind==='wash'&&consumers.length)lines.push(consumers[0].allocations?'本批用1～2枚，两种共3枚':'本批用'+consumers[0].inputs.find(function(i){return i.id===m.id;}).quantity+'枚');
         var n=add(m.id,lines,levels[m.material.quality],kind,kind==='wash'?280:initial?240:320,m.material.quality);n.demand=m.demand;
         if(consumers.length)n.batch=consumers[0].id;
         visual.set(m.id,n);
@@ -290,7 +296,7 @@
       });
       var folded=Boolean(to.folded);
       merged.forEach(function(input){
-        var label='该铭文×'+input.quantity;
+        var label=op.allocations?'该铭文×1～2':'该铭文×'+input.quantity;
         // A deterministic recipe is folded directly into its product; its
         // batch quantity and probability share one label, not another row.
         if(folded)label+='、概率'+percent(op.outputs[0].probability);
@@ -346,8 +352,12 @@
     var xNote=!xTerm?'':symbolic?'符号模板 A：X 采用同一种合法不分档词条；概率只对该模板条件成立。':'具体模式 B：杂词 X 固定为'+xTerm.attr+'（'+T.tierLabel(xTerm.tier)+'），不替换属性或档位。';
     var drawing=svg(title,nodes,edges,width,layout.height,layout.bands);
     var actions=details.length?'<button type="button" class="seg" data-craft-action="diagram-failures" aria-expanded="'+Boolean(settings.showFailures)+'">'+(settings.showFailures?'收起所有失败结果':'展开所有失败结果')+'</button>':'';
-    return '<div class="craft-flow-guide">'+(route.recorded?'本枚产物的实际材料链；只包含已经使用的记录，不包含重抽前或未使用的其他产物。':'每次只产出一枚；同款蓝二按不同批次分别备料。需求按从零制作一枚目标累计，连线数量是每批投料。')+'</div>'+
+    var allocationDetails=flexible?'<details class="craft-flow-allocations"><summary>可互换配比（任选一种）</summary>'+graph.operations.filter(function(o){return o.allocations;}).map(function(o){
+      return '<p>'+esc(o.allocations.map(function(choice){return choice.map(function(i){return materialNames.get(i.id)+'×'+i.quantity;}).join('＋');}).join(' 或 '))+'；两种共3枚，各至少1枚。结果及概率相同。</p>';
+    }).join('')+'</details>':'';
+    return '<div class="craft-flow-guide">'+(route.recorded?'本枚产物的实际材料链；只包含已经使用的记录，不包含重抽前或未使用的其他产物。':flexible?'两种互补材料合计3枚、各至少1枚；1＋2和2＋1可互换。图中备料总数按一种示例配比累计，并非唯一配比的固定需求。':'每次只产出一枚；同款蓝二按不同批次分别备料。需求按从零制作一枚目标累计，连线数量是每批投料。')+'</div>'+
       (xNote?'<p class="craft-note">'+esc(xNote)+'</p>':'')+
+      allocationDetails+
       figure(title,drawing,'',actions)+
       '<ul class="craft-flow-rules"><li>'+(route.recorded?'手动补充从当前品质起算，不虚构此前制作步骤。':'备料总数仅含主线所需成功材料，不含失败重试消耗。')+'</li><li>每次合成只产出1枚结果；独立洗练素材另行准备。</li><li>概率沿用工具原路线模型，非游戏实测频率。</li></ul>'+
       (details.length?'<div class="craft-flow-details" data-flow-details'+(settings.showFailures?'':' hidden')+'>'+details.join('')+'</div>':'');

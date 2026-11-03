@@ -23,6 +23,21 @@ function sourcedPair(){
   return craft([{quantity:1,node:base([term('速','?')],false)},{quantity:1,node:base([term('闪避','U')],true)}]);
 }
 
+test('互补紫一的两个正整数配比等价，但实录仍保留真实配比',()=>{
+  const inputs=[{quantity:1,node:base([term('速','?')],false)},{quantity:1,node:base([term('闪避','U')],true)}];
+  const high=craft(inputs,o=>o.material.terms.some(t=>t.attr==='速'&&t.tier==='H'));
+  const middle=craft(inputs,o=>o.material.terms.some(t=>t.attr==='速'&&t.tier==='M'));
+  const tree=craft([{quantity:2,node:high},{quantity:1,node:middle}],o=>o.material.terms.every(t=>t.attr==='速'));
+  const original=route(tree),before=JSON.stringify(original),graph=Model.project(original,'闪避');
+  const op=graph.operations.find(o=>o.quality==='p2');
+  assert.deepEqual(op.allocations.map(a=>a.map(i=>i.quantity)),[[1,2],[2,1]]);
+  assert.equal(JSON.stringify(original),before,'display choices never change saved trees or their demand');
+  const recorded=Model.project({...original,recorded:true},'闪避');
+  assert.equal(recorded.operations.find(o=>o.quality==='p2').allocations,undefined);
+  const same=Model.project(route(craft([{quantity:3,node:high}])),'闪避');
+  assert.equal(same.operations.find(o=>o.quality==='p2').allocations,undefined);
+});
+
 for(const [dun,attrs] of [['鬼遁',['暴击伤害','速','速']],['龙遁',['PVP伤害','PVP速','PVP速']]]){
   test(dun+' shares complementary 50% products and counts the complete one-target demand',()=>{
     const plan=Paths.representative({prefix:'天府',dun,quality:'o2',attrs});

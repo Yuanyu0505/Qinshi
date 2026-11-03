@@ -29,9 +29,22 @@
         root.addEventListener("storage", function (event) {
           if (event.key && event.key.indexOf(api.LEASE_PREFIX) === 0) root.QinshiAccountLease.refresh(event.key.slice(api.LEASE_PREFIX.length));
         });
-        root.addEventListener("pagehide", function () { root.QinshiAccountLease.releaseAll(); });
+        root.addEventListener("pagehide", function (event) {
+          if (event.persisted) root.QinshiAccountLease.suspendAll();
+          else root.QinshiAccountLease.releaseAll();
+        });
         root.addEventListener("visibilitychange", function () {
           if (!root.document || root.document.visibilityState === "visible") root.QinshiAccountLease.renewAll();
+        });
+        root.addEventListener("pageshow", function (event) {
+          if (!event.persisted || !root.QinshiAccounts) return;
+          // A cached document has stale in-memory accounts. Never resurrect
+          // an account selected/deleted elsewhere while this page was frozen.
+          if (!root.QinshiAccounts.isCurrentContext()) {
+            root.QinshiAccountLease.releaseAll();root.location.reload();return;
+          }
+          var account = root.QinshiAccounts.currentAccount();
+          root.QinshiAccountLease.resumeAll(function (id) { return account && account.id === id; });
         });
       }
     }
@@ -51,6 +64,7 @@
     var ttl = Number(options.ttl) > 0 ? Number(options.ttl) : DEFAULT_TTL;
     var channel = options.channel || null;
     var owned = new Map();
+    var suspended = new Map();
     var listeners = new Set();
 
     function key(accountId) { return LEASE_PREFIX + accountId; }
@@ -92,9 +106,18 @@
       var token = owned.get(accountId);
       return Boolean(valid(current) && token && current.ownerTabId === tabId && current.token === token);
     }
+    function ensureWritable(accountId) {
+      var current = read(accountId), token = owned.get(accountId);
+      // Expiry alone is not a takeover. Background throttling/sleep can miss
+      // every renewal. Only the exact former owner may revive its own token;
+      // another owner's lease, even expired, must be claimed explicitly.
+      if (!current || !token || current.ownerTabId !== tabId || current.token !== token) return false;
+      return valid(current) || write(accountId, token);
+    }
     function renew(accountId) {
-      if (!canWrite(accountId)) return false;
-      return write(accountId, owned.get(accountId));
+      var current = read(accountId), token = owned.get(accountId);
+      if (!current || !token || current.ownerTabId !== tabId || current.token !== token) return false;
+      return write(accountId, token);
     }
     function renewAll() { Array.from(owned.keys()).forEach(renew); }
     function release(accountId) {
@@ -105,7 +128,25 @@
       if (channel && typeof channel.postMessage === "function") channel.postMessage({ type: "lease-changed", accountId: accountId });
       notify(accountId);
     }
-    function releaseAll() { Array.from(owned.keys()).forEach(release); }
+    function releaseAll() { suspended.clear();Array.from(owned.keys()).forEach(release); }
+    function suspendAll() {
+      suspended.clear();
+      Array.from(owned.keys()).forEach(function (id) {
+        var current=read(id),token=owned.get(id);
+        if(current&&current.ownerTabId===tabId&&current.token===token)suspended.set(id,token);
+        release(id);
+      });
+    }
+    function resumeAll(allow) {
+      var pending=Array.from(suspended);suspended.clear();
+      pending.forEach(function (entry) {
+        var id=entry[0],token=entry[1],current=read(id);
+        if(allow&&!allow(id))return;
+        // Any different token means another editing context intervened. Even
+        // if expired, it is not ours to replace automatically on browser Back.
+        if(!current||current.ownerTabId===tabId&&current.token===token)write(id,token);
+      });
+    }
     function refresh(accountId) { return notify(accountId); }
     function subscribe(listener) {
       if (typeof listener !== "function") return function () {};
@@ -125,7 +166,7 @@
       if (channel && typeof channel.close === "function") channel.close();
       listeners.clear();
     }
-    return { claim: claim, takeOver: takeOver, canWrite: canWrite, renew: renew, renewAll: renewAll, release: release, releaseAll: releaseAll, refresh: refresh, subscribe: subscribe, destroy: destroy };
+    return { claim: claim, takeOver: takeOver, canWrite: canWrite, ensureWritable: ensureWritable, renew: renew, renewAll: renewAll, release: release, releaseAll: releaseAll, suspendAll: suspendAll, resumeAll: resumeAll, refresh: refresh, subscribe: subscribe, destroy: destroy };
   }
 
   return { LEASE_PREFIX: LEASE_PREFIX, DEFAULT_TTL: DEFAULT_TTL, createLease: createLease };

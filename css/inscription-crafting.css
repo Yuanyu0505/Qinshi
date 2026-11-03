@@ -103,6 +103,9 @@
 .craft-flow-details { border:1px solid var(--line); border-radius:8px; padding:12px; margin-top:12px; }
 .craft-flow-details[hidden] { display:none; }
 .craft-flow-rules { color:var(--muted,#b7ad99); background:#85704308; border-top:1px solid var(--line,#443a29); padding:12px 12px 12px 30px; font-size:12px; line-height:1.7; }
+.craft-flow-allocations { margin:8px 0; font-size:13px; line-height:1.7; }
+.craft-flow-allocations summary { cursor:pointer; color:var(--gold); }
+.craft-flow-allocations p { margin:6px 0; overflow-wrap:anywhere; }
 .craft-unused-group+.craft-unused-group { border-top:1px solid var(--line,#443a29); padding-top:10px; margin-top:12px; }
 .craft-unused-group h6 { margin:6px 0; color:var(--gold); font-size:14px; }
 .craft-unused-group p { margin:6px 0; line-height:1.7; overflow-wrap:anywhere; }
@@ -131,6 +134,9 @@
 .craft-material { border:1px solid #76613d; border-radius:9px; padding:12px; min-width:0; margin:0; }
 .craft-material legend { color:#edcf87; padding:0 6px; font-weight:600; }
 .craft-material label { margin:8px 0 12px; }
+.craft-material-header { display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:6px 10px; margin:0 0 10px; }
+.craft-material-header .craft-note { flex:1 1 120px; min-width:0; margin:0; overflow-wrap:anywhere; }
+.craft-material-header button { flex:0 0 auto; margin-left:auto; min-height:36px; }
 .craft-preview-outcomes>summary { padding:12px 0; cursor:pointer; font-weight:600; }
 .craft-pending { border:2px solid #c39c55; padding:14px; border-radius:10px; margin-top:12px; }
 .craft-highlight { color:#edcf87; }

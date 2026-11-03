@@ -138,14 +138,23 @@
       return account;
     }
     function assertWritable(id) {
+      assertCurrentContext(id);
       if (!lease) return;
-      if (!lease.canWrite(id)) {
+      if (!canWrite(id)) {
         var error = new Error("该账号正在其他标签页编辑，当前页面为只读模式。");
         error.code = "ACCOUNT_READ_ONLY";
         throw error;
       }
     }
-    function canWrite(id) { return !lease || lease.canWrite(id); }
+    function canWrite(id) { return !lease || (lease.ensureWritable ? lease.ensureWritable(id) : lease.canWrite(id)); }
+    function contextIsCurrent(id) {
+      if ((session.getItem(ACTIVE_SESSION_KEY) || null) !== activeAccountId) return false;
+      var live=parseRegistry(storage.getItem(REGISTRY_KEY));
+      return id ? Boolean(live&&live.accounts.some(function(item){return item.id===id;})) : !live||live.accounts.length===0;
+    }
+    function assertCurrentContext(id) {
+      if (!contextIsCurrent(id)) throw new Error("账号选择或账号列表已在其他页面更新，请重新加载工具后重试。");
+    }
     function orderedAccounts() {
       if (!registry) return [];
       return registry.order.map(function (id) { return find(id); }).filter(Boolean).map(clone);
@@ -371,6 +380,7 @@
     function setItem(logicalKey, value) {
       ensureBoot();
       if (!activeAccountId) throw new Error("请先创建游戏账号。");
+      assertCurrentContext(activeAccountId);
       if (!canWrite(activeAccountId)) return false;
       storage.setItem(physicalKey(activeAccountId, logicalKey), String(value));
       return true;
@@ -378,6 +388,7 @@
     function removeItem(logicalKey) {
       ensureBoot();
       if (!activeAccountId) return;
+      assertCurrentContext(activeAccountId);
       if (!canWrite(activeAccountId)) return false;
       storage.removeItem(physicalKey(activeAccountId, logicalKey));
       return true;
@@ -399,6 +410,7 @@
       migrateLegacyLocalData: migrateLegacyLocalData,
       listAccounts: function () { ensureBoot(); return orderedAccounts(); },
       currentAccount: currentAccount,
+      isCurrentContext: function () { ensureBoot(); return contextIsCurrent(activeAccountId); },
       primaryAccount: primaryAccount,
       bindAccount: bindAccount,
       createAccount: createAccount,

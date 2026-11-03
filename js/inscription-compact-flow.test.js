@@ -57,3 +57,25 @@ test('base materials use one line and failed outcomes are compact peers of usefu
   assert.ok(failure&&success);
   assert.equal(failure.match(/<rect[^>]* y="([^"]+)"/)[1],success.match(/<rect[^>]* y="([^"]+)"/)[1]);
 });
+
+test('complementary materials show flexible batch guidance without fixed 2+1 consumption',()=>{
+  const p=P.representative({prefix:'天府',dun:'鬼遁',quality:'o2',attrs:['速','速','速']});
+  const html=p.strategies.map(route=>F.render(route,p.xAttr)).join('');
+  assert.match(html,/两种共3枚，各至少1枚/);
+  assert.match(html,/该铭文×1～2/);
+  assert.match(html,/可互换配比/);
+  assert.match(html,/示例配比/);
+});
+
+test('flow product notes have breathing room below the stat divider',()=>{
+  const p=plan();const html=F.render(p.strategies[0],p.xAttr);
+  for(const match of html.matchAll(/<g class="craft-flow-box[^\"]*"[^>]*>([\s\S]*?)<\/g>/g)){
+    const node=match[1];if(!node.includes('craft-flow-divider'))continue;
+    const divider=Number(node.match(/class="craft-flow-divider"[^>]*y1="([^"]+)"/)[1]);
+    const note=Number(node.match(/class="craft-flow-node-note"[^>]*y="([^"]+)"/)[1]);
+    assert.ok(note-divider>=15,'notes must clear the divider');
+    const texts=Array.from(node.matchAll(/<text[^>]* y="([^"]+)"/g),m=>Number(m[1]));
+    const rect=node.match(/<rect[^>]* y="([^"]+)"[^>]*height="([^"]+)"/);
+    assert.ok(texts.at(-1)<=Number(rect[1])+Number(rect[2])-12,'last note remains inside padding');
+  }
+});

@@ -30,6 +30,37 @@ function harness(initial) {
   return { api, localStorage, sessionStorage };
 }
 
+test('休眠后的铭文写入安全续期，其他标签页接管后拒绝覆盖',()=>{
+  const Lease=require('./account-edit-lease.js'),State=require('./inscription-crafting-state.js');
+  let clock=100;const localStorage=memoryStorage(),sessionStorage=memoryStorage();
+  const lease=Lease.createLease({storage:localStorage,tabId:'a',token:()=> 'a-token',now:()=>clock,ttl:50});
+  const api=Accounts.createStore({localStorage,sessionStorage,lease,uuid:()=> 'lease-account'});api.boot();api.createAccount({name:'A',server:'one'});
+  const query=State.createQueryStore(api),workbench=State.createWorkbench(api),q=query.inspect(),w=workbench.inspect();
+  clock=1000;
+  const nextQuery={...q.target,dun:'鬼遁'};
+  assert.equal(query.save(nextQuery,q.token,'lease-account').target.dun,'鬼遁');
+  assert.equal(workbench.save(w.state,w.token,'lease-account').valid,true);
+  const before=api.getItem(State.QUERY_KEY);
+  const other=Lease.createLease({storage:localStorage,tabId:'b',token:()=> 'b-token',now:()=>clock,ttl:50});other.takeOver('lease-account');
+  assert.throws(()=>query.save({...nextQuery,dun:'云遁'},before,'lease-account'),/其他标签页|只读/);
+  assert.equal(api.getItem(State.QUERY_KEY),before);
+});
+
+test('缓存页面不能写入已删除账号或已变更的会话账号',()=>{
+  const h=harness(),a=h.api.createAccount({name:'A',server:'one'}),b=h.api.createAccount({name:'B',server:'two'});
+  h.api.bindAccount(a.id);
+  h.sessionStorage.setItem(Accounts.ACTIVE_SESSION_KEY,b.id);
+  assert.equal(h.api.isCurrentContext(),false);
+  assert.throws(()=>h.api.setItem('qinshi_inscription_path_query_v1','stale'),/账号.*更新|重新加载/);
+  assert.equal(h.localStorage.getItem(Accounts.physicalKey(a.id,'qinshi_inscription_path_query_v1')),null);
+  h.sessionStorage.setItem(Accounts.ACTIVE_SESSION_KEY,a.id);
+  const registry=h.api.registry();registry.accounts=registry.accounts.filter(x=>x.id!==a.id);registry.order=registry.order.filter(x=>x!==a.id);registry.primaryAccountId=b.id;
+  h.localStorage.setItem(Accounts.REGISTRY_KEY,JSON.stringify(registry));
+  assert.equal(h.api.isCurrentContext(),false);
+  assert.throws(()=>h.api.setItem('qinshi_inscription_crafting_v1','stale'),/账号.*更新|重新加载/);
+  assert.equal(h.localStorage.getItem(Accounts.physicalKey(a.id,'qinshi_inscription_crafting_v1')),null);
+});
+
 test("账号注册表限制三个账号且名称服务器组合唯一", () => {
   const h = harness();
   h.api.createAccount({ name: "主号", server: "微信一区" });

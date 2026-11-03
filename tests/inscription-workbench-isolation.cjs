@@ -55,3 +55,42 @@ test('clear-old-data confirmation can cancel and never clears query favorites or
  const saved=await p.evaluate(()=>({progress:QinshiAccounts.getItem('qinshi_inscription_progress_v2'),favorites:QinshiAccounts.getItem('qinshi_inscription_route_favorites_v1'),query:InscriptionCraftingState.createQueryStore(QinshiAccounts).inspect().target.dun}));assert.deepEqual(saved,{progress:'{"keepProgress":true}',favorites:'{"keepFavorites":true}',query:'地遁'});
  }finally{await p.close();}
 });
+
+for(const width of [390,768,1280])test(width+' material clear action stays in its own top-right header and clears only that slot',async()=>{
+ const p=await setup(width);try{
+ await p.evaluate(()=>{
+ const target={discipleKey:'',slot:'',dun:'云遁',quality:'o2',attrs:['护盾','护盾','技免'],xTerm:null};
+ let w=InscriptionSimulation.upgrade({version:1,target,simulation:{stage:'b2',inputs:[],pending:null}});
+ const m={prefix:InscriptionRules.prefixes[0],dun:'云遁',quality:'b2',origin:'wash',terms:[{attr:'护盾',tier:'H'}]};
+ w.lab.lots=[{id:'header-stock',material:m,quantity:2,source:{type:'manual'}}];
+ w=InscriptionSimulation.act(w,'select',{selection:[{id:'header-stock',quantity:2}]});
+ QinshiAccounts.setItem(InscriptionCraftingState.KEY,JSON.stringify({schemaVersion:1,idSequence:0,actual:[],goals:[],workspaces:{},draft:{simpleWorkbench:w}}));InscriptionCraftingUI.refresh();
+ });
+ await p.locator('[data-mode="crafting-simulator"]').click();const s=p.locator('#inscription-crafting-simulator'),cards=s.locator('.craft-material');
+ for(const card of await cards.all()){
+   const button=card.locator('.craft-material-header [data-craft-action="clear-material"]');assert.equal(await button.count(),1);
+   const header=await card.locator('.craft-material-header').boundingBox(),bounds=await button.boundingBox();
+   assert.ok(bounds.x+bounds.width<=header.x+header.width+1);assert.ok(Math.abs(bounds.x+bounds.width-header.x-header.width)<2);
+ }
+ p.once('dialog',d=>d.accept());await cards.first().locator('[data-craft-action="clear-material"]').click();
+ const sim=await p.evaluate(()=>InscriptionCraftingState.createWorkbench(QinshiAccounts).inspect().state.simulation);
+ assert.equal(sim.refs[0],null);assert.equal(sim.refs[1],'header-stock');
+ assert.equal(await cards.first().locator('[data-sim-material="0"]').count(),1,'cleared card is a manual material editor');
+ assert.equal(await cards.first().locator('.craft-material-header [data-craft-action="clear-material"]').count(),1,'manual material retains the same header action');
+ assert.equal(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
+ }finally{await p.close();}
+});
+
+test('expired editing lease recovers while path and simulator filters stay independent',async()=>{
+ const p=await setup();try{
+ async function expire(){await p.evaluate(()=>{const id=QinshiAccounts.currentAccount().id,key=QinshiAccountLeaseApi.LEASE_PREFIX+id,value=JSON.parse(localStorage.getItem(key));value.expiresAt=Date.now()-1000;localStorage.setItem(key,JSON.stringify(value));});}
+ const q=p.locator('#inscription-crafting-paths'),s=p.locator('#inscription-crafting-simulator');
+ await expire();await q.locator('[data-craft-field="dun"]').selectOption('鬼遁');
+ assert.equal(await p.evaluate(()=>InscriptionCraftingState.createQueryStore(QinshiAccounts).inspect().target.dun),'鬼遁');
+ await p.locator('[data-mode="crafting-simulator"]').click();await expire();await s.locator('[data-craft-field="dun"]').selectOption('云遁');
+ assert.equal(await p.evaluate(()=>InscriptionCraftingState.createWorkbench(QinshiAccounts).inspect().state.target.dun),'云遁');
+ await p.locator('[data-mode="crafting-paths"]').click();assert.equal(await q.locator('[data-craft-field="dun"]').inputValue(),'鬼遁');
+ await p.evaluate(()=>{dispatchEvent(new PageTransitionEvent('pagehide',{persisted:true}));dispatchEvent(new PageTransitionEvent('pageshow',{persisted:true}));});
+ await q.locator('[data-craft-field="dun"]').selectOption('地遁');assert.equal(await p.evaluate(()=>InscriptionCraftingState.createQueryStore(QinshiAccounts).inspect().target.dun),'地遁');
+ }finally{await p.close();}
+});

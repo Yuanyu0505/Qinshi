@@ -124,7 +124,7 @@
       // Recheck after injectable callbacks (rng/uuid) and immediately before the
       // single write. Never overwrite a reentrant edit or a newly selected account.
       if (accountId() !== account || storage.getItem(KEY) !== before) fail("当前账号或合成存档已改变，请刷新后重试");
-      try { if (storage.setItem(KEY, JSON.stringify(state)) === false) fail("存储拒绝写入"); }
+      try { write(storage, KEY, state); }
       catch (error) { fail("合成数据保存失败，未提交：" + error.message); }
       return result === undefined ? copy(state) : result;
     }
@@ -190,7 +190,12 @@
     var result=copy(target);checkSimple({version:1,target:result,simulation:blankSimulation()});return result;
   }
   function accountOf(storage){var a=storage.currentAccount&&storage.currentAccount();return a?a.id:null;}
-  function write(storage,key,value){if(storage.setItem(key,JSON.stringify(value))===false)fail('存储拒绝写入');}
+  function write(storage,key,value){
+    if(storage.setItem(key,JSON.stringify(value))===false){
+      if(storage.isReadOnly&&storage.isReadOnly())fail('该账号正在其他标签页编辑，当前页面只读；请在顶部接管编辑后重新打开本分区。');
+      fail('存储拒绝写入，修改未保存；请检查浏览器存储权限或可用空间。');
+    }
+  }
   // Query filters have their own account-scoped transaction. A damaged simulator
   // must never prevent a player from querying or favoriting a valid recipe.
   function createQueryStore(storage){

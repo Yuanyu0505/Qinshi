@@ -18,6 +18,25 @@
     (node.children||[]).forEach(function(c){for(var i=0;i<c.quantity;i++)inputs.push(R.signature(c.node.material));});
     return JSON.stringify([R.signature(node.material),inputs.sort()]);
   }
+  function equivalentAllocations(operation,byId){
+    // A display choice is not another saved recipe. Require every displayed
+    // input type at least once and compare the COMPLETE result distribution,
+    // not just coverage or the probability of the selected goal.
+    if(operation.kind!=='craft'||operation.inputs.length!==2)return null;
+    var inputs=operation.inputs,total=inputs.reduce(function(n,i){return n+i.quantity;},0);
+    if(total!==3)return null;
+    var first=byId.get(inputs[0].id).material,second=byId.get(inputs[1].id).material;
+    if(physical(first)===physical(second))return null;
+    var baseline=operation.outputs.map(function(o){return {signature:R.signature(byId.get(o.id).material),probability:o.probability};});
+    var choices=[];
+    for(var count=1;count<total;count++){
+      var preview=R.preview(Array(count).fill(first).concat(Array(total-count).fill(second)));
+      if(!preview.valid||preview.outcomes.length!==baseline.length)continue;
+      if(!preview.outcomes.every(function(o){return baseline.some(function(b){return b.signature===R.signature(o.material)&&Math.abs(b.probability-o.probability)<1e-12;});}))continue;
+      choices.push([{id:inputs[0].id,quantity:count},{id:inputs[1].id,quantity:total-count}]);
+    }
+    return choices.length>1?choices:null;
+  }
   function project(route,xAttr){
     var materials=[],operations=[],materialMap=new Map(),operationMap=new Map(),byId=new Map(),failures=new Map();
     var legacy=route.xTerm===undefined&&route.symbolicX===undefined;
@@ -124,6 +143,10 @@
       if(entry.demand||entry.kind!=='failure')return;
       var matches=required.filter(function(wanted){return physical(wanted.material)===physical(entry.material)&&JSON.stringify(wanted.symbols)===JSON.stringify(entry.symbols);});
       if(matches.length){entry.kind='product';entry.useful=true;entry.alternateFor=matches.map(function(wanted){return wanted.id;});}
+    });
+    if(!route.recorded)operations.forEach(function(operation){
+      var choices=equivalentAllocations(operation,byId);
+      if(choices)operation.allocations=choices;
     });
     return {materials:materials,operations:operations,targetId:target.id,notes:[
       '每次合成只得到一枚产物；各分支为互斥结果，概率保持原路线不变。',

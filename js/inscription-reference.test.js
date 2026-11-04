@@ -82,3 +82,13 @@ test('blue two indistinguishable speed lists possible future tiers but never inv
   assert.deepEqual(god.possibilities, [{ tier:'M', value:1 }]);
   assert.equal('probability' in ghost, false);
 });
+
+test('reference comparisons preserve unavailable cells and use percentage points or raw speed deltas',()=>{
+ assert.equal(typeof Reference.compareRows,'function');
+ const rows=Reference.compareRows('地遁','p2','地遁','o2');
+ const high=rows.find(r=>r.attr==='技能穿透'&&r.tier==='H');assert.equal(high.left.value,4);assert.equal(high.right.value,6);assert.equal(high.delta,2);assert.equal(high.unit,'百分点');
+ const speed=Reference.compareRows('鬼遁','p2','鬼遁','o2').find(r=>r.attr==='速'&&r.tier==='H');assert.equal(speed.delta,2);assert.equal(speed.unit,'');
+ const absent=Reference.compareRows('人遁','o2','地遁','o2').find(r=>r.attr==='技能穿透'&&r.tier==='H');assert.equal(absent.left,null);assert.equal(absent.delta,null);
+ const green=Reference.compareRows('天遁','g1','天遁','o2');assert.ok(green.every(r=>r.left===null&&r.delta===null));
+ const blue=Reference.compareRows('鬼遁','b2','鬼遁','p1');assert.equal(blue.find(r=>r.attr==='速'&&r.tier==='?').delta,null);
+});

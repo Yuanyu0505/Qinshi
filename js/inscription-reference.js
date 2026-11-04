@@ -50,6 +50,15 @@
       return {attr:row.attr,tier:row.tier,value:row.value,toQuality:recipe.quality,possibilities:possible};
     }).filter(function (row) { return row.possibilities.length; });
   }
+  function compareRows(leftDun,leftQuality,rightDun,rightQuality){
+    var left=termRows(leftDun,leftQuality),right=termRows(rightDun,rightQuality),rows=new Map();
+    left.concat(right).forEach(function(t){var key=t.attr+':'+t.tier;if(!rows.has(key))rows.set(key,{attr:t.attr,tier:t.tier});});
+    return Terms.sortEntries(Array.from(rows.values()).map(function(row){
+      var a=left.find(function(t){return t.attr===row.attr&&t.tier===row.tier;})||null,b=right.find(function(t){return t.attr===row.attr&&t.tier===row.tier;})||null;
+      var meta=Rules.attributes.find(function(t){return t.id===row.attr;});
+      return {attr:row.attr,tier:row.tier,left:a,right:b,delta:a&&b?b.value-a.value:null,unit:meta&&meta.unit==='%'?'百分点':'',value:Math.max(a?a.value:-Infinity,b?b.value:-Infinity)};
+    }));
+  }
   function qualityLabel(id) { var row = tierData.find(function (entry) { return entry.id === id; }); return row ? row.label : id; }
   function qualityHtml(id) { return '<span class="ins-ref-quality ins-ref-quality-' + esc(id) + '">' + esc(qualityLabel(id)) + '</span>'; }
   function termHtml(row, quality, dun) {
@@ -60,65 +69,106 @@
   function wrapTable(label, head, body, className) {
     return '<p class="mobile-scroll-hint" aria-hidden="true">左右滑动查看完整资料 →</p><div class="table-wrap mobile-scroll-region ins-ref-scroll" tabindex="0" aria-label="' + esc(label) + '，可左右滑动"><table class="ins-reference-table ' + (className || '') + '"><thead><tr>' + head.map(function (title) { return '<th scope="col">' + title + '</th>'; }).join('') + '</tr></thead><tbody>' + body + '</tbody></table></div>';
   }
-  function currentHtml(quality, all) {
-    return (all ? tierData.map(function (row) { return row.id; }) : [quality]).map(function (id) {
-      var body = id === 'g1' ? '<p class="muted-tip">绿一副属性数值未知，暂不推算。</p>' : wrapTable(qualityLabel(id) + '遁位副属性', ['遁位','单条词条数值 / 档位 / 来源'], Rules.duns.map(function (dun) {
-        return '<tr><th scope="row">' + extreme(dun) + '</th><td><div class="ins-ref-terms">' + termRows(dun.id, id).map(function (row) {
-          return '<span class="ins-ref-term">' + termHtml(row, id, dun.id) + '<small class="ins-ref-origin">' + row.origins.map(function (origin) { return originLabels[origin]; }).join(' / ') + '</small></span>';
-        }).join('') + '</div></td></tr>';
-      }).join(''), 'ins-ref-dun-table');
-      return '<div class="ins-ref-quality-panel" data-ref-quality-panel="' + id + '"><h4>' + qualityHtml(id) + '</h4>' + body + '</div>';
+  function amountHtml(row,q){
+    if(!row)return '<span class="ins-ref-empty">—</span>';
+    var meta=Rules.attributes.find(function(a){return a.id===row.attr;});
+    return Terms.valueHtml(row.value+(meta?meta.unit:''),q);
+  }
+  function sourceHtml(row){return '<small class="ins-ref-origin">'+row.origins.map(function(o){return originLabels[o];}).join(' / ')+'</small>';}
+  function matches(row,s){return (!s.keyword||row.attr.toLowerCase().includes(s.keyword.toLowerCase().trim()))&&(!s.source||row.origins.includes(s.source));}
+  function matrixHtml(dun,q,s){
+    if(q==='g1')return '<p class="muted-tip">绿一副属性数值未知，暂不推算；绿一无法置换。</p>';
+    var rows=termRows(dun,q).filter(function(r){return matches(r,s);}),attrs=Array.from(new Set(rows.map(function(r){return r.attr;}))),tiers=['H','M','L','U'];
+    if(rows.some(function(r){return r.tier==='?';}))tiers.push('?');
+    return wrapTable(qualityLabel(q)+' · '+dun+'副属性',['属性'].concat(tiers.map(Terms.tierLabel)),attrs.map(function(attr){
+      return '<tr data-ref-attr-row="'+esc(attr)+'"><th scope="row">'+esc(attr)+'</th>'+tiers.map(function(tier){var row=rows.find(function(r){return r.attr===attr&&r.tier===tier;});return '<td>'+amountHtml(row,q)+(row?sourceHtml(row):'')+'</td>';}).join('')+'</tr>';
+    }).join('')||'<tr><td colspan="'+(tiers.length+1)+'">没有符合条件的词条。</td></tr>','ins-ref-matrix');
+  }
+  function currentHtml(s){
+    var pairs=s.all?tierData.map(function(q){return {dun:s.dun,q:q.id};}):[{dun:s.dun,q:s.quality}];
+    if(!s.all&&s.mode==='quality')pairs.push({dun:s.dun,q:s.quality2});
+    if(!s.all&&s.mode==='dun')pairs.push({dun:s.dun2,q:s.quality});
+    var panels=pairs.map(function(pair){var dun=Rules.duns.find(function(d){return d.id===pair.dun;});
+      return '<article class="ins-ref-quality-panel" data-ref-quality-panel="'+pair.q+'"'+(pairs.length===2?' data-ref-compare-panel':'')+'><h4>'+qualityHtml(pair.q)+' · '+extreme(dun)+'</h4>'+matrixHtml(pair.dun,pair.q,s)+'</article>';
     }).join('');
+    var diff='';if(pairs.length===2&&s.diff){
+      var a=pairs[0],b=pairs[1];diff='<div data-ref-comparison><h4>右侧减左侧 · 同属性同档位差值</h4>'+wrapTable('两组副属性差值',['属性','档位','差值'],compareRows(a.dun,a.q,b.dun,b.q).filter(function(r){return (r.left&&matches(r.left,s))||(r.right&&matches(r.right,s));}).map(function(r){
+        return '<tr><th scope="row">'+esc(r.attr)+'</th><td>'+esc(Terms.tierLabel(r.tier))+'</td><td>'+(r.delta===null?'—':esc((r.delta>0?'+':'')+r.delta+(r.unit?' '+r.unit:'')))+'</td></tr>';
+      }).join(''))+'</div>';
+    }
+    return '<div class="ins-ref-panels'+(pairs.length===2?' is-comparison':'')+'">'+panels+'</div>'+diff;
   }
   function washHtml() {
     return '<div class="ins-ref-wash-grid">' + Rules.duns.map(function (dun) {
-      return '<article class="ins-ref-wash-card" data-ref-wash-dun="' + esc(dun.id) + '"><h4>' + extreme(dun) + '</h4><div class="ins-ref-terms">' + washOnlyRows(dun.id).map(function (row) { return termHtml(row,'p2',dun.id); }).join('') + '</div></article>';
+      return '<article class="ins-ref-wash-card" data-ref-wash-dun="' + esc(dun.id) + '"><h4>' + extreme(dun) + '</h4><small class="ins-ref-origin">紫二 · 低档 · 仅洗练</small><dl>' + washOnlyRows(dun.id).map(function (row) { return '<div><dt>'+esc(row.attr)+'</dt><dd>'+amountHtml(row,'p2')+'</dd></div>'; }).join('') + '</dl></article>';
     }).join('') + '</div>';
   }
   function washOnlyRows(dun) {
     return termRows(dun,'p2','wash').filter(function(row){return row.origins.indexOf('crafted')<0;});
   }
-  function upgradeHtml(dun, from) {
+  function upgradeHtml(dun, from,diff) {
     var recipe = Rules.recipes[from];
-    return wrapTable('同档成长对照', ['属性','升级前 · ' + qualityHtml(from),'升级后 · ' + qualityHtml(recipe.quality)], upgradeRows(dun, from).map(function (row) {
-      return '<tr data-ref-upgrade-row="' + esc(row.attr + ':' + row.tier) + '"><th scope="row">' + esc(row.attr) + '</th><td>' + termHtml(row,from,dun) + '</td><td><div class="ins-ref-terms">' + row.possibilities.map(function (next) { return termHtml({attr:row.attr,tier:next.tier},recipe.quality,dun); }).join('<span class="ins-ref-or">或</span>') + '</div></td></tr>';
+    return wrapTable('同档成长对照', ['属性','档位','升级前 · ' + qualityHtml(from),'升级后 · ' + qualityHtml(recipe.quality)].concat(diff?['成长差值']:[]), upgradeRows(dun, from).map(function (row) {
+      var unit=Rules.attributes.find(function(a){return a.id===row.attr;}).unit==='%'?'百分点':'';
+      return '<tr data-ref-upgrade-row="' + esc(row.attr + ':' + row.tier) + '"><th scope="row">' + esc(row.attr) + '</th><td>'+esc(Terms.tierLabel(row.tier))+'</td><td>' + amountHtml(row,from) + '</td><td><div class="ins-ref-terms">' + row.possibilities.map(function (next) { return amountHtml({attr:row.attr,value:next.value},recipe.quality)+(row.tier==='?'?'<small class="ins-ref-origin">'+esc(Terms.tierLabel(next.tier))+'</small>':''); }).join('<span class="ins-ref-or">或</span>') + '</div></td>'+(diff?'<td>'+row.possibilities.map(function(n){return esc('+'+(n.value-row.value)+(unit?' '+unit:''));}).join(' 或 ')+'</td>':'')+'</tr>';
     }).join(''));
   }
-  function foundationHtml() {
+  function foundationHtml(s) {
     var summary = wrapTable('品质基础数值和石头资料', ['品质','主属性单值','相邻品质单值成长','分解所得置换石','单次重铸置换石'], tierData.map(function (row,index) {
       var previous = tierData[index - 1];
       var growth = previous ? '+' + (row.scalar - previous.scalar) + '（+' + ((row.scalar / previous.scalar - 1) * 100).toFixed(2) + '%）' : '—';
-      return '<tr><th scope="row">' + qualityHtml(row.id) + '</th><td>' + Terms.valueHtml(row.scalar,row.id) + '</td><td>' + growth + '</td><td>' + row.disassemble + '</td><td>' + (row.recast === null ? '未知 / 未提供' : row.recast) + '</td></tr>';
+      return '<tr><th scope="row">' + qualityHtml(row.id) + '</th><td>' + Terms.valueHtml(row.scalar,row.id) + '</td><td class="ins-ref-growth">' + growth + '</td><td>' + row.disassemble + '</td><td>' + (row.recast === null ? '无法置换' : row.recast) + '</td></tr>';
     }).join(''));
-    var main = wrapTable('五天位七品质主属性', ['天位'].concat(tierData.map(function (row) { return qualityHtml(row.id); })), Rules.prefixes.map(function (prefix) {
+    var full = wrapTable('五天位七品质主属性', ['天位'].concat(tierData.map(function (row) { return qualityHtml(row.id); })), Rules.prefixes.map(function (prefix) {
       return '<tr><th scope="row">' + esc(prefix) + '</th>' + tierData.map(function (row) {
         return '<td class="ins-ref-quality-' + row.id + '">' + Terms.mainHtml(mainStats(prefix,row.id).map(function (entry) { return entry.attr + '+' + entry.value; }).join('、'),row.id) + '</td>';
       }).join('') + '</tr>';
-    }).join(''), 'ins-ref-main-table');
-    return summary + '<h4>天位主属性</h4>' + main;
+    }).join(''), 'ins-ref-main-overview');
+    var main=s.mode==='quality'?wrapTable('两品质天位主属性对比',['天位','属性',qualityHtml(s.quality),qualityHtml(s.quality2)].concat(s.diff?['差值']:[]),Rules.prefixes.map(function(prefix){
+      return mainStats(prefix,s.quality).map(function(a,i){var b=mainStats(prefix,s.quality2)[i];return '<tr><th scope="row">'+esc(prefix)+'</th><td>'+esc(a.attr)+'</td><td>'+Terms.valueHtml(a.value,s.quality)+'</td><td>'+Terms.valueHtml(b.value,s.quality2)+'</td>'+(s.diff?'<td>'+esc((b.value-a.value>0?'+':'')+(b.value-a.value))+'</td>':'')+'</tr>';}).join('');
+    }).join(''),'ins-ref-main-table'):wrapTable('五天位主属性',['天位','主属性一','主属性二'],Rules.prefixes.map(function(prefix){return '<tr><th scope="row">'+esc(prefix)+'</th>'+mainStats(prefix,s.quality).map(function(a){return '<td>'+Terms.valueHtml(a.value+a.attr,s.quality)+'</td>';}).join('')+'</tr>';}).join(''),'ins-ref-main-table');
+    return summary + '<h4>天位主属性</h4><div class="ins-ref-controls"><label>查看方式<select data-ref-main-mode>'+options([{id:'single',label:'单项查看'},{id:'quality',label:'双品质对比'}],s.mode)+'</select></label><label>品质<select data-ref-main-quality>'+options(tierData,s.quality)+'</select></label>'+(s.mode==='quality'?'<label>对比品质<select data-ref-main-quality2>'+options(tierData,s.quality2)+'</select></label><label><input type="checkbox" data-ref-main-diff'+(s.diff?' checked':'')+'>显示差值</label>':'')+'</div>'+main+'<details class="ins-ref-overview"><summary>查看全部品质主属性总览</summary>'+full+'</details>';
   }
   function options(rows, selected) { return rows.map(function (row) { return '<option value="' + esc(row.id) + '"' + (row.id === selected ? ' selected' : '') + '>' + esc(row.label || row.id) + '</option>'; }).join(''); }
   function render(host) {
     if (!host) return;
-    var state = host._insRefState || {quality:'o2',all:false,dun:'天遁',from:'p1'};
+    var state = host._insRefState || {tab:'current',current:{quality:'o2',quality2:'p2',all:false,dun:'天遁',dun2:'地遁',mode:'single',diff:false,source:'',keyword:''},upgrade:{dun:'天遁',from:'p1',diff:false},foundation:{quality:'o2',quality2:'p2',mode:'single',diff:false}};
     host._insRefState = state;
-    host.innerHTML = '<section class="ins-reference-block ins-ref-section"><h3>遁位副属性数值与来源</h3><div class="ins-ref-controls"><label>品质星级<select data-ref-quality aria-label="资料品质星级">' + options(tierData,state.quality) + '</select></label><label class="ins-ref-check"><input type="checkbox" data-ref-all' + (state.all ? ' checked' : '') + '>展示全部品质</label></div><p class="muted-tip">每项为单条词条，不表示可任意组合。极致属性支持高 / 中 / 低档，同属性同档位不可重复，每枚最多两条高档；蓝一仅供资料和个人记录。</p><div data-ref-current>' + currentHtml(state.quality,state.all) + '</div></section>' +
-      '<section class="ins-reference-block ins-ref-section"><h3>紫二 · 仅能通过洗练获得的词条</h3><p class="muted-tip">以下词条不能定向合成获得，建议遇到时保留；不列洗练和合成都能获得的词条。每枚紫二需两条合法词条，本表不是整枚组合清单。</p>' + washHtml() + '</section>' +
-      '<section class="ins-reference-block ins-ref-section"><h3>升级同档成长对照</h3><div class="ins-ref-controls"><label>遁位<select data-ref-upgrade-dun aria-label="成长对照遁位">' + options(Rules.duns,state.dun) + '</select></label><label>升级前品质<select data-ref-upgrade-from aria-label="成长对照升级前品质">' + options(Rules.qualities.filter(function (row) { return Rules.recipes[row.id]; }),state.from) + '</select></label></div><p class="muted-tip">沿真实同档成长，不按下一个更大数值猜档。蓝二速度档位不可辨时列出可继承的可能情况，不推测具体档位或概率；本表不等于完整投料配方。</p><div data-ref-upgrades>' + upgradeHtml(state.dun,state.from) + '</div></section>' +
-      '<section class="ins-reference-block ins-ref-section" data-ref-foundation><h3>品质基础、分解与重铸</h3><p class="muted-tip">主属性单值乘各天位固定倍率。相邻品质成长仅为主属性单值差，不代表合成配方；石头数值仅作静态资料，不计算重铸次数，不扣除真实库存。</p>' + foundationHtml() + '</section>';
+    var current=state.current,u=state.upgrade,body='';
+    if(state.tab==='current')body='<h3>副属性与来源</h3><div class="ins-ref-controls"><label>查看方式<select data-ref-mode>'+options([{id:'single',label:'单项查看'},{id:'quality',label:'双品质对比'},{id:'dun',label:'双遁位对比'}],current.mode)+'</select></label><label>品质<select data-ref-quality>'+options(tierData,current.quality)+'</select></label><label>遁位<select data-ref-dun>'+options(Rules.duns,current.dun)+'</select></label>'+
+      (current.mode==='quality'?'<label>对比品质<select data-ref-quality2>'+options(tierData,current.quality2)+'</select></label>':'')+(current.mode==='dun'?'<label>对比遁位<select data-ref-dun2>'+options(Rules.duns,current.dun2)+'</select></label>':'')+
+      (current.mode==='single'?'<label class="ins-ref-check"><input type="checkbox" data-ref-all'+(current.all?' checked':'')+'>展示全部品质</label>':'<label class="ins-ref-check"><input type="checkbox" data-ref-diff'+(current.diff?' checked':'')+'>显示差值</label>')+
+      '<label>来源<select data-ref-source>'+options([{id:'',label:'全部来源'},{id:'wash',label:'可洗练'},{id:'crafted',label:'可合成'}],current.source)+'</select></label><label>属性关键词<input type="search" data-ref-keyword value="'+esc(current.keyword)+'" placeholder="如：技能穿透"></label></div><p class="muted-tip">每格是单条词条，不代表可任意组合；同属性同档位不可重复，每枚最多两条高档。蓝色速度档位不可辨；— 表示此处没有已知合法词条，不视为0。</p><div data-ref-current>'+currentHtml(current)+'</div>';
+    if(state.tab==='wash')body='<h3>紫二 · 仅能通过洗练获得的词条</h3><p class="muted-tip">不能定向合成的词条，遇到可保留；每枚紫二仍需两条合法词条。本表不是整枚组合清单。</p>'+washHtml();
+    if(state.tab==='upgrade')body='<h3>升级同档成长对照</h3><div class="ins-ref-controls"><label>遁位<select data-ref-upgrade-dun>'+options(Rules.duns,u.dun)+'</select></label><label>升级前品质<select data-ref-upgrade-from>'+options(Rules.qualities.filter(function(q){return Rules.recipes[q.id];}),u.from)+'</select></label><label><input type="checkbox" data-ref-upgrade-diff'+(u.diff?' checked':'')+'>显示差值</label></div><p class="muted-tip">沿真实同档成长，不按下一个更大数值猜档。蓝二速度列出可继承的可能情况，不推测档位或概率；本表不是完整投料配方。</p><div data-ref-upgrades>'+upgradeHtml(u.dun,u.from,u.diff)+'</div>';
+    if(state.tab==='foundation')body='<h3>品质与材料</h3><p class="muted-tip">主属性单值乘各天位固定倍率。分解与置换数值仅作资料，不扣除库存；绿一无法置换。</p><div data-ref-foundation>'+foundationHtml(state.foundation)+'</div>';
+    host.innerHTML='<div class="ins-ref-tabs" role="group" aria-label="资料类别">'+[{id:'current',label:'副属性与来源'},{id:'wash',label:'紫二仅洗练词条'},{id:'upgrade',label:'升级同档成长'},{id:'foundation',label:'品质与材料'}].map(function(tab){return '<button type="button" class="seg'+(state.tab===tab.id?' active':'')+'" data-ref-tab="'+tab.id+'" aria-pressed="'+(state.tab===tab.id)+'">'+tab.label+'</button>';}).join('')+'</div><section class="ins-reference-block ins-ref-section">'+body+'</section>';
     if (!host._insRefBound) {
       host.addEventListener('change', function (event) {
-        var target = event.target, current = host._insRefState;
-        if (target.matches('[data-ref-quality]')) current.quality = target.value;
-        else if (target.matches('[data-ref-all]')) current.all = target.checked;
-        else if (target.matches('[data-ref-upgrade-dun]')) current.dun = target.value;
-        else if (target.matches('[data-ref-upgrade-from]')) current.from = target.value;
+        var t=event.target,s=host._insRefState,c=s.current;
+        if(t.matches('[data-ref-mode]')){c.mode=t.value;c.all=false;}
+        else if(t.matches('[data-ref-quality]'))c.quality=t.value;
+        else if(t.matches('[data-ref-quality2]'))c.quality2=t.value;
+        else if(t.matches('[data-ref-dun]'))c.dun=t.value;
+        else if(t.matches('[data-ref-dun2]'))c.dun2=t.value;
+        else if(t.matches('[data-ref-source]'))c.source=t.value;
+        else if(t.matches('[data-ref-keyword]'))c.keyword=t.value;
+        else if(t.matches('[data-ref-all]')){c.all=t.checked;c.mode='single';}
+        else if(t.matches('[data-ref-diff]'))c.diff=t.checked;
+        else if(t.matches('[data-ref-upgrade-dun]'))s.upgrade.dun=t.value;
+        else if(t.matches('[data-ref-upgrade-from]'))s.upgrade.from=t.value;
+        else if(t.matches('[data-ref-upgrade-diff]'))s.upgrade.diff=t.checked;
+        else if(t.matches('[data-ref-main-mode]'))s.foundation.mode=t.value;
+        else if(t.matches('[data-ref-main-quality]'))s.foundation.quality=t.value;
+        else if(t.matches('[data-ref-main-quality2]'))s.foundation.quality2=t.value;
+        else if(t.matches('[data-ref-main-diff]'))s.foundation.diff=t.checked;
         else return;
-        host.querySelector('[data-ref-current]').innerHTML = currentHtml(current.quality,current.all);
-        host.querySelector('[data-ref-upgrades]').innerHTML = upgradeHtml(current.dun,current.from);
+        render(host);
       });
+      host.addEventListener('input',function(e){if(e.target.matches('[data-ref-keyword]')){host._insRefState.current.keyword=e.target.value;host.querySelector('[data-ref-current]').innerHTML=currentHtml(host._insRefState.current);}});
+      host.addEventListener('click',function(e){var button=e.target.closest('[data-ref-tab]');if(button){host._insRefState.tab=button.dataset.refTab;render(host);}});
       host._insRefBound = true;
     }
   }
-  return {mainStats:mainStats,tiers:tiers,termRows:termRows,washOnlyRows:washOnlyRows,upgradeRows:upgradeRows,render:render};
+  return {mainStats:mainStats,tiers:tiers,termRows:termRows,washOnlyRows:washOnlyRows,upgradeRows:upgradeRows,compareRows:compareRows,render:render};
 });

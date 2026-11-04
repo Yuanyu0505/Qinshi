@@ -9,7 +9,28 @@
 #inscription-reference .ins-ref-scroll { width: 100%; max-width: 100%; min-width: 0; overflow-x: auto; overscroll-behavior-x: contain; }
 #inscription-reference .ins-reference-table { min-width: 560px; width: 100%; }
 #inscription-reference .ins-ref-dun-table { min-width: 650px; table-layout: fixed; }
-#inscription-reference .ins-ref-main-table { min-width: 1150px; }
+#inscription-reference .ins-ref-main-table { min-width: 420px; }
+#inscription-reference .ins-ref-main-overview { min-width: 1150px; }
+#inscription-reference .ins-ref-matrix { min-width: 420px; }
+#inscription-reference .ins-reference-table td { vertical-align: top; font-variant-numeric: tabular-nums; }
+#inscription-reference .ins-ref-matrix td { text-align: center; }
+#inscription-reference .ins-ref-matrix th:first-child { min-width: 90px; }
+#inscription-reference .ins-ref-origin { display: block; font-size: 13px; line-height: 1.5; }
+#inscription-reference .muted-tip { font-size: 13px; line-height: 1.7; }
+#inscription-reference .ins-ref-empty, #inscription-reference .ins-ref-growth { color: var(--muted, #a99e89); }
+#inscription-reference .ins-ref-tabs { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+#inscription-reference .ins-ref-panels.is-comparison { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 16px; }
+#inscription-reference .ins-ref-panels.is-comparison .ins-ref-quality-panel { margin: 0; min-width: 0; }
+#inscription-reference .ins-ref-wash-grid { grid-template-columns: repeat(3,minmax(0,1fr)); }
+#inscription-reference .ins-ref-wash-card dl { margin: 10px 0 0; }
+#inscription-reference .ins-ref-wash-card dl > div { display: flex; justify-content: space-between; gap: 16px; padding: 7px 0; border-top: 1px solid rgba(201,165,90,.13); }
+#inscription-reference .ins-ref-wash-card dt { color: var(--text, #e6ddca); }
+#inscription-reference .ins-ref-wash-card dd { margin: 0; }
+#inscription-reference .ins-ref-overview { margin-top: 18px; }
+@media (max-width: 1000px) {
+  #inscription-reference .ins-ref-panels.is-comparison { grid-template-columns: minmax(0,1fr); }
+  #inscription-reference .ins-ref-wash-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
+}
 #inscription-reference .ins-reference-table th { vertical-align: top; }
 #inscription-reference .ins-ref-dun-table th { white-space: normal; }
 #inscription-reference .ins-ref-dun-table tr > th:first-child { width: 180px; }
@@ -30,6 +51,9 @@
   .ins-ref-controls { gap: 12px; }
   .ins-ref-controls label { flex-wrap: wrap; }
   .ins-ref-wash-grid { grid-template-columns: 1fr; }
+  #inscription-reference .ins-ref-wash-grid { grid-template-columns: minmax(0,1fr); }
+  #inscription-reference .ins-ref-tabs { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); }
+  #inscription-reference .ins-ref-tabs button { min-width: 0; padding: 10px 8px; }
   #inscription-reference .ins-ref-dun-table tr > th:first-child { width: 120px; }
   #inscription-reference .ins-reference-table th,
   #inscription-reference .ins-reference-table td { padding: 10px; }

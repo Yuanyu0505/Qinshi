@@ -132,5 +132,49 @@
       return inspect();
     }};
   }
-  return {normalizeDraft:normalizeDraft,combinations:combinations,options:options,duns:duns,search:search,groupResults:groupResults,createDraftStore:createDraftStore};
+  function blankTarget(){return {discipleKey:'',slot:'',dun:'',quality:'o2',attrs:['','',''],xTerm:null};}
+  function resultFilters(value){
+    var f=value||{};return {ordinary:f.ordinary===true,group:['common','formation','other'].includes(f.group)?f.group:'all',
+      prefix:R.prefixes.includes(f.prefix)?f.prefix:'',dun:R.duns.some(function(d){return d.id===f.dun;})?f.dun:'',search:typeof f.search==='string'?f.search.slice(0,80):''};
+  }
+  function locatorValue(value){
+    if(!value||value.version!==1||!value.target||!info(value.target.quality)||!Array.isArray(value.target.attrs))throw new Error('查询工作区格式异常');
+    var t=value.target,attrs=t.attrs;
+    if(attrs.length!==info(t.quality).count||attrs.some(function(a){return typeof a!=='string'||a&&!attrIds.includes(a);})||typeof t.discipleKey!=='string'||typeof t.slot!=='string'||typeof t.dun!=='string')throw new Error('查询工作区目标异常');
+    return {version:1,target:copy(t),reverse:normalizeDraft(value.reverse),filters:resultFilters(value.filters),queried:value.queried===true,generated:value.generated===true};
+  }
+  function createLocatorStore(storage,mode,child){
+    if(!['crafting-paths','crafting-simulator'].includes(mode)||!['direct','reverse'].includes(child))throw new Error('未知查询工作区');
+    var key='qinshi_inscription_locator_'+(mode==='crafting-paths'?'paths':'simulator')+'_'+child+'_v1';
+    function owner(){var a=storage.currentAccount();return a?a.id:null;}
+    function legacy(){
+      var target=blankTarget(),reverse=normalizeDraft(),warning='';
+      try{
+        var raw=storage.getItem(mode==='crafting-paths'?'qinshi_inscription_path_query_v1':'qinshi_inscription_crafting_v1');
+        if(raw){var parsed=JSON.parse(raw),candidate=mode==='crafting-paths'?parsed:parsed.draft&&parsed.draft.simpleWorkbench&&parsed.draft.simpleWorkbench.target;
+          if(candidate)target=locatorValue({version:1,target:candidate}).target;}
+      }catch(e){warning='旧目标读取异常，原始数据保留，使用独立的新查询工作区。';}
+      reverse=normalizeDraft({quality:target.quality});
+      if(child==='reverse'){
+        var old=createDraftStore(storage,mode).inspect();
+        if(old.valid&&old.token!==null)reverse=old.draft;else if(!old.valid)warning='旧反查草稿异常，原始数据保留，使用独立的新查询工作区。';
+        target=blankTarget();target.quality=reverse.quality;target.attrs=Array(info(reverse.quality).count).fill('');
+      }
+      return {value:locatorValue({version:1,target:target,reverse:reverse}),warning:warning};
+    }
+    function inspect(){var raw=null;try{
+      raw=storage.getItem(key);var fallback=raw==null?legacy():null;
+      return {valid:true,token:raw,accountId:owner(),value:fallback?fallback.value:locatorValue(JSON.parse(raw)),warning:fallback?fallback.warning:''};
+    }catch(e){return {valid:false,token:raw,accountId:owner(),value:locatorValue({version:1,target:blankTarget()}),error:e.message};}}
+    return {key:key,inspect:inspect,save:function(value,expected,accountId){
+      if(!accountId||owner()!==accountId)throw new Error('账号已切换，请重新打开铭文分区');
+      var current=inspect();if(!current.valid)throw new Error('查询工作区异常，原始数据保留，请先恢复备份');
+      if(current.token!==expected)throw new Error('查询工作区已在其他页面更新，请重新打开分区');
+      var raw=JSON.stringify(locatorValue(value));
+      if(storage.setItem(key,raw)===false)throw new Error('当前账号为只读或存储拒绝写入，筛选未保存');
+      if(owner()!==accountId||storage.getItem(key)!==raw)throw new Error('筛选保存失败，请重新打开分区');
+      return inspect();
+    }};
+  }
+  return {normalizeDraft:normalizeDraft,combinations:combinations,options:options,duns:duns,search:search,groupResults:groupResults,createDraftStore:createDraftStore,createLocatorStore:createLocatorStore,resultFilters:resultFilters};
 });

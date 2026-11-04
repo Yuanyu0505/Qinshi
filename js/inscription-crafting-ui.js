@@ -2,9 +2,9 @@
   'use strict';
   var R=root.InscriptionRules, P=root.InscriptionPaths, S=root.InscriptionCraftingState, F=root.InscriptionFlowchart, T=root.InscriptionTerms, L=root.InscriptionSimulation, X=root.InscriptionReverse;
   var views={}, store, state, token, accountId, loaded=false, sequence=0;
-  var queryStore,queryTarget,queryToken,recovery=null;
-  var activeMode='crafting-paths',seenRaw,seenQueryRaw;
-  function targetFor(v){return v.mode==='crafting-paths'?queryTarget:state.target;}
+  var recovery=null,simulationView=null,roots={},activeChildren={};
+  var activeMode='crafting-paths';
+  function targetFor(v){return v.scene?state.target:v.locator.target;}
   var favoriteStore, favoriteState=null, favoriteOperation=0, favoriteBusy=false;
   var modelNote='等概率模型，非实测游戏频率。各步骤概率以材料备齐为前提；置换概率未知，不计算整条路线的总成功率。';
   function esc(value) { return String(value==null?'':value).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
@@ -19,7 +19,10 @@
   }
   function friendly(message) { return String(message).replace(/\b[HMLU]\b/g,T.tierLabel); }
   function field(v,name) { return v.el.querySelector('[data-craft-field="'+name+'"]'); }
-  function area(v,name) { return v.el.querySelector('[data-craft-'+name+']'); }
+  function area(v,name) {
+    if(v.scene&&name==='status'){var current=views[v.mode+'-'+activeChildren[v.mode]];if(current)return area(current,name);}
+    return v.el.querySelector('[data-craft-'+name+']');
+  }
   function options(list,value,empty) {
     return (empty===undefined?'':'<option value="">'+esc(empty)+'</option>')+list.map(function(item){
       var id=typeof item==='string'?item:item.id, label=typeof item==='string'?item:item.label;
@@ -59,50 +62,72 @@
     return next;
   }
   function clearPlan(v){v.generation++;if(area(v,'results')){area(v,'results').innerHTML='';v.planTarget='';v.plan=null;v.routeSelections=new Map();}}
+  function saveLocator(v,next){
+    try{var result=v.locatorStore.save(next,v.locatorToken,accountId);v.locator=result.value;v.locatorToken=result.token;return true;}
+    catch(e){status(v,e.message);return false;}
+  }
   function changeTarget(v,next,keepAttrs,guard) {
-    var beforeTarget=targetFor(v),previousX=next.xTerm;
+    var beforeTarget=targetFor(v);
     next=normalizeTarget(keepAttrs?next:S.targetAfterContextChange(beforeTarget,next));
     if(sameTarget(next,beforeTarget)){renderFilters(v);return true;}
-    if(v.mode==='crafting-paths'){
-      try{if(guard)guard();var q=queryStore.save(next,queryToken,accountId);if(!q.valid)throw new Error(q.errors.join('；'));queryTarget=q.target;queryToken=q.token;clearPlan(v);renderFilters(v);return true;}
-      catch(e){status(v,e.message);renderFilters(v);}
-      return false;
-    }
+    try{if(guard)guard();var value=clone(v.locator);value.target=next;value.generated=false;
+      if(saveLocator(v,value)){clearPlan(v);renderFilters(v);return true;}
+    }catch(e){status(v,e.message);}renderFilters(v);return false;
+  }
+  function applySimulation(v,next,guard){
     if(recovery){status(v,'请先选择保留隔离或清空旧模拟数据；路径查询仍可正常使用。');renderFilters(v);return false;}
+    var beforeTarget=state.target;
     var before=position(beforeTarget),after=position(next),sim=state.simulation;
     var incompatible=before.prefix!==after.prefix||before.dun!==after.dun||R.qualities.findIndex(function(q){return q.id===sim.stage;})>=R.qualities.findIndex(function(q){return q.id===next.quality;});
     var queryOnly=next.discipleKey===beforeTarget.discipleKey&&next.slot===beforeTarget.slot&&next.dun===beforeTarget.dun&&next.quality===beforeTarget.quality&&JSON.stringify(next.attrs)===JSON.stringify(beforeTarget.attrs);
     if(queryOnly)incompatible=false;
     if(incompatible&&sceneExists(sim)&&!root.confirm('切换将重新准备当前模拟材料，已生成的结果保留到虚拟背包。是否继续？')){renderFilters(v);return false;}
     try{if(guard)guard();var draft=incompatible?L.act(state,'reset'):clone(state);draft.target=next;
-      if(save(v,draft)){v.bagSelection={};renderFilters(v);renderSimulator(v);if(previousX&&!next.xTerm)status(v,'原具体杂词 X 已恢复为未指定。');return true;}
+      if(save(v,draft)){simulationView.bagSelection={};renderSimulator(simulationView);return true;}
       else renderFilters(v);
     }catch(e){status(v,e.message);renderFilters(v);}
     return false;
   }
-  function init(mode) {
-    var el=document.getElementById('inscription-'+mode);
-    var v=views[mode]={mode:mode,el:el,generation:0,activeSuggestion:-1,planTarget:'',reverseStore:X.createDraftStore(root.QinshiAccounts,mode),bagSources:{}};
-    var searchId=mode+'-disciple-suggestions';
+  function initRoot(mode){
+    var host=document.getElementById('inscription-'+mode);roots[mode]=host;activeChildren[mode]='direct';
+    host.innerHTML='<div class="craft-actions craft-locator-tabs" role="group" aria-label="查询方式">'+['direct','reverse'].map(function(child){return '<button type="button" class="seg'+(child==='direct'?' active':'')+'" data-locator-tab="'+child+'" aria-pressed="'+(child==='direct')+'">'+(child==='direct'?'按弟子／遁位查询':'按属性反查')+'</button>';}).join('')+'</div><div data-locator-panel="direct"></div><div data-locator-panel="reverse" hidden></div>'+
+      (mode==='crafting-simulator'?'<section class="craft-panel"><h3>共用模拟现场</h3><p class="craft-note">上方两种方式仅定位目标，点击应用后才更新此现场。手动填写代表洗练备料；紫色中档请从虚拟背包取用。</p><div data-craft-simulator></div></section>':'');
+    ['direct','reverse'].forEach(function(child){init(mode,child,host.querySelector('[data-locator-panel="'+child+'"]'));});
+    if(mode==='crafting-simulator'){
+      simulationView={mode:mode,scene:true,el:host,bagSources:{},bagSelection:{}};
+      var scene=area(simulationView,'simulator');
+      scene.addEventListener('click',function(e){var control=e.target.closest('[data-craft-action]');if(control)onClick(simulationView,control);});
+      scene.addEventListener('change',function(e){onChange(simulationView,e.target);});
+      scene.addEventListener('input',function(e){if(e.target.matches('[data-bag-count]'))updateBagSelection(simulationView,e.target);});
+    }
+    host.querySelectorAll('[data-locator-tab]').forEach(function(b){b.addEventListener('click',function(){
+      activeChildren[mode]=b.dataset.locatorTab;host.querySelectorAll('[data-locator-panel]').forEach(function(panel){panel.hidden=panel.dataset.locatorPanel!==b.dataset.locatorTab;});
+      host.querySelectorAll('[data-locator-tab]').forEach(function(tab){tab.classList.toggle('active',tab===b);tab.setAttribute('aria-pressed',String(tab===b));});
+      activate(mode);
+    });});
+  }
+  function init(mode,child,el) {
+    var id=mode+'-'+child,v=views[id]={id:id,mode:mode,child:child,el:el,generation:0,activeSuggestion:-1,planTarget:'',locatorStore:X.createLocatorStore(root.QinshiAccounts,mode,child)};
+    var searchId=id+'-disciple-suggestions';
     el.innerHTML='<div data-craft-status class="craft-status" role="alert" hidden></div>'+
       '<section class="craft-panel"><h3>'+(mode==='crafting-paths'?'合成路径查询':'合成模拟')+'</h3>'+
-      '<p class="craft-note">本页筛选独立保存，与另一页互不影响。模拟及背包按当前游戏账号保存，不关联真实铭文库存。</p>'+
-      '<div class="craft-controls craft-filters"><label class="craft-search">弟子搜索（可不选）'+
+      '<p class="craft-note">两种查询各自保存筛选。'+(mode==='crafting-simulator'?'下方模拟现场与背包共用，筛选不会自动改变现场。':'本分区的目标与路线独立保存。')+'</p>'+
+      '<div class="craft-controls craft-filters"'+(child==='reverse'?' hidden':'')+'><label class="craft-search">弟子搜索（可不选）'+
       '<input type="search" data-craft-field="search" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="'+searchId+'" placeholder="输入姓名，例如盖聂">'+
       '<span id="'+searchId+'" class="craft-suggestions" data-craft-suggestions role="listbox" hidden></span></label>'+
       '<label>弟子天遁位<select data-craft-field="slot"></select></label>'+
       '<label>目标品质<select data-craft-field="quality">'+options(R.qualities,'o2')+'</select></label>'+
       '<label>遁位<select data-craft-field="dun">'+options(R.duns.map(function(d){return d.id;}),'','请选择遁位')+'</select></label></div>'+
       '<div data-craft-reverse></div>'+
-      '<div class="craft-actions">'+button('reverse-search','根据所选属性和遁位反查弟子')+button('clear-options','清除所有选项')+'</div>'+
+      '<div class="craft-actions">'+(child==='reverse'?button('reverse-search','根据所选属性和遁位反查弟子'):'')+button('clear-options','清除所有选项')+'</div>'+
       '<div data-craft-reverse-results></div>'+
+      '<p class="craft-note" data-craft-selected-target></p>'+
       '<div data-craft-attrs class="craft-attrs"></div>'+
       '<p class="craft-note">属性槽由品质决定，必须选满；同属性同档位不能重复，每枚最多两条高档。</p>'+
       (mode==='crafting-paths'?'<div class="craft-controls craft-x-picker"><label>具体杂词 X（可选）<select data-craft-field="x-term"></select></label></div><p class="craft-note" data-craft-x-note></p>':'')+
       '<div data-craft-analysis></div></section>'+
       '<details class="craft-panel craft-values"><summary>所选属性的品质、档位与数值</summary><div data-craft-matrix></div></details>'+
-      (mode==='crafting-paths'?'<div class="craft-actions">'+button('generate','一键查询合成路径')+'</div><div data-craft-results></div>':
-        '<section class="craft-panel"><h3>本次模拟材料</h3><p class="craft-note">手动填写代表洗练备料；紫色开始中档只能合成获得，请从虚拟背包取用。所有模拟数据按游戏账号保存，不影响真实个人进度。</p><div data-craft-simulator></div></section>');
+      (mode==='crafting-paths'?'<div class="craft-actions">'+button('generate','一键查询合成路径')+'</div><div data-craft-results></div>':'<div class="craft-actions">'+button('apply-simulation','应用到模拟')+'</div>');
     el.addEventListener('change',function(event){onChange(v,event.target);});
     el.addEventListener('click',function(event){
       var attrControl=event.target.closest('[data-craft-attr-trigger],[data-craft-attr-option]');
@@ -139,7 +164,7 @@
     if(!query){hideSuggestions(v);return;}
     var items=root.INSCRIPTION_DATA.items.filter(function(item){return item.name.replace(/[·\s]/g,'').toLowerCase().includes(query);});
     list.innerHTML=items.length?items.map(function(item,i){
-      return '<button type="button" role="option" aria-selected="false" id="'+v.mode+'-suggestion-'+i+'" data-craft-action="choose-disciple" data-key="'+esc(encodeURIComponent(item.quality+'\0'+item.name))+'">'+esc(item.name)+'<small>'+esc(item.quality)+'</small></button>';
+      return '<button type="button" role="option" aria-selected="false" id="'+v.id+'-suggestion-'+i+'" data-craft-action="choose-disciple" data-key="'+esc(encodeURIComponent(item.quality+'\0'+item.name))+'">'+esc(item.name)+'<small>'+esc(item.quality)+'</small></button>';
     }).join(''):'<span class="craft-note">没有匹配弟子，可使用独立遁位筛选。</span>';
     list.hidden=false; field(v,'search').setAttribute('aria-expanded','true'); v.activeSuggestion=-1;
   }
@@ -224,15 +249,15 @@
     closeAttrPicker(v);
     host.style.setProperty('--craft-slots',quality(targetFor(v).quality).count);
     host.innerHTML=targetFor(v).attrs.map(function(attr,i){
-      var id=v.mode+'-attr-'+i,listId=id+'-options',choices=attrs.slice();if(attr&&!choices.includes(attr))choices.push(attr);
+      var id=v.id+'-attr-'+i,listId=id+'-options',choices=attrs.slice();if(attr&&!choices.includes(attr))choices.push(attr);
       return '<div class="craft-attr-picker"><span id="'+id+'-label">目标属性'+(i+1)+'</span>'+
         '<select class="craft-attr-native" aria-hidden="true" tabindex="-1" data-craft-field="attr" data-index="'+i+'"'+(!dun?' disabled':'')+'>'+options(choices,attr,'请选择属性')+'</select>'+
-        '<button type="button" id="'+id+'" class="craft-attr-trigger" role="combobox" aria-haspopup="listbox" aria-expanded="false" aria-controls="'+listId+'" aria-labelledby="'+id+'-label '+id+'-value" aria-describedby="'+v.mode+'-attr-feedback" data-craft-attr-trigger data-index="'+i+'"'+(!dun?' disabled':'')+'><span id="'+id+'-value">'+esc(attr||'请选择属性')+'</span></button>'+
+        '<button type="button" id="'+id+'" class="craft-attr-trigger" role="combobox" aria-haspopup="listbox" aria-expanded="false" aria-controls="'+listId+'" aria-labelledby="'+id+'-label '+id+'-value" aria-describedby="'+v.id+'-attr-feedback" data-craft-attr-trigger data-index="'+i+'"'+(!dun?' disabled':'')+'><span id="'+id+'-value">'+esc(attr||'请选择属性')+'</span></button>'+
         '<div id="'+listId+'" class="craft-attr-options" role="listbox" aria-labelledby="'+id+'-label" hidden>'+[''].concat(choices).map(function(value,j){
           var result=value?targetCompletion(candidateTarget(v,i,value)):{valid:true};
           return '<button type="button" role="option" tabindex="-1" id="'+id+'-option-'+j+'" aria-selected="'+String(value===attr)+'" aria-disabled="'+String(!result.valid)+'" data-craft-attr-option data-index="'+i+'" data-value="'+esc(value)+'">'+esc(value||'请选择属性')+(!result.valid?'<small>不可选 · 点击查看原因</small>':'')+'</button>';
         }).join('')+'</div></div>';
-    }).join('')+'<div id="'+v.mode+'-attr-feedback" data-craft-attr-feedback class="craft-analysis unavailable craft-attr-feedback" role="status" aria-live="polite" hidden></div>';
+    }).join('')+'<div id="'+v.id+'-attr-feedback" data-craft-attr-feedback class="craft-analysis unavailable craft-attr-feedback" role="status" aria-live="polite" hidden></div>';
     renderAttrFeedback(v);
     if(focusedIndex!==null&&attrTrigger(v,focusedIndex))attrTrigger(v,focusedIndex).focus();
   }
@@ -245,6 +270,7 @@
     field(v,'dun').innerHTML=options(R.duns.map(function(d){return d.id;}),dun||'','请选择遁位');
     field(v,'dun').value=dun||''; field(v,'dun').disabled=!!item;
     field(v,'dun').title=item?'遁位由所选弟子的实际铭文位置确定':'未指定弟子时可独立筛选';
+    area(v,'selected-target').textContent=v.child==='reverse'?(item?'已选组合：'+item.name+' · '+target.slot.replace('|',' · ')+' · '+qLabel(target.quality):'应用反查结果后，可在下方补全或调整目标组合。'):'';
     var attrs=Array.from(new Set(R.termsFor(dun,target.quality).map(function(t){return t.attr;})));
     renderAttrPickers(v,attrs,dun);
     if(field(v,'x-term')){
@@ -256,52 +282,57 @@
     renderReverse(v);renderAnalysis(v); renderMatrix(v);
   }
   function readReverse(v){
-    var saved=v.reverseStore.inspect();v.reverseToken=saved.token;v.reverseAccount=saved.accountId;v.reverseValid=saved.valid;
-    v.reverse=saved.valid&&saved.token===null?X.normalizeDraft({quality:targetFor(v).quality}):X.normalizeDraft(saved.draft);v.reverseEditing=saved.editing;v.reverseResults=null;v.reversePage=0;
-    v.reverseError=saved.valid?'':'反查草稿读取异常，原始数据保留：'+saved.error;
+    v.reverse=X.normalizeDraft(v.locator.reverse);v.reversePage=0;v.reverseMembers={};
+    v.reverseResults=v.locator.queried?X.search(root.INSCRIPTION_DATA.items,v.reverse):null;
   }
   function checkReverse(v){
-    var fresh=v.reverseStore.inspect();
-    if(!fresh.valid)throw new Error('反查草稿异常，原始数据已保留，请重新打开分区');
+    var fresh=v.locatorStore.inspect();
+    if(!fresh.valid)throw new Error('查询工作区异常，原始数据已保留，请重新打开分区');
     if(fresh.accountId!==accountId||currentAccount()!==accountId)throw new Error('账号已切换，请重新打开铭文分区');
-    if(fresh.token!==v.reverseToken)throw new Error('反查筛选已在其他页面更新，请重新打开分区');
+    if(fresh.token!==v.locatorToken)throw new Error('查询工作区已在其他页面更新，请重新打开分区');
   }
   function updateReverse(v,next,editing){
     if(!loaded||currentAccount()!==accountId){status(v,'账号已切换，请重新打开铭文分区。');return false;}
     next=X.normalizeDraft(next);
     if(next.dun&&!X.duns(next).some(function(d){return d.id===next.dun;}))next.dun='';
     try{
-      var result=v.reverseStore.save(next,editing,v.reverseToken,accountId);
-      v.reverseToken=result.token;v.reverseAccount=result.accountId;v.reverseValid=true;v.reverseError='';
-      v.reverse=next;v.reverseEditing=editing;v.reverseResults=null;v.reversePage=0;renderFilters(v);return true;
+      var value=clone(v.locator);value.reverse=next;value.queried=false;
+      if(!saveLocator(v,value))return false;
+      v.reverse=next;v.reverseResults=null;v.reversePage=0;renderFilters(v);return true;
     }catch(e){status(v,e.message);renderFilters(v);return false;}
   }
   function renderReverse(v){
+    if(v.child!=='reverse'){area(v,'reverse').innerHTML='';return;}
     if(!v.reverse)readReverse(v);
-    var draft=v.reverse,target=targetFor(v),editing=v.reverseEditing;
-    if(editing){
-      field(v,'quality').value=draft.quality;
-      field(v,'dun').innerHTML=options(X.duns(draft),draft.dun,'全部符合条件的遁位');
-      field(v,'dun').disabled=false;field(v,'dun').title='待应用的反查遁位，不改变当前合成目标';
-    }
-    area(v,'reverse').innerHTML='<div class="craft-controls craft-reverse-attrs">'+draft.attrs.map(function(attr,i){
+    var draft=v.reverse;
+    area(v,'reverse').innerHTML='<div class="craft-controls"><label>目标品质<select data-reverse-field="quality">'+options(R.qualities,draft.quality)+'</select></label><label>遁位<select data-reverse-field="dun">'+options(X.duns(draft),draft.dun,'全部符合条件的遁位')+'</select></label></div><div class="craft-controls craft-reverse-attrs">'+draft.attrs.map(function(attr,i){
       return '<label>按属性反查'+(i+1)+'<select data-reverse-attr="'+i+'">'+options(X.options(draft,i),attr,'不限制属性')+'</select></label>';
-    }).join('')+'</div><p class="craft-note">反查可重复选择，次数表示至少需要几条该属性；优先填满查询词条，其余为非查询词条X。'+
-      (editing?'当前为待应用反查：'+esc(qLabel(draft.quality)+' · '+(draft.dun||'全部遁位'))+'；下方合成目标仍为'+esc(qLabel(target.quality)+' · '+(position(target).dun||'未选择遁位'))+'。点击结果才会应用。':
-      '反查草稿独立保存；选择属性后，上方品质和遁位用于反查，不会改动当前模拟。')+'</p>'+
-      (editing?button('reverse-exit','返回当前合成目标'):'')+(v.reverseError?'<p class="craft-status" role="alert">'+esc(v.reverseError)+'</p>':'');
+    }).join('')+'</div><p class="craft-note">可重复选择，次数表示至少需要几条该属性；优先填满查询词条，其余为非查询词条X。点击结果应用目标，筛选本身不会改变模拟现场。</p>';
     renderReverseResults(v);
   }
   function renderReverseResults(v){
     var host=area(v,'reverse-results'),rows=v.reverseResults;
     if(!rows){host.innerHTML='';return;}
-    var size=30,start=(v.reversePage||0)*size,end=Math.min(rows.length,start+size);
-    host.innerHTML='<section class="craft-reverse-results"><h4>反查结果 · '+rows.length+'组</h4><p class="craft-note">搜索全部弟子；展示不同数量分配的最高合法组合。非查询词条X需应用后自行选择。</p>'+
-      (rows.length?'<div class="craft-reverse-grid">'+rows.slice(start,end).map(function(row,i){
+    var filters=v.locator.filters,common=new Set();
+    try{var stored=JSON.parse(root.QinshiAccounts.getItem('qinshi_inscription_common_v1'));if(stored&&Array.isArray(stored.keys))common=new Set(stored.keys);}catch(e){/* no personal classification inferred from broken data */}
+    var cards=X.groupResults(rows,filters,{commonKeys:common,formationNames:root.InscriptionProgressRules.formationNames(root.FORMATIONS_DATA),atlasTargets:(root.FORBIDDEN_DATA||{}).discipleAtlasTargets});
+    v.reverseCards=cards;
+    var size=30;v.reversePage=Math.max(0,Math.min(v.reversePage||0,Math.max(0,Math.ceil(cards.length/size)-1)));
+    var start=v.reversePage*size,end=Math.min(cards.length,start+size);
+    host.innerHTML='<section class="craft-reverse-results"><h4>反查结果 · '+cards.length+'组</h4><div class="craft-controls craft-result-filters">'+
+      '<label class="craft-result-check"><input type="checkbox" data-result-filter="ordinary"'+(filters.ordinary?' checked':'')+'>展示普通弟子</label>'+
+      '<label>弟子分类<select data-result-filter="group">'+options([{id:'all',label:'全部弟子'},{id:'formation',label:'合阵弟子'},{id:'common',label:'常用弟子'},{id:'other',label:'其他弟子'}],filters.group)+'</select></label>'+
+      '<label>天位<select data-result-filter="prefix">'+options(R.prefixes,filters.prefix,'全部天位')+'</select></label>'+
+      '<label>遁位<select data-result-filter="dun">'+options(R.duns.map(function(d){return d.id;}),filters.dun,'全部遁位')+'</select></label>'+
+      '<label>搜索弟子<input type="search" data-result-filter="search" value="'+esc(filters.search)+'" placeholder="输入弟子姓名"></label></div><p class="craft-note">先筛选具体弟子，再合并同位置同搭配；非查询词条X需应用后自行选择。</p>'+
+      (cards.length?'<div class="craft-reverse-grid">'+cards.slice(start,end).map(function(card,i){
+        var index=start+i,selected=v.reverseMembers&&v.reverseMembers[card.key],row=card.members.find(function(m){return m.discipleKey===selected;})||card.members[0];
+        if(!v.reverseMembers)v.reverseMembers={};v.reverseMembers[card.key]=row.discipleKey;
         var known=T.sortTerms(row.terms.filter(Boolean),row.quality).map(function(t){return T.html(t,row.quality);});
         row.terms.filter(function(t){return !t;}).forEach(function(){known.push('<span class="craft-note">非查询词条X</span>');});
-        return '<article data-reverse-result><b>'+esc(row.name)+'</b><small>'+esc(row.discipleQuality+' · '+row.slot.replace('|',' · ')+' · '+qLabel(row.quality))+'</small><p>'+known.join(' ＋ ')+'</p>'+button('reverse-apply','应用此组合',' data-index="'+(start+i)+'"')+'</article>';
-      }).join('')+'</div><div class="craft-actions">'+button('reverse-prev','上一页',start?'':' disabled')+'<span>'+(start+1)+'–'+end+' / '+rows.length+'</span>'+button('reverse-next','下一页',end<rows.length?'':' disabled')+'</div>':'<p class="craft-note">没有符合条件的弟子位置，请调整品质、属性或遁位。</p>')+'</section>';
+        return '<article data-reverse-result><b>'+esc(card.members.map(function(m){return m.name;}).join('／'))+'</b><small>'+esc(row.slot.replace('|',' · ')+' · '+qLabel(row.quality))+'</small><p>'+known.join(' ＋ ')+'</p>'+
+          (card.members.length>1?'<label>应用弟子<select data-result-member="'+index+'">'+options(card.members.map(function(m){return {id:encodeURIComponent(m.discipleKey),label:m.name};}),encodeURIComponent(row.discipleKey))+'</select></label>':'')+button('reverse-apply','应用此组合',' data-index="'+index+'"')+'</article>';
+      }).join('')+'</div><div class="craft-actions">'+button('reverse-prev','上一页',start?'':' disabled')+'<span>'+(start+1)+'–'+end+' / '+cards.length+'</span>'+button('reverse-next','下一页',end<cards.length?'':' disabled')+'</div>':'<p class="craft-note">没有符合条件的弟子位置，请调整筛选或勾选展示普通弟子。</p>')+'</section>';
   }
   function renderAnalysis(v) {
     var target=targetFor(v),dun=position(target).dun,host=area(v,'analysis');
@@ -453,7 +484,8 @@
         var result=P.representative({prefix:p.prefix,dun:p.dun,quality:target.quality,attrs:target.attrs,xTerm:target.xTerm||null});
         if(!result.valid)throw new Error(result.errors.concat(result.notes||[]).join('；'));
         if(!result.strategies.length)throw new Error('当前目标尚无可展示的完整路线；不会用不合法步骤补齐。');
-        v.planTarget=selected; renderPlan(v,result); status(v,'');
+        v.planTarget=selected;renderPlan(v,result);status(v,'');
+        if(!v.locator.generated){var value=clone(v.locator);value.generated=true;saveLocator(v,value);}
       }catch(error){status(v,error.message);}
     },0);
   }
@@ -522,6 +554,9 @@
     if(v.actualRecord){try{var traced=L.route(state,v.actualRecord);host.innerHTML=button('close-actual-route','收起完整路线')+F.render(traced,null,{positionLabel:'本次实际合成记录'});if(F.bind)F.bind(host.querySelector('[data-flow-viewer]'));}catch(e){v.actualRecord=null;host.innerHTML='<p class="craft-note">'+esc(e.message)+'</p>';}}
   }
   function renderSimulator(v) {
+    if(v.mode!=='crafting-simulator'||!simulationView)return;
+    v=simulationView;
+    v.renderedToken=token;v.renderedAccount=accountId;
     var host=area(v,'simulator');if(!host)return;
     if(recovery){host.innerHTML=recoveryPanel();return;}
     var sim=state.simulation,recipe=R.recipes[sim.stage],p=position(targetFor(v));
@@ -571,9 +606,10 @@
   function renderAll(clearRoutes) {
     if(!state)return;
     Object.keys(views).forEach(function(key){
-      var v=views[key];renderFilters(v);renderSimulator(v);
+      var v=views[key];renderFilters(v);
       if(clearRoutes && area(v,'results')){area(v,'results').innerHTML='';v.planTarget='';v.plan=null;v.routeSelections=new Map();}
     });
+    if(simulationView)renderSimulator(simulationView);
   }
   function labAction(v,action,payload){
     try{var draft=L.act(state,action,payload);if(save(v,draft)){if(['select','next','reset','back','clear-bag','clear-inputs','prepare'].includes(action))v.bagSelection={};renderSimulator(v);return true;}}
@@ -584,6 +620,12 @@
     if(control.matches('[data-route-variant]'))return;
     if(!loaded||currentAccount()!==accountId){status(v,'请重新打开铭文分区后再操作。');return;}
     status(v,'');
+    if(control.matches('[data-result-member]')){var card=v.reverseCards[Number(control.dataset.resultMember)];if(card)v.reverseMembers[card.key]=decodeURIComponent(control.value);return;}
+    if(control.matches('[data-result-filter]')){
+      var filtered=clone(v.locator),filter=control.dataset.resultFilter;filtered.filters[filter]=filter==='ordinary'?control.checked:control.value;
+      if(saveLocator(v,filtered)){v.reversePage=0;renderReverseResults(v);}return;
+    }
+    if(control.matches('[data-reverse-field]')){var changed=clone(v.reverse);changed[control.dataset.reverseField]=control.value;updateReverse(v,changed,true);return;}
     if(control.matches('[data-reverse-attr]')){
       var reverse=clone(v.reverse),index=Number(control.dataset.reverseAttr);
       reverse.attrs[index]=control.value;updateReverse(v,reverse,true);return;
@@ -601,9 +643,6 @@
     if(control.matches('[data-craft-field]')){
       var target=clone(targetFor(v)),name=control.dataset.craftField;
       if(name==='search')return;
-      if(v.reverseEditing&&['quality','dun'].includes(name)){
-        var nextReverse=clone(v.reverse);nextReverse[name]=control.value;updateReverse(v,nextReverse,true);return;
-      }
       if(name==='attr'){
         target.attrs[Number(control.dataset.index)]=control.value;
         // Hidden native selects remain a legacy/script bridge. Validate and
@@ -616,9 +655,7 @@
       if(name==='x-term'){
         var split=control.value.lastIndexOf(':');target.xTerm=control.value?{attr:control.value.slice(0,split),tier:control.value.slice(split+1)}:null;
       }
-      if(changeTarget(v,target)&&name==='quality'){
-        var resized=clone(v.reverse);resized.quality=target.quality;updateReverse(v,resized,false);
-      }
+      changeTarget(v,target);
       return;
     }
     var sim=clone(state.simulation);
@@ -639,27 +676,22 @@
     if(action.indexOf('diagram-')===0){F.zoom(control.closest('[data-flow-viewer]'),action.slice(8));return;}
     if(!loaded||currentAccount()!==accountId){status(v,'请重新打开铭文分区后再操作。');return;}
     status(v,'');
-    if(action==='reverse-exit'){
-      var returned=clone(v.reverse);returned.quality=targetFor(v).quality;updateReverse(v,returned,false);return;
-    }
+    if(action==='apply-simulation'){try{checkReverse(v);applySimulation(v,clone(targetFor(v)),function(){checkReverse(v);});}catch(e){status(v,e.message);}return;}
     if(action==='reverse-search'){
       if(!v.reverse.attrs.some(Boolean)){status(v,'请至少选择一个反查属性。');return;}
+      var queried=clone(v.locator);queried.queried=true;if(!saveLocator(v,queried))return;
       v.reverseResults=X.search(root.INSCRIPTION_DATA.items,v.reverse);v.reversePage=0;renderReverseResults(v);return;
     }
     if(action==='reverse-prev'||action==='reverse-next'){
-      var pages=Math.ceil((v.reverseResults||[]).length/30);v.reversePage=Math.max(0,Math.min(pages-1,(v.reversePage||0)+(action==='reverse-next'?1:-1)));renderReverseResults(v);return;
+      var pages=Math.ceil((v.reverseCards||[]).length/30);v.reversePage=Math.max(0,Math.min(pages-1,(v.reversePage||0)+(action==='reverse-next'?1:-1)));renderReverseResults(v);return;
     }
     if(action==='reverse-apply'){
-      var row=(v.reverseResults||[])[Number(control.dataset.index)];if(!row)return;
+      var card=(v.reverseCards||[])[Number(control.dataset.index)];if(!card)return;
+      var row=card.members.find(function(m){return m.discipleKey===v.reverseMembers[card.key];})||card.members[0];
       try{checkReverse(v);}catch(e){status(v,e.message);return;}
       var applied={discipleKey:row.discipleKey,slot:row.slot,dun:row.dun,quality:row.quality,attrs:row.attrs.slice(),xTerm:null};
-      if(changeTarget(v,applied,true,function(){checkReverse(v);})){
-        // Apply one checked target transaction first; exiting draft mode is a
-        // separate preference and must not discard a scene on cancellation.
-        var results=v.reverseResults;
-        if(updateReverse(v,v.reverse,false)){v.reverseResults=results;renderReverseResults(v);}
-        else status(v,'合成目标已应用，反查显示设置未保存，请重新打开分区。');
-      }
+      if(v.mode==='crafting-simulator'&&!applySimulation(v,applied,function(){checkReverse(v);}))return;
+      changeTarget(v,applied,true,function(){checkReverse(v);});
       return;
     }
     if(action==='toggle-favorite'){toggleFavorite(v,control);return;}
@@ -667,15 +699,12 @@
       var target=clone(targetFor(v)),key=decodeURIComponent(control.dataset.key);
       if(target.discipleKey===key){hideSuggestions(v);return;}
       target.discipleKey=key;target.slot='';
-      if(changeTarget(v,target)&&v.reverseEditing)updateReverse(v,v.reverse,false);return;
+      changeTarget(v,target);return;
     }
     if(action==='clear-options'){
-      try{checkReverse(v);}catch(e){status(v,e.message);return;}
-      var blank={discipleKey:'',slot:'',dun:'',quality:'o2',attrs:['','',''],xTerm:null};v.attrRejection='';
-      if(v.mode==='crafting-paths'){if(changeTarget(v,blank,false,function(){checkReverse(v);}))updateReverse(v,X.normalizeDraft(),false);return;}
-      if(recovery){status(v,'请先处理旧模拟数据，或切换至路径查询。');return;}
-      if(sceneExists(state.simulation)&&!root.confirm('清除本页筛选和当前材料？已生成的结果保留到虚拟背包，路径查询不受影响。'))return;
-      try{checkReverse(v);var cleared=L.act(state,'reset');cleared.target=blank;if(save(v,cleared)){v.bagSelection={};if(!updateReverse(v,X.normalizeDraft(),false))status(v,'本页合成目标已清除，反查草稿未保存，请重新打开分区。');renderFilters(v);renderSimulator(v);}}catch(e){status(v,e.message);}return;
+      var cleared=clone(v.locator);cleared.target={discipleKey:'',slot:'',dun:'',quality:'o2',attrs:['','',''],xTerm:null};cleared.generated=false;
+      if(v.child==='reverse'){cleared.reverse=X.normalizeDraft();cleared.filters=X.resultFilters();cleared.queried=false;}
+      if(saveLocator(v,cleared)){v.attrRejection='';readReverse(v);clearPlan(v);renderFilters(v);}return;
     }
     if(action==='isolate-legacy'||action==='clear-legacy'){
       var clearing=action==='clear-legacy';
@@ -728,41 +757,40 @@
     if(mode==='crafting-favorites'){if(root.InscriptionRouteFavorites)root.InscriptionRouteFavorites.activate();return;}
     if(!R||!P||!S||!F||!T||!L||!X||!root.QinshiAccounts||!root.INSCRIPTION_DATA)return;
     if(!store)store=S.createWorkbench(root.QinshiAccounts);
-    if(!queryStore)queryStore=S.createQueryStore(root.QinshiAccounts);
     activeMode=mode;
-    var v=views[mode]||init(mode),account=currentAccount(),raw,queryRaw,reverseRaw;
-    try{raw=root.QinshiAccounts.getItem(S.KEY);queryRaw=root.QinshiAccounts.getItem(S.QUERY_KEY);reverseRaw=root.QinshiAccounts.getItem(v.reverseStore.key);}catch(e){force=true;}
-    if(!force&&loaded&&accountId===account&&!recovery&&raw===seenRaw&&queryRaw===seenQueryRaw&&v.reverseAccount===account&&reverseRaw===v.reverseToken&&v.loadedAccount===account&&v.loadedToken===(mode==='crafting-paths'?queryToken:token))return;
-    var result=store.inspect(),q=queryStore.inspect();seenRaw=raw;seenQueryRaw=queryRaw;
-    var oldQuery=queryTarget&&JSON.stringify(queryTarget),changedAccount=!loaded||accountId!==account;
+    if(!roots[mode])initRoot(mode);
+    var account=currentAccount(),changedAccount=!loaded||accountId!==account;
+    var result=store.inspect();
     accountId=account;loaded=true;
     if(changedAccount){favoriteOperation++;favoriteBusy=false;}
-    if(q.valid){queryTarget=normalizeTarget(q.target);queryToken=q.token;}
-    else {queryTarget=q.target;queryToken=q.token;}
     recovery=null;
     if(result.valid){state=L.upgrade(result.state);token=result.token;if(state.simulation.legacy)recovery={reason:'旧现场材料来源或规则需要重新确认',raw:root.QinshiAccounts.getItem(S.KEY)};}
     else {state=L.upgrade({version:1,target:{discipleKey:'',slot:'',dun:'',quality:'o2',attrs:['','',''],xTerm:null},simulation:S.blankSimulation()});token=null;recovery={reason:result.errors.join('；'),raw:root.QinshiAccounts.getItem(S.KEY)};}
     state.target=normalizeTarget(state.target);
     inspectFavorites();
-    if(changedAccount)Object.keys(views).forEach(function(key){var view=views[key];view.bagOpen=false;view.actualRecord=null;view.bagSelection={};view.bagSources={};view.reverseAccount=null;view.reverseResults=null;clearPlan(view);view.loadedAccount=null;});
-    if(force)Object.keys(views).forEach(function(key){views[key].loadedAccount=null;});
-    if(oldQuery!==JSON.stringify(queryTarget)&&views['crafting-paths']){
-      clearPlan(views['crafting-paths']);views['crafting-paths'].loadedAccount=null;
+    if(changedAccount){
+      Object.keys(views).forEach(function(key){var view=views[key];clearPlan(view);view.loadedAccount=null;view.reverseResults=null;});
+      if(simulationView){simulationView.bagOpen=false;simulationView.actualRecord=null;simulationView.bagSelection={};simulationView.bagSources={};}
     }
-    var view=v;view.attrRejection='';status(view,'');
-      if(view.reverseAccount!==account||view.reverseToken!==reverseRaw||force)readReverse(view);
-      view.el.querySelectorAll('button,input,select').forEach(function(c){c.disabled=false;});
-      renderFilters(view);renderSimulator(view);
-      if(view.mode==='crafting-paths'){
-        if(view.plan)renderPlan(view,view.plan);
-        if(!q.valid)status(view,'查询筛选读取异常，原始数据保留：'+q.errors.join('；'));
+    ['direct','reverse'].forEach(function(child){
+      var view=views[mode+'-'+child],saved=view.locatorStore.inspect(),changed=view.loadedAccount!==account||view.locatorToken!==saved.token;
+      if(changed||force){
+        view.locator=saved.value;view.locator.target=normalizeTarget(view.locator.target);view.locatorToken=saved.token;view.loadedAccount=account;view.attrRejection='';
+        if(changed)clearPlan(view);readReverse(view);status(view,saved.valid?saved.warning:'查询工作区读取异常，原始数据保留：'+saved.error);
       }
-    view.loadedAccount=account;view.loadedToken=mode==='crafting-paths'?queryToken:token;
+      if(changed||force||!view.rendered){renderFilters(view);view.rendered=true;}
+      // Route data is regenerated from the independently persisted goal, never
+      // copied from the other child. Hidden children keep their own DOM/zoom.
+      if(view.mode==='crafting-paths'&&view.locator.generated&&!view.plan&&(changed||force)){
+        generate(view);
+      }
+    });
+    if(mode==='crafting-simulator'&&(force||recovery||simulationView.renderedToken!==token||simulationView.renderedAccount!==accountId))renderSimulator(simulationView);
   }
   document.addEventListener('click',function(event){Object.keys(views).forEach(function(key){var v=views[key];if(!event.target.closest('.craft-search')||!v.el.contains(event.target))hideSuggestions(v);if(!event.target.closest('.craft-attr-picker')||!v.el.contains(event.target))closeAttrPicker(v);});});
   root.addEventListener('inscription-route-favorites-change',function(){
     if(!loaded||currentAccount()!==accountId)return;inspectFavorites();
     Object.keys(views).forEach(function(key){var v=views[key];v.loadedAccount=null;if(!v.el.hidden&&!v.el.closest('#partition-inscription').hidden&&v.plan&&v.planTarget===JSON.stringify(targetFor(v)))renderPlan(v,v.plan);});
   });
-  root.InscriptionCraftingUI={activate:activate,refresh:function(){var keys=Object.keys(views);if(keys.length)activate(views[activeMode]?activeMode:keys[0],true);if(root.InscriptionRouteFavorites)root.InscriptionRouteFavorites.refresh();}};
+  root.InscriptionCraftingUI={activate:activate,refresh:function(){if(Object.keys(views).length)activate(activeMode,true);if(root.InscriptionRouteFavorites)root.InscriptionRouteFavorites.refresh();}};
 })(window);

@@ -11,6 +11,7 @@ for(const width of [390,768,1440])test(width+' reference tabs show local matrix 
  assert.equal(await host.locator('.ins-ref-matrix thead th').count(),5);assert.match(await host.locator('[data-ref-attr-row="技能穿透"]').innerText(),/6%.*5%.*4%/s);
  await host.locator('[data-ref-mode]').selectOption('quality');await host.locator('[data-ref-quality2]').selectOption('p2');await host.locator('[data-ref-diff]').check();
  assert.equal(await host.locator('[data-ref-compare-panel]').count(),2);assert.match(await host.locator('[data-ref-comparison]').innerText(),/百分点/);
+ if(width>=768){const panels=await host.locator('[data-ref-compare-panel]').all();const a=await panels[0].boundingBox(),b=await panels[1].boundingBox();assert.ok(Math.abs(a.y-b.y)<2&&b.x>a.x,'tablet and desktop comparisons are side by side');}
  await host.locator('[data-ref-mode]').selectOption('dun');assert.equal(await host.locator('[data-ref-quality2]').count(),0);assert.equal(await host.locator('[data-ref-dun2]').count(),1);assert.equal(await host.locator('[data-ref-compare-panel]').count(),2);
  await host.locator('[data-ref-mode]').selectOption('single');await host.locator('[data-ref-source]').selectOption('crafted');await host.locator('[data-ref-quality]').selectOption('p2');
  const row=host.locator('[data-ref-attr-row="技能穿透"]');assert.doesNotMatch(await row.innerText(),/2%/);
@@ -21,5 +22,10 @@ for(const width of [390,768,1440])test(width+' reference tabs show local matrix 
  assert.equal(await host.locator('.ins-ref-main-table tbody tr').count(),5);await host.locator('[data-ref-main-quality]').selectOption('g1');assert.match(await host.locator('.ins-ref-main-table').innerText(),/25600护盾/);
  assert.equal(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true);await p.screenshot({path:'test-results/1081-reference-'+width+'.png'});
  assert.equal(await p.evaluate(()=>QinshiAccounts.getItem('qinshi_inscription_progress_v2')),before);
+ }finally{await p.close();}
+});
+test('reference source filter differences never use values excluded from either visible matrix',async()=>{
+ const p=await setup(1440);try{const host=p.locator('#inscription-reference');await host.locator('[data-ref-dun]').selectOption('地遁');await host.locator('[data-ref-mode]').selectOption('quality');await host.locator('[data-ref-quality]').selectOption('p2');await host.locator('[data-ref-quality2]').selectOption('o2');await host.locator('[data-ref-source]').selectOption('crafted');await host.locator('[data-ref-diff]').check();
+ const row=host.locator('[data-ref-comparison] tbody tr').filter({hasText:'技能穿透'}).filter({hasText:'低档'});assert.equal(await row.locator('td').last().innerText(),'—');
  }finally{await p.close();}
 });

@@ -319,7 +319,7 @@
     var host=area(v,'reverse-results'),rows=v.reverseResults;
     if(!rows){host.innerHTML='';return;}
     var filters=v.locator.filters,common=new Set();
-    try{var stored=JSON.parse(root.QinshiAccounts.getItem('qinshi_inscription_common_v1'));if(stored&&Array.isArray(stored.keys))common=new Set(stored.keys);}catch(e){/* no personal classification inferred from broken data */}
+    try{v.commonToken=root.QinshiAccounts.getItem('qinshi_inscription_common_v1');var stored=JSON.parse(v.commonToken);if(stored&&Array.isArray(stored.keys))common=new Set(stored.keys);}catch(e){/* no personal classification inferred from broken data */}
     var cards=X.groupResults(rows,filters,{commonKeys:common,formationNames:root.InscriptionProgressRules.formationNames(root.FORMATIONS_DATA),atlasTargets:(root.FORBIDDEN_DATA||{}).discipleAtlasTargets});
     v.reverseCards=cards;
     var size=30;v.reversePage=Math.max(0,Math.min(v.reversePage||0,Math.max(0,Math.ceil(cards.length/size)-1)));
@@ -697,7 +697,6 @@
       var row=card.members.find(function(m){return m.discipleKey===v.reverseMembers[card.key];})||card.members[0];
       try{checkReverse(v);}catch(e){status(v,e.message);return;}
       var applied={discipleKey:row.discipleKey,slot:row.slot,dun:row.dun,quality:row.quality,attrs:row.attrs.slice(),xTerm:null};
-      if(v.mode==='crafting-simulator'&&!applySimulation(v,applied,function(){checkReverse(v);}))return;
       changeTarget(v,applied,true,function(){checkReverse(v);});
       return;
     }
@@ -787,6 +786,7 @@
         if(changed)clearPlan(view);readReverse(view);status(view,saved.valid?saved.warning:'查询工作区读取异常，原始数据保留：'+saved.error);
       }
       if(changed||force||!view.rendered){renderFilters(view);view.rendered=true;}
+      if(view.child==='reverse'&&view.reverseResults&&view.commonToken!==root.QinshiAccounts.getItem('qinshi_inscription_common_v1'))renderReverseResults(view);
       // Route data is regenerated from the independently persisted goal, never
       // copied from the other child. Hidden children keep their own DOM/zoom.
       if(view.mode==='crafting-paths'&&view.locator.generated&&!view.plan&&(changed||force)){

@@ -29,7 +29,6 @@
 #inscription-reference .ins-ref-wash-card dd { margin: 0; }
 #inscription-reference .ins-ref-overview { margin-top: 18px; }
 @media (max-width: 1000px) {
-  #inscription-reference .ins-ref-panels.is-comparison { grid-template-columns: minmax(0,1fr); }
   #inscription-reference .ins-ref-wash-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
 }
 #inscription-reference .ins-reference-table th { vertical-align: top; }
@@ -49,6 +48,7 @@
 .ins-ref-quality-o1, .ins-ref-quality-o2 { color: var(--ins-term-orange, #f79646); }
 .ins-ref-quality-panel + .ins-ref-quality-panel { margin-top: 24px; }
 @media (max-width: 600px) {
+  #inscription-reference .ins-ref-panels.is-comparison { grid-template-columns: minmax(0,1fr); }
   .ins-ref-controls { gap: 12px; }
   .ins-ref-controls label { flex-wrap: wrap; }
   .ins-ref-wash-grid { grid-template-columns: 1fr; }

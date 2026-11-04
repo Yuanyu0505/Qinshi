@@ -29,3 +29,15 @@ test('locator stores retain pending search text and quarantine malformed reverse
  const damaged=store.inspect().value;damaged.reverse={quality:'p2',dun:'鬼遁',attrs:['不存在的属性','']};const raw=JSON.stringify(damaged);s.setItem(store.key,raw);
  assert.equal(store.inspect().valid,false);assert.throws(()=>store.save(v,raw,'a'),/异常/);assert.equal(s.getItem(store.key),raw);
 });
+test('direct path migration retains the old workbench fallback when no query document exists',()=>{
+ const s=storage(),raw=JSON.stringify({draft:{simpleWorkbench:{target}}});s.setItem('qinshi_inscription_crafting_v1',raw);
+ const result=X.createLocatorStore(s,'crafting-paths','direct').inspect();assert.equal(result.valid,true);assert.equal(result.value.target.dun,'鬼遁');assert.deepEqual(result.value.target.attrs,['速','速','速']);
+ assert.equal(s.getItem('qinshi_inscription_crafting_v1'),raw);assert.equal(s.getItem('qinshi_inscription_path_query_v1'),null);
+});
+test('malformed locator position and concrete X stay quarantined rather than normalized and overwritten',()=>{
+ const s=storage(),store=X.createLocatorStore(s,'crafting-paths','direct');
+ for(const change of [{dun:'不存在'},{slot:'坏位置'},{xTerm:{attr:'不存在',tier:'H'}}]){
+  const value={version:1,target:{...target,...change}},raw=JSON.stringify(value);s.setItem(store.key,raw);
+  assert.equal(store.inspect().valid,false,JSON.stringify(change));assert.throws(()=>store.save({version:1,target},raw,'a'),/异常/);assert.equal(s.getItem(store.key),raw);
+ }
+});

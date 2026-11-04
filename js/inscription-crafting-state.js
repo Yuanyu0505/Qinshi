@@ -353,5 +353,5 @@
       save: function (value, expected, accountId) { legacy.saveSimple(value, expected, accountId); return inspect(); }
     };
   }
-  return { KEY: KEY, QUERY_KEY: QUERY_KEY, createQueryStore: createQueryStore, createStore: createStore, createWorkbench: createWorkbench, blankSimulation: blankSimulation, targetAfterContextChange: targetAfterContextChange, context: context, xOptions: xOptions, infer: infer, preview: simulationPreview };
+  return { KEY: KEY, QUERY_KEY: QUERY_KEY, checkedTarget: checkedTarget, createQueryStore: createQueryStore, createStore: createStore, createWorkbench: createWorkbench, blankSimulation: blankSimulation, targetAfterContextChange: targetAfterContextChange, context: context, xOptions: xOptions, infer: infer, preview: simulationPreview };
 });

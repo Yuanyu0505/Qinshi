@@ -93,7 +93,8 @@
     }).join('');
     var diff='';if(pairs.length===2&&s.diff){
       var a=pairs[0],b=pairs[1];diff='<div data-ref-comparison><h4>右侧减左侧 · 同属性同档位差值</h4>'+wrapTable('两组副属性差值',['属性','档位','差值'],compareRows(a.dun,a.q,b.dun,b.q).filter(function(r){return (r.left&&matches(r.left,s))||(r.right&&matches(r.right,s));}).map(function(r){
-        return '<tr><th scope="row">'+esc(r.attr)+'</th><td>'+esc(Terms.tierLabel(r.tier))+'</td><td>'+(r.delta===null?'—':esc((r.delta>0?'+':'')+r.delta+(r.unit?' '+r.unit:'')))+'</td></tr>';
+        var visibleLeft=r.left&&matches(r.left,s),visibleRight=r.right&&matches(r.right,s),delta=visibleLeft&&visibleRight?r.delta:null;
+        return '<tr><th scope="row">'+esc(r.attr)+'</th><td>'+esc(Terms.tierLabel(r.tier))+'</td><td>'+(delta===null?'—':esc((delta>0?'+':'')+delta+(r.unit?' '+r.unit:'')))+'</td></tr>';
       }).join(''))+'</div>';
     }
     return '<div class="ins-ref-panels'+(pairs.length===2?' is-comparison':'')+'">'+panels+'</div>'+diff;

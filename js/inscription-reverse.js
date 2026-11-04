@@ -1,7 +1,10 @@
 (function(root,factory){
-  'use strict';var api=factory(typeof module==='object'&&module.exports?require('./inscription-rules.js'):root.InscriptionRules);
+  'use strict';var common=typeof module==='object'&&module.exports;
+  // The browser loads the state module after this file; resolve it only when a
+  // locator is opened, not while registering the rule-only reverse API.
+  var api=factory(common?require('./inscription-rules.js'):root.InscriptionRules,function(){return common?require('./inscription-crafting-state.js'):root.InscriptionCraftingState;});
   if(typeof module==='object'&&module.exports)module.exports=api;if(root)root.InscriptionReverse=api;
-})(typeof window!=='undefined'?window:null,function(R){
+})(typeof window!=='undefined'?window:null,function(R,State){
   'use strict';
   var cache=new Map(),attrIds=R.attributes.map(function(a){return a.id;});
   function copy(v){return JSON.parse(JSON.stringify(v));}
@@ -139,7 +142,7 @@
   }
   function locatorValue(value){
     if(!value||value.version!==1||!value.target||!info(value.target.quality)||!Array.isArray(value.target.attrs))throw new Error('查询工作区格式异常');
-    var t=value.target,attrs=t.attrs;
+    var t=State().checkedTarget(value.target),attrs=t.attrs;
     if(attrs.length!==info(t.quality).count||attrs.some(function(a){return typeof a!=='string'||a&&!attrIds.includes(a);})||typeof t.discipleKey!=='string'||typeof t.slot!=='string'||typeof t.dun!=='string')throw new Error('查询工作区目标异常');
     var reverse=normalizeDraft(value.reverse);
     if(value.reverse&&(value.reverse.quality!==reverse.quality||value.reverse.dun!==reverse.dun||JSON.stringify(value.reverse.attrs)!==JSON.stringify(reverse.attrs)))throw new Error('查询工作区反查属性异常');
@@ -152,9 +155,12 @@
     function legacy(){
       var target=blankTarget(),reverse=normalizeDraft(),warning='';
       try{
-        var raw=storage.getItem(mode==='crafting-paths'?'qinshi_inscription_path_query_v1':'qinshi_inscription_crafting_v1');
-        if(raw){var parsed=JSON.parse(raw),candidate=mode==='crafting-paths'?parsed:parsed.draft&&parsed.draft.simpleWorkbench&&parsed.draft.simpleWorkbench.target;
-          if(candidate)target=locatorValue({version:1,target:candidate}).target;}
+        if(mode==='crafting-paths'){
+          var oldQuery=State().createQueryStore(storage).inspect();if(!oldQuery.valid)throw new Error(oldQuery.errors.join('；'));target=oldQuery.target;
+        }else{
+          var raw=storage.getItem('qinshi_inscription_crafting_v1');
+          if(raw){var parsed=JSON.parse(raw),candidate=parsed.draft&&parsed.draft.simpleWorkbench&&parsed.draft.simpleWorkbench.target;if(candidate)target=State().checkedTarget(candidate);}
+        }
       }catch(e){warning='旧目标读取异常，原始数据保留，使用独立的新查询工作区。';}
       reverse=normalizeDraft({quality:target.quality});
       if(child==='reverse'){

@@ -27,7 +27,7 @@ test('reverse draft changes and cancelled apply leave a pending simulation byte-
  await s.locator('[data-locator-tab="reverse"]').click();await s.locator('[data-reverse-attr]').nth(0).selectOption('技能穿透');await s.locator('[data-reverse-field="quality"]').selectOption('p1');
  assert.equal(await s.locator('[data-reverse-attr]').count(),2);
  assert.equal(await p.evaluate(()=>QinshiAccounts.getItem(InscriptionCraftingState.KEY)),raw);
- await s.locator('[data-craft-action="reverse-search"]').click();p.once('dialog',d=>d.dismiss());await s.locator('[data-craft-action="reverse-apply"]').first().click();
+ await s.locator('[data-craft-action="reverse-search"]').click();await s.locator('[data-craft-action="reverse-apply"]').first().click();p.once('dialog',d=>d.dismiss());await s.locator('[data-locator-panel="reverse"] [data-craft-action="apply-simulation"]').click();
  assert.equal(await p.evaluate(()=>QinshiAccounts.getItem(InscriptionCraftingState.KEY)),raw);
  }finally{await p.close();}
 });

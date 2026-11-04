@@ -23,3 +23,9 @@ test('reverse result filters and queried marker survive reload per child and acc
  a.save(v,null,'a');assert.deepEqual(a.inspect().value.filters,v.filters);assert.equal(b.inspect().value.filters.ordinary,false);assert.equal(b.inspect().value.queried,false);
  s.owner('b');assert.equal(a.inspect().value.queried,false);
 });
+test('locator stores retain pending search text and quarantine malformed reverse terms',()=>{
+ const s=storage(),store=X.createLocatorStore(s,'crafting-paths','direct'),v=store.inspect().value;v.search='盖聂';
+ store.save(v,null,'a');assert.equal(store.inspect().value.search,'盖聂');
+ const damaged=store.inspect().value;damaged.reverse={quality:'p2',dun:'鬼遁',attrs:['不存在的属性','']};const raw=JSON.stringify(damaged);s.setItem(store.key,raw);
+ assert.equal(store.inspect().valid,false);assert.throws(()=>store.save(v,raw,'a'),/异常/);assert.equal(s.getItem(store.key),raw);
+});

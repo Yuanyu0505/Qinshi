@@ -16,6 +16,7 @@
 #inscription-reference .ins-ref-matrix td { text-align: center; }
 #inscription-reference .ins-ref-matrix th:first-child { min-width: 90px; }
 #inscription-reference .ins-ref-origin { display: block; font-size: 13px; line-height: 1.5; }
+#inscription-reference input[type="checkbox"] { width: 20px; height: 20px; min-height: 20px; padding: 0; }
 #inscription-reference .muted-tip { font-size: 13px; line-height: 1.7; }
 #inscription-reference .ins-ref-empty, #inscription-reference .ins-ref-growth { color: var(--muted, #a99e89); }
 #inscription-reference .ins-ref-tabs { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }

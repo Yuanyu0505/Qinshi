@@ -7,7 +7,7 @@ const { createServer } = require('../serve.js');
 const { openApp, getAccountItem, setAccountItem } = require('./browser-test-helpers.cjs');
 
 const KEY = 'qinshi_inscription_crafting_v1';
-const QUERY_KEY = 'qinshi_inscription_path_query_v1';
+const QUERY_KEY = 'qinshi_inscription_locator_paths_direct_v1';
 const FAVORITES_KEY = 'qinshi_inscription_route_favorites_v1';
 const PROGRESS_KEY = 'qinshi_inscription_progress_v2';
 let browser, server, url;
@@ -54,6 +54,7 @@ async function goal(page, { mode = 'paths', dun = '地遁', quality = 'o2', attr
   await field(s, 'quality').selectOption(quality);
   await field(s, 'dun').selectOption(dun);
   for (let i = 0; i < attrs.length; i++) await field(s, 'attr').nth(i).selectOption(attrs[i]);
+  if(mode==='simulator')await s.locator('[data-craft-action="apply-simulation"]').click();
   return s;
 }
 async function generate(s) {
@@ -61,7 +62,7 @@ async function generate(s) {
   await s.locator('.craft-strategy').first().waitFor({ state: 'visible' });
 }
 async function workbench(page) { return page.evaluate(() => window.InscriptionCraftingState.createWorkbench(window.QinshiAccounts).inspect().state); }
-async function queryTarget(page) { return page.evaluate(() => window.InscriptionCraftingState.createQueryStore(window.QinshiAccounts).inspect().target); }
+async function queryTarget(page) { return page.evaluate(() => window.InscriptionReverse.createLocatorStore(window.QinshiAccounts,'crafting-paths','direct').inspect().value.target); }
 async function material(s, index, values) {
   for (let i = 0; i < values.length; i++) await s.locator('[data-sim-material="' + index + '"][data-sim-term="' + i + '"]').selectOption(values[i]);
 }
@@ -132,7 +133,7 @@ test('弟子建议支持键盘；改搜索词保留已选弟子、实际位置�
     assert.equal(await field(s, 'slot').inputValue(), '天府|龙遁');
     await page.locator('[data-mode="query"]').click();
     await page.locator('[data-mode="crafting-paths"]').click();
-    assert.equal(await search.inputValue(), '墨眉天明');
+    assert.equal(await search.inputValue(), '盖聂','revisiting the cached child retains its current search text without changing the selected disciple');
     await page.reload({ waitUntil: 'load' }); await openInscription(page);
     assert.deepEqual(await queryTarget(page), before);
     assert.equal(await field(s, 'slot').inputValue(), '天府|龙遁');
@@ -154,7 +155,7 @@ test('地三穿完整代表路线逐图可展开，紫色洗练无中档，失�
     }
     const audit = await page.evaluate(() => {
       const R = window.InscriptionRules, P = window.InscriptionPaths, F = window.InscriptionRouteFavorites;
-      const target = window.InscriptionCraftingState.createQueryStore(window.QinshiAccounts).inspect().target;
+      const target = window.InscriptionReverse.createLocatorStore(window.QinshiAccounts,'crafting-paths','direct').inspect().value.target;
       const plan = P.representative({ prefix: '天府', dun: target.dun, quality: target.quality, attrs: target.attrs });
       const nodes = [];
       function visit(node) { nodes.push(node); node.children.forEach(child => visit(child.node)); }
@@ -269,9 +270,11 @@ test('模拟不兼容目标切换须确认，取消保留材料，接受只重�
     await page.locator('[data-mode="crafting-simulator"]').click();
     const s = await goal(page, { mode: 'simulator', dun: '鬼遁', attrs: ['速', '速', '速'] });
     await material(s, 0, ['速:?']); const before = await workbench(page);
-    page.once('dialog', d => d.dismiss()); await field(s, 'dun').selectOption('龙遁');
-    assert.deepEqual(await workbench(page), before); assert.equal(await field(s, 'dun').inputValue(), '鬼遁');
-    page.once('dialog', d => d.accept()); await field(s, 'dun').selectOption('龙遁');
+    await field(s, 'dun').selectOption('龙遁');
+    assert.deepEqual(await workbench(page), before,'locator selection alone never changes shared scene');
+    page.once('dialog', d => d.dismiss());await s.locator('[data-craft-action="apply-simulation"]').click();
+    assert.deepEqual(await workbench(page), before);assert.equal(await field(s,'dun').inputValue(),'龙遁');
+    page.once('dialog', d => d.accept());await s.locator('[data-craft-action="apply-simulation"]').click();
     assert.deepEqual((await workbench(page)).simulation, { stage: 'b2', inputs: [], refs: [], pending: null });
     await page.locator('[data-mode="crafting-paths"]').click();
     assert.equal(await field(section(page), 'dun').inputValue(), '地遁');
@@ -377,7 +380,7 @@ test('收藏增删筛选、重复属性、统一置顶与账号隔离，不改�
     await favorites.locator('[data-favorite-remove]').click(); await favoriteCount(page, 0);
     assert.equal(await favorites.locator('.craft-favorite-route').count(), 0);
     await page.locator('[data-mode="crafting-paths"]').click(); await generate(s);
-    assert.equal(await s.locator('[aria-pressed="true"]').count(), 0);
+    assert.equal(await s.locator('.craft-favorite-star[aria-pressed="true"]').count(), 0);
   } finally { await page.close(); }
 });
 
@@ -416,7 +419,7 @@ test('收藏写入拒绝及损坏存档显式报错，不伪造成功或覆盖�
     await s.locator('[data-craft-action="toggle-favorite"]').first().click();
     await s.locator('[data-craft-status]').filter({ hasText: '收藏未成功保存' }).waitFor();
     assert.equal(await getAccountItem(page, FAVORITES_KEY), null);
-    assert.equal(await s.locator('[aria-pressed="true"]').count(), 0);
+    assert.equal(await s.locator('.craft-favorite-star[aria-pressed="true"]').count(), 0);
     await page.reload({ waitUntil: 'load' }); await openInscription(page);
     await setAccountItem(page, FAVORITES_KEY, '{broken');
     await page.locator('[data-mode="crafting-favorites"]').click();
@@ -494,6 +497,7 @@ test('旧异常铭文加载切页不改raw，明确修正合法三档且保留�
     assert.match(await historicalCard.innerText(), /历史记录警告/);
     await page.locator('[data-mode="reference"]').click();
     assert.match(await page.locator('#inscription-reference').innerText(), /天遁（极致：攻、暴击伤害）/);
+    await page.locator('#inscription-reference [data-ref-dun]').selectOption('云遁');
     assert.match(await page.locator('#inscription-reference').innerText(), /云遁（极致：护盾、技免）/);
     assert.equal(await getAccountItem(page, PROGRESS_KEY), raw);
     await page.locator('[data-mode="progress"]').click(); await page.locator('#ins-progress-search').fill('神鬼谷盖聂');

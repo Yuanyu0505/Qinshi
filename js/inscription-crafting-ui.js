@@ -71,6 +71,7 @@
     next=normalizeTarget(keepAttrs?next:S.targetAfterContextChange(beforeTarget,next));
     if(sameTarget(next,beforeTarget)){renderFilters(v);return true;}
     try{if(guard)guard();var value=clone(v.locator);value.target=next;value.generated=false;
+      if(beforeTarget.discipleKey!==next.discipleKey){var selected=itemFor(next);value.search=selected?selected.name:'';}
       if(saveLocator(v,value)){clearPlan(v);renderFilters(v);return true;}
     }catch(e){status(v,e.message);}renderFilters(v);return false;
   }
@@ -92,7 +93,7 @@
     var host=document.getElementById('inscription-'+mode);roots[mode]=host;activeChildren[mode]='direct';
     host.innerHTML='<div class="craft-actions craft-locator-tabs" role="group" aria-label="查询方式">'+['direct','reverse'].map(function(child){return '<button type="button" class="seg'+(child==='direct'?' active':'')+'" data-locator-tab="'+child+'" aria-pressed="'+(child==='direct')+'">'+(child==='direct'?'按弟子／遁位查询':'按属性反查')+'</button>';}).join('')+'</div><div data-locator-panel="direct"></div><div data-locator-panel="reverse" hidden></div>'+
       (mode==='crafting-simulator'?'<section class="craft-panel"><h3>共用模拟现场</h3><p class="craft-note">上方两种方式仅定位目标，点击应用后才更新此现场。手动填写代表洗练备料；紫色中档请从虚拟背包取用。</p><div data-craft-simulator></div></section>':'');
-    ['direct','reverse'].forEach(function(child){init(mode,child,host.querySelector('[data-locator-panel="'+child+'"]'));});
+    init(mode,'direct',host.querySelector('[data-locator-panel="direct"]'));
     if(mode==='crafting-simulator'){
       simulationView={mode:mode,scene:true,el:host,bagSources:{},bagSelection:{}};
       var scene=area(simulationView,'simulator');
@@ -101,6 +102,7 @@
       scene.addEventListener('input',function(e){if(e.target.matches('[data-bag-count]'))updateBagSelection(simulationView,e.target);});
     }
     host.querySelectorAll('[data-locator-tab]').forEach(function(b){b.addEventListener('click',function(){
+      if(!views[mode+'-'+b.dataset.locatorTab])init(mode,b.dataset.locatorTab,host.querySelector('[data-locator-panel="'+b.dataset.locatorTab+'"]'));
       activeChildren[mode]=b.dataset.locatorTab;host.querySelectorAll('[data-locator-panel]').forEach(function(panel){panel.hidden=panel.dataset.locatorPanel!==b.dataset.locatorTab;});
       host.querySelectorAll('[data-locator-tab]').forEach(function(tab){tab.classList.toggle('active',tab===b);tab.setAttribute('aria-pressed',String(tab===b));});
       activate(mode);
@@ -137,7 +139,10 @@
       if(control) onClick(v,control);
     });
     el.addEventListener('keydown',function(event){if(event.target.matches('[data-craft-attr-trigger]'))onAttrKey(v,event);});
-    el.addEventListener('input',function(event){if(event.target===field(v,'search')) suggestions(v);if(event.target.matches('[data-bag-count]'))updateBagSelection(v,event.target);});
+    el.addEventListener('input',function(event){
+      if(event.target===field(v,'search')){var value=clone(v.locator);value.search=event.target.value;saveLocator(v,value);suggestions(v);}
+      if(event.target.matches('[data-result-filter="search"]'))onChange(v,event.target);
+    });
     field(v,'search').addEventListener('focus',function(){if(!itemFor(targetFor(v))) suggestions(v);});
     field(v,'search').addEventListener('keydown',function(event){
       var list=area(v,'suggestions'), choices=Array.from(list.querySelectorAll('[data-craft-action="choose-disciple"]'));
@@ -263,7 +268,7 @@
   }
   function renderFilters(v) {
     var target=targetFor(v),item=itemFor(target),dun=position(target).dun;
-    field(v,'search').value=item?item.name:''; hideSuggestions(v);
+    field(v,'search').value=v.locator.search!==null?v.locator.search:(item?item.name:''); hideSuggestions(v);
     field(v,'slot').innerHTML=options(item?item.slots.map(function(s){return{id:s.tian+'|'+R.normalizeDun(s.shield),label:s.tian+' · '+R.normalizeDun(s.shield)};}):[],target.slot,item?'请选择弟子实际位置':'未指定弟子则无法选择此项或无需选择');
     field(v,'slot').disabled=!item; field(v,'quality').value=target.quality;
     field(v,'slot').title=item?'选择此弟子的铭文位置':'未指定弟子则无法选择此项或无需选择';
@@ -622,8 +627,10 @@
     status(v,'');
     if(control.matches('[data-result-member]')){var card=v.reverseCards[Number(control.dataset.resultMember)];if(card)v.reverseMembers[card.key]=decodeURIComponent(control.value);return;}
     if(control.matches('[data-result-filter]')){
-      var filtered=clone(v.locator),filter=control.dataset.resultFilter;filtered.filters[filter]=filter==='ordinary'?control.checked:control.value;
-      if(saveLocator(v,filtered)){v.reversePage=0;renderReverseResults(v);}return;
+      var filtered=clone(v.locator),filter=control.dataset.resultFilter,newValue=filter==='ordinary'?control.checked:control.value;
+      if(filtered.filters[filter]===newValue)return;
+      filtered.filters[filter]=newValue;var focused=document.activeElement===control,caret=control.selectionStart;
+      if(saveLocator(v,filtered)){v.reversePage=0;renderReverseResults(v);if(focused&&filter==='search'){var search=v.el.querySelector('[data-result-filter="search"]');search.focus();search.setSelectionRange(caret,caret);}}return;
     }
     if(control.matches('[data-reverse-field]')){var changed=clone(v.reverse);changed[control.dataset.reverseField]=control.value;updateReverse(v,changed,true);return;}
     if(control.matches('[data-reverse-attr]')){
@@ -702,7 +709,7 @@
       changeTarget(v,target);return;
     }
     if(action==='clear-options'){
-      var cleared=clone(v.locator);cleared.target={discipleKey:'',slot:'',dun:'',quality:'o2',attrs:['','',''],xTerm:null};cleared.generated=false;
+      var cleared=clone(v.locator);cleared.target={discipleKey:'',slot:'',dun:'',quality:'o2',attrs:['','',''],xTerm:null};cleared.generated=false;cleared.search='';
       if(v.child==='reverse'){cleared.reverse=X.normalizeDraft();cleared.filters=X.resultFilters();cleared.queried=false;}
       if(saveLocator(v,cleared)){v.attrRejection='';readReverse(v);clearPlan(v);renderFilters(v);}return;
     }
@@ -773,7 +780,8 @@
       if(simulationView){simulationView.bagOpen=false;simulationView.actualRecord=null;simulationView.bagSelection={};simulationView.bagSources={};}
     }
     ['direct','reverse'].forEach(function(child){
-      var view=views[mode+'-'+child],saved=view.locatorStore.inspect(),changed=view.loadedAccount!==account||view.locatorToken!==saved.token;
+      var view=views[mode+'-'+child];if(!view)return;
+      var saved=view.locatorStore.inspect(),changed=view.loadedAccount!==account||view.locatorToken!==saved.token;
       if(changed||force){
         view.locator=saved.value;view.locator.target=normalizeTarget(view.locator.target);view.locatorToken=saved.token;view.loadedAccount=account;view.attrRejection='';
         if(changed)clearPlan(view);readReverse(view);status(view,saved.valid?saved.warning:'查询工作区读取异常，原始数据保留：'+saved.error);

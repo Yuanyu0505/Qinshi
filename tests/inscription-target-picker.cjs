@@ -5,7 +5,7 @@ const { createServer } = require('../serve.js');
 const { openApp, getAccountItem, setAccountItem } = require('./browser-test-helpers.cjs');
 
 const KEY = 'qinshi_inscription_crafting_v1';
-const QUERY_KEY = 'qinshi_inscription_path_query_v1';
+const QUERY_KEY = 'qinshi_inscription_locator_paths_direct_v1';
 let browser, server, url;
 const scriptErrors = [];
 before(async () => {
@@ -43,7 +43,7 @@ function trigger(s, index) { return s.locator('[data-craft-attr-trigger][data-in
 function option(s, index, value) { return s.locator('[data-craft-attr-option][data-index="' + index + '"][data-value="' + value + '"]'); }
 async function choose(s, index, value) { await trigger(s, index).click(); await option(s, index, value).click(); }
 async function attrs(s) { return field(s, 'attr').evaluateAll(els => els.map(el => el.value)); }
-async function target(page) { return page.evaluate(() => window.InscriptionCraftingState.createQueryStore(window.QinshiAccounts).inspect().target); }
+async function target(page) { return page.evaluate(() => window.InscriptionReverse.createLocatorStore(window.QinshiAccounts,'crafting-paths','direct').inspect().value.target); }
 
 test('鬼遁橙二冲突候选可解释但不写入，合法候选保留其他槽且不影响模拟页', async () => {
   const page = await pageFor(); try {
@@ -137,7 +137,7 @@ test('隐藏native桥兼容旧脚本；历史非法目标重开不丢失、不�
     const raw = await getAccountItem(page, QUERY_KEY), simulatorRaw = await getAccountItem(page, KEY);
     assert.deepEqual(await attrs(s), ['暴击伤害', '暴击伤害', '暴击伤害']);
     assert.match(await s.locator('[data-craft-attr-feedback]').innerText(), /无法组成所选搭配.*保留/s);
-    const saved = JSON.parse(raw); saved.attrs = ['攻', '暴击伤害', '暴击伤害'];
+    const saved = JSON.parse(raw); saved.target.attrs = ['攻', '暴击伤害', '暴击伤害'];
     await setAccountItem(page, QUERY_KEY, JSON.stringify(saved));
     const historical = await getAccountItem(page, QUERY_KEY);
     await page.reload({ waitUntil: 'load' }); await openMode(page);

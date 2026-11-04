@@ -38,6 +38,7 @@ for(const width of [390,768,1440])test(width+' reverse results default to divine
  const p=await setup(width);try{await p.locator('[data-mode="crafting-paths"]').click();const root=p.locator('#inscription-crafting-paths');await root.locator('[data-locator-tab="reverse"]').click();const reverse=panel(p,'crafting-paths','reverse');
  await reverse.locator('[data-reverse-attr]').first().selectOption('技能穿透');await reverse.locator('[data-craft-action="reverse-search"]').click();
  assert.equal(await reverse.locator('[data-result-filter="ordinary"]').isChecked(),false);
+ const checkbox=await reverse.locator('[data-result-filter="ordinary"]').evaluate(n=>{const b=n.getBoundingClientRect(),s=getComputedStyle(n);return {width:b.width,height:b.height,minWidth:s.minWidth,minHeight:s.minHeight,padding:s.padding};});assert.ok(checkbox.width<=24&&checkbox.height<=24,'visibility checkbox must not stretch like a full-width text field: '+JSON.stringify(checkbox));
  assert.doesNotMatch(await reverse.locator('[data-reverse-result]').first().innerText(),/普通橙色|红色神将/);
  await reverse.locator('[data-result-filter="ordinary"]').check();await reverse.locator('[data-result-filter="search"]').fill('鬼谷盖聂');
  await reverse.locator('[data-result-filter="search"]').dispatchEvent('change');

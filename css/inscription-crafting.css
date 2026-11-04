@@ -186,5 +186,7 @@
 .craft-result-filters label { min-width: 0; }
 .craft-result-filters input[type="search"] { width: 100%; min-width: 0; }
 .craft-result-check { display: flex; align-items: center; gap: 7px; }
+.craft-controls label.craft-result-check { flex-direction: row; justify-content: flex-start; min-height: 44px; }
+#partition-inscription .craft-result-check input[type="checkbox"] { width: 20px; height: 20px; min-height: 20px; padding: 0; flex: 0 0 20px; }
 .craft-reverse-grid article label { display: grid; gap: 6px; margin-bottom: 10px; }
 .craft-reverse-grid article b { overflow-wrap: anywhere; }

@@ -52,7 +52,7 @@ test('clear-old-data confirmation can cancel and never clears query favorites or
  const q=p.locator('#inscription-crafting-paths');await q.locator('[data-craft-field="dun"]').selectOption('地遁');await p.locator('[data-mode="crafting-simulator"]').click();const s=p.locator('#inscription-crafting-simulator');
  p.once('dialog',d=>d.dismiss());await s.locator('[data-craft-action="clear-legacy"]').click();assert.equal(await p.evaluate(()=>QinshiAccounts.getItem(InscriptionCraftingState.KEY)),'broken legacy');
  p.once('dialog',d=>d.accept());await s.locator('[data-craft-action="clear-legacy"]').click();assert.equal(await p.evaluate(()=>InscriptionCraftingState.createWorkbench(QinshiAccounts).inspect().valid),true);
- const saved=await p.evaluate(()=>({progress:QinshiAccounts.getItem('qinshi_inscription_progress_v2'),favorites:QinshiAccounts.getItem('qinshi_inscription_route_favorites_v1'),query:InscriptionCraftingState.createQueryStore(QinshiAccounts).inspect().target.dun}));assert.deepEqual(saved,{progress:'{"keepProgress":true}',favorites:'{"keepFavorites":true}',query:'地遁'});
+ const saved=await p.evaluate(()=>({progress:QinshiAccounts.getItem('qinshi_inscription_progress_v2'),favorites:QinshiAccounts.getItem('qinshi_inscription_route_favorites_v1'),query:InscriptionReverse.createLocatorStore(QinshiAccounts,'crafting-paths','direct').inspect().value.target.dun}));assert.deepEqual(saved,{progress:'{"keepProgress":true}',favorites:'{"keepFavorites":true}',query:'地遁'});
  }finally{await p.close();}
 });
 
@@ -123,7 +123,7 @@ test('refilling a spent group restores material slots and preview after repeat',
 
 test('continuous simulator credits new batches, replaces retry, and unlocks material editing',async()=>{
  const p=await setup();try{await p.locator('[data-mode="crafting-simulator"]').click();const s=p.locator('#inscription-crafting-simulator');
- await s.locator('[data-craft-field="dun"]').selectOption('鬼遁');assert.equal(await s.locator('[data-auto-credit]').isChecked(),true);
+ await s.locator('[data-craft-field="dun"]').selectOption('鬼遁');await s.locator('[data-craft-action="apply-simulation"]').click();assert.equal(await s.locator('[data-auto-credit]').isChecked(),true);
  for(const input of await s.locator('[data-sim-term]').all())await input.selectOption('速:?');
  await s.locator('[data-craft-action="roll"]').click();assert.equal(await s.locator('[data-craft-action="credit"]').count(),0);
  const current=()=>p.evaluate(()=>InscriptionCraftingState.createWorkbench(QinshiAccounts).inspect().state);
@@ -140,14 +140,14 @@ test('continuous simulator credits new batches, replaces retry, and unlocks mate
 
 test('unchanged crafting tabs retain their controls rather than rebuilding hidden views',async()=>{
  const p=await setup();try{const q=p.locator('#inscription-crafting-paths'),s=p.locator('#inscription-crafting-simulator');
- await q.locator('[data-craft-field="dun"]').selectOption('鬼遁');await p.locator('[data-mode="crafting-simulator"]').click();await s.locator('[data-craft-field="dun"]').selectOption('云遁');
+ await q.locator('[data-craft-field="dun"]').selectOption('鬼遁');await p.locator('[data-mode="crafting-simulator"]').click();await s.locator('[data-craft-field="dun"]').selectOption('云遁');await s.locator('[data-craft-action="apply-simulation"]').click();
  await p.locator('[data-mode="crafting-paths"]').click();await p.locator('[data-mode="crafting-simulator"]').click();
  await p.evaluate(()=>{window.savedQ=document.querySelector('#inscription-crafting-paths [data-craft-field="attr"]');window.savedS=document.querySelector('#inscription-crafting-simulator [data-sim-term]');});
  for(let i=0;i<3;i++){await p.locator('[data-mode="crafting-paths"]').click();await p.locator('[data-mode="crafting-simulator"]').click();}
  assert.equal(await p.evaluate(()=>savedQ===document.querySelector('#inscription-crafting-paths [data-craft-field="attr"]')&&savedS===document.querySelector('#inscription-crafting-simulator [data-sim-term]')),true);
  // An external write must still invalidate the cached simulator.
  await p.evaluate(()=>{const store=InscriptionCraftingState.createWorkbench(QinshiAccounts),r=store.inspect(),w=r.state;w.target.dun='地遁';store.save(w,r.token,QinshiAccounts.currentAccount().id);});
- await p.locator('[data-mode="crafting-paths"]').click();await p.locator('[data-mode="crafting-simulator"]').click();assert.equal(await s.locator('[data-craft-field="dun"]').inputValue(),'地遁');
+ await p.locator('[data-mode="crafting-paths"]').click();await p.locator('[data-mode="crafting-simulator"]').click();assert.equal(await s.locator('[data-craft-field="dun"]').inputValue(),'云遁','external scene update must not replace an independent locator draft');assert.equal(await p.evaluate(()=>InscriptionCraftingState.createWorkbench(QinshiAccounts).inspect().state.target.dun),'地遁');
  }finally{await p.close();}
 });
 
@@ -156,7 +156,7 @@ test('uncached query migration never displays a stale target after simulator abs
  assert.equal(await p.evaluate(()=>QinshiAccounts.getItem(InscriptionCraftingState.QUERY_KEY)),null);
  await p.locator('[data-mode="crafting-simulator"]').click();await s.locator('[data-craft-field="dun"]').selectOption('云遁');
  await p.locator('[data-mode="crafting-simulator"]').click();await p.locator('[data-mode="crafting-paths"]').click();
- const target=await p.evaluate(()=>InscriptionCraftingState.createQueryStore(QinshiAccounts).inspect().target);assert.equal(await q.locator('[data-craft-field="dun"]').inputValue(),target.dun);
+ const target=await p.evaluate(()=>InscriptionReverse.createLocatorStore(QinshiAccounts,'crafting-paths','direct').inspect().value.target);assert.equal(await q.locator('[data-craft-field="dun"]').inputValue(),target.dun);
  }finally{await p.close();}
 });
 
@@ -165,11 +165,12 @@ test('expired editing lease recovers while path and simulator filters stay indep
  async function expire(){await p.evaluate(()=>{const id=QinshiAccounts.currentAccount().id,key=QinshiAccountLeaseApi.LEASE_PREFIX+id,value=JSON.parse(localStorage.getItem(key));value.expiresAt=Date.now()-1000;localStorage.setItem(key,JSON.stringify(value));});}
  const q=p.locator('#inscription-crafting-paths'),s=p.locator('#inscription-crafting-simulator');
  await expire();await q.locator('[data-craft-field="dun"]').selectOption('鬼遁');
- assert.equal(await p.evaluate(()=>InscriptionCraftingState.createQueryStore(QinshiAccounts).inspect().target.dun),'鬼遁');
+ assert.equal(await p.evaluate(()=>InscriptionReverse.createLocatorStore(QinshiAccounts,'crafting-paths','direct').inspect().value.target.dun),'鬼遁');
  await p.locator('[data-mode="crafting-simulator"]').click();await expire();await s.locator('[data-craft-field="dun"]').selectOption('云遁');
+ await s.locator('[data-craft-action="apply-simulation"]').click();
  assert.equal(await p.evaluate(()=>InscriptionCraftingState.createWorkbench(QinshiAccounts).inspect().state.target.dun),'云遁');
  await p.locator('[data-mode="crafting-paths"]').click();assert.equal(await q.locator('[data-craft-field="dun"]').inputValue(),'鬼遁');
  await p.evaluate(()=>{dispatchEvent(new PageTransitionEvent('pagehide',{persisted:true}));dispatchEvent(new PageTransitionEvent('pageshow',{persisted:true}));});
- await q.locator('[data-craft-field="dun"]').selectOption('地遁');assert.equal(await p.evaluate(()=>InscriptionCraftingState.createQueryStore(QinshiAccounts).inspect().target.dun),'地遁');
+ await q.locator('[data-craft-field="dun"]').selectOption('地遁');assert.equal(await p.evaluate(()=>InscriptionReverse.createLocatorStore(QinshiAccounts,'crafting-paths','direct').inspect().value.target.dun),'地遁');
  }finally{await p.close();}
 });

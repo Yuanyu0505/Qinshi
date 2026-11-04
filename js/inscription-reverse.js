@@ -141,7 +141,9 @@
     if(!value||value.version!==1||!value.target||!info(value.target.quality)||!Array.isArray(value.target.attrs))throw new Error('查询工作区格式异常');
     var t=value.target,attrs=t.attrs;
     if(attrs.length!==info(t.quality).count||attrs.some(function(a){return typeof a!=='string'||a&&!attrIds.includes(a);})||typeof t.discipleKey!=='string'||typeof t.slot!=='string'||typeof t.dun!=='string')throw new Error('查询工作区目标异常');
-    return {version:1,target:copy(t),reverse:normalizeDraft(value.reverse),filters:resultFilters(value.filters),queried:value.queried===true,generated:value.generated===true};
+    var reverse=normalizeDraft(value.reverse);
+    if(value.reverse&&(value.reverse.quality!==reverse.quality||value.reverse.dun!==reverse.dun||JSON.stringify(value.reverse.attrs)!==JSON.stringify(reverse.attrs)))throw new Error('查询工作区反查属性异常');
+    return {version:1,target:copy(t),reverse:reverse,filters:resultFilters(value.filters),queried:value.queried===true,generated:value.generated===true,search:typeof value.search==='string'?value.search.slice(0,100):null};
   }
   function createLocatorStore(storage,mode,child){
     if(!['crafting-paths','crafting-simulator'].includes(mode)||!['direct','reverse'].includes(child))throw new Error('未知查询工作区');

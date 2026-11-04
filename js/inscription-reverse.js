@@ -74,6 +74,37 @@
       });
     });return results;
   }
+  function nameKey(name){return String(name||'').replace(/[·\s]/g,'');}
+  function divine(row){return row.discipleQuality==='红色神将';}
+  // Identity edges come from explicit project mappings and full-name equality,
+  // never substring/title stripping. Build identity before filtering, but apply
+  // classification to each concrete disciple before constructing result cards.
+  function groupResults(rows,filters,context){
+    rows=rows||[];filters=filters||{};context=context||{};
+    var parents=new Map(),byName=new Map(),identities=new Map();
+    function find(k){if(!parents.has(k))parents.set(k,k);var p=parents.get(k);if(p!==k){p=find(p);parents.set(k,p);}return p;}
+    function join(a,b){parents.set(find(a),find(b));}
+    rows.forEach(function(row){identities.set(row.discipleKey,row);var n=nameKey(row.name);if(!byName.has(n))byName.set(n,[]);byName.get(n).push(row);find(row.discipleKey);});
+    identities.forEach(function(row){if(divine(row)){var ordinary=nameKey(row.name).replace(/^神/,'');(byName.get(ordinary)||[]).forEach(function(peer){if(!divine(peer))join(row.discipleKey,peer.discipleKey);});}});
+    Object.keys(context.atlasTargets||{}).forEach(function(key){
+      var names=[key].concat(context.atlasTargets[key]||[]),members=[];
+      names.forEach(function(n){(byName.get(nameKey(n))||[]).forEach(function(r){members.push(r);});});
+      members.filter(divine).forEach(function(god){members.filter(function(r){return !divine(r);}).forEach(function(normal){join(god.discipleKey,normal.discipleKey);});});
+    });
+    var common=context.commonKeys||new Set(),formation=context.formationNames||new Set(),cards=new Map(),query=nameKey(filters.search).toLowerCase();
+    rows.forEach(function(row){
+      if(!filters.ordinary&&!divine(row))return;
+      var isCommon=common.has(row.discipleKey),isFormation=formation.has(row.name),prefix=row.slot.split('|')[0];
+      if(filters.group==='common'&&!isCommon||filters.group==='formation'&&!isFormation||filters.group==='other'&&(isCommon||isFormation))return;
+      if(filters.prefix&&filters.prefix!==prefix||filters.dun&&filters.dun!==row.dun||query&&!nameKey(row.name).toLowerCase().includes(query))return;
+      var terms=row.terms.map(function(t){return t?[t.attr,t.tier,R.value(t,row.quality)]:null;}).sort(function(a,b){return JSON.stringify(a).localeCompare(JSON.stringify(b));});
+      var key=JSON.stringify([find(row.discipleKey),row.slot,row.quality,terms]);
+      if(!cards.has(key))cards.set(key,{key:key,members:[]});
+      var members=cards.get(key).members;if(!members.some(function(m){return m.discipleKey===row.discipleKey;}))members.push(row);
+    });
+    var result=Array.from(cards.values());result.forEach(function(c){c.members.sort(function(a,b){return Number(divine(b))-Number(divine(a))||a.name.localeCompare(b.name,'zh-CN');});});
+    return result.sort(function(a,b){return Number(divine(b.members[0]))-Number(divine(a.members[0]))||a.members[0].name.localeCompare(b.members[0].name,'zh-CN')||a.key.localeCompare(b.key);});
+  }
   // Draft writes use the same account boundary and optimistic raw token as the
   // other inscription stores, but never write the live simulation document.
   function createDraftStore(storage,mode){
@@ -101,5 +132,5 @@
       return inspect();
     }};
   }
-  return {normalizeDraft:normalizeDraft,combinations:combinations,options:options,duns:duns,search:search,createDraftStore:createDraftStore};
+  return {normalizeDraft:normalizeDraft,combinations:combinations,options:options,duns:duns,search:search,groupResults:groupResults,createDraftStore:createDraftStore};
 });

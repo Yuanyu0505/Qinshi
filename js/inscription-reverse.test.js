@@ -57,3 +57,33 @@ test('reverse drafts isolate pages/accounts and reject stale, readonly and damag
  owner='b';assert.equal(paths.inspect().draft.attrs[0],'');assert.throws(()=>paths.save(d,true,null,'a'),/账号已切换/);
  data.set('b:'+paths.key,'damaged');assert.equal(paths.inspect().valid,false);assert.throws(()=>paths.save(d,true,'damaged','b'),/异常/);assert.equal(data.get('b:'+paths.key),'damaged');
 });
+
+function row(name,discipleQuality='红色神将',slot='天府|人遁',terms=[{attr:'技能穿透',tier:'M'},{attr:'技能穿透',tier:'L'},null]) {
+ return {name,discipleQuality,discipleKey:discipleQuality+'\0'+name,slot,dun:slot.split('|')[1],quality:'o2',terms,attrs:terms.map(t=>t?t.attr:'')};
+}
+test('reverse result grouping hides ordinary by default and puts surviving divine identities first',()=>{
+ assert.equal(typeof X.groupResults,'function');
+ const rows=[row('鬼谷盖聂','普通橙色'),row('神鬼谷盖聂'),row('其他','普通橙色')];
+ assert.deepEqual(X.groupResults(rows).map(c=>c.members.map(r=>r.name)),[['神鬼谷盖聂']]);
+ assert.deepEqual(X.groupResults(rows,{ordinary:true}).map(c=>c.members.map(r=>r.name)),[['神鬼谷盖聂','鬼谷盖聂'],['其他']]);
+});
+test('explicit pairs and exact full names are additive but positions and combinations stay separate',()=>{
+ const rows=[row('兵家王翦','普通橙色'),row('王翦','普通橙色'),row('神·王翦'),row('王翦','普通橙色','天相|人遁'),row('镜仙端木蓉','普通橙色'),row('神端木蓉')];
+ rows[0].terms.reverse();
+ const cards=X.groupResults(rows,{ordinary:true},{atlasTargets:{'兵家王翦':['兵家王翦','神·王翦']}});
+ assert.equal(cards.length,4);
+ assert.equal(cards.find(c=>c.members.some(r=>r.name==='神·王翦')).members.length,3);
+ assert.equal(cards.find(c=>c.members.some(r=>r.name==='神端木蓉')).members.length,1);
+ assert.equal(X.groupResults([row('神王翦'),row('王翦','普通橙色','天府|人遁',[{attr:'技能穿透',tier:'M'},null,null])],{ordinary:true}).length,2);
+});
+test('result filters run on individuals before merging without sharing common or formation classification',()=>{
+ const rows=[row('神鬼谷盖聂'),row('鬼谷盖聂','普通橙色'),row('神王翦')];
+ const context={commonKeys:new Set(['普通橙色\0鬼谷盖聂']),formationNames:new Set(['神王翦'])};
+ assert.deepEqual(X.groupResults(rows,{ordinary:true,group:'common'},context)[0].members.map(r=>r.name),['鬼谷盖聂']);
+ assert.deepEqual(X.groupResults(rows,{ordinary:true,group:'formation'},context)[0].members.map(r=>r.name),['神王翦']);
+ assert.deepEqual(X.groupResults(rows,{ordinary:true,group:'other'},context)[0].members.map(r=>r.name),['神鬼谷盖聂']);
+ assert.equal(X.groupResults(rows,{ordinary:true,search:'鬼谷',prefix:'天相'},context).length,0);
+ assert.equal(X.groupResults(rows,{ordinary:true,dun:'鬼遁'},context).length,0);
+ assert.equal(X.groupResults(rows,{ordinary:true,search:'神·鬼谷盖聂'},context).length,1);
+ assert.equal(X.groupResults(rows,{group:'common'},context).length,0);
+});

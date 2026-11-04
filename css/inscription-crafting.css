@@ -21,6 +21,13 @@
 .ins-crafting button:disabled { cursor:default; opacity:.6; }
 .craft-actions { display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin:10px 0; }
 .craft-actions button,.craft-material button { padding:8px 12px; }
+.craft-reverse-attrs { grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); }
+.craft-reverse-results { border:1px solid var(--line,#665537); border-radius:8px; padding:12px; margin:12px 0; min-width:0; }
+.craft-reverse-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr)); gap:10px; }
+.craft-reverse-grid article { border:1px solid var(--line,#665537); padding:12px; border-radius:8px; min-width:0; overflow-wrap:anywhere; }
+.craft-reverse-grid article>b { color:#ff7373; }
+.craft-reverse-grid small { display:block; margin-top:6px; color:var(--muted,#b7ad99); }
+.craft-reverse-grid p { line-height:1.7; }
 .craft-search { position:relative; }
 .craft-suggestions { position:absolute; top:100%; left:0; right:0; z-index:30; display:block; max-height:330px; overflow:auto; border:1px solid #b48b44; border-radius:8px; background:#211b13; box-shadow:0 8px 24px #0009; padding:4px; }
 .craft-suggestions button { display:flex; flex-direction:column; width:100%; min-height:46px; border:0; border-bottom:1px solid #4b3c28; background:transparent; color:var(--text,#f2e4cd); padding:10px; text-align:left; }

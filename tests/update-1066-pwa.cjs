@@ -22,6 +22,7 @@ const NEW_ASSETS = [
   'css/formation-search.css', 'css/inscription-route-favorites.css',
   'data/2026-10-inscription-update.js', 'js/inscription-progress-rules.js',
   'js/inscription-route-favorites.js', 'js/inscription-flow-model.js',
+  'css/inscription-reference.css', 'js/inscription-reference.js', 'js/inscription-reverse.js',
   'css/pilots.css', 'data/pilots.js', 'js/pilots.js', 'js/pilots-ui.js'
 ];
 let artifacts;
@@ -136,6 +137,8 @@ async function offlineFeatures(page, beforeCount) {
     .map(item => item.name).sort());
   assert.deepEqual(weapons, ['神兵听潮笛', '神兵焚天钺', '神兵青岚刀'].sort(), 'New weapons remain available offline after installation/upgrade');
   assert.equal(await page.evaluate(() => Boolean(window.InscriptionProgressRules && window.InscriptionRouteFavorites)), true);
+  assert.deepEqual(await page.evaluate(() => InscriptionReference.mainStats('天机','b1')), [{attr:'内力',value:2700},{attr:'护盾',value:43200}]);
+  assert.deepEqual(await page.evaluate(() => InscriptionReverse.combinations('人遁','o2',['技能穿透']).map(terms=>terms.map(term=>term&&InscriptionRules.value(term,'o2')))), [[5,4,null]]);
   assert.equal(await page.evaluate(() => window.INSCRIPTION_DATA.items.filter(item => item.name === '神镜仙端木蓉').length), 1);
   await enter(page, 'inscription');
   await page.locator('[data-mode="progress"]').click();
@@ -153,7 +156,10 @@ async function offlineFeatures(page, beforeCount) {
   await query.locator('[data-craft-action="generate"]').click();
   await query.locator('.craft-strategy').first().waitFor();
   await query.locator('[data-craft-action="toggle-favorite"]').first().click();
-  await page.waitForFunction(({ key, count }) => JSON.parse(window.QinshiAccounts.getItem(key)).entries.length === count, { key: FAVORITES, count: beforeCount + 1 });
+  await page.waitForFunction(({ key, count }) => {
+    const raw = window.QinshiAccounts.getItem(key);
+    return raw !== null && JSON.parse(raw).entries.length === count;
+  }, { key: FAVORITES, count: beforeCount + 1 });
   await page.locator('[data-mode="crafting-favorites"]').click();
   assert.equal(await favorites.locator('.craft-favorite-route').count(), beforeCount + 1);
   assert.equal(await favorites.locator('.craft-favorite-invalid').count(), 0);

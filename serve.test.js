@@ -447,7 +447,9 @@ test("铭文页面统一使用遁位术语", () => {
   assert.match(html, /全部遁位/);
   assert.match(html, /天遁/);
   assert.doesNotMatch(html, /全部盾位|天位·盾位/);
-  assert.match(inscription, /遁位副属性/);
+  const reference = fs.readFileSync(path.join(__dirname, "js", "inscription-reference.js"), "utf8");
+  assert.match(reference, /遁位副属性/);
+  assert.match(inscription, /REFERENCE\.render/);
   assert.match(inscription, /normalizeDunName/);
   assert.doesNotMatch(inscription, /"天盾"|"云盾"/);
   assert.doesNotMatch(inscription, /INITIAL_COMMON_NAMES/);
@@ -1638,7 +1640,9 @@ test("锻造查询和铭文宽表保留滑动提示而锻造总览改为响应�
   assert.doesNotMatch(html, /aria-label="锻造材料总览，可左右滑动"/);
   assert.match(app, /forgeScrollHintHtml/);
   assert.match(app, /aria-label="主锻造装备材料表，可左右滑动"/);
-  assert.match(inscription, /mobile-scroll-hint/);
+  const reference = fs.readFileSync(path.join(__dirname, "js", "inscription-reference.js"), "utf8");
+  assert.match(reference, /mobile-scroll-hint/);
+  assert.match(inscription, /REFERENCE\.render/);
   assert.match(css, /\.mobile-scroll-region/);
 });
 

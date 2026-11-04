@@ -6,6 +6,74 @@ const Lab=require('./inscription-simulation.js');
 function fresh(){return Lab.upgrade({version:1,target:{discipleKey:'',slot:'',dun:'鬼遁',quality:'o2',attrs:['速','速','速']},simulation:{stage:'b2',inputs:[[{attr:'速',tier:'?'}],[{attr:'速',tier:'?'}]],pending:null}});}
 const total=w=>w.lab.lots.reduce((n,l)=>n+l.quantity,0);
 
+// These public-action cases catch provenance loss, guessing between recipes,
+// foreign-record injection, and accidental migration of previously manual stock.
+for(const action of ['group-quantity','quantity']){
+ const increase=(w,quantity,extra={})=>Lab.act(w,action,{id:action==='quantity'?w.lab.lots[0].id:R.signature(w.lab.lots[0].material),quantity,...extra});
+ test(action+' inherits one unique source without drawing or fabricating records',()=>{
+  const w=Lab.act(Lab.act(fresh(),'roll',{random:()=>0}),'credit');
+  const records=JSON.stringify(w.lab.records),before=JSON.stringify(w),source=w.lab.records[0].id;
+  const grown=increase(w,4);
+  assert.equal(total(grown),4);assert.equal(JSON.stringify(w),before);
+  assert.equal(JSON.stringify(grown.lab.records),records);
+  assert.deepEqual(grown.lab.lots.map(l=>l.source),[{type:'simulation',recordId:source},{type:'simulation',recordId:source}]);
+  assert.deepEqual(grown.lab.lots.map(l=>l.quantity),[1,3]);
+ });
+ test(action+' requires a selected recipe when distinct matching sources exist',()=>{
+  let w=Lab.act(Lab.act(fresh(),'roll',{random:()=>0}),'repeat');
+  w=Lab.act(Lab.act(w,'roll',{random:()=>0}),'repeat');
+  const before=JSON.stringify(w),records=JSON.stringify(w.lab.records),source=w.lab.records[1].id;
+  assert.throws(()=>increase(w,5),/来源/);assert.equal(JSON.stringify(w),before);
+  const grown=increase(w,5,{sourceRecordId:source});
+  assert.equal(grown.lab.lots.at(-1).source.recordId,source);
+  assert.equal(total(grown),action==='quantity'?6:5);
+  assert.equal(JSON.stringify(grown.lab.records),records);
+ });
+ test(action+' rejects missing or foreign recipe selections atomically',()=>{
+  let w=Lab.act(Lab.act(fresh(),'roll',{random:()=>0}),'repeat');
+  w=Lab.act(Lab.act(w,'roll',{random:()=>.999}),'repeat');
+  const before=JSON.stringify(w),foreign=w.lab.records[1].id;
+  assert.notEqual(R.signature(w.lab.records[0].material),R.signature(w.lab.records[1].material));
+  for(const sourceRecordId of ['missing-record',foreign,null,'']){
+   assert.throws(()=>increase(w,4,{sourceRecordId}),/来源/);
+   assert.equal(JSON.stringify(w),before);
+  }
+ });
+ test(action+' leaves old manual lots unchanged when inheriting a simulated source',()=>{
+  let w=Lab.act(Lab.act(fresh(),'roll',{random:()=>0}),'credit');
+  w.lab.lots.push({id:'old-manual',material:structuredClone(w.lab.lots[0].material),quantity:2,source:{type:'manual'}});
+  const manual=JSON.stringify(w.lab.lots[1]);
+  w=increase(w,5);
+  assert.equal(JSON.stringify(w.lab.lots[1]),manual);
+  assert.equal(w.lab.lots.at(-1).source.recordId,w.lab.records[0].id);
+  assert.equal(w.lab.lots.at(-1).quantity,action==='quantity'?4:2);
+ });
+ test(action+' keeps a manual-only group manual and cannot attach an unrelated record',()=>{
+  let w=Lab.act(Lab.act(fresh(),'roll',{random:()=>0}),'credit');
+  const recordId=w.lab.records[0].id;
+  w=Lab.act(w,'reset',{stage:'p1'});
+  w.lab.lots[0].source={type:'manual'};
+  const before=JSON.stringify(w);
+  assert.throws(()=>increase(w,3,{sourceRecordId:recordId}),/来源/);assert.equal(JSON.stringify(w),before);
+  const grown=increase(w,3);
+  assert.equal(total(grown),3);assert.ok(grown.lab.lots.every(l=>l.source.type==='manual'));
+  assert.equal(JSON.stringify(grown.lab.records),JSON.stringify(w.lab.records));
+ });
+ test(action+' deduplicates several batches carrying the same recipe source',()=>{
+  let w=Lab.act(Lab.act(fresh(),'roll',{random:()=>0}),'credit');
+  w.lab.lots.push({...structuredClone(w.lab.lots[0]),id:'same-recipe',quantity:2});
+  const grown=increase(w,5);
+  assert.ok(grown.lab.lots.every(l=>l.source.recordId===w.lab.records[0].id));
+  assert.equal(total(grown),action==='quantity'?7:5);
+ });
+ test(action+' inherited additions still block conflicting synthesis undo',()=>{
+  const w=Lab.act(Lab.act(fresh(),'roll',{random:()=>0}),'credit');
+  const grown=increase(w,3),before=JSON.stringify(grown);
+  assert.throws(()=>Lab.act(grown,'back'),/改变|冲突/);
+  assert.equal(JSON.stringify(grown),before);
+ });
+}
+
 test('interactive synthesis defaults to automatic credit and repeat immediately adds one fresh result',()=>{
  let w=Lab.act(fresh(),'simulate',{random:()=>0});assert.equal(w.lab.autoCredit,true);assert.equal(total(w),1);
  const first=w.simulation.pending.recordId;w=Lab.act(w,'repeat-simulate',{random:()=>.999});
@@ -52,16 +120,17 @@ test('enabling automatic credit before retry saves its replacement exactly once'
  w=Lab.act(w,'back');assert.equal(total(w),0);assert.equal(w.lab.records.length,0);
 });
 
-test('refill of an identical group repairs spent slot refs without inventing simulation provenance',()=>{
+test('refill of an identical group repairs spent refs using the selected existing source',()=>{
  let w=Lab.act(threePurple(),'roll',{random:()=>0});w=Lab.act(w,'repeat');
  const id=R.signature(w.lab.lots[0].material),records=JSON.stringify(w.lab.records);
- w=Lab.act(w,'group-quantity',{id,quantity:4});
+ const source=w.lab.lots[0].source.recordId;
+ w=Lab.act(w,'group-quantity',{id,quantity:4,sourceRecordId:source});
  const group=Lab.groups(w).find(g=>g.id===id);
  assert.deepEqual([group.quantity,group.available,group.reserved],[4,1,3]);
- assert.ok(w.simulation.refs.every(ref=>w.lab.lots.find(l=>l.id===ref).source.type==='manual'));
+ assert.ok(w.simulation.refs.every(ref=>w.lab.lots.find(l=>l.id===ref).source.recordId===source));
  assert.equal(Lab.preview(w).valid,true);assert.equal(JSON.stringify(w.lab.records),records);
  w=Lab.act(w,'roll',{random:()=>0});
- assert.ok(w.lab.records.at(-1).inputs.every(i=>i.source==='manual'&&i.recordId===null));
+ assert.ok(w.lab.records.at(-1).inputs.every(i=>i.source==='simulation'&&i.recordId===source));
 });
 
 test('loading a legacy depleted reference uses only identical stock and preserves valid reservations',()=>{
@@ -101,10 +170,11 @@ test('manual mid tiers are rejected; generated mid tiers may be selected from in
  const w=fresh();w.simulation.stage='p1';w.simulation.inputs=Array.from({length:3},()=>[{attr:'速',tier:'M'},{attr:'防',tier:'H'}]);w.simulation.refs=[];
  assert.throws(()=>Lab.preview(w),/洗练/);
 });
-test('quantity increments are independent manual lots and invalidate conflicting undo',()=>{
+test('quantity increments inherit the unique source and invalidate conflicting undo',()=>{
  let w=Lab.act(fresh(),'roll',{random:()=>0});w=Lab.act(w,'credit');const lot=w.lab.lots[0];
  w=Lab.act(w,'quantity',{id:lot.id,quantity:4});assert.equal(total(w),4);
- assert.equal(w.lab.lots.filter(l=>l.source.type==='manual').reduce((n,l)=>n+l.quantity,0),3);
+ assert.equal(w.lab.lots.filter(l=>l.source.type==='simulation').reduce((n,l)=>n+l.quantity,0),4);
+ assert.ok(w.lab.lots.every(l=>l.source.recordId===lot.source.recordId));
  assert.throws(()=>Lab.act(w,'back'),/背包.*改变|冲突/);
  const route=Lab.route(w,w.simulation.pending.recordId);assert.equal(route.tree.kind,'craft');assert.equal(route.tree.children.length,2);
 });
@@ -163,9 +233,10 @@ test('actual route traces used simulated parents and excludes discarded retry ou
  assert.ok(route.tree.children.every(c=>c.node.children.every(i=>i.node.kind==='base'&&i.node.material.quality==='b2')));
  assert.ok(!JSON.stringify(route).includes(abandoned));
 });
-test('manually incremented material is a trace leaf, not a copied simulated chain',()=>{
- let w=threePurple(),first=w.simulation.refs[0];
- w=Lab.act(w,'quantity',{id:first,quantity:2});const manual=w.lab.lots.find(l=>l.source.type==='manual');
+test('old manual stock stays a trace leaf beside existing simulated chains',()=>{
+ let w=threePurple();
+ const manual={id:'old-manual',material:structuredClone(w.lab.lots[0].material),quantity:1,source:{type:'manual'}};
+ w.lab.lots.push(manual);
  const others=w.simulation.refs.slice(1).map(id=>({id,quantity:1}));
  for(let i=0;i<3;i++)w=Lab.act(w,'edit',{index:i,terms:[null,null]});
  w=Lab.act(w,'select',{selection:[{id:manual.id,quantity:1},...others]});w=Lab.act(w,'roll',{random:()=>0});
@@ -176,13 +247,14 @@ test('manually incremented material is a trace leaf, not a copied simulated chai
 
 test('equivalent backpack materials group without losing separate actual source routes',()=>{
  let w=threePurple();w=Lab.act(w,'reset',{stage:'p1'});
- w=Lab.act(w,'quantity',{id:w.lab.lots[0].id,quantity:3});
+ const source=w.lab.lots[0].source.recordId;
+ w=Lab.act(w,'quantity',{id:w.lab.lots[0].id,quantity:3,sourceRecordId:source});
  const groups=Lab.groups(w);assert.equal(groups.length,1);
  const group=groups[0];assert.equal(group.quantity,5);assert.equal(group.available,5);assert.equal(group.reserved,0);
  assert.equal(group.lots.length,4);assert.equal(group.id,R.signature(group.material));
- assert.equal(group.lots.filter(l=>l.source.type==='simulation').length,3);
+ assert.equal(group.lots.filter(l=>l.source.type==='simulation').length,4);
  group.lots.filter(l=>l.source.type==='simulation').forEach(l=>assert.equal(Lab.route(w,l.source.recordId).tree.sourceKey,l.source.recordId));
- assert.equal(group.lots.filter(l=>l.source.type==='manual')[0].quantity,2);
+ assert.equal(group.lots.at(-1).quantity,2);assert.equal(group.lots.at(-1).source.recordId,source);
  const before=JSON.stringify(w);group.lots[0].quantity=900;assert.equal(JSON.stringify(w),before);
 });
 
@@ -212,12 +284,13 @@ test('group picker subtracts existing reserved stock and atomically validates co
  assert.ok(Lab.route(w,w.simulation.pending.recordId).tree.children.every(c=>c.node.kind==='craft'));
 });
 
-test('group quantity additions are manual and reductions respect exact lot reservations',()=>{
+test('group quantity additions inherit selected provenance and reductions respect exact lot reservations',()=>{
  let w=threePurple();w=Lab.act(w,'reset',{stage:'p1'});const first=w.lab.lots[0].id;
  w=Lab.act(w,'select',{selection:[{id:first,quantity:1}]});const id=Lab.groups(w)[0].id;
- w=Lab.act(w,'group-quantity',{id,quantity:6});assert.equal(total(w),6);
+ const source=w.lab.lots[0].source.recordId;
+ w=Lab.act(w,'group-quantity',{id,quantity:6,sourceRecordId:source});assert.equal(total(w),6);
  assert.equal(w.lab.records.length,3);assert.equal(w.lab.lots.find(l=>l.id===first).quantity,1);
- assert.equal(w.lab.lots.find(l=>l.source.type==='manual').quantity,3);
+ assert.equal(w.lab.lots.at(-1).quantity,3);assert.equal(w.lab.lots.at(-1).source.recordId,source);
  w=Lab.act(w,'group-quantity',{id,quantity:1});assert.equal(total(w),1);
  assert.equal(w.lab.lots.find(l=>l.id===first).quantity,1);assert.equal(w.simulation.refs[0],first);
  const snapshot=JSON.stringify(w);assert.throws(()=>Lab.act(w,'group-remove',{id}),/占用/);assert.equal(JSON.stringify(w),snapshot);
@@ -232,13 +305,21 @@ test('picker keeps legacy source confirmation mandatory',()=>{
  assert.equal(JSON.stringify(w),before);
 });
 
-test('group selection keeps manual increments as leaves beside real simulated parents',()=>{
+test('group selection reuses the unique simulated parent recipe for each expanded quantity',()=>{
  let w=Lab.act(fresh(),'roll',{random:()=>0});w=Lab.act(w,'repeat');w=Lab.act(w,'reset',{stage:'p1'});
  const id=Lab.groups(w)[0].id;w=Lab.act(w,'group-quantity',{id,quantity:3});
  w=Lab.act(w,'select',{selection:[{id,quantity:3}]});w=Lab.act(w,'roll',{random:()=>0});
  const children=Lab.route(w,w.simulation.pending.recordId).tree.children;
- assert.deepEqual(children.map(c=>c.node.kind),['craft','base','base']);
- assert.ok(children.slice(1).every(c=>c.node.sourceLabel==='手动补充'&&c.node.material.quality==='p1'));
+ assert.deepEqual(children.map(c=>c.node.kind),['craft','craft','craft']);
+ assert.ok(children.every(c=>c.node.sourceKey===w.lab.records[0].id));
+ assert.equal(children.flatMap(c=>c.node.children).length,6);
+ assert.ok(children.flatMap(c=>c.node.children).every(c=>c.node.kind==='base'&&c.node.material.quality==='b2'));
+ assert.equal(w.lab.records.length,2);
+ const graph=require('./inscription-flow-model.js').project(Lab.route(w,w.simulation.pending.recordId));
+ assert.equal(graph.operations.filter(o=>o.quality==='p1').length,1);
+ assert.equal(graph.materials.find(m=>m.material.quality==='p1').demand,3);
+ assert.equal(graph.materials.find(m=>m.material.quality==='b2').demand,6);
+ assert.deepEqual(graph.operations.find(o=>o.quality==='p1').sourceKeys,[w.lab.records[0].id]);
 });
 
 test('picker accepts several grouped kinds and rejects mixed over-allocation without mutation',()=>{

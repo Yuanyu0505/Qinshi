@@ -73,11 +73,25 @@
     if(!s.inputs.length)s.inputs=inputsFor(s.stage);
     allocations.forEach(function(l,i){s.inputs[slots[i]]=copy(l.material.terms);s.refs[slots[i]]=l.id;});
   }
-  function groupQuantity(w,id,quantity){
+  function additionSource(w,g,sourceRecordId){
+    // Keep depleted batches eligible: replenishment reuses a known recipe,
+    // without drawing a new result or reattributing existing manual stock.
+    var sources=Array.from(new Set(g.lots.filter(function(l){return l.source.type==='simulation';}).map(function(l){return l.source.recordId;})));
+    if(sourceRecordId!==undefined){
+      if(typeof sourceRecordId!=='string'||!sources.includes(sourceRecordId))fail('所选合成来源不属于该铭文分组');
+    }else{
+      if(sources.length>1)fail('该铭文有多个合成来源，请先选择补充数量的来源');
+      if(!sources.length)return {type:'manual'};
+      sourceRecordId=sources[0];
+    }
+    if(R.signature(record(w,sourceRecordId).material)!==g.id)fail('合成来源与背包铭文不一致');
+    return {type:'simulation',recordId:sourceRecordId};
+  }
+  function groupQuantity(w,id,quantity,sourceRecordId){
     var g=group(w,id),n=amount(quantity),reserved=reservations(w);
     if(n<g.reserved)fail('该铭文已被当前材料位占用，请先清空对应材料位');
     if(n===g.quantity)return;
-    if(n>g.quantity)addLot(w,g.material,n-g.quantity,{type:'manual'});
+    if(n>g.quantity)addLot(w,g.material,n-g.quantity,additionSource(w,g,sourceRecordId));
     else{
       // Spend unreserved manual additions first; never reattribute simulated lots.
       var remaining=g.quantity-n;
@@ -229,11 +243,11 @@
     }else if(action==='select'){
       select(w,p.selection);
     }else if(action==='group-quantity'||action==='group-remove'){
-      groupQuantity(w,p.id,action==='group-remove'?0:p.quantity);
+      groupQuantity(w,p.id,action==='group-remove'?0:p.quantity,p.sourceRecordId);
     }else if(action==='quantity'){
       var l=lot(w,p.id),n=amount(p.quantity),reserved=s.pending?0:s.refs.filter(function(id){return id===l.id;}).length;
       if(n<reserved)fail('该铭文已被当前材料位占用，请先清空对应材料位');
-      if(n>l.quantity)addLot(w,l.material,n-l.quantity,{type:'manual'});else l.quantity=n;
+      if(n>l.quantity)addLot(w,l.material,n-l.quantity,additionSource(w,group(w,R.signature(l.material)),p.sourceRecordId));else l.quantity=n;
       w.lab.revision++;
     }else if(action==='clear-bag'){
       w.lab.lots.forEach(function(l){l.quantity=0;});

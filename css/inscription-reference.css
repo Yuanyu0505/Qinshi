@@ -1,0 +1,36 @@
+#inscription-reference { min-width: 0; max-width: 100%; }
+#inscription-reference .ins-ref-section { min-width: 0; }
+#inscription-reference h4 { margin: 14px 0 10px; color: var(--gold, #c9a55a); }
+.ins-ref-controls { display: flex; flex-wrap: wrap; gap: 12px 20px; align-items: center; margin: 12px 0; }
+.ins-ref-controls label { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+.ins-ref-controls select { min-width: 100px; max-width: 100%; }
+.ins-ref-controls .ins-ref-check { cursor: pointer; }
+.ins-ref-check input { accent-color: var(--gold, #c9a55a); }
+#inscription-reference .ins-ref-scroll { width: 100%; max-width: 100%; min-width: 0; overflow-x: auto; overscroll-behavior-x: contain; }
+#inscription-reference .ins-reference-table { min-width: 560px; width: 100%; }
+#inscription-reference .ins-ref-dun-table { min-width: 650px; table-layout: fixed; }
+#inscription-reference .ins-ref-main-table { min-width: 1150px; }
+#inscription-reference .ins-reference-table th { vertical-align: top; }
+#inscription-reference .ins-ref-dun-table th { white-space: normal; }
+#inscription-reference .ins-ref-dun-table tr > th:first-child { width: 180px; }
+.ins-ref-terms { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 14px; }
+.ins-ref-term { display: inline-flex; flex-direction: column; gap: 2px; padding: 3px 0; }
+.ins-ref-origin { color: var(--muted, #999); font-size: 11px; }
+.ins-ref-or { color: var(--muted, #999); font-size: 12px; }
+.ins-ref-wash-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 12px; }
+.ins-ref-wash-card { min-width: 0; padding: 0 14px 14px; background: rgba(201, 165, 90, .035); border: 1px solid rgba(201, 165, 90, .2); border-radius: 8px; }
+.ins-ref-wash-card h4 { font-size: 13px; line-height: 1.6; }
+.ins-ref-quality { font-weight: 600; white-space: nowrap; }
+.ins-ref-quality-g1, .ins-ref-quality-g1 .ins-term-value { color: #76c89d; }
+.ins-ref-quality-b1, .ins-ref-quality-b2 { color: var(--ins-term-blue, #72b8ff); }
+.ins-ref-quality-p1, .ins-ref-quality-p2 { color: var(--ins-term-purple, #d0a0ff); }
+.ins-ref-quality-o1, .ins-ref-quality-o2 { color: var(--ins-term-orange, #f79646); }
+.ins-ref-quality-panel + .ins-ref-quality-panel { margin-top: 24px; }
+@media (max-width: 600px) {
+  .ins-ref-controls { gap: 12px; }
+  .ins-ref-controls label { flex-wrap: wrap; }
+  .ins-ref-wash-grid { grid-template-columns: 1fr; }
+  #inscription-reference .ins-ref-dun-table tr > th:first-child { width: 120px; }
+  #inscription-reference .ins-reference-table th,
+  #inscription-reference .ins-reference-table td { padding: 10px; }
+}

@@ -6,34 +6,22 @@
   var RULES = window.InscriptionRules;
   var TERMS = window.InscriptionTerms;
   var PROGRESS_RULES = window.InscriptionProgressRules;
+  var REFERENCE = window.InscriptionReference;
   var ACCOUNT_STORAGE = window.QinshiAccounts;
   var STORE_KEY = "qinshi_inscription_progress_v2";
   var COMMON_STORE_KEY = "qinshi_inscription_common_v1";
   var commonKeys = new Set();
   var commonDefaultApplied = false;
   var formationNames = new Set();
-  var TIANS = ["天府", "天相", "天同", "天梁", "天机"];
-  var SHIELDS = ["天遁", "地遁", "人遁", "神遁", "鬼遁", "龙遁", "虎遁", "风遁", "云遁"];
-  var MAIN = {
-    "天府": { "1": "攻+44300、防+22150", "2": "攻+75300、防+37650" },
-    "天相": { "1": "内力+44300、攻击+22150", "2": "内力+75300、攻击+37650" },
-    "天同": { "1": "血+354400、内力+22150", "2": "血+602400、内力+37650" },
-    "天梁": { "1": "防+44300、血+177200", "2": "防+75300、血+301200" },
-    "天机": { "1": "护盾+354400、内力+22150", "2": "护盾+602400、内力+37650" }
+  var MAIN_ORDER = {
+    "天府": ["攻", "防"], "天相": ["内力", "攻"], "天同": ["血", "内力"],
+    "天梁": ["防", "血"], "天机": ["护盾", "内力"]
   };
   var COMMON_SUBS = ["闪避", "招架", "治疗效果"];
   var SUBS = {};
   RULES.duns.forEach(function (dun) {
     SUBS[dun.id] = dun.attrs.concat(COMMON_SUBS).map(function (name) { return { n:name, x:dun.high.indexOf(name) !== -1, common:COMMON_SUBS.indexOf(name) !== -1 }; });
   });
-  var SHIELD_NOTES = {
-    "龙遁": "PVP速支持高/中/低档；中档来自合成，蓝二为" + TERMS.html({attr:"PVP速",tier:"?"},"b2"),
-    "鬼遁": "速支持高/中/低档；中档来自合成，蓝二为" + TERMS.html({attr:"速",tier:"?"},"b2"),
-    "神遁": "PVP速无高档，橙二最高为" + TERMS.html({attr:"PVP速",tier:"L"},"o2") + "／" + TERMS.html({attr:"PVP速",tier:"M"},"o2") + "；中档来自合成",
-    "地遁": "PVP速无高档，橙二最高为" + TERMS.html({attr:"PVP速",tier:"L"},"o2") + "／" + TERMS.html({attr:"PVP速",tier:"M"},"o2") + "；中档来自合成",
-    "人遁": "血、抗暴击支持三档；技能穿透最多两档",
-    "虎遁": "血、内力支持三档；同一种不分档属性每枚只能一条"
-  };
 
   var progress = loadProgress();
   var editingKey = "";
@@ -44,7 +32,7 @@
 
   function init() {
     var partition = document.getElementById("partition-inscription");
-    if (!DATA || !PERFORMANCE || !PROGRESS_RULES || !partition) return;
+    if (!DATA || !PERFORMANCE || !PROGRESS_RULES || !REFERENCE || !partition) return;
     // Content patches already normalize this; also guard direct/older data loads.
     DATA.items.forEach(function (item) {
       (item.slots || []).forEach(function (slot) { slot.shield = normalizeDunName(slot.shield); });
@@ -383,7 +371,7 @@
   function refreshEditorMain() {
     el.editor.querySelectorAll(".ins-editor-slot").forEach(function (row) {
       var quality = row.querySelector(".ins-edit-quality").value, info = PROGRESS_RULES.qualityInfo(quality);
-      var main = /^o[12]$/.test(quality) && MAIN[row.dataset.tian] && MAIN[row.dataset.tian][quality.charAt(1)];
+      var main = mainText(row.dataset.tian, quality);
       row.querySelector(".ins-main-preview").innerHTML = main ? '主属性：' + mainStackHtml(main, quality) : "主属性：暂无此品质的已知数值";
       var selects = Array.from(row.querySelectorAll(".ins-edit-sub")), pool = PROGRESS_RULES.termsFor(row.dataset.shield, quality);
       var selected = selects.map(function (select) { return pool.find(function (term) { return PROGRESS_RULES.identity(term) === select.value; }) || null; });
@@ -448,7 +436,7 @@
   function savedSlotHtml(slot) {
     if (!slot || typeof slot !== "object" || Array.isArray(slot)) return '<div class="craft-legacy-warning">历史位置结构异常，原始内容已保留。</div>';
     var quality = qualityId(slot), fields = PROGRESS_RULES.qualityFields(quality), info = PROGRESS_RULES.qualityInfo(quality);
-    var main = /^o[12]$/.test(quality) && MAIN[slot.tian] && MAIN[slot.tian][quality.charAt(1)] || "暂无此品质的已知主属性";
+    var main = mainText(slot.tian, quality) || "暂无此品质的已知主属性";
     var parts = PROGRESS_RULES.entries(slot), order = subDisplayOrder(slot), displays = [];
     var count = Math.max(info ? info.count : 3, parts.reduce(function (last, entry, index) { return entry.attr || entry.raw || entry.tier ? index + 1 : last; }, 0));
     for (var index = 0; index < count; index++) {
@@ -464,6 +452,11 @@
     var count = Number(star);
     var stars = Array(count + 1).join('<span class="ins-rank-star" aria-hidden="true">★</span>');
     return '<span class="ins-rank-stars ' + color + '" aria-label="' + quality + count + '星" title="' + quality + count + '星">' + stars + '</span>';
+  }
+  function mainText(prefix, quality) {
+    // Preserve the established orange display order; only derive the numbers.
+    var order = MAIN_ORDER[prefix] || [];
+    return REFERENCE.mainStats(prefix, quality).sort(function (a,b) { return order.indexOf(a.attr) - order.indexOf(b.attr); }).map(function (entry) { return entry.attr + '+' + entry.value; }).join('、');
   }
   function mainStackHtml(main, quality) { return TERMS.mainHtml(main,quality); }
   function handleProgressAction(event) {
@@ -522,7 +515,7 @@
   }
   function queryMainHtml(slot, savedSlot) {
     var quality = savedSlot ? qualityId(savedSlot) : "o2", fields = PROGRESS_RULES.qualityFields(quality);
-    var main = /^o[12]$/.test(quality) && MAIN[slot.tian] && MAIN[slot.tian][quality.charAt(1)] || "暂无此品质的已知主属性";
+    var main = mainText(slot.tian, quality) || "暂无此品质的已知主属性";
     return '<div class="ins-main-line"><span class="ins-main-rank">' + starBadgeHtml(fields ? fields.quality : "", fields ? fields.star : "") + '<small>主属性</small></span>' + mainStackHtml(main, quality) + '</div>';
   }
   function currentSubstatsHtml(savedSlot) {
@@ -539,7 +532,7 @@
   }
 
   function renderReference() {
-    el.reference.innerHTML = '<section class="ins-reference-block"><h3>天位主属性</h3><p class="mobile-scroll-hint" aria-hidden="true">左右滑动查看全部星级 →</p><div class="table-wrap mobile-scroll-region" tabindex="0" aria-label="天位主属性资料表，可左右滑动"><table class="ins-reference-table"><thead><tr><th>天位</th><th>' + starBadgeHtml("橙色", "1") + '</th><th>' + starBadgeHtml("橙色", "2") + '</th><th>紫色</th></tr></thead><tbody>' + TIANS.map(function (tian) { return '<tr><th>' + tian + '</th><td>' + mainStackHtml(MAIN[tian]["1"],"o1") + '</td><td>' + mainStackHtml(MAIN[tian]["2"],"o2") + '</td><td>暂不展示主属性</td></tr>'; }).join("") + '</tbody></table></div></section><section class="ins-reference-block"><h3>遁位副属性</h3><p class="mobile-scroll-hint" aria-hidden="true">左右滑动查看全部说明 →</p><div class="table-wrap mobile-scroll-region" tabindex="0" aria-label="遁位副属性资料表，可左右滑动"><table class="ins-reference-table"><thead><tr><th>遁位</th><th>支持副属性（含合成档）</th><th>备注</th></tr></thead><tbody>' + SHIELDS.map(function (shield) { return '<tr><th>' + shield + extremeNoteHtml(shield) + '</th><td><div class="ins-sub-list">' + SUBS[shield].map(subTagHtml).join("") + '</div></td><td class="ins-shield-note">' + (SHIELD_NOTES[shield] || "—") + '</td></tr>'; }).join("") + '</tbody></table></div><div class="muted-tip">“极致”表示该属性支持高/中/低三档，橙色可分别各选一条，并非可以洗出三条相同档位。紫色最多两条，紫色以上中档来自合成；同一种不分档属性仅一条。具体品质数值与来源见合成路径查询。</div></section>';
+    REFERENCE.render(el.reference);
   }
 
   document.addEventListener("DOMContentLoaded", init);

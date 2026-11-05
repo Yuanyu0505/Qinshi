@@ -1,10 +1,11 @@
 #inscription-reference { min-width: 0; max-width: 100%; }
 #inscription-reference .ins-ref-section { min-width: 0; }
 #inscription-reference h4 { margin: 14px 0 10px; color: var(--gold, #c9a55a); }
-.ins-ref-controls { display: flex; flex-wrap: wrap; gap: 12px 20px; align-items: center; margin: 12px 0; }
-.ins-ref-controls label { display: flex; align-items: center; gap: 8px; font-size: 13px; }
-.ins-ref-controls select { min-width: 100px; max-width: 100%; }
-.ins-ref-controls .ins-ref-check { cursor: pointer; }
+#inscription-reference .ins-ref-controls { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr)); gap: 16px; align-items: end; margin: 16px 0; }
+#inscription-reference .ins-ref-controls label { display: flex; flex-direction: column; align-items: stretch; gap: 8px; min-width: 0; font-size: 15px; line-height: 1.5; }
+#inscription-reference .ins-ref-controls select,
+#inscription-reference .ins-ref-controls input[type="search"] { box-sizing: border-box; width: 100%; min-width: 0; max-width: 100%; min-height: 44px; padding: 10px 12px; border: 1px solid var(--line, #59431f); border-radius: 6px; background: var(--bg2, #151109); color: var(--text, #e6ddca); font: inherit; font-size: 16px; }
+#inscription-reference .ins-ref-controls .ins-ref-check { box-sizing: border-box; flex-direction: row; align-items: center; min-height: 44px; padding: 10px 0; cursor: pointer; }
 .ins-ref-check input { accent-color: var(--gold, #c9a55a); }
 #inscription-reference .ins-ref-scroll { width: 100%; max-width: 100%; min-width: 0; overflow-x: auto; overscroll-behavior-x: contain; }
 #inscription-reference .ins-reference-table { min-width: 560px; width: 100%; }

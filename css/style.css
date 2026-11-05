@@ -1917,6 +1917,10 @@ figcaption { color: var(--muted); font-size: 13px; margin-top: 8px; }
 #partition-tactics .tactics-rank-badge.is-current-target span:first-child { color: #35d06f; }
 #partition-tactics .tactics-rank-badge.is-current-target span:last-child { color: #ff4b4b; }
 #partition-tactics .tactics-empty-value { color: var(--muted); }
+#partition-tactics .tactics-reference-table tr.is-current > *,
+#partition-tactics .tactics-reference-table tr.is-current > * * { color: #35d06f; }
+#partition-tactics .tactics-reference-table tr.is-target > *,
+#partition-tactics .tactics-reference-table tr.is-target > * * { color: #ff4b4b; }
 #partition-tactics .tactics-modes { margin-bottom: 14px; }
 #partition-tactics .tactics-cost-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
 #partition-tactics .tactics-cost-tactics,

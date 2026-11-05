@@ -15,6 +15,7 @@
   var needsCache = {};
   var deferredRenderTimer = null;
   var historyCleanupTimer = null;
+  var historyCleanupDay = "";
   var renderVersion = 0;
   var visibleCards = [];
   var searchRefresh = window.UI_PERFORMANCE.createRefreshQueue(render);
@@ -112,6 +113,7 @@
   function scheduleHistoryCleanup() {
     if (historyCleanupTimer !== null) clearTimeout(historyCleanupTimer);
     var now = new Date();
+    historyCleanupDay = now.toDateString();
     var tomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 0, 1);
     historyCleanupTimer = setTimeout(function () {
       clearHistoricalSelections(new Date());
@@ -494,6 +496,7 @@
   function render(onComplete) {
     searchRefresh.cancel();
     if (!elements.content) return;
+    clearHistoricalSelections(new Date());
     cancelDeferredRender();
     needsCache = {};
     updateControls();
@@ -599,12 +602,7 @@
     } else {
       var identity = identityFromControl(control);
       var selectedReward = rewardRecord(occurrence, identity);
-      var isMachineSeries = identity.category === "machine-beast" || identity.category === "nucleus";
-      if (!selectedReward && isMachineSeries) {
-        changedEventIds = applyFamilySelection(identity, true, core.defaultPurposes(identity.category));
-      } else {
-        core.setRewardSelection(state.needs, occurrence.id, identity, !selectedReward, []);
-      }
+      core.setRewardSelection(state.needs, occurrence.id, identity, !selectedReward, core.defaultPurposes(identity.category));
     }
     saveNeeds();
     refreshAfterNeedsChange(changedEventIds);
@@ -629,7 +627,7 @@
 
   function openPurposeEditor(control) {
     var occurrence = occurrenceById(control.dataset.forbiddenEvent);
-    if (!occurrence) return;
+    if (!occurrence || core.statusFor(occurrence, new Date()) === "history") return;
     var identity = identityFromControl(control);
     var record = rewardRecord(occurrence, identity);
     if (!record) return;
@@ -645,17 +643,14 @@
         (purposeDraft.purposes.indexOf(purpose) !== -1 ? " checked" : "") + "><span>" + escapeHtml(PURPOSE_LABELS[purpose]) + "</span></label>";
     }).join("");
     var eventScope = elements.purposeEditor.querySelector('input[name="forbidden-purpose-scope"][value="event"]');
-    var familyScope = elements.purposeEditor.querySelector('input[name="forbidden-purpose-scope"][value="family"]');
-    var isMachineSeries = record.category === "machine-beast" || record.category === "nucleus";
     if (elements.purposeFamilyLabel) {
       elements.purposeFamilyLabel.textContent = record.category === "machine-beast"
-        ? "全部同机关兽系列"
+        ? "本期及之后每一期（同机关兽系列）"
         : record.category === "nucleus"
-          ? "全部同机关兽神核系列"
-          : "全部同装备系列";
+          ? "本期及之后每一期（同机关兽神核系列）"
+          : "本期及之后每一期（同装备系列）";
     }
-    if (isMachineSeries && familyScope) familyScope.checked = true;
-    else if (eventScope) eventScope.checked = true;
+    if (eventScope) eventScope.checked = true;
     elements.purposeEditor.hidden = false;
     positionPurposeDialog(control);
     var first = elements.purposeOptions.querySelector("input");
@@ -681,9 +676,12 @@
     });
   }
 
-  function applyFamilySelection(identity, selected, purposes) {
+  function applyFamilySelection(identity, selected, purposes, sourceEventId) {
     var changedEventIds = [];
+    var source = occurrenceById(sourceEventId);
+    var today = new Date();
     (data.occurrences || []).forEach(function (occurrence) {
+      if (!core.canSyncOccurrence(occurrence, source, today)) return;
       resolvedOccurrenceIdentities(occurrence, identity.category).forEach(function (resolved) {
         if (resolved.category === identity.category && resolved.familyKey === identity.familyKey) {
           core.setRewardSelection(state.needs, occurrence.id, resolved, selected, purposes);
@@ -696,10 +694,17 @@
 
   function savePurposeEditor(selected) {
     if (!purposeDraft) return;
+    var occurrence = occurrenceById(purposeDraft.eventId);
+    if (!occurrence || core.statusFor(occurrence, new Date()) === "history") {
+      closePurposeEditor(false);
+      render();
+      return;
+    }
     var purposes = selected ? selectedPurposes() : [];
     var changedEventIds = [purposeDraft.eventId];
-    if (purposeScope() === "family") changedEventIds = applyFamilySelection(purposeDraft.identity, selected, purposes);
+    if (purposeScope() === "family") changedEventIds = applyFamilySelection(purposeDraft.identity, selected, purposes, purposeDraft.eventId);
     else core.setRewardSelection(state.needs, purposeDraft.eventId, purposeDraft.identity, selected, purposes);
+    clearHistoricalSelections(new Date());
     saveNeeds();
     closePurposeEditor(false);
     refreshAfterNeedsChange(changedEventIds);
@@ -848,6 +853,20 @@
       if (!partitionRendered) render();
     }
     document.addEventListener("qinshi:partitionchange", activatePartition);
+    function refreshHistoricalSelections() {
+      if (document.hidden) return;
+      var now = new Date();
+      var changedDay = historyCleanupDay !== now.toDateString();
+      var removed = clearHistoricalSelections(now);
+      if (removed || changedDay) {
+        closePurposeEditor(false);
+        if (!elements.partition.hidden) render();
+        else partitionRendered = false;
+      }
+      scheduleHistoryCleanup();
+    }
+    document.addEventListener("visibilitychange", refreshHistoricalSelections);
+    window.addEventListener("pageshow", refreshHistoricalSelections);
     if (!elements.partition.hidden) activatePartition();
   }
 

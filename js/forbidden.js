@@ -441,10 +441,23 @@
     return needs;
   }
 
+  function canSyncOccurrence(occurrence, source, today) {
+    if (!occurrence || !source) return false;
+    var status = statusFor(occurrence, today);
+    var start = parseLocalDate(occurrence.start);
+    var sourceStart = parseLocalDate(source.start);
+    return Boolean((status === "current" || status === "future") && start && sourceStart && start >= sourceStart);
+  }
+
   function applyFamilyChange(needs, data, identity, change) {
+    var today = change.today || new Date();
+    var source = (data && data.occurrences || []).find(function (occurrence) { return occurrence.id === change.eventId; });
+    clearHistoricalNeeds(needs, data && data.occurrences, today);
+    if (change.eventId && !source) return needs;
     (data && data.occurrences || []).forEach(function (occurrence) {
+      if (source ? !canSyncOccurrence(occurrence, source, today) : ["current", "future"].indexOf(statusFor(occurrence, today)) === -1) return;
       occurrenceRewardIdentities(data, occurrence).forEach(function (candidate) {
-        if (candidate.familyKey !== identity.familyKey) return;
+        if (candidate.category !== identity.category || candidate.familyKey !== identity.familyKey) return;
         setRewardSelection(needs, occurrence.id, candidate, change.selected !== false, change.purposes || []);
       });
     });
@@ -523,6 +536,7 @@
     normalizeNeedsV2: normalizeNeedsV2,
     setDiscipleSelection: setDiscipleSelection,
     setRewardSelection: setRewardSelection,
+    canSyncOccurrence: canSyncOccurrence,
     applyFamilyChange: applyFamilyChange,
     eventNeeds: eventNeeds,
     hasNeeds: hasNeeds,

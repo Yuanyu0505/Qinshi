@@ -140,4 +140,29 @@ assert.deepStrictEqual(migrated.events[wind.id].rewards[fragmentIdentity.key].pu
 assert.strictEqual(F.matchesPurpose(migrated, wind.id, "atlas"), true);
 assert.strictEqual(F.matchesPurpose(migrated, wind.id, "machine-beasts"), false);
 
+// A future source must never write into history, the current period or earlier forecasts.
+const scopeData = Object.assign({}, DATA, { occurrences: [
+  { id: "past", start: "2026-10-29", end: "2026-11-01", templateId: "wind_forest_fire_mountain" },
+  { id: "active", start: "2026-11-05", end: "2026-11-08", templateId: "wind_forest_fire_mountain" },
+  { id: "before", start: "2026-11-09", end: "2026-11-11", templateId: "wind_forest_fire_mountain" },
+  { id: "source", start: "2026-11-12", end: "2026-11-15", templateId: "wind_forest_fire_mountain" },
+  { id: "later", start: "2026-11-19", end: "2026-11-22", templateId: "wind_forest_fire_mountain" }
+] });
+const scopeNeeds = F.normalizeNeedsV2(null, null, scopeData);
+F.setDiscipleSelection(scopeNeeds, "past", "隐虎季布", true);
+F.setRewardSelection(scopeNeeds, "past", bodyIdentity, true, ["atlas"]);
+F.applyFamilyChange(scopeNeeds, scopeData, bodyIdentity, {
+  eventId: "source", today: "2026-11-05", selected: true, purposes: ["forging"]
+});
+assert.deepStrictEqual(Object.keys(scopeNeeds.events), ["source", "later"]);
+assert.deepStrictEqual(scopeNeeds.events.source.rewards["equipment:影虎"].purposes, ["forging"]);
+assert.ok(scopeNeeds.events.later.rewards["equipment:影虎碎片"]);
+F.applyFamilyChange(scopeNeeds, scopeData, bodyIdentity, {
+  eventId: "source", today: "2026-11-05", selected: false
+});
+assert.deepStrictEqual(scopeNeeds.events, {});
+assert.strictEqual(F.canSyncOccurrence(scopeData.occurrences[0], scopeData.occurrences[3], "2026-11-05"), false);
+assert.strictEqual(F.canSyncOccurrence(scopeData.occurrences[3], scopeData.occurrences[3], "2026-11-15"), true);
+assert.strictEqual(F.canSyncOccurrence(scopeData.occurrences[3], scopeData.occurrences[3], "2026-11-16"), false);
+
 console.log("forbidden core tests passed");

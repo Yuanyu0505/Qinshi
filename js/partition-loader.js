@@ -1,7 +1,7 @@
 (function (root) {
   "use strict";
   // Static paths also work when index.html is opened directly (file:).
-  var version = "1.0.83";
+  var version = "1.0.84";
   var registry = {
     pilots: { scripts: ["data/pilots.js", "js/pilots.js", "js/pilots-ui.js"], api: "PILOTS_UI" },
     "secret-realm": { scripts: ["data/secret-realm.js", "js/secret-realm-core.js", "js/secret-realm-planner.js", "js/secret-realm-ui.js"], api: "SECRET_REALM_UI", rootArgument: true },

@@ -41,3 +41,8 @@ test('malformed locator position and concrete X stay quarantined rather than nor
   assert.equal(store.inspect().valid,false,JSON.stringify(change));assert.throws(()=>store.save({version:1,target},raw,'a'),/异常/);assert.equal(s.getItem(store.key),raw);
  }
 });
+
+test('reverse collapsed selection survives reload and reopening preserves filters and target',()=>{
+ const s=storage(),store=X.createLocatorStore(s,'crafting-paths','reverse'),value=store.inspect().value;value.target=target;value.filters.search='盖聂';value.queried=true;value.resultsCollapsed=true;
+ const saved=store.save(value,null,'a');assert.equal(store.inspect().value.resultsCollapsed,true);const next={...saved.value,resultsCollapsed:false};store.save(next,saved.token,'a');assert.equal(store.inspect().value.filters.search,'盖聂');assert.deepEqual(store.inspect().value.target,target);
+});

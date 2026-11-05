@@ -28,6 +28,11 @@
 #inscription-reference .ins-ref-wash-card dt { color: var(--text, #e6ddca); }
 #inscription-reference .ins-ref-wash-card dd { margin: 0; }
 #inscription-reference .ins-ref-overview { margin-top: 18px; }
+#inscription-reference [data-ref-upgrades] table { table-layout: fixed; }
+#inscription-reference [data-ref-upgrades] .ins-reference-table th,
+#inscription-reference [data-ref-upgrades] .ins-reference-table td { text-align: center; vertical-align: middle; }
+#inscription-reference [data-ref-upgrades] .ins-ref-terms { justify-content: center; align-items: center; }
+#inscription-reference .ins-ref-other-duns { margin-top: 18px; }
 @media (max-width: 1000px) {
   #inscription-reference .ins-ref-wash-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
 }

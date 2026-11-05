@@ -2,6 +2,12 @@ const { test } = require("node:test");
 const assert = require("node:assert");
 const T = require("./tactics.js");
 
+test('screenshot pack defaults preserve stock and explicit custom or zero prices',()=>{
+ const fs=require('node:fs'),vm=require('node:vm'),sandbox={window:{}};vm.runInNewContext(fs.readFileSync(require.resolve('../data/tactics.js'),'utf8'),sandbox);const tactics=sandbox.window.TACTICS_DATA.items;
+ const state=T.normalizeCostState(tactics,{},{});assert.deepEqual(state.materials['shared:merit'],{stock:0,packSize:100,packPrice:280});assert.equal(state.materials['shared:horn'].packPrice,720);assert.equal(state.materials['mark:yin'].packPrice,700);assert.equal(state.materials['mantra:shared:tong'].packPrice,600);assert.equal(state.materials['mantra:yin:shang'].packSize,20);assert.equal(state.materials['mantra:shared:extreme'].packPrice,null);
+ const custom=T.normalizeCostState(tactics,{materials:{'shared:merit':{stock:2042,packSize:8,packPrice:0}}},{});assert.deepEqual(custom.materials['shared:merit'],{stock:2042,packSize:8,packPrice:0});
+});
+
 function rank(rank, mark, merit, options) {
   const config = options || {};
   return {

@@ -393,6 +393,16 @@
     return { start: start, target: target };
   }
 
+  function defaultMaterialPack(material) {
+    if(material.key==='shared:merit')return {packSize:100,packPrice:280};
+    if(material.key==='shared:horn')return {packSize:100,packPrice:720};
+    if(material.group==='兵法印记'&&['wind','forest','fire','mountain','yin','thunder'].indexOf(material.tacticId)>=0)return {packSize:20,packPrice:['yin','thunder'].indexOf(material.tacticId)>=0?700:400};
+    if(material.mantraId==='extreme')return {packSize:null,packPrice:null};
+    if(['殇真言碎片','盛真言碎片'].indexOf(material.name)>=0)return {packSize:20,packPrice:700};
+    if(['齐真言碎片','镖真言碎片','统真言碎片','灵真言碎片','禅真言碎片','心真言碎片','解真言碎片','裂真言碎片','洽真言碎片'].indexOf(material.name)>=0)return {packSize:6,packPrice:600};
+    return {packSize:null,packPrice:null};
+  }
+
   function normalizeCostState(tactics, rawInput, progressInput) {
     var raw = object(rawInput);
     var progress = object(progressInput);
@@ -410,11 +420,11 @@
     var rawMaterials = object(raw.materials);
     var materials = {};
     materialCatalog(tactics).forEach(function (material) {
-      var value = object(rawMaterials[material.key]);
+      var value = object(rawMaterials[material.key]),defaults=defaultMaterialPack(material);
       materials[material.key] = {
         stock: nonNegativeInteger(value.stock, 0),
-        packSize: positiveInteger(value.packSize, null),
-        packPrice: optionalNonNegativeInteger(value.packPrice)
+        packSize: value.packSize==null||value.packSize===''?defaults.packSize:positiveInteger(value.packSize, null),
+        packPrice: value.packPrice==null||value.packPrice===''?defaults.packPrice:optionalNonNegativeInteger(value.packPrice)
       };
     });
     return { selected: selected, configs: configs, materials: materials };

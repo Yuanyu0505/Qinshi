@@ -66,13 +66,15 @@
     try{var result=v.locatorStore.save(next,v.locatorToken,accountId);v.locator=result.value;v.locatorToken=result.token;return true;}
     catch(e){status(v,e.message);return false;}
   }
-  function changeTarget(v,next,keepAttrs,guard) {
+  function changeTarget(v,next,keepAttrs,guard,collapseResults) {
     var beforeTarget=targetFor(v);
     next=normalizeTarget(keepAttrs?next:S.targetAfterContextChange(beforeTarget,next));
-    if(sameTarget(next,beforeTarget)){renderFilters(v);return true;}
-    try{if(guard)guard();var value=clone(v.locator);value.target=next;value.generated=false;
+    var changed=!sameTarget(next,beforeTarget);
+    if(!changed&&collapseResults===undefined){renderFilters(v);return true;}
+    try{if(guard)guard();var value=clone(v.locator);value.target=next;if(changed)value.generated=false;
+      if(collapseResults!==undefined)value.resultsCollapsed=collapseResults;
       if(beforeTarget.discipleKey!==next.discipleKey){var selected=itemFor(next);value.search=selected?selected.name:'';}
-      if(saveLocator(v,value)){clearPlan(v);renderFilters(v);return true;}
+      if(saveLocator(v,value)){if(changed)clearPlan(v);renderFilters(v);return true;}
     }catch(e){status(v,e.message);}renderFilters(v);return false;
   }
   function applySimulation(v,next,guard){
@@ -141,8 +143,10 @@
     el.addEventListener('keydown',function(event){if(event.target.matches('[data-craft-attr-trigger]'))onAttrKey(v,event);});
     el.addEventListener('input',function(event){
       if(event.target===field(v,'search')){var value=clone(v.locator);value.search=event.target.value;saveLocator(v,value);suggestions(v);}
-      if(event.target.matches('[data-result-filter="search"]'))onChange(v,event.target);
+      if(event.target.matches('[data-result-filter="search"]')&&!event.isComposing&&!v.reverseComposing)onChange(v,event.target);
     });
+    el.addEventListener('compositionstart',function(event){if(event.target.matches('[data-result-filter="search"]'))v.reverseComposing=true;});
+    el.addEventListener('compositionend',function(event){if(event.target.matches('[data-result-filter="search"]')){v.reverseComposing=false;onChange(v,event.target);}});
     field(v,'search').addEventListener('focus',function(){if(!itemFor(targetFor(v))) suggestions(v);});
     field(v,'search').addEventListener('keydown',function(event){
       var list=area(v,'suggestions'), choices=Array.from(list.querySelectorAll('[data-craft-action="choose-disciple"]'));
@@ -301,7 +305,7 @@
     next=X.normalizeDraft(next);
     if(next.dun&&!X.duns(next).some(function(d){return d.id===next.dun;}))next.dun='';
     try{
-      var value=clone(v.locator);value.reverse=next;value.queried=false;
+      var value=clone(v.locator);value.reverse=next;value.queried=false;value.resultsCollapsed=false;
       if(!saveLocator(v,value))return false;
       v.reverse=next;v.reverseResults=null;v.reversePage=0;renderFilters(v);return true;
     }catch(e){status(v,e.message);renderFilters(v);return false;}
@@ -315,29 +319,34 @@
     }).join('')+'</div><p class="craft-note">可重复选择，次数表示至少需要几条该属性；优先填满查询词条，其余为非查询词条X。点击结果应用目标，筛选本身不会改变模拟现场。</p>';
     renderReverseResults(v);
   }
-  function renderReverseResults(v){
+  function renderReverseResults(v,preserveFilters){
     var host=area(v,'reverse-results'),rows=v.reverseResults;
     if(!rows){host.innerHTML='';return;}
     var filters=v.locator.filters,common=new Set();
     try{v.commonToken=root.QinshiAccounts.getItem('qinshi_inscription_common_v1');var stored=JSON.parse(v.commonToken);if(stored&&Array.isArray(stored.keys))common=new Set(stored.keys);}catch(e){/* no personal classification inferred from broken data */}
     var cards=X.groupResults(rows,filters,{commonKeys:common,formationNames:root.InscriptionProgressRules.formationNames(root.FORMATIONS_DATA),atlasTargets:(root.FORBIDDEN_DATA||{}).discipleAtlasTargets});
     v.reverseCards=cards;
+    if(v.locator.resultsCollapsed){host.innerHTML='<section class="craft-reverse-results"><p class="craft-note">已选组合，反查结果已收起。</p>'+button('reverse-reselect','重新选择')+'</section>';return;}
     var size=30;v.reversePage=Math.max(0,Math.min(v.reversePage||0,Math.max(0,Math.ceil(cards.length/size)-1)));
     var start=v.reversePage*size,end=Math.min(cards.length,start+size);
-    host.innerHTML='<section class="craft-reverse-results"><h4>反查结果 · '+cards.length+'组</h4><div class="craft-controls craft-result-filters">'+
-      '<label class="craft-result-check"><input type="checkbox" data-result-filter="ordinary"'+(filters.ordinary?' checked':'')+'>展示普通弟子</label>'+
-      '<label>弟子分类<select data-result-filter="group">'+options([{id:'all',label:'全部弟子'},{id:'formation',label:'合阵弟子'},{id:'common',label:'常用弟子'},{id:'other',label:'其他弟子'}],filters.group)+'</select></label>'+
-      '<label>天位<select data-result-filter="prefix">'+options(R.prefixes,filters.prefix,'全部天位')+'</select></label>'+
-      '<label>遁位<select data-result-filter="dun">'+options(R.duns.map(function(d){return d.id;}),filters.dun,'全部遁位')+'</select></label>'+
-      '<label>搜索弟子<input type="search" data-result-filter="search" value="'+esc(filters.search)+'" placeholder="输入弟子姓名"></label></div><p class="craft-note">先筛选具体弟子，再合并同位置同搭配；非查询词条X需应用后自行选择。</p>'+
-      (cards.length?'<div class="craft-reverse-grid">'+cards.slice(start,end).map(function(card,i){
+    var content=cards.length?'<div class="craft-reverse-grid">'+cards.slice(start,end).map(function(card,i){
         var index=start+i,selected=v.reverseMembers&&v.reverseMembers[card.key],row=card.members.find(function(m){return m.discipleKey===selected;})||card.members[0];
         if(!v.reverseMembers)v.reverseMembers={};v.reverseMembers[card.key]=row.discipleKey;
         var known=T.sortTerms(row.terms.filter(Boolean),row.quality).map(function(t){return T.html(t,row.quality);});
         row.terms.filter(function(t){return !t;}).forEach(function(){known.push('<span class="craft-note">非查询词条X</span>');});
         return '<article data-reverse-result><b>'+esc(card.members.map(function(m){return m.name;}).join('／'))+'</b><small>'+esc(row.slot.replace('|',' · ')+' · '+qLabel(row.quality))+'</small><p>'+known.join(' ＋ ')+'</p>'+
           (card.members.length>1?'<label>应用弟子<select data-result-member="'+index+'">'+options(card.members.map(function(m){return {id:encodeURIComponent(m.discipleKey),label:m.name};}),encodeURIComponent(row.discipleKey))+'</select></label>':'')+button('reverse-apply','应用此组合',' data-index="'+index+'"')+'</article>';
-      }).join('')+'</div><div class="craft-actions">'+button('reverse-prev','上一页',start?'':' disabled')+'<span>'+(start+1)+'–'+end+' / '+cards.length+'</span>'+button('reverse-next','下一页',end<cards.length?'':' disabled')+'</div>':'<p class="craft-note">没有符合条件的弟子位置，请调整筛选或勾选展示普通弟子。</p>')+'</section>';
+      }).join('')+'</div><div class="craft-actions">'+button('reverse-prev','上一页',start?'':' disabled')+'<span>'+(start+1)+'–'+end+' / '+cards.length+'</span>'+button('reverse-next','下一页',end<cards.length?'':' disabled')+'</div>':'<p class="craft-note">没有符合条件的弟子位置，请调整筛选或勾选展示普通弟子。</p>';
+    // Keep the actual input node alive: replacing it cancels Chinese IME.
+    if(preserveFilters&&host.querySelector('[data-reverse-cards]')){
+      host.querySelector('[data-reverse-count]').textContent='反查结果 · '+cards.length+'组';host.querySelector('[data-reverse-cards]').innerHTML=content;return;
+    }
+    host.innerHTML='<section class="craft-reverse-results"><h4 data-reverse-count>反查结果 · '+cards.length+'组</h4><div class="craft-controls craft-result-filters">'+
+      '<label class="craft-result-check"><input type="checkbox" data-result-filter="ordinary"'+(filters.ordinary?' checked':'')+'>展示普通弟子</label>'+
+      '<label>弟子分类<select data-result-filter="group">'+options([{id:'all',label:'全部弟子'},{id:'formation',label:'合阵弟子'},{id:'common',label:'常用弟子'},{id:'other',label:'其他弟子'}],filters.group)+'</select></label>'+
+      '<label>天位<select data-result-filter="prefix">'+options(R.prefixes,filters.prefix,'全部天位')+'</select></label>'+
+      '<label>遁位<select data-result-filter="dun">'+options(R.duns.map(function(d){return d.id;}),filters.dun,'全部遁位')+'</select></label>'+
+      '<label>搜索弟子<input type="search" data-result-filter="search" value="'+esc(filters.search)+'" placeholder="输入弟子姓名"></label></div><p class="craft-note">先筛选具体弟子，再合并同位置同搭配；非查询词条X需应用后自行选择。</p><div data-reverse-cards>'+content+'</div></section>';
   }
   function renderAnalysis(v) {
     var target=targetFor(v),dun=position(target).dun,host=area(v,'analysis');
@@ -627,10 +636,11 @@
     status(v,'');
     if(control.matches('[data-result-member]')){var card=v.reverseCards[Number(control.dataset.resultMember)];if(card)v.reverseMembers[card.key]=decodeURIComponent(control.value);return;}
     if(control.matches('[data-result-filter]')){
+      if(control.dataset.resultFilter==='search'&&v.reverseComposing)return;
       var filtered=clone(v.locator),filter=control.dataset.resultFilter,newValue=filter==='ordinary'?control.checked:control.value;
       if(filtered.filters[filter]===newValue)return;
-      filtered.filters[filter]=newValue;var focused=document.activeElement===control,caret=control.selectionStart;
-      if(saveLocator(v,filtered)){v.reversePage=0;renderReverseResults(v);if(focused&&filter==='search'){var search=v.el.querySelector('[data-result-filter="search"]');search.focus();search.setSelectionRange(caret,caret);}}return;
+      filtered.filters[filter]=newValue;
+      if(saveLocator(v,filtered)){v.reversePage=0;renderReverseResults(v,true);}return;
     }
     if(control.matches('[data-reverse-field]')){var changed=clone(v.reverse);changed[control.dataset.reverseField]=control.value;updateReverse(v,changed,true);return;}
     if(control.matches('[data-reverse-attr]')){
@@ -686,18 +696,19 @@
     if(action==='apply-simulation'){try{checkReverse(v);applySimulation(v,clone(targetFor(v)),function(){checkReverse(v);});}catch(e){status(v,e.message);}return;}
     if(action==='reverse-search'){
       if(!v.reverse.attrs.some(Boolean)){status(v,'请至少选择一个反查属性。');return;}
-      var queried=clone(v.locator);queried.queried=true;if(!saveLocator(v,queried))return;
+      var queried=clone(v.locator);queried.queried=true;queried.resultsCollapsed=false;if(!saveLocator(v,queried))return;
       v.reverseResults=X.search(root.INSCRIPTION_DATA.items,v.reverse);v.reversePage=0;renderReverseResults(v);return;
     }
     if(action==='reverse-prev'||action==='reverse-next'){
       var pages=Math.ceil((v.reverseCards||[]).length/30);v.reversePage=Math.max(0,Math.min(pages-1,(v.reversePage||0)+(action==='reverse-next'?1:-1)));renderReverseResults(v);return;
     }
+    if(action==='reverse-reselect'){var reopened=clone(v.locator);reopened.resultsCollapsed=false;if(saveLocator(v,reopened))renderReverseResults(v);return;}
     if(action==='reverse-apply'){
       var card=(v.reverseCards||[])[Number(control.dataset.index)];if(!card)return;
       var row=card.members.find(function(m){return m.discipleKey===v.reverseMembers[card.key];})||card.members[0];
       try{checkReverse(v);}catch(e){status(v,e.message);return;}
       var applied={discipleKey:row.discipleKey,slot:row.slot,dun:row.dun,quality:row.quality,attrs:row.attrs.slice(),xTerm:null};
-      changeTarget(v,applied,true,function(){checkReverse(v);});
+      changeTarget(v,applied,true,function(){checkReverse(v);},true);
       return;
     }
     if(action==='toggle-favorite'){toggleFavorite(v,control);return;}

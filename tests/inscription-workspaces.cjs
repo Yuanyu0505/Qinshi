@@ -18,7 +18,7 @@ test('path children retain independent targets and generated routes on switching
  assert.ok(await reverse.locator('[data-reverse-result]').count()>0);await reverse.locator('[data-craft-action="reverse-apply"]').first().click();
  await root.locator('[data-locator-tab="direct"]').click();assert.equal(await direct.locator('[data-craft-results]').innerText(),before);
  await p.reload();await openInscription(p);await p.locator('[data-mode="crafting-paths"]').click();assert.equal(await direct.locator('[data-craft-field="dun"]').inputValue(),'人遁');
- await root.locator('[data-locator-tab="reverse"]').click();assert.equal(await reverse.locator('[data-reverse-attr]').first().inputValue(),'速');assert.ok(await reverse.locator('[data-reverse-result]').count()>0);
+ await root.locator('[data-locator-tab="reverse"]').click();assert.equal(await reverse.locator('[data-reverse-attr]').first().inputValue(),'速');assert.equal(await reverse.locator('[data-reverse-result]').count(),0);await reverse.locator('[data-craft-action="reverse-reselect"]').click();assert.ok(await reverse.locator('[data-reverse-result]').count()>0);
  }finally{await p.close();}
 });
 test('simulator locators never mutate shared scene until explicit apply, cancelled apply is byte-identical',async()=>{

@@ -1984,6 +1984,11 @@ figcaption { color: var(--muted); font-size: 13px; margin-top: 8px; }
 #partition-tactics .tactics-cost-material-row:last-child { border-bottom: 0; }
 #partition-tactics .tactics-cost-material-name { display: grid; gap: 2px; }
 #partition-tactics .tactics-cost-material-name span { color: var(--muted); font-size: 12px; }
+#partition-tactics .tactics-cost-fixed-price { display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 4px 8px; align-items: center; }
+#partition-tactics .tactics-cost-fixed-price > span { grid-column: 1 / -1; color: var(--muted); font-size: 12px; }
+#partition-tactics .tactics-cost-fixed-price b { font-weight: 400; overflow-wrap: anywhere; }
+#partition-tactics .tactics-cost-price-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+#partition-tactics .tactics-cost-price-editor { min-width: 0; }
 #partition-tactics .tactics-cost-result-card h3,
 #partition-tactics .tactics-cost-result-card h4,
 #partition-tactics .tactics-cost-combined h2,

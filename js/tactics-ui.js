@@ -19,7 +19,8 @@
     progressError: "",
     cost: null,
     costOutcome: null,
-    costError: ""
+    costError: "",
+    costPriceEdits: {}
   };
   var el = {};
   var partitionActivated = false;
@@ -163,6 +164,7 @@
   }
 
   function loadCostState() {
+    state.costPriceEdits={};
     var parsed = {};
     try {
       parsed = JSON.parse(ACCOUNT_STORAGE.getItem(COST_STORE_KEY) || "{}");
@@ -174,7 +176,7 @@
 
   function saveCostState() {
     try {
-      ACCOUNT_STORAGE.setItem(COST_STORE_KEY, JSON.stringify(state.cost));
+      if(ACCOUNT_STORAGE.setItem(COST_STORE_KEY, JSON.stringify(state.cost))===false)throw new Error('Storage write refused');
       state.costError = "";
       return true;
     } catch (error) {
@@ -451,12 +453,14 @@
   }
 
   function maximizeTargetMantras(tactic) {
+    state.calculator.target=CORE.changeRank(tactic,state.calculator.target,15);
     tactic.mantras.forEach(function (mantra) {
       state.calculator.target.mantras[mantra.id] = CORE.allowedMantraRank(
         tactic, mantra.id, state.calculator.target.rank
       );
     });
     renderCalculator();
+    renderReference();
   }
 
   function calculatorOutcome(tactic) {
@@ -798,10 +802,13 @@
 
   function costMaterialRowHtml(material) {
     var value = state.cost.materials[material.key] || { stock: 0, packSize: null, packPrice: null };
-    return '<div class="tactics-cost-material-row"><div class="tactics-cost-material-name"><b>' + escapeHtml(material.name) + '</b><span>' + escapeHtml(material.group) + '</span></div>' +
+    var edit=state.costPriceEdits[material.key],key=escapeHtml(material.key);
+    var priceControls=edit?
+      '<label><span>每包数量</span><input type="text" inputmode="numeric" pattern="[0-9]*" value="'+escapeHtml(edit.packSize)+'" data-cost-price-key="'+key+'" data-cost-price-field="packSize"></label><div class="tactics-cost-price-editor"><label><span>每包元宝</span><input type="text" inputmode="numeric" pattern="[0-9]*" value="'+escapeHtml(edit.packPrice)+'" data-cost-price-key="'+key+'" data-cost-price-field="packPrice"></label><div class="tactics-cost-price-actions"><button type="button" class="seg" data-cost-price-action="save" data-material-key="'+key+'">保存</button><button type="button" class="seg" data-cost-price-action="cancel" data-material-key="'+key+'">取消</button></div></div>':
+      '<div class="tactics-cost-fixed-price"><span>每包数量</span><b>'+escapeHtml(value.packSize==null?'未设置':formatNumber(value.packSize))+'</b></div><div class="tactics-cost-fixed-price"><span>每包元宝</span><b>'+escapeHtml(value.packPrice==null?'未设置':formatNumber(value.packPrice))+'</b><button type="button" class="seg" data-cost-price-action="edit" data-material-key="'+key+'">编辑</button></div>';
+    return '<div class="tactics-cost-material-row" data-cost-material-row="'+key+'"><div class="tactics-cost-material-name"><b>' + escapeHtml(material.name) + '</b><span>' + escapeHtml(material.group) + '</span></div>' +
       '<label><span>库存</span><input type="text" inputmode="numeric" pattern="[0-9]*" value="' + escapeHtml(value.stock) + '" data-cost-material="' + escapeHtml(material.key) + '" data-cost-material-field="stock"></label>' +
-      '<label><span>每包数量</span><input type="text" inputmode="numeric" pattern="[0-9]*" value="' + escapeHtml(value.packSize == null ? '' : value.packSize) + '" placeholder="未设置" data-cost-material="' + escapeHtml(material.key) + '" data-cost-material-field="packSize"></label>' +
-      '<label><span>每包元宝</span><input type="text" inputmode="numeric" pattern="[0-9]*" value="' + escapeHtml(value.packPrice == null ? '' : value.packPrice) + '" placeholder="未设置" data-cost-material="' + escapeHtml(material.key) + '" data-cost-material-field="packPrice"></label></div>';
+      priceControls+'</div>';
   }
 
   function costRequirementHtml(item) {
@@ -897,6 +904,20 @@
   }
 
   function handleCostModeClick(event) {
+    var priceButton=event.target.closest('[data-cost-price-action]');
+    if(priceButton&&state.cost){
+      var key=priceButton.dataset.materialKey,material=state.cost.materials[key],priceAction=priceButton.dataset.costPriceAction;
+      if(!material)return;
+      if(priceAction==='edit'){state.costPriceEdits[key]={packSize:material.packSize==null?'':String(material.packSize),packPrice:material.packPrice==null?'':String(material.packPrice)};renderCostMode();return;}
+      if(priceAction==='cancel'){delete state.costPriceEdits[key];renderCostMode();return;}
+      if(priceAction==='save'){
+        var row=priceButton.closest('[data-cost-material-row]'),size=validCostInteger(row.querySelector('[data-cost-price-field="packSize"]').value,false,true),price=validCostInteger(row.querySelector('[data-cost-price-field="packPrice"]').value,false,false);
+        if(size===false||!size||price===false||row.querySelector('[data-cost-price-field="packPrice"]').value.trim()===''){showCostError('每包数量须为正整数，每包元宝须为非负整数；原价格尚未修改。');return;}
+        var previous={packSize:material.packSize,packPrice:material.packPrice};material.packSize=size;material.packPrice=price;
+        if(!saveCostState()){material.packSize=previous.packSize;material.packPrice=previous.packPrice;showCostError(state.costError);return;}
+        delete state.costPriceEdits[key];state.costOutcome=null;renderCostMode();return;
+      }
+    }
     var actionButton = event.target.closest('[data-cost-action]');
     if (!actionButton || !state.cost) return;
     var action = actionButton.dataset.costAction;
@@ -938,6 +959,7 @@
     if (!text) return allowBlank ? null : 0;
     if (!/^\d+$/.test(text)) return false;
     var number = Number(text);
+    if(!Number.isSafeInteger(number))return false;
     if (positive && number <= 0) return false;
     return number;
   }
@@ -945,6 +967,7 @@
   function handleCostModeChange(event) {
     var control = event.target;
     if (!state.cost) return;
+    if(control.matches('[data-cost-price-field]')){var draft=state.costPriceEdits[control.dataset.costPriceKey];if(draft)draft[control.dataset.costPriceField]=control.value;return;}
     if (control.matches('[data-cost-selected]')) {
       state.cost.selected[control.dataset.costSelected] = control.checked;
       saveAndRenderCost();

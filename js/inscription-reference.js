@@ -39,16 +39,23 @@
       return {attr:term.attr,tier:term.tier,value:Progress.value(term, quality, dun),origins:origins};
     }));
   }
-  function upgradeRows(dun, fromQuality) {
+  function upgradeRows(dun, fromQuality, toQuality) {
     var recipe = Rules.recipes[fromQuality];
     if (!recipe) return [];
-    var target = Progress.termsFor(dun, recipe.quality, 'crafted');
+    var destination=toQuality||recipe.quality,reachable=upgradeDestinations(fromQuality);
+    if(!reachable.some(function(q){return q.id===destination;}))return [];
+    var target = Progress.termsFor(dun, destination, 'crafted');
     return termRows(dun, fromQuality).map(function (row) {
       var possible = target.filter(function (term) {
         return term.attr === row.attr && (row.tier === '?' ? term.tier === 'H' || term.tier === 'M' : term.tier === row.tier);
-      }).map(function (term) { return {tier:term.tier,value:Progress.value(term, recipe.quality, dun)}; });
-      return {attr:row.attr,tier:row.tier,value:row.value,toQuality:recipe.quality,possibilities:possible};
+      }).map(function (term) { return {tier:term.tier,value:Progress.value(term, destination, dun)}; });
+      return {attr:row.attr,tier:row.tier,value:row.value,toQuality:destination,possibilities:possible};
     }).filter(function (row) { return row.possibilities.length; });
+  }
+  function upgradeDestinations(from){
+    var result=[],recipe=Rules.recipes[from];
+    while(recipe){result.push({id:recipe.quality,label:qualityLabel(recipe.quality)});recipe=Rules.recipes[recipe.quality];}
+    return result;
   }
   function compareRows(leftDun,leftQuality,rightDun,rightQuality){
     var left=termRows(leftDun,leftQuality),right=termRows(rightDun,rightQuality),rows=new Map();
@@ -56,7 +63,7 @@
     return Terms.sortEntries(Array.from(rows.values()).map(function(row){
       var a=left.find(function(t){return t.attr===row.attr&&t.tier===row.tier;})||null,b=right.find(function(t){return t.attr===row.attr&&t.tier===row.tier;})||null;
       var meta=Rules.attributes.find(function(t){return t.id===row.attr;});
-      return {attr:row.attr,tier:row.tier,left:a,right:b,delta:a&&b?b.value-a.value:null,unit:meta&&meta.unit==='%'?'百分点':'',value:Math.max(a?a.value:-Infinity,b?b.value:-Infinity)};
+      return {attr:row.attr,tier:row.tier,left:a,right:b,delta:a&&b?b.value-a.value:null,unit:meta&&meta.unit==='%'?'%':'',value:Math.max(a?a.value:-Infinity,b?b.value:-Infinity)};
     }));
   }
   function qualityLabel(id) { var row = tierData.find(function (entry) { return entry.id === id; }); return row ? row.label : id; }
@@ -91,13 +98,17 @@
     var panels=pairs.map(function(pair){var dun=Rules.duns.find(function(d){return d.id===pair.dun;});
       return '<article class="ins-ref-quality-panel" data-ref-quality-panel="'+pair.q+'"'+(pairs.length===2?' data-ref-compare-panel':'')+'><h4>'+qualityHtml(pair.q)+' · '+extreme(dun)+'</h4>'+matrixHtml(pair.dun,pair.q,s)+'</article>';
     }).join('');
-    var diff='';if(pairs.length===2&&s.diff){
-      var a=pairs[0],b=pairs[1];diff='<div data-ref-comparison><h4>右侧减左侧 · 同属性同档位差值</h4>'+wrapTable('两组副属性差值',['属性','档位','差值'],compareRows(a.dun,a.q,b.dun,b.q).filter(function(r){return (r.left&&matches(r.left,s))||(r.right&&matches(r.right,s));}).map(function(r){
-        var visibleLeft=r.left&&matches(r.left,s),visibleRight=r.right&&matches(r.right,s),delta=visibleLeft&&visibleRight?r.delta:null;
-        return '<tr><th scope="row">'+esc(r.attr)+'</th><td>'+esc(Terms.tierLabel(r.tier))+'</td><td>'+(delta===null?'—':esc((delta>0?'+':'')+delta+(r.unit?' '+r.unit:'')))+'</td></tr>';
-      }).join(''))+'</div>';
-    }
-    return '<div class="ins-ref-panels'+(pairs.length===2?' is-comparison':'')+'">'+panels+'</div>'+diff;
+    return '<div class="ins-ref-panels'+(pairs.length===2?' is-comparison':'')+'">'+panels+'</div>'+otherDunsHtml(s);
+  }
+  function otherDunsHtml(s){
+    if(!s.keyword.trim())return '';
+    var qualities=s.all?tierData.map(function(q){return q.id;}):s.mode==='quality'?Array.from(new Set([s.quality,s.quality2])):[s.quality];
+    var groups=Rules.duns.filter(function(d){return d.id!==s.dun&&(s.mode!=='dun'||d.id!==s.dun2);}).map(function(d){
+      var rows=qualities.filter(function(q){return termRows(d.id,q).some(function(r){return matches(r,s);});});return {dun:d,qualities:rows};
+    }).filter(function(group){return group.qualities.length;});
+    return '<section class="ins-ref-other-duns"><button type="button" class="seg" data-ref-other-toggle aria-expanded="'+!!s.showOther+'">'+(s.showOther?'收起其他遁位':'查看其他遁位')+'（'+groups.length+'）</button><div data-ref-other-results'+(s.showOther?'':' hidden')+'>'+(s.showOther?(groups.map(function(group){
+      return '<article class="ins-ref-quality-panel"><h4>'+extreme(group.dun)+'</h4>'+group.qualities.map(function(q){return '<h5>'+qualityHtml(q)+'</h5>'+matrixHtml(group.dun.id,q,s);}).join('')+'</article>';
+    }).join('')||'<p class="muted-tip">其他遁位没有符合当前关键词、品质和来源的词条。</p>'):'')+'</div></section>';
   }
   function washHtml() {
     return '<div class="ins-ref-wash-grid">' + Rules.duns.map(function (dun) {
@@ -107,11 +118,10 @@
   function washOnlyRows(dun) {
     return termRows(dun,'p2','wash').filter(function(row){return row.origins.indexOf('crafted')<0;});
   }
-  function upgradeHtml(dun, from,diff) {
-    var recipe = Rules.recipes[from];
-    return wrapTable('同档成长对照', ['属性','档位','升级前 · ' + qualityHtml(from),'升级后 · ' + qualityHtml(recipe.quality)].concat(diff?['成长差值']:[]), upgradeRows(dun, from).map(function (row) {
-      var unit=Rules.attributes.find(function(a){return a.id===row.attr;}).unit==='%'?'百分点':'';
-      return '<tr data-ref-upgrade-row="' + esc(row.attr + ':' + row.tier) + '"><th scope="row">' + esc(row.attr) + '</th><td>'+esc(Terms.tierLabel(row.tier))+'</td><td>' + amountHtml(row,from) + '</td><td><div class="ins-ref-terms">' + row.possibilities.map(function (next) { return amountHtml({attr:row.attr,value:next.value},recipe.quality)+(row.tier==='?'?'<small class="ins-ref-origin">'+esc(Terms.tierLabel(next.tier))+'</small>':''); }).join('<span class="ins-ref-or">或</span>') + '</div></td>'+(diff?'<td>'+row.possibilities.map(function(n){return esc('+'+(n.value-row.value)+(unit?' '+unit:''));}).join(' 或 ')+'</td>':'')+'</tr>';
+  function upgradeHtml(dun, from,to,diff) {
+    return wrapTable('同档成长对照', ['属性','档位','升级前 · ' + qualityHtml(from),'升级后 · ' + qualityHtml(to)].concat(diff?['成长差值']:[]), upgradeRows(dun, from,to).map(function (row) {
+      var unit=Rules.attributes.find(function(a){return a.id===row.attr;}).unit==='%'?'%':'';
+      return '<tr data-ref-upgrade-row="' + esc(row.attr + ':' + row.tier) + '"><th scope="row">' + esc(row.attr) + '</th><td>'+esc(Terms.tierLabel(row.tier))+'</td><td>' + amountHtml(row,from) + '</td><td><div class="ins-ref-terms">' + row.possibilities.map(function (next) { return amountHtml({attr:row.attr,value:next.value},to)+(row.tier==='?'?'<small class="ins-ref-origin">'+esc(Terms.tierLabel(next.tier))+'</small>':''); }).join('<span class="ins-ref-or">或</span>') + '</div></td>'+(diff?'<td>'+row.possibilities.map(function(n){var delta=n.value-row.value;return esc((delta>0?'+':'')+delta+unit);}).join(' 或 ')+'</td>':'')+'</tr>';
     }).join(''));
   }
   function foundationHtml(s) {
@@ -125,23 +135,24 @@
         return '<td class="ins-ref-quality-' + row.id + '">' + Terms.mainHtml(mainStats(prefix,row.id).map(function (entry) { return entry.attr + '+' + entry.value; }).join('、'),row.id) + '</td>';
       }).join('') + '</tr>';
     }).join(''), 'ins-ref-main-overview');
-    var main=s.mode==='quality'?wrapTable('两品质天位主属性对比',['天位','属性',qualityHtml(s.quality),qualityHtml(s.quality2)].concat(s.diff?['差值']:[]),Rules.prefixes.map(function(prefix){
-      return mainStats(prefix,s.quality).map(function(a,i){var b=mainStats(prefix,s.quality2)[i];return '<tr><th scope="row">'+esc(prefix)+'</th><td>'+esc(a.attr)+'</td><td>'+Terms.valueHtml(a.value,s.quality)+'</td><td>'+Terms.valueHtml(b.value,s.quality2)+'</td>'+(s.diff?'<td>'+esc((b.value-a.value>0?'+':'')+(b.value-a.value))+'</td>':'')+'</tr>';}).join('');
+    var main=s.mode==='quality'?wrapTable('两品质天位主属性对比',['天位','属性',qualityHtml(s.quality),qualityHtml(s.quality2)],Rules.prefixes.map(function(prefix){
+      return mainStats(prefix,s.quality).map(function(a,i){var b=mainStats(prefix,s.quality2)[i];return '<tr><th scope="row">'+esc(prefix)+'</th><td>'+esc(a.attr)+'</td><td>'+Terms.valueHtml(a.value,s.quality)+'</td><td>'+Terms.valueHtml(b.value,s.quality2)+'</td></tr>';}).join('');
     }).join(''),'ins-ref-main-table'):wrapTable('五天位主属性',['天位','主属性一','主属性二'],Rules.prefixes.map(function(prefix){return '<tr><th scope="row">'+esc(prefix)+'</th>'+mainStats(prefix,s.quality).map(function(a){return '<td>'+Terms.valueHtml(a.value+a.attr,s.quality)+'</td>';}).join('')+'</tr>';}).join(''),'ins-ref-main-table');
-    return summary + '<h4>天位主属性</h4><div class="ins-ref-controls"><label>查看方式<select data-ref-main-mode>'+options([{id:'single',label:'单项查看'},{id:'quality',label:'双品质对比'}],s.mode)+'</select></label><label>品质<select data-ref-main-quality>'+options(tierData,s.quality)+'</select></label>'+(s.mode==='quality'?'<label>对比品质<select data-ref-main-quality2>'+options(tierData,s.quality2)+'</select></label><label><input type="checkbox" data-ref-main-diff'+(s.diff?' checked':'')+'>显示差值</label>':'')+'</div>'+main+'<details class="ins-ref-overview"><summary>查看全部品质主属性总览</summary>'+full+'</details>';
+    return summary + '<h4>天位主属性</h4><div class="ins-ref-controls"><label>查看方式<select data-ref-main-mode>'+options([{id:'single',label:'单项查看'},{id:'quality',label:'双品质对比'}],s.mode)+'</select></label><label>品质<select data-ref-main-quality>'+options(tierData,s.quality)+'</select></label>'+(s.mode==='quality'?'<label>对比品质<select data-ref-main-quality2>'+options(tierData,s.quality2)+'</select></label>':'')+'</div>'+main+'<details class="ins-ref-overview"><summary>查看全部品质主属性总览</summary>'+full+'</details>';
   }
   function options(rows, selected) { return rows.map(function (row) { return '<option value="' + esc(row.id) + '"' + (row.id === selected ? ' selected' : '') + '>' + esc(row.label || row.id) + '</option>'; }).join(''); }
   function render(host) {
     if (!host) return;
-    var state = host._insRefState || {tab:'current',current:{quality:'o2',quality2:'p2',all:false,dun:'天遁',dun2:'地遁',mode:'single',diff:false,source:'',keyword:''},upgrade:{dun:'天遁',from:'p1',diff:false},foundation:{quality:'o2',quality2:'p2',mode:'single',diff:false}};
+    var state = host._insRefState || {tab:'current',current:{quality:'o2',quality2:'p2',all:false,dun:'天遁',dun2:'地遁',mode:'single',source:'',keyword:'',showOther:false},upgrade:{dun:'天遁',from:'p1',to:'p2',diff:false},foundation:{quality:'o2',quality2:'p2',mode:'single'}};
     host._insRefState = state;
-    var current=state.current,u=state.upgrade,body='';
+    var current=state.current,u=state.upgrade,body='',destinations=upgradeDestinations(u.from);
+    if(!destinations.some(function(q){return q.id===u.to;}))u.to=destinations[0].id;
     if(state.tab==='current')body='<h3>遁位副属性与来源</h3><div class="ins-ref-controls"><label>查看方式<select data-ref-mode>'+options([{id:'single',label:'单项查看'},{id:'quality',label:'双品质对比'},{id:'dun',label:'双遁位对比'}],current.mode)+'</select></label><label>品质<select data-ref-quality>'+options(tierData,current.quality)+'</select></label><label>遁位<select data-ref-dun>'+options(Rules.duns,current.dun)+'</select></label>'+
       (current.mode==='quality'?'<label>对比品质<select data-ref-quality2>'+options(tierData,current.quality2)+'</select></label>':'')+(current.mode==='dun'?'<label>对比遁位<select data-ref-dun2>'+options(Rules.duns,current.dun2)+'</select></label>':'')+
-      (current.mode==='single'?'<label class="ins-ref-check"><input type="checkbox" data-ref-all'+(current.all?' checked':'')+'>展示全部品质</label>':'<label class="ins-ref-check"><input type="checkbox" data-ref-diff'+(current.diff?' checked':'')+'>显示差值</label>')+
+      (current.mode==='single'?'<label class="ins-ref-check"><input type="checkbox" data-ref-all'+(current.all?' checked':'')+'>展示全部品质</label>':'')+
       '<label>来源<select data-ref-source>'+options([{id:'',label:'全部来源'},{id:'wash',label:'可洗练'},{id:'crafted',label:'可合成'}],current.source)+'</select></label><label>属性关键词<input type="search" data-ref-keyword value="'+esc(current.keyword)+'" placeholder="如：技能穿透"></label></div><p class="muted-tip">每格是单条词条，不代表可任意组合；同属性同档位不可重复，每枚最多两条高档。蓝色速度档位不可辨；— 表示此处没有已知合法词条，不视为0。</p><div data-ref-current>'+currentHtml(current)+'</div>';
     if(state.tab==='wash')body='<h3>紫二 · 仅能通过洗练获得的词条</h3><p class="muted-tip">不能定向合成的词条，遇到可保留；每枚紫二仍需两条合法词条。本表不是整枚组合清单。</p>'+washHtml();
-    if(state.tab==='upgrade')body='<h3>升级同档成长对照</h3><div class="ins-ref-controls"><label>遁位<select data-ref-upgrade-dun>'+options(Rules.duns,u.dun)+'</select></label><label>升级前品质<select data-ref-upgrade-from>'+options(Rules.qualities.filter(function(q){return Rules.recipes[q.id];}),u.from)+'</select></label><label><input type="checkbox" data-ref-upgrade-diff'+(u.diff?' checked':'')+'>显示差值</label></div><p class="muted-tip">沿真实同档成长，不按下一个更大数值猜档。蓝二速度列出可继承的可能情况，不推测档位或概率；本表不是完整投料配方。</p><div data-ref-upgrades>'+upgradeHtml(u.dun,u.from,u.diff)+'</div>';
+    if(state.tab==='upgrade')body='<h3>升级同档成长对照</h3><div class="ins-ref-controls"><label>遁位<select data-ref-upgrade-dun>'+options(Rules.duns,u.dun)+'</select></label><label>升级前品质<select data-ref-upgrade-from>'+options(Rules.qualities.filter(function(q){return Rules.recipes[q.id];}),u.from)+'</select></label><label>升级后品质<select data-ref-upgrade-to>'+options(destinations,u.to)+'</select></label><label><input type="checkbox" data-ref-upgrade-diff'+(u.diff?' checked':'')+'>显示差值</label></div><p class="muted-tip">沿真实同档成长，不按下一个更大数值猜档。蓝二速度列出可继承的可能情况，不推测档位或概率；本表不是完整投料配方。</p><div data-ref-upgrades>'+upgradeHtml(u.dun,u.from,u.to,u.diff)+'</div>';
     if(state.tab==='foundation')body='<h3>品质与材料</h3><p class="muted-tip">主属性单值乘各天位固定倍率。分解与置换数值仅作资料，不扣除库存；绿一无法置换。</p><div data-ref-foundation>'+foundationHtml(state.foundation)+'</div>';
     host.innerHTML='<div class="ins-ref-tabs" role="group" aria-label="资料类别">'+[{id:'current',label:'副属性与来源'},{id:'wash',label:'紫二仅洗练词条'},{id:'upgrade',label:'升级同档成长'},{id:'foundation',label:'品质与材料'}].map(function(tab){return '<button type="button" class="seg'+(state.tab===tab.id?' active':'')+'" data-ref-tab="'+tab.id+'" aria-pressed="'+(state.tab===tab.id)+'">'+tab.label+'</button>';}).join('')+'</div><section class="ins-reference-block ins-ref-section">'+body+'</section>';
     if (!host._insRefBound) {
@@ -153,21 +164,25 @@
         else if(t.matches('[data-ref-dun]'))c.dun=t.value;
         else if(t.matches('[data-ref-dun2]'))c.dun2=t.value;
         else if(t.matches('[data-ref-source]'))c.source=t.value;
-        else if(t.matches('[data-ref-keyword]'))c.keyword=t.value;
+        else if(t.matches('[data-ref-keyword]')){
+          // input already refreshed the results. Replacing the button during
+          // blur/change would cancel the first click on “查看其他遁位”.
+          if(c.keyword!==t.value){c.keyword=t.value;host.querySelector('[data-ref-current]').innerHTML=currentHtml(c);}
+          return;
+        }
         else if(t.matches('[data-ref-all]')){c.all=t.checked;c.mode='single';}
-        else if(t.matches('[data-ref-diff]'))c.diff=t.checked;
         else if(t.matches('[data-ref-upgrade-dun]'))s.upgrade.dun=t.value;
-        else if(t.matches('[data-ref-upgrade-from]'))s.upgrade.from=t.value;
+        else if(t.matches('[data-ref-upgrade-from]')){s.upgrade.from=t.value;s.upgrade.to=upgradeDestinations(t.value)[0].id;}
+        else if(t.matches('[data-ref-upgrade-to]'))s.upgrade.to=t.value;
         else if(t.matches('[data-ref-upgrade-diff]'))s.upgrade.diff=t.checked;
         else if(t.matches('[data-ref-main-mode]'))s.foundation.mode=t.value;
         else if(t.matches('[data-ref-main-quality]'))s.foundation.quality=t.value;
         else if(t.matches('[data-ref-main-quality2]'))s.foundation.quality2=t.value;
-        else if(t.matches('[data-ref-main-diff]'))s.foundation.diff=t.checked;
         else return;
         render(host);
       });
       host.addEventListener('input',function(e){if(e.target.matches('[data-ref-keyword]')){host._insRefState.current.keyword=e.target.value;host.querySelector('[data-ref-current]').innerHTML=currentHtml(host._insRefState.current);}});
-      host.addEventListener('click',function(e){var button=e.target.closest('[data-ref-tab]');if(button){host._insRefState.tab=button.dataset.refTab;render(host);}});
+      host.addEventListener('click',function(e){var button=e.target.closest('[data-ref-tab]');if(button){host._insRefState.tab=button.dataset.refTab;render(host);}else if(e.target.closest('[data-ref-other-toggle]')){var c=host._insRefState.current;c.showOther=!c.showOther;host.querySelector('[data-ref-current]').innerHTML=currentHtml(c);}});
       host._insRefBound = true;
     }
   }

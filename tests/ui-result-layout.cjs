@@ -66,7 +66,9 @@ for (const width of [390, 900, 1440]) {
         return progress.bottom <= result.top && result.bottom <= calculator.top;
       }));
       await page.locator('[data-reference-mode="all"]').click();
-      const lines = await page.locator('.tactics-mantra-fragment').evaluateAll(nodes => nodes.map(node => {
+      const presentation = page.locator('[data-reference-presentation]');
+      if (await presentation.isVisible()) await presentation.click();
+      const lines = await page.locator('.tactics-reference-table .tactics-mantra-fragment').evaluateAll(nodes => nodes.map(node => {
         const range = document.createRange();
         range.selectNodeContents(node);
         return { text: node.textContent, lines: new Set(Array.from(range.getClientRects(), r => r.top)).size };

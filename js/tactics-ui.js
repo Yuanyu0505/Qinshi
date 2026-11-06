@@ -625,6 +625,11 @@
   }
 
   function handleReferenceClick(event) {
+    if (event.target.closest('[data-reference-presentation]')) {
+      el.reference.classList.toggle('show-comparison-table');
+      renderReference();
+      return;
+    }
     var button = event.target.closest("button[data-action=\"set-reference-mode\"]");
     if (!button || !el.reference.contains(button)) return;
     var mode = button.dataset.referenceMode;
@@ -767,6 +772,17 @@
         ? standardReferenceRowHtml(tactic, row, currentRank, targetRank)
         : specialReferenceRowHtml(tactic, row, currentRank, targetRank);
     }).join("") + "</tbody></table></div>";
+    var template = document.createElement('template');
+    template.innerHTML = html;
+    var table = template.content.querySelector('.tactics-reference-table');
+    if (table) {
+      html += '<div class="tactics-reference-cards">' + Array.from(table.tBodies[0].rows).map(function (row) {
+        return '<details class="tactics-reference-card ' + row.className + '"' + (row.className ? ' open' : '') + '><summary>' + row.cells[0].innerHTML + '</summary><dl>' + Array.from(row.cells).slice(1).map(function (cell, index) {
+          return '<div><dt>' + escapeHtml(headings[index + 1]) + '</dt><dd>' + cell.innerHTML + '</dd></div>';
+        }).join('') + '</dl></details>';
+      }).join('') + '</div>';
+      html = html.replace('</h2>', '</h2><button type="button" class="seg tactics-reference-presentation" data-reference-presentation aria-pressed="' + el.reference.classList.contains('show-comparison-table') + '">' + (el.reference.classList.contains('show-comparison-table') ? '逐阶卡片' : '完整对比表') + '</button>');
+    }
     el.reference.innerHTML = html;
   }
 

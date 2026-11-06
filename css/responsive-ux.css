@@ -1,0 +1,48 @@
+/* Shared responsive presentation. Keep business modules' layouts and data intact. */
+.responsive-partition-jump, .responsive-filter-toggle, .responsive-back-top,
+.tactics-reference-cards, .tactics-reference-presentation { display: none; }
+.responsive-back-top[hidden] { display: none !important; }
+#app input[type="number"], #app td { font-variant-numeric: tabular-nums; }
+@media (max-width: 1024px) {
+  #app .muted-tip, #app .filter-label, #app .pilots-category-notes { font-size: 14px; line-height: 1.65; }
+  [role="dialog"], dialog { max-height: calc(100dvh - 24px); overflow-y: auto; overscroll-behavior: contain; }
+}
+@media (min-width: 768px) and (max-width: 1366px) {
+  header.top { flex-wrap: wrap; }
+  .responsive-partition-jump { display: flex; align-items: center; gap: 10px; flex: 1 0 100%; font-size: 14px; color: var(--muted); }
+  .responsive-partition-jump select { flex: 1; min-width: 0; min-height: 44px; font-size: 16px; padding: 8px 12px; }
+}
+@media (min-width: 768px) {
+  #partition-tactics .tactics-calculator-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; }
+  #partition-tactics .tactics-calculator-side .tactics-form-grid { grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr)); }
+}
+@media (max-width: 767px), (max-height: 500px) and (orientation: landscape) {
+  .responsive-filter-toggle { display: block; width: 100%; min-height: 44px; margin-bottom: 12px; }
+  .responsive-filters-collapsed .responsive-filter-body { display: none; }
+  .responsive-filters-collapsed .responsive-filter-toggle { margin-bottom: 0; }
+  .responsive-back-top:not([hidden]) { display: block; position: fixed; right: 12px; bottom: calc(76px + env(safe-area-inset-bottom)); z-index: 85; min-height: 44px; background: var(--bg2); }
+  .tabs .tab, .mobile-more-toggle { font-size: 12px; min-width: 0; padding-inline: 3px; }
+  input[type="date"] { color-scheme: dark; font-size: 16px; min-width: 0; max-width: 100%; }
+}
+@media (max-width: 1440px) {
+  .craft-flow-viewport { max-height: min(68vh, 720px); max-height: min(68dvh, 720px); }
+  .craft-flow-toolbar { position: sticky; top: 0; z-index: 5; }
+}
+#partition-tactics .tactics-reference-cards { gap: 12px; }
+#partition-tactics .tactics-reference-card { border: 1px solid var(--line); border-radius: 8px; padding: 12px; min-width: 0; background: var(--bg2); }
+#partition-tactics .tactics-reference-card summary { min-height: 44px; cursor: pointer; font-size: 16px; font-weight: 600; }
+#partition-tactics .tactics-reference-card dl { margin: 8px 0 0; }
+#partition-tactics .tactics-reference-card dl > div { display: grid; grid-template-columns: 95px minmax(0,1fr); gap: 12px; border-top: 1px solid var(--line); padding: 10px 0; }
+#partition-tactics .tactics-reference-card dt { color: var(--muted); }
+#partition-tactics .tactics-reference-card dd { margin: 0; line-height: 1.65; overflow-wrap: anywhere; }
+#partition-tactics .tactics-reference-card .tactics-mantra-fragment { white-space: normal; }
+#partition-tactics .tactics-reference-card.is-current { border-left: 4px solid #35d06f; color: #35d06f; }
+#partition-tactics .tactics-reference-card.is-target { border-left: 4px solid #ff4b4b; color: #ff4b4b; }
+@media (max-width: 600px) {
+  #partition-tactics .tactics-reference-presentation { display: inline-block; }
+  #partition-tactics #tactics-reference:not(.show-comparison-table) .tactics-table-scroll { display: none; }
+  #partition-tactics #tactics-reference:not(.show-comparison-table) .tactics-reference-cards { display: grid; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; }
+}

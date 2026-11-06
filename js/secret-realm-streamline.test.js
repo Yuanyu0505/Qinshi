@@ -26,7 +26,7 @@ test('daily planning uses entered period totals, not hidden today markers',()=>{
   assert.equal(state.realms.guigu.periods[6].sources.pack6.todayDate,null);
   assert.equal(Core.buildPlanningInput(state,'guigu',now,Data).periods[0].sources.find(s=>s.id==='pack6').maxPurchases,4);
 });
-test('cash is rounded up once at total level and apportioned as integer rows and periods',()=>{
+test('legacy whole-yuan budget allocation remains compatible while cash details are independent',()=>{
   const result=Planner.plan({cumulative:0,inventory:0,target:2,discount:4.3,vouchers:0,useVouchers:true,periods:[
     {number:1,sources:[{id:'a',name:'A',draws:1,price:98,maxPurchases:1,availableDraws:0}]},
     {number:2,sources:[{id:'b',name:'B',draws:1,price:98,maxPurchases:1,availableDraws:0}]}
@@ -34,4 +34,7 @@ test('cash is rounded up once at total level and apportioned as integer rows and
   assert.equal(result.valid,true);assert.equal(result.cheapest.totalAfter,85);
   assert.deepEqual(result.cheapest.periods.map(p=>p.after),[43,42]);
   assert.equal(result.cheapest.periods.flatMap(p=>p.rows).reduce((n,r)=>n+r.after,0),85);
+  assert.deepEqual(result.cheapest.periods.map(p=>p.discountedCash),[42.14,42.14]);
+  assert.equal(result.cheapest.discountedCash,84.28);
+  assert.equal(result.cheapest.roundingAdjustment,0.72);
 });

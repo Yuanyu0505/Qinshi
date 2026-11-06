@@ -44,6 +44,14 @@
   }
   function cash(cents, discount) { return safe(cashExact(cents, discount), '折后金额'); }
 
+  // Independent monetary detail, rounded half-up to cents. Never use the
+  // chronological whole-yuan budget allocation as a row/period's actual cash.
+  function discountedCash(cents, discount) {
+    const numerator = BigInt(cents) * discount.numerator;
+    const denominator = discount.denominator * 10n;
+    return safe((2n * numerator + denominator) / (2n * denominator), '折后明细金额');
+  }
+
   function validate(input) {
     if (!input || typeof input !== 'object' || Array.isArray(input)) fail('规划输入无效');
     const cumulative = integer(input.cumulative, '累计抽数');
@@ -160,6 +168,8 @@
     }
     if (candidate.unlimitedCount) counts.set(candidate.unlimited.index, candidate.unlimitedCount);
     let vouchersLeft = data.vouchers;
+    // Retain legacy `after` budget allocations for consumers; UI cash details
+    // exclusively use `discountedCash` and never display these allocations.
     let totalRemaining = 0;
     let previousCash = 0;
     const periods = data.periods.slice(0, candidate.last + 1).map(period => {
@@ -183,14 +193,17 @@
         after += rowAfter;
         return { id: source.id, name: source.name, availableDraws: source.availableDraws,
           directCurrency: source.availableCurrency + purchases * source.purchaseCurrency,
-          purchases, draws: rowDraws, before: rowBefore / 100, voucherUsed: voucher / 100, after: rowAfter / 100 };
+          purchases, draws: rowDraws, before: rowBefore / 100, voucherUsed: voucher / 100, after: rowAfter / 100,
+          discountedCash: discountedCash(rowBefore - voucher, data.discount) / 100 };
       });
       return { number: period.number, draws, before: before / 100, voucherUsed: voucherUsed / 100,
-        after: after / 100, rows };
+        after: after / 100, discountedCash: discountedCash(before - voucherUsed, data.discount) / 100, rows };
     });
+    const actualCash = discountedCash(candidate.before - candidate.voucher, data.discount);
     return { reachPeriod: candidate.number, availableTotal: candidate.total, surplus: candidate.surplus,
       totalBefore: candidate.before / 100, voucherUsed: candidate.voucher / 100,
-      totalAfter: candidate.after / 100, periods };
+      totalAfter: candidate.after / 100, discountedCash: actualCash / 100,
+      roundingAdjustment: (candidate.after - actualCash) / 100, periods };
   }
 
   // Draws and direct gifts are independent resources. Enumerate the small
@@ -215,7 +228,7 @@
       if (better(candidate,cheapest,'cheapest')) cheapest=candidate;
     }
     if (BigInt(freeTickets)>=needDraws && BigInt(freeTickets)+BigInt(freeCurrency)>=needCurrency) {
-      return {fastest:{reachPeriod:null,availableTotal:data.base,surplus:data.base-data.target,totalBefore:0,voucherUsed:0,totalAfter:0,periods:[]},cheapest:{reachPeriod:null,availableTotal:data.base,surplus:data.base-data.target,totalBefore:0,voucherUsed:0,totalAfter:0,periods:[]},maxReachable:data.base,shortfall:0,currencyShortfall:0};
+      return {fastest:{reachPeriod:null,availableTotal:data.base,surplus:data.base-data.target,totalBefore:0,voucherUsed:0,totalAfter:0,discountedCash:0,roundingAdjustment:0,periods:[]},cheapest:{reachPeriod:null,availableTotal:data.base,surplus:data.base-data.target,totalBefore:0,voucherUsed:0,totalAfter:0,discountedCash:0,roundingAdjustment:0,periods:[]},maxReachable:data.base,shortfall:0,currencyShortfall:0};
     }
     data.periods.forEach((period,last)=>{
       period.sources.forEach(source=>{
@@ -294,7 +307,7 @@
         maxReachable: data.maxReachable, shortfall: 0 };
       if (data.base >= data.target) {
         const empty = { reachPeriod: null, availableTotal: data.base, surplus: data.base - data.target,
-          totalBefore: 0, voucherUsed: 0, totalAfter: 0, periods: [] };
+          totalBefore: 0, voucherUsed: 0, totalAfter: 0, discountedCash: 0, roundingAdjustment: 0, periods: [] };
         result.fastest = empty;
         result.cheapest = { ...empty, periods: [] };
         drawDetails(result.fastest,data);drawDetails(result.cheapest,data);return result;

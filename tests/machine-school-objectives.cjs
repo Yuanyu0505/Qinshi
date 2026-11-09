@@ -22,6 +22,7 @@ async function enter(page) {
   } else await page.locator('.tab[data-partition="machine-beasts"]').click();
   await page.locator('[data-machine-beast-mode="calculator"]').click();
   await page.locator('[data-machine-calculator-mode="school"]').click();
+  await page.locator('#machine-price-settings > summary').click();
 }
 async function scenario(run, width = 1100) {
   const context = await browser.newContext({ viewport: { width, height: 1000 }, serviceWorkers: 'block' });

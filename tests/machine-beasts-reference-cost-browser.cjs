@@ -39,6 +39,7 @@ async function enter(page) {
     await page.locator('#mobile-more-layer [data-partition="machine-beasts"]').click();
   } else await page.locator('.tab[data-partition="machine-beasts"]').click();
   await page.locator('[data-machine-beast-mode="calculator"]').click();
+  await page.locator('#machine-price-settings > summary').click();
 }
 
 async function waitForCalculation(page, resultKey) {
@@ -108,6 +109,9 @@ async function calculateFixedSchool(page) {
 }
 
 async function assertReferenceCostPresentation(page) {
+  await page.locator('[data-reference-cost-panel]').evaluateAll(panels => panels.forEach(panel => {
+    for (let node = panel.parentElement; node; node = node.parentElement) if (node.tagName === 'DETAILS') node.open = true;
+  }));
   const totals = await page.locator('[data-reference-cost-total]').evaluateAll(nodes => nodes.map(node => getComputedStyle(node).color));
   assert.ok(totals.length > 0, 'complete plans must expose a reference total');
   assert.deepEqual(totals, totals.map(() => 'rgb(255, 107, 99)'));
@@ -149,6 +153,7 @@ async function assertReferenceCostPresentation(page) {
 
 async function assertVisibleWithoutOverflow(page, selector) {
   const locator = page.locator(selector).first();
+  await locator.evaluate(element => { for (let node = element; node; node = node.parentElement) if (node.tagName === 'DETAILS') node.open = true; });
   await locator.scrollIntoViewIfNeeded();
   assert.equal(await locator.isVisible(), true, selector + ' must be visible');
   const dimensions = await locator.evaluate(node => ({

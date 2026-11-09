@@ -945,7 +945,7 @@ test("首页提供机关兽个人进度、方案计算、资料图表及其三�
 test("机关兽方案计算提供单只与目标流派阶数子页面", () => {
   const html = fs.readFileSync(path.join(__dirname, "index.html"), "utf8");
   const ui = fs.readFileSync(path.join(__dirname, "js", "machine-beasts-ui.js"), "utf8");
-  const css = fs.readFileSync(path.join(__dirname, "css", "style.css"), "utf8");
+  const css = fs.readFileSync(path.join(__dirname, "css", "machine-beasts.css"), "utf8");
   assert.match(html, /data-machine-calculator-mode="single"[^>]*>单只机关兽/);
   assert.match(html, /data-machine-calculator-mode="school"[^>]*>目标流派阶数/);
   assert.match(ui, /使用已有库存/);
@@ -961,13 +961,13 @@ test("机关兽方案计算提供单只与目标流派阶数子页面", () => {
   assert.match(css, /\.machine-owned-inventory-grid/);
   assert.match(css, /\.machine-school-calculator-grid/);
   assert.match(css, /\.machine-school-plan-summary/);
-  assert.match(css, /\.machine-new-rank-mode\s*\{[\s\S]*?flex-wrap:\s*nowrap/);
-  assert.match(css, /\.machine-new-rank-mode label\s*\{[^}]*white-space:\s*nowrap/);
+  assert.match(css, /\.machine-new-rank-mode\s*\{[\s\S]*?flex-wrap:\s*wrap/);
+  assert.match(css, /\.machine-new-rank-mode label\s*\{[^}]*white-space:\s*normal/);
 });
 
 test("机关兽新增投入突出需求，资料图表使用纵向自适应卡片", () => {
   const ui = fs.readFileSync(path.join(__dirname, "js", "machine-beasts-ui.js"), "utf8");
-  const css = fs.readFileSync(path.join(__dirname, "css", "style.css"), "utf8");
+  const css = fs.readFileSync(path.join(__dirname, "css", "machine-beasts.css"), "utf8");
 
   assert.match(ui, /emphasisClass[\s\S]*?"machine-owned-investment"[\s\S]*?"machine-investment-demand"/);
   assert.match(ui, /itemList\(result\.selected\.ownedItems,[\s\S]*?"owned"\)/);
@@ -989,7 +989,7 @@ test("机关兽新增投入突出需求，资料图表使用纵向自适应卡�
 test("机关兽三个页面提供搜索、流派切换、命中高亮和移动端自适应布局", () => {
   const html = fs.readFileSync(path.join(__dirname, "index.html"), "utf8");
   const ui = fs.readFileSync(path.join(__dirname, "js", "machine-beasts-ui.js"), "utf8");
-  const css = fs.readFileSync(path.join(__dirname, "css", "style.css"), "utf8");
+  const css = fs.readFileSync(path.join(__dirname, "css", "machine-beasts.css"), "utf8");
 
   assert.match(ui, /searchBar\("progress"/);
   assert.match(html, /id="machine-beast-calculator-search"/);
@@ -1011,7 +1011,7 @@ test("机关兽三个页面提供搜索、流派切换、命中高亮和移动�
   assert.match(ui, /renderReference\(\)[\s\S]*?beastReference\(\)\s*\+\s*materialReference\(\)\s*\+\s*blueprintGuideReference\(\)\s*\+\s*breakthroughGuideReference\(\)\s*\+\s*schoolReference\(\)\s*\+\s*thresholdReference\(\)\s*\+\s*researchReference\(\)/);
   assert.match(css, /#partition-machine-beasts \.machine-search-bar/);
   assert.match(css, /#partition-machine-beasts \.machine-search-match/);
-  assert.match(css, /@media \(max-width: 1024px\)[\s\S]*?#partition-machine-beasts \.machine-search-bar/);
+  assert.match(css, /@container machine-beasts \(max-width: 640px\)[\s\S]*?#partition-machine-beasts \.machine-search-bar/);
 });
 
 test("全端导航使用当前完整分区顺序", async () => {

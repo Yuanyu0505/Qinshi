@@ -22,6 +22,7 @@ test("reference settings: legacy data receives safe defaults for non-contributio
   const legacy = { ...data };
   delete legacy.referenceCostRules;
   assert.deepEqual(CORE.normalizeReferenceCostSettings(legacy), {
+    bluePurpleInventoryOnly: true,
     awakeningBlueprintStock: 0,
     useAwakeningBlueprintStock: true,
     awakeningBlueprintPrice: 70,
@@ -52,6 +53,7 @@ test("reference settings: accepts zero and numeric inputs, floors stock, exclude
     unrelated: true
   });
   assert.deepEqual(result, {
+    bluePurpleInventoryOnly: true,
     awakeningBlueprintStock: 5,
     useAwakeningBlueprintStock: false,
     awakeningBlueprintPrice: 0,

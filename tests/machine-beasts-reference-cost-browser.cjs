@@ -97,20 +97,12 @@ async function calculateFixedSchool(page) {
   await waitForCalculation(page, 'schoolResult');
   const result = await page.evaluate(() => window.MACHINE_BEAST_UI.captureView().schoolResult);
   assert.equal(result.valid, true);
-  assert.equal(result.plans.length, 1);
-  assert.equal(result.plans[0].kind, 'merged');
-  assert.deepEqual(result.plans[0].beasts.map(item => [item.beastId, item.endLevel, item.resources.fragments]), [
-    ['mechanical-white-tiger', 20, 67], ['mechanical-vermilion-bird', 19, 32]
-  ]);
-  const panel = page.locator('[data-reference-cost-panel="school-0"]');
-  // 288 blueprints * 70 + white tiger 14,889 + vermilion bird 7,112.
-  assert.equal(await panel.locator('[data-reference-cost-total]').textContent(), '42,161');
-  assert.match(await panel.textContent(), /神图费用 20,160/);
-  assert.match(await panel.textContent(), /机关兽已知费用 22,001/);
-  assert.deepEqual(await panel.locator('.machine-reference-cost-beasts li').allTextContents(), [
-    '机关白虎：缺少碎片 67，折算 1.675只，贡献 40,200÷2.7，费用 14,889',
-    '机关朱雀：缺少碎片 32，折算 0.8只，贡献 19,200÷2.7，费用 7,112'
-  ]);
+  assert.equal(result.plans.length, 2);
+  const cheapest = result.plans.find(p => p.kind === 'cost');
+  assert.equal(cheapest.totals.pricedYuan,42160);
+  assert.deepEqual(cheapest.beasts.map(item=>[item.beastId,item.endLevel]),[['mechanical-vermilion-bird',20],['mechanical-white-tiger',19]]);
+  const panel=page.locator('[data-reference-cost-panel="school-0"]');
+  assert.equal(await panel.locator('[data-reference-cost-total]').textContent(),'42,160');
   await assertReferenceCostPresentation(page);
   return result;
 }
@@ -156,7 +148,7 @@ async function assertReferenceCostPresentation(page) {
 }
 
 async function assertVisibleWithoutOverflow(page, selector) {
-  const locator = page.locator(selector);
+  const locator = page.locator(selector).first();
   await locator.scrollIntoViewIfNeeded();
   assert.equal(await locator.isVisible(), true, selector + ' must be visible');
   const dimensions = await locator.evaluate(node => ({
@@ -174,25 +166,18 @@ async function assertVisibleWithoutOverflow(page, selector) {
 
 test('real single plan includes exact blueprint and fragment deficit fees', async () => scenario(calculateFixedSingle));
 
-test('real multi-beast school fees update without rerunning or changing the chosen plan', async () => scenario(async page => {
-  const before = await calculateFixedSchool(page);
-  await page.evaluate(() => {
-    window.__schoolSolveCount = 0;
-    const solve = window.MACHINE_BEAST_SCHOOL_PLANNER.calculateSchoolPlans;
-    window.MACHINE_BEAST_SCHOOL_PLANNER.calculateSchoolPlans = function (...args) {
-      window.__schoolSolveCount++;
-      return solve.apply(this, args);
-    };
-  });
+test('school price changes invalidate the chosen plan and require a new solve', async () => scenario(async page => {
+  await calculateFixedSchool(page);
   await page.locator('[data-reference-cost-field="awakeningBlueprintPrice"]').fill('64');
   await page.locator('[data-reference-cost-field="awakeningBlueprintStock"]').fill('10');
-  const panel = page.locator('[data-reference-cost-panel="school-0"]');
-  assert.equal(await panel.locator('[data-reference-blueprint-missing]').textContent(), '278');
-  assert.equal(await panel.locator('[data-reference-cost-total]').textContent(), '39,793');
-  await page.locator('[data-reference-cost-field="useAwakeningBlueprintStock"]').uncheck();
-  assert.equal(await panel.locator('[data-reference-cost-total]').textContent(), '40,433');
-  assert.deepEqual(await page.evaluate(() => window.MACHINE_BEAST_UI.captureView().schoolResult), before);
-  assert.equal(await page.evaluate(() => window.__schoolSolveCount), 0);
+  assert.equal(await page.evaluate(()=>window.MACHINE_BEAST_UI.captureView().schoolResult),null);
+  await page.locator('[data-machine-action="calculate-school"]').click();
+  await waitForCalculation(page,'schoolResult');
+  const result=await page.evaluate(()=>window.MACHINE_BEAST_UI.captureView().schoolResult);
+  const cost=result.plans.find(p=>p.kind==='cost'||p.kind==='merged').cost;
+  assert.equal(cost.blueprints.usedStock,10);
+  assert.equal(cost.blueprints.yuan,cost.blueprints.missing*64);
+  assert.equal(await page.locator('[data-reference-cost-panel="school-0"] [data-reference-cost-total]').textContent(),cost.totalYuan.toLocaleString('en-US'));
 }));
 
 for (const width of [360, 390, 768, 1100]) {
@@ -307,26 +292,21 @@ test('invalid stock or price replaces old totals and missing manual prices are n
   assert.equal(await page.locator('[data-reference-cost-total]').count(), 1);
 }));
 
-test('each school alternative deducts the same stock once from its own aggregated need', async () => scenario(async page => {
+test('each real school alternative deducts shared stock once from its own aggregated need', async () => scenario(async page => {
+  await calculateFixedSchool(page);
   await page.locator('[data-reference-cost-field="awakeningBlueprintStock"]').fill('10');
-  await page.evaluate(() => {
-    const view = window.MACHINE_BEAST_UI.captureView();
-    function plan(kind, required) {
-      return { kind, totals: { projectedTotalLevel: 45, investedCount: 0, ownedInvestedCount: 0, newInvestedCount: 0, milestoneCount: 0, overflowResearch: 0, awakeningBlueprints: required, organPieces: 0, fragments: 0, contribution: 0, yuan: 0 }, beasts: [] };
-    }
-    view.calculatorMode = 'school';
-    view.schoolResult = { valid: true, current: { totalLevel: 0 }, target: { stage: 1, totalLevel: 45 }, plans: [plan('free', 25), plan('milestone', 30)] };
-    window.MACHINE_BEAST_UI.restoreView(view);
-  });
-  assert.deepEqual(await page.locator('[data-reference-blueprint-stock]').allTextContents(), ['10', '10']);
-  assert.deepEqual(await page.locator('[data-reference-blueprint-missing]').allTextContents(), ['15', '20']);
-  assert.deepEqual(await page.locator('[data-reference-cost-total]').allTextContents(), ['1,050', '1,400']);
-  await assertReferenceCostPresentation(page);
-  assert.equal((await getAccountJson(page, KEY)).referenceCost.awakeningBlueprintStock, 10);
-  await page.locator('[data-reference-cost-field="useAwakeningBlueprintStock"]').uncheck();
-  assert.deepEqual(await page.locator('[data-reference-blueprint-stock]').allTextContents(), ['0', '0']);
-  assert.deepEqual(await page.locator('[data-reference-cost-total]').allTextContents(), ['1,750', '2,100']);
-  await assertReferenceCostPresentation(page);
+  await page.locator('[data-machine-action="calculate-school"]').click();
+  await waitForCalculation(page,'schoolResult');
+  const result=await page.evaluate(()=>window.MACHINE_BEAST_UI.captureView().schoolResult);
+  assert.equal(result.plans.length,2);
+  for(let i=0;i<result.plans.length;i++){
+    const p=result.plans[i],panel=page.locator('[data-reference-cost-panel="school-'+i+'"]');
+    assert.equal(p.cost.blueprints.usedStock,10);
+    assert.equal(p.cost.blueprints.missing,p.totals.awakeningBlueprints-10);
+    assert.equal(await panel.locator('[data-reference-blueprint-stock]').textContent(),'10');
+    assert.equal(await panel.locator('[data-reference-cost-total]').textContent(),p.cost.totalYuan.toLocaleString('en-US'));
+  }
+  assert.equal((await getAccountJson(page, KEY)).referenceCost.awakeningBlueprintStock,10);
 }));
 
 for (const failure of ['false', 'throw']) {

@@ -113,6 +113,7 @@
         referenceNumber(sourcePrices[beast.id], null) : (beast.tier === "橙五" ? defaultOrangeFivePrice : null);
     });
     return {
+      bluePurpleInventoryOnly: source.bluePurpleInventoryOnly !== false,
       awakeningBlueprintStock: Math.floor(referenceNumber(source.awakeningBlueprintStock, 0)),
       useAwakeningBlueprintStock: source.useAwakeningBlueprintStock !== false,
       awakeningBlueprintPrice: Object.prototype.hasOwnProperty.call(source, "awakeningBlueprintPrice") ?
@@ -180,6 +181,59 @@
       beasts: beasts,
       missingPrices: missingPrices
     };
+  }
+
+  // School plans compare priced resources only. Keep the legacy single-beast
+  // calculator's explicit blue/purple price behavior unchanged.
+  function calculateSchoolReferenceCost(data, requirements, rawSettings) {
+    var beastsById = new Map((data && data.beasts || []).map(function (beast) {
+      return [beast.id, beast];
+    }));
+    var requested = requirements && typeof requirements === "object" ? requirements : {};
+    var unpricedFragments = new Map();
+    var entryOrder = new Map();
+    var pricedEntries = (Array.isArray(requested.beasts) ? requested.beasts : []).filter(function (rawEntry) {
+      var entry = rawEntry && typeof rawEntry === "object" ? rawEntry : {};
+      var beastId = String(entry.beastId == null ? "unknown-beast" : entry.beastId);
+      if (!entryOrder.has(beastId)) entryOrder.set(beastId, entryOrder.size);
+      var beast = beastsById.get(beastId);
+      var unpriced = beast && (beast.quality === "blue" || beast.quality === "purple" || beast.tier === "蓝色" || beast.tier === "紫色");
+      if (unpriced) unpricedFragments.set(beastId,
+        (unpricedFragments.get(beastId) || 0) + Math.floor(referenceNumber(entry.fragments, 0)));
+      return !unpriced;
+    });
+    // Exclude unknown acquisition costs before arithmetic, not by subtracting
+    // their prices afterward: a large ignored price can erase small known costs.
+    var result = calculateReferenceCost(data, Object.assign({}, requested, { beasts: pricedEntries }), rawSettings);
+    result.unpricedResources = [];
+    result.beasts.forEach(function (entry) {
+      var beast = beastsById.get(entry.beastId);
+      if (!beast) return;
+      if (entry.contribution !== null) {
+        // Aggregate identical deficits first (the legacy calculator does this),
+        // then round original decimal factors, avoiding binary-product errors.
+        var exactYuan = ceilReferenceYuan([entry.fragments, beast.contributionPerFragment], contributionPerYuan(data));
+        result.knownYuan += exactYuan - entry.yuan;
+        entry.yuan = exactYuan;
+      }
+    });
+    unpricedFragments.forEach(function (fragments, beastId) {
+      var beast = beastsById.get(beastId);
+      var bodySize = referenceNumber(beast.fragmentsPerBody, 0);
+      var bodyEquivalent = bodySize > 0 ? fragments / bodySize : null;
+      result.beasts.push({ beastId: beastId, beastName: beast.name, fragments: fragments,
+        bodyEquivalent: bodyEquivalent, unitPrice: null, contribution: null,
+        yuan: fragments > 0 ? null : 0, priced: false });
+      if (fragments > 0) result.unpricedResources.push({
+        resource: "beast-body", beastId: beastId, beastName: beast.name,
+        fragments: fragments, bodyEquivalent: bodyEquivalent,
+        reason: "蓝紫本体获取成本未计入"
+      });
+    });
+    result.beasts.sort(function (left, right) { return entryOrder.get(left.beastId) - entryOrder.get(right.beastId); });
+    result.complete = result.blueprints.yuan !== null && result.missingPrices.length === 0;
+    result.totalYuan = result.complete ? result.knownYuan : null;
+    return result;
   }
 
   function emptyInventory(data) {
@@ -710,6 +764,7 @@
     searchBeasts: searchBeasts,
     normalizeReferenceCostSettings: normalizeReferenceCostSettings,
     calculateReferenceCost: calculateReferenceCost,
+    calculateSchoolReferenceCost: calculateSchoolReferenceCost,
     normalizeBeastProgress: normalizeBeastProgress,
     schoolSnapshot: schoolSnapshot,
     researchFor: researchFor,

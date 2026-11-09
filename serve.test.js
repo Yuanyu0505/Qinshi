@@ -951,9 +951,9 @@ test("机关兽方案计算提供单只与目标流派阶数子页面", () => {
   assert.match(ui, /使用已有库存/);
   assert.match(ui, /data-machine-owned-enabled/);
   assert.match(ui, /data-machine-owned-limit/);
-  assert.match(ui, /自由等级方案/);
-  assert.match(ui, /效果档位方案/);
-  assert.match(ui, /同时满足自由等级与同等投入效果档位优化/);
+  assert.match(ui, /投入最小方案/);
+  assert.match(ui, /最多效果档位方案/);
+  assert.match(ui, /两种目标得到相同方案/);
   assert.match(ui, /仅0阶/);
   assert.match(ui, /0–7阶/);
   assert.match(ui, /newRankModeSelector\("single", state\.singleNewRankMode\)/);
@@ -1111,8 +1111,8 @@ test("机关兽计算结果不展示冗余结果类型标题", () => {
   assert.doesNotMatch(ui, /<span>最优方案<\/span>/);
   assert.doesNotMatch(ui, /<span>目标流派阶数计算<\/span>/);
   assert.match(ui, />计算结果<\/b>/);
-  assert.match(ui, /自由等级方案/);
-  assert.match(ui, /效果档位方案/);
+  assert.match(ui, /投入最小方案/);
+  assert.match(ui, /最多效果档位方案/);
 });
 
 test("典籍默认展示最高阶累计，并通过页面级气泡查看逐阶成长", async () => {

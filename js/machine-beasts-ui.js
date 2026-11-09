@@ -38,6 +38,7 @@
   var calculationRunners = {};
   var calculationSequence = 0;
   var calculating = false;
+  var calculatingKind = null;
   var lastCostRenderKey = "";
 
   function setCalculating(busy) {
@@ -64,6 +65,7 @@
 
   function runCalculation(kind, payload) {
     cancelCalculation(true);
+    calculatingKind = kind;
     var sequence = calculationSequence;
     var account = ACCOUNT_STORAGE.currentAccount && ACCOUNT_STORAGE.currentAccount();
     var accountId = account && account.id;
@@ -226,35 +228,37 @@
         return '<option value="' + preset.price + '"' + (selected && Number(draft.awakeningBlueprintPrice) === preset.price ? ' selected' : '') + '>' + escapeHtml(preset.label) + ' · ' + preset.price + '元宝</option>';
       }).join("") + '<option value="custom"' + (!selected ? ' selected' : '') + '>自定义</option></select></label>' +
       '<label><span>神图单价（元宝／张，可自定义）</span><input type="number" min="0" step="any" inputmode="decimal" data-reference-cost-field="awakeningBlueprintPrice" value="' + escapeHtml(draft.awakeningBlueprintPrice) + '"></label></div>' +
-      '<details class="machine-reference-beast-prices"><summary>非贡献兑换机关兽每只参考价（橙五默认45,000，蓝紫请填写）</summary><div class="machine-reference-cost-grid">' + DATA.beasts.filter(function (beast) { return beast.contributionPerFragment == null; }).map(function (beast) {
+      '<details class="machine-reference-beast-prices"><summary>非贡献兑换机关兽每只参考价（橙五默认45,000；蓝紫价格仅用于单兽估算）</summary><div class="machine-reference-cost-grid">' + DATA.beasts.filter(function (beast) { return beast.contributionPerFragment == null; }).map(function (beast) {
         return '<label><span>' + escapeHtml(beast.name) + '（' + escapeHtml(beast.tier) + '）</span><input type="number" min="0" step="any" inputmode="decimal" placeholder="未设置，不计为免费" data-reference-beast-price="' + beast.id + '" value="' + escapeHtml(draft.beastPrices[beast.id]) + '"></label>';
-      }).join("") + '</div></details><p class="muted-tip">只估算觉醒神图与缺少的机关兽；不含机关破片、改造及突破等其他材料。贡献÷2.7折算元宝并向上取整；缺少碎片按折算只数计价，不额外凑整只，也不代表实际购买包装。各备选方案独立抵扣一次同一神图库存，不消耗真实库存；价格不参与最优解与排序。</p>' +
-      '<p class="machine-reference-cost-save-status" data-reference-cost-save-status role="status">' + escapeHtml(referenceCostInputError() || (state.referenceCostDirty ? '当前参考成本修改未保存。' : '参考成本设置按当前账号保存。')) + '</p>' +
+      }).join("") + '</div></details><p class="muted-tip">只估算觉醒神图与缺少的机关兽；不含机关破片、改造及突破等其他材料。贡献÷2.7折算元宝并向上取整；缺少碎片按折算只数计价，不额外凑整只，也不代表实际购买包装。各备选方案独立抵扣一次同一神图库存，不消耗真实库存。' + (state.calculatorMode === "school" ? '当前价格与神图库存参与流派优化；修改后需重新计算。流派方案不计蓝紫本体获取成本，未知价格不代表免费。' : '单兽参考价格不参与最优解与排序。') + '</p>' +
+      '<p class="machine-reference-cost-save-status" data-reference-cost-save-status role="status">' + escapeHtml(referenceCostInputError() || (ACCOUNT_STORAGE.isReadOnly && ACCOUNT_STORAGE.isReadOnly() ? '当前账号只读；可调整参考成本临时计算，不写入个人设置。' : state.referenceCostDirty ? '当前参考成本修改未保存。' : '参考成本设置按当前账号保存。')) + '</p>' +
       '<button type="button" class="seg" data-machine-action="save-reference-cost">保存／重试保存参考成本设置</button></section>';
   }
 
-  function referenceCostPanel(requirements) {
+  function referenceCostPanel(requirements, school) {
     var error = referenceCostInputError();
     if (error) return '<h3>参考成本</h3><p class="machine-reference-cost-error" role="alert">' + escapeHtml(error) + ' 已隐藏旧总价，请修正设置。</p>';
-    var cost = CORE.calculateReferenceCost(DATA, requirements, state.referenceCostDraft);
+    var cost = school ? CORE.calculateSchoolReferenceCost(DATA, requirements, state.referenceCostDraft) : CORE.calculateReferenceCost(DATA, requirements, state.referenceCostDraft);
     var blueprints = cost.blueprints;
     var beastYuan = cost.beasts.reduce(function (total, beast) { return total + (beast.yuan === null ? 0 : beast.yuan); }, 0);
-    return '<h3>参考成本（元宝）</h3><div class="machine-reference-cost-breakdown" tabindex="0" role="region" aria-label="参考成本明细，可横向滚动"><span>神图需求 <b>' + formatNumber(blueprints.required) + '</b></span>' +
+    return '<h3>' + (school ? '已计价参考元宝明细' : '参考成本（元宝）') + '</h3><div class="machine-reference-cost-breakdown" tabindex="0" role="region" aria-label="参考成本明细，可横向滚动"><span>神图需求 <b>' + formatNumber(blueprints.required) + '</b></span>' +
       '<span>使用已有 <b data-reference-blueprint-stock>' + formatNumber(blueprints.usedStock) + '</b></span><span>神图缺口 <b data-reference-blueprint-missing>' + formatNumber(blueprints.missing) + '</b></span>' +
       '<span>神图费用 <b>' + formatNumber(blueprints.yuan) + '</b>（单价 ' + formatNumber(blueprints.unitPrice) + '）</span><span>机关兽已知费用 <b>' + formatNumber(beastYuan) + '</b></span></div>' +
       (cost.beasts.length ? '<ul class="machine-reference-cost-beasts">' + cost.beasts.map(function (beast) {
+        var model = beastById(beast.beastId);
+        if (school && model && (model.quality === 'blue' || model.quality === 'purple')) return '<li>' + escapeHtml(beast.beastName) + '：缺少碎片 ' + formatNumber(beast.fragments) + '，蓝紫本体获取成本未计入（未知，不代表免费）。</li>';
         return '<li>' + escapeHtml(beast.beastName) + '：缺少碎片 ' + formatNumber(beast.fragments) + '，折算 ' + formatNumber(beast.bodyEquivalent) + '只' +
           (beast.contribution === null ? '，每只参考价 ' + (beast.unitPrice === null ? '未设置' : formatNumber(beast.unitPrice)) : '，贡献 ' + formatNumber(beast.contribution) + '÷2.7') +
           '，费用 ' + (beast.yuan === null ? '未设置，暂不可计入总价' : formatNumber(beast.yuan)) + '</li>';
       }).join("") + '</ul>' : '') +
-      (cost.complete ? '<p class="machine-reference-cost-total">参考总价 <b data-reference-cost-total>' + formatNumber(cost.totalYuan) + '</b> 元宝</p>' :
+      (cost.complete ? '<p class="machine-reference-cost-total">' + (school ? '已计价参考元宝' : '参考总价') + ' <b data-reference-cost-total>' + formatNumber(cost.totalYuan) + '</b> 元宝</p>' :
         '<p class="machine-reference-cost-error">成本不完整，已知小计 <b>' + formatNumber(cost.knownYuan) + '</b> 元宝；未设置单价：' + cost.missingPrices.map(function (beast) { return escapeHtml(beast.beastName); }).join('、') + '。缺价不等于免费，不显示完整总价。</p>') +
-      '<p class="muted-tip">仅含神图和新增机关兽的碎片缺口，按折算只数估价；不改变推荐方案，不扣减真实库存。</p>';
+      '<p class="muted-tip">' + (school ? '已计价金额用于方案比较，不是完整实际总成本。未计价：蓝紫本体获取成本、机关破片获取成本、高阶制作及改造制作成本；不扣减真实库存。' : '仅含神图和新增机关兽的碎片缺口，按折算只数估价；不改变推荐方案，不扣减真实库存。') + '</p>';
   }
 
   function costSlot(key, requirements) {
     state.referenceCostRequirements[key] = requirements;
-    return '<section class="machine-reference-cost-panel" data-reference-cost-panel="' + key + '">' + referenceCostPanel(requirements) + '</section>';
+    return '<section class="machine-reference-cost-panel" data-reference-cost-panel="' + key + '">' + referenceCostPanel(requirements, key.indexOf('school-') === 0) + '</section>';
   }
 
   function refreshReferenceCosts() {
@@ -263,10 +267,10 @@
     lastCostRenderKey = renderKey;
     el.calculatorResult.querySelectorAll('[data-reference-cost-panel]').forEach(function (panel) {
       var requirements = state.referenceCostRequirements[panel.dataset.referenceCostPanel];
-      if (requirements) panel.innerHTML = referenceCostPanel(requirements);
+      if (requirements) panel.innerHTML = referenceCostPanel(requirements, panel.dataset.referenceCostPanel.indexOf('school-') === 0);
     });
     var status = el.calculatorControls.querySelector('[data-reference-cost-save-status]');
-    if (status) status.textContent = referenceCostInputError() || (state.referenceCostDirty ? '当前参考成本修改未保存，请修正输入或重试保存。' : '参考成本设置已按当前账号保存。');
+    if (status) status.textContent = referenceCostInputError() || (ACCOUNT_STORAGE.isReadOnly && ACCOUNT_STORAGE.isReadOnly() ? '当前账号只读；当前参考成本仅用于临时计算，不写入个人设置。' : state.referenceCostDirty ? '当前参考成本修改未保存，请修正输入或重试保存。' : '参考成本设置已按当前账号保存。');
   }
 
   function updateReferenceCost(target) {
@@ -278,13 +282,21 @@
       draft.awakeningBlueprintPrice = target.value;
       el.calculatorControls.querySelector('[data-reference-cost-field="awakeningBlueprintPrice"]').value = target.value;
     } else return;
+    // Price and shared stock now affect school search, not merely presentation.
+    // Keep single-beast plans valid: their optimization objective is unchanged.
+    if (calculating && calculatingKind === 'beast-school') cancelCalculation(false);
+    state.schoolResult = null;
+    if (state.calculatorMode === 'school') {
+      el.calculatorResult.hidden = true;
+      state.referenceCostRequirements = {};
+    }
     if (target.matches('[data-reference-cost-field="awakeningBlueprintPrice"]')) {
       var preset = el.calculatorControls.querySelector('[data-reference-blueprint-preset]');
       var option = Array.from(preset.options).find(function (item) { return item.value !== 'custom' && target.value !== '' && Number(item.value) === Number(target.value); });
       preset.value = option ? option.value : 'custom';
     }
     state.referenceCostDirty = true;
-    if (!referenceCostInputError()) {
+    if (!referenceCostInputError() && (!ACCOUNT_STORAGE.isReadOnly || !ACCOUNT_STORAGE.isReadOnly())) {
       var normalized = CORE.normalizeReferenceCostSettings(DATA, draft);
       if (saveProgress(state.beasts, normalized)) {
         state.referenceCost = normalized;
@@ -562,11 +574,13 @@
       '<label><span>目标流派阶数</span><select data-school-target>' + schoolStageOptions(school, draft.targetStage) + '</select></label>' +
       '<div><span>当前累计觉醒等级</span><b>' + snapshot.totalLevel + '</b></div><div><span>距离目标</span><b>' + Math.max(0, targetTotal - snapshot.totalLevel) + '级</b></div></div>' +
       '<div class="machine-school-options"><label><input type="checkbox" data-school-option="useOwnedInventory"' + (draft.useOwnedInventory ? ' checked' : '') + '>使用已有库存</label>' +
+      '<label><input type="checkbox" data-reference-cost-field="bluePurpleInventoryOnly"' + (state.referenceCostDraft.bluePurpleInventoryOnly !== false ? ' checked' : '') + '>蓝紫本体仅使用库存</label>' +
       '<label><input type="checkbox" data-school-option="allowNewHighRanks"' + (draft.allowNewHighRanks ? ' checked' : '') + (draft.newRankMode === "zero" ? ' disabled' : '') + '>允许新增8–10阶</label>' +
       '<label><input type="checkbox" data-school-option="allowNewModifications"' + (draft.allowNewModifications ? ' checked' : '') + '>允许新增改造机关兽</label></div>' +
+      '<p class="muted-tip">蓝紫限制开启后，只允许使用已保存的完整蓝紫库存及指定阶数使用上限，不会通过碎片补出新本体；关闭使用已有库存时，蓝紫不能新增投入。蓝紫本体获取成本未计入，神图等其他消耗正常计价。</p>' +
       newRankModeSelector("school", draft.newRankMode) +
       '<div class="machine-calculator-actions"><button type="button" class="seg" data-machine-action="reload-school-calculator">从个人进度重新读取</button><button type="button" class="seg active" data-machine-action="calculate-school">计算两套最优方案</button></div>' +
-      '<p class="muted-tip">效果档位方案仅在折算投入总数和新增投入数相同时，优先选择更多10、15、20、25级效果档位。</p>' +
+      '<p class="muted-tip">投入最小方案：已计价元宝最少 → 新增解锁效果最多 → 等级内研发度溢出最少 → 神图总消耗最少。最多效果档位方案：新增解锁效果最多 → 已计价元宝最少 → 溢出最少 → 神图总消耗最少。允许改造参与时，两套目标均先比较改造本体折算投入数量（已有与新增均计入），再按上述顺序比较；完全相同时按稳定键确定。效果按该兽实际效果解锁等级统计跨越节点。</p>' +
       '<div class="machine-school-beast-controls">' + orderedBeastIds.map(function (beastId) {
         var beast = beastById(beastId);
         return renderSchoolBeastControl(beast, draft, Boolean(calculatorQuery) && isSearchMatch(beast, "calculator"));
@@ -631,9 +645,9 @@
   }
 
   function schoolPlanTitle(kind) {
-    if (kind === "free") return "自由等级方案";
-    if (kind === "milestone") return "效果档位方案（同等投入优先）";
-    return "同时满足自由等级与同等投入效果档位优化";
+    if (kind === "cost") return "投入最小方案";
+    if (kind === "effects") return "最多效果档位方案";
+    return "两种目标得到相同方案";
   }
 
   function schoolResourceValue(value) {
@@ -646,16 +660,19 @@
     return '<article class="machine-school-plan-beast"><header><strong>' + escapeHtml(detail.beastName) + '</strong><b>' + detail.startLevel + '级 → ' + detail.endLevel + '级</b></header>' +
       '<div class="machine-school-plan-beast-metrics"><span>研发度 ' + formatNumber(detail.startResearch) + ' → ' + formatNumber(detail.endResearch) + '</span><span>增加 ' + formatNumber(detail.addedResearch) + '</span><span>溢出 ' + formatNumber(detail.overflowResearch) + '</span></div>' +
       '<div class="machine-result-columns"><article><h3>使用已有库存</h3>' + itemList(ownedItems, "不使用已有完整机关兽", "owned") + '</article><article><h3>新增投入</h3>' + itemList(newItems, "无需新增机关兽", true) + '</article></div>' +
-      '<div class="machine-school-plan-resources"><span>折算投入 <b>' + detail.investedCount + '只</b></span><span>机关兽碎片缺口 <b>' + formatNumber(detail.resources.fragments) + '</b></span><span>贡献 <b>' + schoolResourceValue(detail.resources.contribution) + '</b></span><span>元宝 <b>' + schoolResourceValue(detail.resources.yuan) + '</b></span></div></article>';
+      '<div class="machine-school-plan-resources"><span>折算投入 <b>' + detail.investedCount + '只</b></span><span>新增解锁效果 <b>' + formatNumber(detail.unlockedEffects) + '</b></span><span>机关兽碎片缺口 <b>' + formatNumber(detail.resources.fragments) + '</b></span><span>神图总消耗 <b>' + formatNumber(detail.resources.awakeningBlueprints) + '</b></span><span>机关破片 <b>' + formatNumber(detail.resources.organPieces) + '</b></span><span>改造本体折算投入 <b>' + formatNumber(detail.modifiedInvestedCount) + '</b>（已有 ' + formatNumber(detail.ownedModifiedInvestedCount) + '／新增 ' + formatNumber(detail.newModifiedInvestedCount) + '）</span></div></article>';
   }
 
   function renderSchoolPlan(plan, result, index) {
     var totals = plan.totals;
+    var physical = { owned: 0, new: 0 };
+    plan.beasts.forEach(function (detail) { detail.items.forEach(function (item) { physical[item.source] += item.count; }); });
     return '<section class="panel machine-result machine-school-plan"><div class="machine-result-head"><div><h2>' + escapeHtml(schoolPlanTitle(plan.kind)) + '</h2></div><b>' + result.target.stage + '阶 · 累计' + result.target.totalLevel + '级</b></div>' +
       '<div class="machine-school-plan-summary"><div><span>当前累计等级</span><b>' + result.current.totalLevel + '</b></div><div><span>推荐后累计等级</span><b>' + totals.projectedTotalLevel + '</b></div>' +
-      '<div><span>折算投入总只数</span><b>' + totals.investedCount + '</b></div><div><span>使用已有库存</span><b>' + totals.ownedInvestedCount + '</b></div><div><span>新增机关兽</span><b>' + totals.newInvestedCount + '</b></div>' +
-      '<div><span>效果档位数量</span><b>' + totals.milestoneCount + '</b></div><div><span>研发度溢出</span><b>' + formatNumber(totals.overflowResearch) + '</b></div><div><span>觉醒神图</span><b>' + formatNumber(totals.awakeningBlueprints) + '</b></div>' +
-      '<div><span>机关破片</span><b>' + formatNumber(totals.organPieces) + '</b></div><div><span>机关兽碎片缺口</span><b>' + formatNumber(totals.fragments) + '</b></div><div><span>贡献合计</span><b>' + schoolResourceValue(totals.contribution) + '</b></div><div><span>元宝合计</span><b>' + schoolResourceValue(totals.yuan) + '</b></div></div>' +
+      '<div><span>折算投入总只数</span><b>' + totals.investedCount + '</b></div><div><span>已有完整机关兽消耗</span><b>' + physical.owned + '只</b><span>折算 ' + totals.ownedInvestedCount + '只</span></div><div><span>新增完整机关兽需求</span><b>' + physical.new + '只</b><span>折算 ' + totals.newInvestedCount + '只</span></div>' +
+      '<div><span>新增解锁效果</span><b>' + formatNumber(totals.unlockedEffects) + '</b></div><div><span>研发度溢出</span><b>' + formatNumber(totals.overflowResearch) + '</b></div><div><span>觉醒神图总消耗</span><b>' + formatNumber(totals.awakeningBlueprints) + '</b></div>' +
+      '<div><span>机关破片</span><b>' + formatNumber(totals.organPieces) + '</b></div><div><span>机关兽碎片缺口</span><b>' + formatNumber(totals.fragments) + '</b></div><div><span>已计价参考元宝' + (plan.cost && !plan.cost.complete ? '（已知小计）' : '') + '</span><b>' + formatNumber(plan.cost ? plan.cost.knownYuan : totals.pricedYuan) + '</b></div>' +
+      '<div><span>改造本体折算投入</span><b>' + formatNumber(totals.modifiedInvestedCount) + '</b><span>已有 ' + formatNumber(totals.ownedModifiedInvestedCount) + '／新增 ' + formatNumber(totals.newModifiedInvestedCount) + '</span></div></div>' +
       costSlot("school-" + index, { awakeningBlueprints: totals.awakeningBlueprints, beasts: plan.beasts.map(function (detail) { return { beastId: detail.beastId, fragments: detail.resources.fragments }; }) }) +
       (plan.beasts.length ? '<div class="machine-school-plan-beasts">' + plan.beasts.map(renderSchoolBeastPlan).join("") + '</div>' : '<p class="machine-school-complete">目标已达成，无需新增投入。</p>') + '</section>';
   }
@@ -795,7 +812,8 @@
       singleInventoryPolicy: clone(state.singleInventoryPolicy),
       singleNewRankMode: state.singleNewRankMode,
       schoolDraft: clone(state.schoolDraft),
-      schoolResult: clone(state.schoolResult)
+      schoolResult: clone(state.schoolResult),
+      schoolReferenceCostKey: JSON.stringify(state.referenceCostDraft)
     };
   }
 
@@ -816,7 +834,7 @@
     if (saved.singleInventoryPolicy) state.singleInventoryPolicy = clone(saved.singleInventoryPolicy);
     state.singleNewRankMode = saved.singleNewRankMode || state.singleNewRankMode;
     if (saved.schoolDraft) state.schoolDraft = clone(saved.schoolDraft);
-    state.schoolResult = saved.schoolResult == null ? null : clone(saved.schoolResult);
+    state.schoolResult = saved.schoolResult == null || (saved.schoolReferenceCostKey != null && saved.schoolReferenceCostKey !== JSON.stringify(state.referenceCostDraft)) ? null : clone(saved.schoolResult);
     rendered = { progress: false, calculator: false, reference: false };
     setMode(saved.mode || "progress");
   }
@@ -995,6 +1013,13 @@
       el.calculatorResult.hidden = true;
       renderCalculatorControls();
     } else if (action === "calculate-school") {
+      var costError = referenceCostInputError();
+      if (costError) {
+        cancelCalculation(false);
+        showError(costError + ' 请修正后重新计算流派方案。');
+        return;
+      }
+      clearError();
       var draft = state.schoolDraft;
       var school = DATA.schools.find(function (item) { return item.id === draft.schoolId; });
       var participatingIds = school.beastIds.filter(function (beastId) { return draft.participating[beastId]; });
@@ -1007,7 +1032,9 @@
         ownedLimitsByBeast: limits,
         allowNewHighRanks: draft.allowNewHighRanks,
         allowNewModifications: draft.allowNewModifications,
-        newRankMode: draft.newRankMode
+        newRankMode: draft.newRankMode,
+        bluePurpleInventoryOnly: state.referenceCostDraft.bluePurpleInventoryOnly !== false,
+        referenceCostSettings: CORE.normalizeReferenceCostSettings(DATA, state.referenceCostDraft)
       } });
     }
   }
@@ -1121,7 +1148,7 @@
   function validDependencies() {
     return DATA && CORE && PLANNER && PERFORMANCE && typeof PERFORMANCE.createRefreshQueue === "function" && Array.isArray(DATA.beasts) && typeof CORE.searchBeasts === "function" && typeof CORE.calculateInvestmentPlan === "function" &&
       typeof PLANNER.calculateSchoolPlans === "function" && typeof PLANNER.defaultTargetStage === "function" &&
-      typeof CORE.normalizeReferenceCostSettings === "function" && typeof CORE.calculateReferenceCost === "function";
+      typeof CORE.normalizeReferenceCostSettings === "function" && typeof CORE.calculateReferenceCost === "function" && typeof CORE.calculateSchoolReferenceCost === "function";
   }
 
   function init() {

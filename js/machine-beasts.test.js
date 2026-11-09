@@ -338,7 +338,8 @@ test("school planner: maps target stages and keeps excluded beasts in the baseli
   const result = PLANNER.calculateSchoolPlans(DATA, school, progress, {
     targetStage: 1,
     participatingBeastIds: participating,
-    useOwnedInventory: false
+    useOwnedInventory: false,
+    bluePurpleInventoryOnly: false
   });
   assert.strictEqual(result.valid, true);
   assert.strictEqual(result.current.totalLevel, 10);
@@ -349,32 +350,34 @@ test("school planner: maps target stages and keeps excluded beasts in the baseli
   });
 });
 
-test("school planner: milestone plan only improves milestones for the same investment", () => {
+test("school planner: cost and effects use their respective formal priorities", () => {
   const school = DATA.schools.find(item => item.id === "hegemonic");
   const result = PLANNER.calculateSchoolPlans(DATA, school, {}, {
     targetStage: 1,
     useOwnedInventory: false,
     newRankMode: "zeroToSeven",
   });
-  const free = result.plans.find(plan => plan.kind === "free");
-  const milestone = result.plans.find(plan => plan.kind === "milestone");
-
-  assert.ok(free);
-  assert.ok(milestone);
-  assert.strictEqual(milestone.totals.investedCount, free.totals.investedCount);
-  assert.strictEqual(milestone.totals.newInvestedCount, free.totals.newInvestedCount);
-  assert.ok(milestone.totals.milestoneCount > free.totals.milestoneCount);
+  assert.strictEqual(result.valid, true);
+  const cost = result.plans.find(plan => plan.kind === "cost" || plan.kind === "merged");
+  const effects = result.plans.find(plan => plan.kind === "effects" || plan.kind === "merged");
+  assert.ok(cost);
+  assert.ok(effects);
+  assert.ok(cost.totals.pricedYuan <= effects.totals.pricedYuan);
+  assert.ok(effects.totals.unlockedEffects >= cost.totals.unlockedEffects);
+  const maximumEffects = DATA.beasts.filter(beast => school.beastIds.includes(beast.id) && beast.quality === "orange")
+    .reduce((sum, beast) => sum + beast.effects.length, 0);
+  assert.strictEqual(effects.totals.unlockedEffects, maximumEffects);
 });
 
-test("school planner: rounded display yuan preserves stable ties in free and milestone plans", () => {
+test("school planner: rounded yuan precedes stable ties while effects can justify further cultivation", () => {
   const progress = {
     "mechanical-white-tiger": { research: 750000, fragments: 13 },
     "mechanical-vermilion-bird": { research: 750000, fragments: 8 },
     "mechanical-bronze-man": { research: 168800 }
   };
-  // B (white tiger 20 / vermilion bird 19) costs 22001 displayed yuan;
-  // A costs 22000 with equal contribution and other optimization metrics.
-  // The original stable key starts with the vermilion bird ID and chooses B.
+  // B (white tiger 20 / vermilion bird 19) costs 22001 body yuan;
+  // A costs 22000 with the same contribution, research and blueprint total.
+  // Thus A wins on priced yuan, before any stable-key tie breaker.
   const exchangeCases = [
     ["mechanical-white-tiger", 19, 27, 16200, 6000],
     ["mechanical-vermilion-bird", 20, 72, 43200, 16000],
@@ -402,21 +405,34 @@ test("school planner: rounded display yuan preserves stable ties in free and mil
   assert.strictEqual(result.valid, true);
   assert.strictEqual(result.current.totalLevel, 42);
   assert.strictEqual(result.target.totalLevel, 45);
-  // Merging is observable evidence that both comparator modes chose the same B.
-  assert.strictEqual(result.plans.length, 1);
-  const plan = result.plans[0];
-  assert.strictEqual(plan.kind, "merged");
-  assert.deepStrictEqual(plan.totals, {
+  assert.strictEqual(result.plans.length, 2);
+  const plan = result.plans.find(candidate => candidate.kind === "cost");
+  const effects = result.plans.find(candidate => candidate.kind === "effects");
+  assert.ok(plan);
+  assert.ok(effects);
+  assert.deepStrictEqual({
+    investedCount: plan.totals.investedCount,
+    ownedInvestedCount: plan.totals.ownedInvestedCount,
+    newInvestedCount: plan.totals.newInvestedCount,
+    unlockedEffects: plan.totals.unlockedEffects,
+    overflowResearch: plan.totals.overflowResearch,
+    awakeningBlueprints: plan.totals.awakeningBlueprints,
+    organPieces: plan.totals.organPieces,
+    fragments: plan.totals.fragments,
+    contribution: plan.totals.contribution,
+    pricedYuan: plan.totals.pricedYuan,
+    projectedTotalLevel: plan.totals.projectedTotalLevel
+  }, {
     investedCount: 3,
     ownedInvestedCount: 0,
     newInvestedCount: 3,
-    milestoneCount: 1,
+    unlockedEffects: 1,
     overflowResearch: 36600,
     awakeningBlueprints: 288,
     organPieces: 1440,
     fragments: 99,
     contribution: 59400,
-    yuan: 22001,
+    pricedYuan: 42160,
     projectedTotalLevel: 45
   });
   assert.deepStrictEqual(plan.beasts.map(detail => ({
@@ -424,27 +440,57 @@ test("school planner: rounded display yuan preserves stable ties in free and mil
     endLevel: detail.endLevel,
     investedCount: detail.investedCount,
     resources: detail.resources
-  })), [
+  })).sort((left, right) => right.beastId.localeCompare(left.beastId)), [
     {
-      beastId: "mechanical-white-tiger", endLevel: 20, investedCount: 2,
-      resources: { awakeningBlueprints: 192, organPieces: 960, fragments: 67, contribution: 40200, yuan: 14889 }
+      beastId: "mechanical-white-tiger", endLevel: 19, investedCount: 1,
+      resources: { awakeningBlueprints: 96, organPieces: 480, fragments: 27, contribution: 16200, yuan: 6000, pricedBodyYuan: 6000 }
     },
     {
-      beastId: "mechanical-vermilion-bird", endLevel: 19, investedCount: 1,
-      resources: { awakeningBlueprints: 96, organPieces: 480, fragments: 32, contribution: 19200, yuan: 7112 }
+      beastId: "mechanical-vermilion-bird", endLevel: 20, investedCount: 2,
+      resources: { awakeningBlueprints: 192, organPieces: 960, fragments: 72, contribution: 43200, yuan: 16000, pricedBodyYuan: 16000 }
     }
   ]);
+  assert.strictEqual(effects.totals.unlockedEffects, 2);
+  assert.strictEqual(effects.totals.pricedYuan, 57769);
+  assert.strictEqual(effects.totals.projectedTotalLevel, 46);
+  assert.ok(effects.beasts.every(beast => beast.endLevel === 20));
 });
 
-test("school planner: an achieved target returns one merged zero-cost plan", () => {
+test("school planner: an achieved target retains zero-cost and maximum-effect objectives", () => {
   const school = DATA.schools.find(item => item.id === "nonAttack");
   const progress = {};
   setSchoolTotalLevel(school, 45, progress);
   const result = PLANNER.calculateSchoolPlans(DATA, school, progress, { targetStage: 1 });
   assert.strictEqual(result.valid, true);
-  assert.strictEqual(result.plans.length, 1);
-  assert.strictEqual(result.plans[0].kind, "merged");
-  assert.strictEqual(result.plans[0].totals.investedCount, 0);
+  const cost = result.plans.find(plan => plan.kind === "cost" || plan.kind === "merged");
+  const effects = result.plans.find(plan => plan.kind === "effects" || plan.kind === "merged");
+  assert.ok(cost);
+  assert.ok(effects);
+  assert.strictEqual(cost.totals.pricedYuan, 0);
+  const expectedEffects = DATA.beasts.filter(beast => school.beastIds.includes(beast.id) && beast.quality === "orange")
+    .reduce((sum, beast) => sum + beast.effects.filter(effect =>
+      (progress[beast.id]?.research || 0) < DATA.researchThresholds[effect.level]).length, 0);
+  assert.strictEqual(effects.totals.unlockedEffects, expectedEffects);
+
+  const idle = PLANNER.calculateSchoolPlans(DATA, school, progress, { targetStage: 1, participatingBeastIds: [] });
+  assert.strictEqual(idle.valid, true);
+  assert.strictEqual(idle.plans.length, 1);
+  assert.strictEqual(idle.plans[0].kind, "merged");
+  assert.strictEqual(idle.plans[0].totals.investedCount, 0);
+
+  // The 45-level baseline has the bronze man at level 10. Five saved
+  // rank-0 bodies add 240000 research, reaching level 15 and its next effect;
+  // 480 blueprints are entirely covered by the shared stock.
+  progress["mechanical-bronze-man"].inventory = { none: { 0: 5 } };
+  const noPricedSpend = PLANNER.calculateSchoolPlans(DATA, school, progress, {
+    targetStage: 1, participatingBeastIds: ["mechanical-bronze-man"], newRankMode: "zero",
+    referenceCostSettings: { awakeningBlueprintStock: 480 }
+  });
+  assert.strictEqual(noPricedSpend.valid, true);
+  assert.strictEqual(noPricedSpend.plans.length, 1);
+  assert.strictEqual(noPricedSpend.plans[0].kind, "merged");
+  assert.strictEqual(noPricedSpend.plans[0].totals.pricedYuan, 0);
+  assert.strictEqual(noPricedSpend.plans[0].totals.unlockedEffects, 1);
 });
 
 test("school planner: high-rank inventory uses seven-rank body equivalents", () => {
@@ -468,6 +514,7 @@ test("school planner: high-rank inventory uses seven-rank body equivalents", () 
   const highRankPlan = direct.find(item => item.items.some(entry => entry.source === "owned" && entry.rank === 10));
   assert.ok(highRankPlan);
   assert.strictEqual(highRankPlan.investedCount, 8);
+  assert.strictEqual(highRankPlan.items.find(item => item.rank === 10).sevenRankEquivalent, 8);
 });
 
 test("school planner: forwards the chosen new-beast rank range", () => {
@@ -476,8 +523,10 @@ test("school planner: forwards the chosen new-beast rank range", () => {
   const beast = DATA.beasts.find(item => item.id === beastId);
   const candidates = PLANNER.machineBeastCandidates(DATA, beast, {}, {
     useOwnedInventory: false,
+    bluePurpleInventoryOnly: false,
     newRankMode: "zero"
   });
+  assert.ok(candidates.some(candidate => candidate.items.some(item => item.source === "new")));
   candidates.forEach(candidate => {
     assert.ok(candidate.items.filter(item => item.source === "new").every(item => item.rank === 0));
   });

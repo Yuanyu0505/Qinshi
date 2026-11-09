@@ -38,35 +38,40 @@
         fragments: 0, contribution: 0, yuan: 0, pricedBodyYuan: 0 } };
   }
 
-  // All current orange beasts have unlimited ordinary rank-0 new materials.
-  // Therefore every feasible set of levels/effects has a zero-modification
-  // completion. Since modification count is the FIRST objective when enabled,
-  // no modified material can be optimal. This proof must be revisited if new
-  // ordinary orange bodies ever become bounded or disallowed.
+  // Exact levels can have holes: ordinary materials may jump over a level
+  // that a modified material can reach. Omit modifications only in a first
+  // pass whose ZERO-modification exact school feasibility is explicitly proven.
   function materialTypes(data, beast, progress, config, gap) {
     var types = [], limits = config.ownedLimits || {};
     if (config.useOwnedInventory !== false) {
-      var ranks = progress.inventory.none || {};
-      Object.keys(ranks).forEach(function (key) {
-        var rank = CORE.integer(key), cap = ranks[key];
-        if (limits.none && Object.prototype.hasOwnProperty.call(limits.none, key)) cap = Math.min(cap, CORE.integer(limits.none[key]));
-        var research = CORE.researchFor(data, beast, rank, "none");
-        if (cap && research) types.push({ source: "owned", modificationId: "none", rank: rank,
-          researchEach: research, weight: rank > 7 ? Math.pow(2, rank - 7) : 1,
-          available: Math.min(cap, Math.ceil(gap / research)) });
+      data.modifications.forEach(function (mod) {
+        if (mod.id !== "none" && (config.plainOnly || beast.quality !== "orange" ||
+            !progress.showMods && !Object.keys(limits[mod.id] || {}).length)) return;
+        var ranks = progress.inventory[mod.id] || {};
+        Object.keys(ranks).forEach(function (key) {
+          var rank = CORE.integer(key), cap = ranks[key];
+          if (limits[mod.id] && Object.prototype.hasOwnProperty.call(limits[mod.id], key)) cap = Math.min(cap, CORE.integer(limits[mod.id][key]));
+          var research = CORE.researchFor(data, beast, rank, mod.id);
+          if (cap && research) types.push({ source: "owned", modificationId: mod.id, rank: rank,
+            researchEach: research, weight: rank > 7 ? Math.pow(2, rank - 7) : 1,
+            available: Math.min(cap, Math.ceil(gap / research)) });
+        });
       });
     }
     if (beast.quality === "orange" || config.bluePurpleInventoryOnly === false) {
       var maxRank = config.newRankMode === "zero" ? 0 : config.allowNewHighRanks ? beast.maxRank : Math.min(7, beast.maxRank);
       for (var rank = 0; rank <= maxRank; rank++) {
-        var research = CORE.researchFor(data, beast, rank, "none");
-        if (research) types.push({ source: "new", modificationId: "none", rank: rank,
-          researchEach: research, weight: rank > 7 ? Math.pow(2, rank - 7) : 1,
-          available: null });
+        data.modifications.forEach(function (mod) {
+          if (mod.id !== "none" && (config.plainOnly || beast.quality !== "orange" || !config.allowNewModifications)) return;
+          var research = CORE.researchFor(data, beast, rank, mod.id);
+          if (research) types.push({ source: "new", modificationId: mod.id, rank: rank,
+            researchEach: research, weight: rank > 7 ? Math.pow(2, rank - 7) : 1,
+            available: null });
+        });
       }
     }
     types.sort(function (a, b) {
-      var x = a.source + ":" + pad(a.rank), y = b.source + ":" + pad(b.rank);
+      var x = a.source + ":" + a.modificationId + ":" + pad(a.rank), y = b.source + ":" + b.modificationId + ":" + pad(b.rank);
       return x < y ? -1 : x > y ? 1 : 0;
     });
     types.forEach(function (t) {
@@ -78,7 +83,10 @@
 
   function rawCandidates(data, beast, progress, config) {
     var start = CORE.levelForResearch(progress.research, data.researchThresholds, beast.maxLevel);
-    var gap = Math.max(0, CORE.thresholdForLevel(beast.maxLevel, data.researchThresholds) - progress.research);
+    var capLevel = Math.min(beast.maxLevel, start + CORE.integer(config.maxAddedLevel, beast.maxLevel));
+    if (capLevel <= start) return [];
+    var terminalAllowed = capLevel === beast.maxLevel;
+    var gap = Math.max(0, CORE.thresholdForLevel(terminalAllowed ? capLevel : capLevel + 1, data.researchThresholds) - progress.research);
     if (!gap) return [];
     var types = materialTypes(data, beast, progress, config, gap);
     // An optimal irredundant solution uses at most ceil(gap/r) copies of
@@ -87,7 +95,7 @@
     // On a full formal tie our fixed vector prefers fewer 'new' entries.
     types = types.filter(function (t) {
       return t.source !== "new" || !types.some(function (owned) {
-        return owned.source === "owned" && owned.rank === t.rank &&
+        return owned.source === "owned" && owned.rank === t.rank && owned.modificationId === t.modificationId &&
           owned.available >= Math.ceil(gap / t.researchEach);
       });
     });
@@ -102,6 +110,7 @@
     var stride = trackNew ? Math.floor((gap - 1) / minimumRate) + 1 : 1;
     var size = internalRows * stride;
     var blueprint = new Float64Array(size); blueprint.fill(Infinity); blueprint[0] = 0;
+    var modified = new Float64Array(size); modified.fill(Infinity); modified[0] = 0;
     // Dense typed values avoid millions of Map/state/linked-list objects.
     // A complete quantity vector makes in-place bounded/unbounded updates safe
     // to reconstruct, and is extension-monotone for stable tie comparison.
@@ -118,15 +127,17 @@
       return false;
     }
     function put(from, r, n, b, type, quantity) {
+      var m = modified[from] + (types[type].modificationId === "none" ? 0 : quantity * types[type].weight);
       if (r >= internalRows) {
+        if (!terminalAllowed) return;
         var key = n + "/" + b, old = terminals.get(key);
-        if (old && (old.r < r || old.r === r && !betterVector(from, type, quantity, old.counts))) return;
-        terminals.set(key, { r: r, n: n, b: b, counts: types.map(function (_, i) { return counts[i][from] + (i === type ? quantity : 0); }) });
+        if (old && (old.m < m || old.m === m && (old.r < r || old.r === r && !betterVector(from, type, quantity, old.counts)))) return;
+        terminals.set(key, { r: r, n: n, b: b, m: m, counts: types.map(function (_, i) { return counts[i][from] + (i === type ? quantity : 0); }) });
         return;
       }
       var target = r * stride + n;
-      if (blueprint[target] < b || blueprint[target] === b && !betterVector(from, type, quantity, target)) return;
-      blueprint[target] = b;
+      if (modified[target] < m || modified[target] === m && (blueprint[target] < b || blueprint[target] === b && !betterVector(from, type, quantity, target))) return;
+      blueprint[target] = b; modified[target] = m;
       for (var i = 0; i < types.length; i++) counts[i][target] = counts[i][from] + (i === type ? quantity : 0);
     }
     types.forEach(function (type, index) {
@@ -153,38 +164,43 @@
       }
     });
     var compact = new Map();
-    function record(r, n, b, vector) {
+    function record(r, n, b, m, vector) {
       var research = r * unit;
       var level = CORE.levelForResearch(progress.research + research, data.researchThresholds, beast.maxLevel);
-      if (level === start) return;
+      if (level === start || level > capLevel) return;
       var key = level + "/" + n + "/" + b;
       var prior = compact.get(key);
       var stable = vector.map(pad).join("");
-      if (prior && (prior.research < research || prior.research === research && prior.stable <= stable)) return;
-      var items = [], invested = 0, owned = 0, pieces = 0, ownedPhysical = 0, newPhysical = 0, newCount = 0;
+      if (prior && (prior.modified < m || prior.modified === m && (prior.research < research || prior.research === research && prior.stable <= stable))) return;
+      var items = [], invested = 0, owned = 0, pieces = 0, ownedPhysical = 0, newPhysical = 0, newCount = 0, ownedModified = 0, newModified = 0;
       vector.forEach(function (count, i) {
         if (!count) return;
         var t = types[i];
-        items.push({ source: t.source, rank: t.rank, modificationId: "none", count: count,
+        items.push({ source: t.source, rank: t.rank, modificationId: t.modificationId, count: count,
           researchEach: t.researchEach, sevenRankEquivalent: t.weight });
         invested += count * t.weight; pieces += count * t.pieces;
         if (t.source === "owned") { owned += count * t.weight; ownedPhysical += count; }
         else { newPhysical += count; newCount += count * t.weight; }
+        if (t.modificationId !== "none") {
+          if (t.source === "owned") ownedModified += count * t.weight; else newModified += count * t.weight;
+        }
       });
       compact.set(key, { endLevel: level, research: research, newCount: newCount,
         blueprints: b, pieces: pieces, invested: invested, owned: owned,
-        ownedPhysical: ownedPhysical, newPhysical: newPhysical, items: items, stable: stable });
+        ownedPhysical: ownedPhysical, newPhysical: newPhysical, items: items, stable: stable,
+        modified: m, ownedModified: ownedModified, newModified: newModified });
     }
     for (var r = 1; r < internalRows; r++) {
       var level = CORE.levelForResearch(progress.research + r * unit, data.researchThresholds, beast.maxLevel);
       if (level === start) continue;
       for (var n = 0; n < stride; n++) {
         var from = r * stride + n, b = blueprint[from];
-        if (b === Infinity || compact.has(level + "/" + n + "/" + b)) continue;
-        record(r, n, b, counts.map(function (array) { return array[from]; }));
+        var prior = compact.get(level + "/" + n + "/" + b);
+        if (b === Infinity || prior && prior.modified <= modified[from]) continue;
+        record(r, n, b, modified[from], counts.map(function (array) { return array[from]; }));
       }
     }
-    terminals.forEach(function (s) { record(s.r, s.n, s.b, s.counts); });
+    terminals.forEach(function (s) { record(s.r, s.n, s.b, s.m, s.counts); });
     return Array.from(compact.values());
   }
 
@@ -209,11 +225,15 @@
     var current = CORE.levelForResearch(progress.research, data.researchThresholds, beast.maxLevel);
     var cache = config.materialCache, typesKey = JSON.stringify([beast.quality, beast.maxLevel, beast.maxRank,
       progress.research, progress.inventory, config.ownedLimits || {}, config.useOwnedInventory !== false,
-      config.bluePurpleInventoryOnly !== false, config.newRankMode || "zeroToSeven", !!config.allowNewHighRanks]);
+      config.bluePurpleInventoryOnly !== false, config.newRankMode || "zeroToSeven", !!config.allowNewHighRanks,
+      config.plainOnly, config.allowNewModifications, progress.showMods, config.maxAddedLevel]);
     var raw = cache && cache.get(typesKey);
     if (!raw) { raw = rawCandidates(data, beast, progress, config); if (cache) cache.set(typesKey, raw); }
     var byLevel = new Map(), costs = new Map();
+    var minimumModified = new Map();
+    raw.forEach(function (r) { minimumModified.set(r.endLevel, Math.min(minimumModified.has(r.endLevel) ? minimumModified.get(r.endLevel) : Infinity, r.modified)); });
     raw.forEach(function (r) {
+      if (r.modified !== minimumModified.get(r.endLevel)) return;
       var cost = costs.get(r.newCount);
       if (!cost) {
         var fragments = Math.max(0, r.newCount * beast.fragmentsPerBody - progress.fragments);
@@ -227,7 +247,7 @@
         addedResearch: r.research, overflowResearch: progress.research + r.research - CORE.thresholdForLevel(r.endLevel, data.researchThresholds),
         investedCount: r.invested, ownedInvestedCount: r.owned, newInvestedCount: r.newCount,
         ownedPhysicalCount: r.ownedPhysical, newPhysicalCount: r.newPhysical,
-        modifiedInvestedCount: 0, ownedModifiedInvestedCount: 0, newModifiedInvestedCount: 0,
+        modifiedInvestedCount: r.modified, ownedModifiedInvestedCount: r.ownedModified, newModifiedInvestedCount: r.newModified,
         unlockedEffects: effectsBetween(beast, current, r.endLevel), stableKey: r.stable, items: r.items,
         resources: { awakeningBlueprints: r.blueprints, organPieces: r.pieces,
           fragments: Math.max(0, r.newCount * beast.fragmentsPerBody - progress.fragments),
@@ -263,42 +283,65 @@
     }
     function order(s) {
       var yuan = sumSafe(s.body, fee(s.blueprints));
-      return effectMode ? [-s.effects, yuan, s.overflow, s.blueprints, s.key] : [yuan, -s.effects, s.overflow, s.blueprints, s.key];
+      return [s.modified].concat(effectMode ? [-s.effects, yuan, s.overflow, s.blueprints, s.key] : [yuan, -s.effects, s.overflow, s.blueprints, s.key]);
     }
+    // Exact remaining gain, with modification count first and crossed nodes
+    // second. This is a feasibility bound, not a cost/frontier replacement.
+    var suffixGoals = Array(sets.length + 1);
+    suffixGoals[sets.length] = new Map([[0, { modified: 0, effects: 0 }]]);
+    for (var si = sets.length - 1; si >= 0; si--) {
+      var goals = new Map();
+      sets[si].forEach(function (c) {
+        suffixGoals[si + 1].forEach(function (tail, gain) {
+          var added = gain + c.endLevel - c.startLevel;
+          if (added > needed) return;
+          var value = { modified: tail.modified + c.modifiedInvestedCount, effects: tail.effects + c.unlockedEffects };
+          var old = goals.get(added);
+          if (!old || cmp([value.modified, -value.effects], [old.modified, -old.effects]) < 0) goals.set(added, value);
+        });
+      });
+      suffixGoals[si] = goals;
+    }
+    var goal = suffixGoals[0].get(needed);
+    if (!goal) return null;
     var suffixGain=Array(sets.length+1).fill(0),suffixEffects=Array(sets.length+1).fill(0);
     for(var k=sets.length-1;k>=0;k--){
       suffixGain[k]=suffixGain[k+1]+Math.max.apply(null,sets[k].map(function(c){return c.endLevel-c.startLevel;}));
       suffixEffects[k]=suffixEffects[k+1]+Math.max.apply(null,sets[k].map(function(c){return c.unlockedEffects;}));
     }
-    var requiredEffects=null,blueprintBudget=Infinity;
+    var requiredEffects=effectMode ? goal.effects : null,blueprintBudget=Infinity;
     if(!effectMode&&sets.every(function(cs){return cs.every(function(c){return c.resources.pricedBodyYuan===0;});})){
       // With free owned bodies, first determine the exact achievable primary
       // fee and effect count using minimum B per (level,effects). This pass is
       // ONLY a feasibility bound; overflow/stable optimization still follows.
-      var width=suffixEffects[0]+1, bounds=new Map([[0,0]]);
-      sets.forEach(function(cs){var nextBounds=new Map();bounds.forEach(function(b,key){
+      var width=suffixEffects[0]+1, bounds=new Map([[0,{ modified: 0, b: 0 }]]);
+      sets.forEach(function(cs){var nextBounds=new Map();bounds.forEach(function(prior,key){
         var gain=Math.floor(key/width),effects=key%width;
-        cs.forEach(function(c){var nk=Math.min(needed,gain+c.endLevel-c.startLevel)*width+effects+c.unlockedEffects;
-          var nb=b+c.resources.awakeningBlueprints;if(!nextBounds.has(nk)||nb<nextBounds.get(nk))nextBounds.set(nk,nb);});
+        cs.forEach(function(c){var added=gain+c.endLevel-c.startLevel;if(added>needed)return;
+          var nk=added*width+effects+c.unlockedEffects;
+          var value={modified:prior.modified+c.modifiedInvestedCount,b:prior.b+c.resources.awakeningBlueprints},old=nextBounds.get(nk);
+          if(!old||cmp([value.modified,value.b],[old.modified,old.b])<0)nextBounds.set(nk,value);});
       });bounds=nextBounds;});
       var bestFee=Infinity;requiredEffects=-1;
-      bounds.forEach(function(b,key){if(Math.floor(key/width)!==needed)return;var y=fee(b),e=key%width;
+      bounds.forEach(function(value,key){if(Math.floor(key/width)!==needed||value.modified!==goal.modified)return;var y=fee(value.b),e=key%width;
         if(y<bestFee||y===bestFee&&e>requiredEffects){bestFee=y;requiredEffects=e;}});
       var hi=sets.reduce(function(n,cs){return n+Math.max.apply(null,cs.map(function(c){return c.resources.awakeningBlueprints;}));},0),lo=0;
       while(lo<hi){var mid=Math.ceil((lo+hi)/2);if(fee(mid)<=bestFee)lo=mid;else hi=mid-1;}blueprintBudget=lo;
     }
-    var states = new Map([[0, [{ gain: 0, body: 0, blueprints: 0, effects: 0, overflow: 0, key: "", beasts: [] }]]]);
+    var states = new Map([[0, [{ gain: 0, modified: 0, body: 0, blueprints: 0, effects: 0, overflow: 0, key: "", beasts: [] }]]]);
     sets.forEach(function (allCandidates,setIndex) {
-      // Independent resources + no budget: all per-beast maximum reachable
-      // effect counts can be achieved simultaneously.
-      var maxEffects = Math.max.apply(null, allCandidates.map(function (c) { return c.unlockedEffects; }));
-      var candidates = effectMode ? allCandidates.filter(function (c) { return c.unlockedEffects === maxEffects; }) : allCandidates;
+      var candidates = allCandidates;
       var collected = new Map();
       states.forEach(function (frontier) {
         frontier.forEach(function (s) {
           candidates.forEach(function (c) {
+            var gain = s.gain + c.endLevel - c.startLevel;
+            if (gain > needed) return;
+            var tail = suffixGoals[setIndex + 1].get(needed - gain);
+            var modified = s.modified + c.modifiedInvestedCount;
+            if (!tail || modified + tail.modified !== goal.modified) return;
             var changed = c.items.length > 0;
-            var v = { gain: s.gain + c.endLevel - c.startLevel,
+            var v = { gain: gain, modified: modified,
               body: sumSafe(s.body, c.resources.pricedBodyYuan),
               blueprints: sumSafe(s.blueprints, c.resources.awakeningBlueprints),
               effects: s.effects + c.unlockedEffects, overflow: sumSafe(s.overflow, c.overflowResearch),
@@ -306,7 +349,8 @@
               beasts: changed ? s.beasts.concat([c]) : s.beasts };
             if(v.gain+suffixGain[setIndex+1]<needed||v.blueprints>blueprintBudget)return;
             if(requiredEffects!==null&&(v.effects>requiredEffects||v.effects+suffixEffects[setIndex+1]<requiredEffects))return;
-            var key = Math.min(needed, v.gain), bucket = collected.get(key);
+            if(effectMode&&v.effects+tail.effects<requiredEffects)return;
+            var key = v.gain, bucket = collected.get(key);
             if (!bucket) { bucket = { saturated: null, values: new Map() }; collected.set(key, bucket); }
             if (Number.isInteger(price) && v.blueprints >= stock) {
               if (!bucket.saturated || cmp(order(v), order(bucket.saturated)) < 0) bucket.saturated = v;
@@ -354,7 +398,7 @@
       overflowResearch: best.overflow, awakeningBlueprints: best.blueprints, organPieces: 0,
       fragments: 0, contribution: 0, yuan: 0, pricedYuan: cost.totalYuan, projectedTotalLevel: baseline + best.gain };
     best.beasts.forEach(function (b) {
-      ["investedCount", "ownedInvestedCount", "newInvestedCount", "ownedPhysicalCount", "newPhysicalCount"].forEach(function (field) { totals[field] += b[field]; });
+      ["investedCount", "ownedInvestedCount", "newInvestedCount", "ownedPhysicalCount", "newPhysicalCount", "modifiedInvestedCount", "ownedModifiedInvestedCount", "newModifiedInvestedCount"].forEach(function (field) { totals[field] += b[field]; });
       totals.organPieces += b.resources.organPieces; totals.fragments += b.resources.fragments;
       totals.contribution = totals.contribution === null || b.resources.contribution === null ? null : totals.contribution + b.resources.contribution;
       totals.yuan += b.resources.pricedBodyYuan;
@@ -371,34 +415,65 @@
       if (!targetStage || targetStage.requiredTotalLevel === null) throw Error("目标流派阶数必须为1至5阶");
       var progress = progressByBeast || {}, baseline = CORE.schoolSnapshot(school, progress, data).totalLevel;
       var needed = Math.max(0, targetStage.requiredTotalLevel - baseline);
+      var resultBase = { valid: true, errors: [], current: { totalLevel: baseline },
+        target: { stage: stage, totalLevel: targetStage.requiredTotalLevel, remaining: needed } };
+      if (!needed) return Object.assign(resultBase, { alreadyReached: true, plans: [] });
       var settings = CORE.normalizeReferenceCostSettings(data, config.referenceCostSettings);
       if (settings.awakeningBlueprintPrice === null) throw Error("请先设置有效的觉醒神图单价再计算");
       var participating = new Set(config.participatingBeastIds || school.beastIds);
       var cache = new Map(), sets = [];
-      school.beastIds.slice().sort().forEach(function (beastId) {
-        if (!participating.has(beastId)) return;
-        var beast = data.beasts.find(function (b) { return b.id === beastId; });
-        if (!beast) return;
-        var current = CORE.normalizeBeastProgress(beast, progress[beastId], data);
-        if (beast.quality === "orange" && beast.contributionPerFragment === null &&
-            CORE.levelForResearch(current.research, data.researchThresholds, beast.maxLevel) < beast.maxLevel &&
-            settings.beastPrices[beastId] === null) throw Error(beast.name + "缺少本体参考价格，请先补齐再计算");
-        sets.push(machineBeastCandidates(data, beast, current, Object.assign({}, config, {
-          materialCache: cache, referenceCostSettings: settings,
-          bluePurpleInventoryOnly: config.bluePurpleInventoryOnly === undefined ? settings.bluePurpleInventoryOnly : config.bluePurpleInventoryOnly,
-          ownedLimits: config.ownedLimitsByBeast && config.ownedLimitsByBeast[beastId]
-        })));
-      });
-      var maximum = sets.reduce(function (n, candidates) { return n + Math.max.apply(null, candidates.map(function (c) { return c.endLevel - c.startLevel; })); }, baseline);
-      if (maximum < targetStage.requiredTotalLevel) throw Error("当前参与范围及蓝紫库存限制下无法达到目标流派阶数");
+      function buildSets(plainOnly) {
+        sets = [];
+        school.beastIds.slice().sort().forEach(function (beastId) {
+          if (!participating.has(beastId)) return;
+          var beast = data.beasts.find(function (b) { return b.id === beastId; });
+          if (!beast) return;
+          var current = CORE.normalizeBeastProgress(beast, progress[beastId], data);
+          if (beast.quality === "orange" && beast.contributionPerFragment === null &&
+              CORE.levelForResearch(current.research, data.researchThresholds, beast.maxLevel) < beast.maxLevel &&
+              settings.beastPrices[beastId] === null) throw Error(beast.name + "缺少本体参考价格，请先补齐再计算");
+          sets.push(machineBeastCandidates(data, beast, current, Object.assign({}, config, {
+            plainOnly: plainOnly, maxAddedLevel: needed,
+            materialCache: cache, referenceCostSettings: settings,
+            bluePurpleInventoryOnly: config.bluePurpleInventoryOnly === undefined ? settings.bluePurpleInventoryOnly : config.bluePurpleInventoryOnly,
+            ownedLimits: config.ownedLimitsByBeast && config.ownedLimitsByBeast[beastId]
+          })));
+        });
+      }
+      function exactReachable() {
+        var reachable = new Set([0]);
+        sets.forEach(function (cs) {
+          var next = new Set();
+          reachable.forEach(function (gain) { cs.forEach(function (c) {
+            var added = gain + c.endLevel - c.startLevel;
+            if (added <= needed) next.add(added);
+          }); });
+          reachable = next;
+        });
+        return reachable.has(needed);
+      }
+      buildSets(true);
+      // If a zero-modification exact solution exists it dominates EVERY
+      // modified solution under both formal orders, regardless of its price.
+      if (!exactReachable()) buildSets(false);
+      if (!exactReachable()) throw Error("当前条件下无法精确达到目标，请调整参与范围、材料或蓝紫库存限制");
       var cost = combine(data, sets, baseline, needed, settings, false);
       var effects = combine(data, sets, baseline, needed, settings, true);
-      if (!cost || !effects) throw Error("当前参与范围内无法达到目标流派阶数");
+      if (!cost || !effects) throw Error("当前条件下无法精确达到目标");
       var plans = cost.stableKey === effects.stableKey ? [Object.assign({}, cost, { kind: "merged" })] : [cost, effects];
-      return { valid: true, errors: [], current: { totalLevel: baseline },
-        target: { stage: stage, totalLevel: targetStage.requiredTotalLevel, remaining: needed }, plans: plans,
-        model: { exact: true, modificationMinimum: 0, bluePurpleInventoryOnly: config.bluePurpleInventoryOnly === undefined ? settings.bluePurpleInventoryOnly : config.bluePurpleInventoryOnly,
-          excludedCosts: ["蓝紫本体获取", "机关破片获取", "高阶制作", "改造制作"] } };
+      plans.forEach(function (plan) {
+        plan.beasts.forEach(function (b) { b.finalEffect = CORE.activeBeastEffect(data.beasts.find(function (beast) { return beast.id === b.beastId; }), b.endLevel); });
+        plan.finalEffects = school.beastIds.map(function (beastId) {
+          var beast = data.beasts.find(function (b) { return b.id === beastId; });
+          if (!beast) return null;
+          var detail = plan.beasts.find(function (b) { return b.beastId === beastId; });
+          var level = detail ? detail.endLevel : CORE.levelForResearch((progress[beastId] || {}).research, data.researchThresholds, beast.maxLevel);
+          return { beastId: beastId, beastName: beast.name, level: level, changed: Boolean(detail), effect: CORE.activeBeastEffect(beast, level) };
+        }).filter(Boolean);
+      });
+      return Object.assign(resultBase, { alreadyReached: false, plans: plans,
+        model: { exact: true, modificationMinimum: cost.totals.modifiedInvestedCount, bluePurpleInventoryOnly: config.bluePurpleInventoryOnly === undefined ? settings.bluePurpleInventoryOnly : config.bluePurpleInventoryOnly,
+          excludedCosts: ["蓝紫本体获取", "机关破片获取", "高阶制作", "改造制作"] } });
     } catch (error) { return { valid: false, errors: [error.message || "流派计算失败"] }; }
   }
   return { defaultTargetStage: defaultTargetStage, machineBeastCandidates: machineBeastCandidates, calculateSchoolPlans: calculateSchoolPlans };

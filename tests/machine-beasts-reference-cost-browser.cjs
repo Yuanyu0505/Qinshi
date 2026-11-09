@@ -97,8 +97,8 @@ async function calculateFixedSchool(page) {
   await waitForCalculation(page, 'schoolResult');
   const result = await page.evaluate(() => window.MACHINE_BEAST_UI.captureView().schoolResult);
   assert.equal(result.valid, true);
-  assert.equal(result.plans.length, 2);
-  const cheapest = result.plans.find(p => p.kind === 'cost');
+  assert.equal(result.plans.length, 1);
+  const cheapest = result.plans.find(p => p.kind === 'merged');
   assert.equal(cheapest.totals.pricedYuan,42160);
   assert.deepEqual(cheapest.beasts.map(item=>[item.beastId,item.endLevel]),[['mechanical-vermilion-bird',20],['mechanical-white-tiger',19]]);
   const panel=page.locator('[data-reference-cost-panel="school-0"]');
@@ -298,9 +298,10 @@ test('each real school alternative deducts shared stock once from its own aggreg
   await page.locator('[data-machine-action="calculate-school"]').click();
   await waitForCalculation(page,'schoolResult');
   const result=await page.evaluate(()=>window.MACHINE_BEAST_UI.captureView().schoolResult);
-  assert.equal(result.plans.length,2);
+  assert.ok(result.plans.length >= 1 && result.plans.length <= 2);
   for(let i=0;i<result.plans.length;i++){
     const p=result.plans[i],panel=page.locator('[data-reference-cost-panel="school-'+i+'"]');
+    assert.equal(p.totals.projectedTotalLevel,45);
     assert.equal(p.cost.blueprints.usedStock,10);
     assert.equal(p.cost.blueprints.missing,p.totals.awakeningBlueprints-10);
     assert.equal(await panel.locator('[data-reference-blueprint-stock]').textContent(),'10');

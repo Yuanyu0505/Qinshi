@@ -345,7 +345,7 @@ test("school planner: maps target stages and keeps excluded beasts in the baseli
   assert.strictEqual(result.current.totalLevel, 10);
   assert.strictEqual(result.target.totalLevel, 45);
   result.plans.forEach(plan => {
-    assert.ok(plan.totals.projectedTotalLevel >= 45);
+    assert.strictEqual(plan.totals.projectedTotalLevel, 45);
     assert.ok(!plan.beasts.some(item => item.beastId === school.beastIds[0]));
   });
 });
@@ -364,12 +364,14 @@ test("school planner: cost and effects use their respective formal priorities", 
   assert.ok(effects);
   assert.ok(cost.totals.pricedYuan <= effects.totals.pricedYuan);
   assert.ok(effects.totals.unlockedEffects >= cost.totals.unlockedEffects);
-  const maximumEffects = DATA.beasts.filter(beast => school.beastIds.includes(beast.id) && beast.quality === "orange")
-    .reduce((sum, beast) => sum + beast.effects.length, 0);
-  assert.strictEqual(effects.totals.unlockedEffects, maximumEffects);
+  // At 45 total levels, 25 + 20 can cross seven nodes. All available orange
+  // beasts have nodes at 10/15/20(/25), so an eighth requires at least 50.
+  assert.strictEqual(effects.totals.projectedTotalLevel, 45);
+  assert.strictEqual(cost.totals.projectedTotalLevel, 45);
+  assert.strictEqual(effects.totals.unlockedEffects, 7);
 });
 
-test("school planner: rounded yuan precedes stable ties while effects can justify further cultivation", () => {
+test("school planner: exact growth rejects a second effect costing an extra level", () => {
   const progress = {
     "mechanical-white-tiger": { research: 750000, fragments: 13 },
     "mechanical-vermilion-bird": { research: 750000, fragments: 8 },
@@ -405,9 +407,9 @@ test("school planner: rounded yuan precedes stable ties while effects can justif
   assert.strictEqual(result.valid, true);
   assert.strictEqual(result.current.totalLevel, 42);
   assert.strictEqual(result.target.totalLevel, 45);
-  assert.strictEqual(result.plans.length, 2);
-  const plan = result.plans.find(candidate => candidate.kind === "cost");
-  const effects = result.plans.find(candidate => candidate.kind === "effects");
+  assert.strictEqual(result.plans.length, 1);
+  const plan = result.plans.find(candidate => candidate.kind === "merged");
+  const effects = plan;
   assert.ok(plan);
   assert.ok(effects);
   assert.deepStrictEqual({
@@ -450,33 +452,24 @@ test("school planner: rounded yuan precedes stable ties while effects can justif
       resources: { awakeningBlueprints: 192, organPieces: 960, fragments: 72, contribution: 43200, yuan: 16000, pricedBodyYuan: 16000 }
     }
   ]);
-  assert.strictEqual(effects.totals.unlockedEffects, 2);
-  assert.strictEqual(effects.totals.pricedYuan, 57769);
-  assert.strictEqual(effects.totals.projectedTotalLevel, 46);
-  assert.ok(effects.beasts.every(beast => beast.endLevel === 20));
+  assert.strictEqual(effects.totals.unlockedEffects, 1);
+  assert.strictEqual(effects.totals.pricedYuan, 42160);
+  assert.strictEqual(effects.totals.projectedTotalLevel, 45);
 });
 
-test("school planner: an achieved target retains zero-cost and maximum-effect objectives", () => {
+test("school planner: an achieved target stops regardless of participants or free additional effects", () => {
   const school = DATA.schools.find(item => item.id === "nonAttack");
   const progress = {};
   setSchoolTotalLevel(school, 45, progress);
   const result = PLANNER.calculateSchoolPlans(DATA, school, progress, { targetStage: 1 });
   assert.strictEqual(result.valid, true);
-  const cost = result.plans.find(plan => plan.kind === "cost" || plan.kind === "merged");
-  const effects = result.plans.find(plan => plan.kind === "effects" || plan.kind === "merged");
-  assert.ok(cost);
-  assert.ok(effects);
-  assert.strictEqual(cost.totals.pricedYuan, 0);
-  const expectedEffects = DATA.beasts.filter(beast => school.beastIds.includes(beast.id) && beast.quality === "orange")
-    .reduce((sum, beast) => sum + beast.effects.filter(effect =>
-      (progress[beast.id]?.research || 0) < DATA.researchThresholds[effect.level]).length, 0);
-  assert.strictEqual(effects.totals.unlockedEffects, expectedEffects);
+  assert.strictEqual(result.alreadyReached, true);
+  assert.deepStrictEqual(result.plans, []);
 
   const idle = PLANNER.calculateSchoolPlans(DATA, school, progress, { targetStage: 1, participatingBeastIds: [] });
   assert.strictEqual(idle.valid, true);
-  assert.strictEqual(idle.plans.length, 1);
-  assert.strictEqual(idle.plans[0].kind, "merged");
-  assert.strictEqual(idle.plans[0].totals.investedCount, 0);
+  assert.strictEqual(idle.alreadyReached, true);
+  assert.deepStrictEqual(idle.plans, []);
 
   // The 45-level baseline has the bronze man at level 10. Five saved
   // rank-0 bodies add 240000 research, reaching level 15 and its next effect;
@@ -487,10 +480,8 @@ test("school planner: an achieved target retains zero-cost and maximum-effect ob
     referenceCostSettings: { awakeningBlueprintStock: 480 }
   });
   assert.strictEqual(noPricedSpend.valid, true);
-  assert.strictEqual(noPricedSpend.plans.length, 1);
-  assert.strictEqual(noPricedSpend.plans[0].kind, "merged");
-  assert.strictEqual(noPricedSpend.plans[0].totals.pricedYuan, 0);
-  assert.strictEqual(noPricedSpend.plans[0].totals.unlockedEffects, 1);
+  assert.strictEqual(noPricedSpend.alreadyReached, true);
+  assert.deepStrictEqual(noPricedSpend.plans, []);
 });
 
 test("school planner: high-rank inventory uses seven-rank body equivalents", () => {
@@ -505,7 +496,7 @@ test("school planner: high-rank inventory uses seven-rank body equivalents", () 
     allowNewHighRanks: false
   });
   assert.strictEqual(result.valid, false);
-  assert.match(result.errors.join(""), /无法达到/);
+  assert.match(result.errors.join(""), /无法精确达到/);
 
   const direct = PLANNER.machineBeastCandidates(DATA, DATA.beasts.find(item => item.id === beastId), progress[beastId], {
     useOwnedInventory: true,

@@ -119,9 +119,9 @@ function compare(left, right) {
   return 0;
 }
 
-function tuple(metrics, mode, modifiedMode) {
+function tuple(metrics, mode) {
   const yuan = metrics.pricedYuan === null ? Infinity : metrics.pricedYuan;
-  return (modifiedMode ? [metrics.modifiedInvestedCount] : []).concat(
+  return [metrics.modifiedInvestedCount].concat(
     mode === "cost" ? [yuan, -metrics.unlockedEffects] : [-metrics.unlockedEffects, yuan],
     [metrics.overflowResearch, metrics.awakeningBlueprints]);
 }
@@ -130,9 +130,9 @@ function bruteSchool(data, progress, options) {
   const school = data.schools[0];
   const target = school.stages[0].requiredTotalLevel;
   const current = data.beasts.reduce((sum, beast) => sum + level(data, beast, (progress[beast.id] || {}).research || 0), 0);
+  if (current >= target) return { reached: true };
   const sets = data.beasts.map(beast => bruteBeast(data, beast, progress[beast.id], options));
   const settings = options.referenceCostSettings || {};
-  const modifiedMode = Boolean(options.allowNewModifications);
   const best = { cost: null, effects: null };
   function combine(index, addedLevel, effects, bodyYuan, blueprints, overflow, modified) {
     if (index < sets.length) {
@@ -141,7 +141,7 @@ function bruteSchool(data, progress, options) {
         blueprints + candidate.blueprints, overflow + candidate.overflow, modified + candidate.modified);
       return;
     }
-    if (current + addedLevel < target) return;
+    if (current + addedLevel !== target) return;
     const stock = settings.useAwakeningBlueprintStock === false ? 0 : (settings.awakeningBlueprintStock || 0);
     const price = Object.hasOwn(settings, "awakeningBlueprintPrice") ? settings.awakeningBlueprintPrice : data.referenceCostRules.blueprintPrice;
     const missing = Math.max(0, blueprints - stock);
@@ -152,7 +152,7 @@ function bruteSchool(data, progress, options) {
     const metrics = { pricedYuan: bodyYuan === null || blueprintYuan === null ? null : bodyYuan + blueprintYuan,
       unlockedEffects: effects, awakeningBlueprints: blueprints, overflowResearch: overflow, modifiedInvestedCount: modified };
     for (const mode of ["cost", "effects"]) {
-      const value = tuple(metrics, mode, modifiedMode);
+      const value = tuple(metrics, mode);
       if (!best[mode] || compare(value, best[mode]) < 0) best[mode] = value;
     }
   }
@@ -163,13 +163,21 @@ function bruteSchool(data, progress, options) {
 function checkAgainstOracle(data, progress, options, context) {
   const expected = bruteSchool(data, progress, options);
   const actual = PLANNER.calculateSchoolPlans(data, data.schools[0], progress, { targetStage: 1, ...options });
+  if (expected.reached) {
+    assert.equal(actual.valid, true, context);
+    assert.equal(actual.alreadyReached, true, context);
+    assert.deepEqual(actual.plans, [], context);
+    return actual;
+  }
   assert.equal(actual.valid, expected.cost !== null, `${context}: feasibility`);
-  if (!actual.valid) return;
+  if (!actual.valid) return actual;
   for (const mode of ["cost", "effects"]) {
     const plan = actual.plans.find(candidate => candidate.kind === mode || candidate.kind === "merged");
     assert.ok(plan, `${context}: missing ${mode} plan`);
-    assert.deepEqual(tuple(plan.totals, mode, Boolean(options.allowNewModifications)), expected[mode], `${context}: ${mode}`);
+    assert.equal(plan.totals.projectedTotalLevel, data.schools[0].stages[0].requiredTotalLevel, context);
+    assert.deepEqual(tuple(plan.totals, mode), expected[mode], `${context}: ${mode}`);
   }
+  return actual;
 }
 
 test("school oracle: shared blueprint stock can reverse intermediate-state cost ordering", () => {
@@ -188,8 +196,8 @@ test("school oracle: shared blueprint stock can reverse intermediate-state cost 
   const progress = { "beast-0": { inventory: { none: { 0: 96 } } }, "beast-1": { inventory: { none: { 0: 96 } } } };
   checkAgainstOracle(data, progress, options, "shared stock reversal");
   const expected = bruteSchool(data, progress, options);
-  assert.equal(expected.cost[0], 1000);
-  assert.equal(expected.cost[3], 97);
+  assert.equal(expected.cost[1], 1000);
+  assert.equal(expected.cost[4], 97);
 });
 
 test("school oracle: blue-purple stock restrictions cannot be bypassed by saved fragments or disabled inventory", () => {
@@ -223,7 +231,7 @@ test("school oracle: modified inventory quantities receive the formal highest pr
     ownedLimitsByBeast: { "beast-0": { initial: { 0: 3 } } } }, "modified inventory");
 });
 
-test("school oracle: an already-reached school target does not suppress further effect unlocking", () => {
+test("school oracle: an already-reached school target stops even when further effects cost nothing", () => {
   const data = fixture([{}], 1);
   const progress = { "beast-0": { research: 5 } };
   checkAgainstOracle(data, progress, { newRankMode: "zero" }, "already-reached target with payable effects");
@@ -231,6 +239,44 @@ test("school oracle: an already-reached school target does not suppress further 
   checkAgainstOracle(data, progress, { newRankMode: "zero", referenceCostSettings: {
     awakeningBlueprintPrice: 0
   } }, "already-reached target with free priced resources still prefers effects");
+});
+
+test('school oracle: exact gain budget trades cost against effects instead of maximizing every beast', () => {
+  const data = fixture([{ effects: [1, 3], contributionPerFragment: 750 },
+    { effects: [1, 2], contributionPerFragment: 0 }], 3);
+  const options = { newRankMode: 'zero', referenceCostSettings: { awakeningBlueprintPrice: 0 } };
+  checkAgainstOracle(data, {}, options, 'fixed three levels, different formal winners');
+  const result = PLANNER.calculateSchoolPlans(data, 'oracle', {}, { targetStage: 1, ...options });
+  const cheap = result.plans.find(p => p.kind === 'cost');
+  const effects = result.plans.find(p => p.kind === 'effects');
+  assert.equal(cheap.totals.pricedYuan, 0); assert.equal(cheap.totals.unlockedEffects, 2);
+  assert.equal(effects.totals.pricedYuan, 3000); assert.equal(effects.totals.unlockedEffects, 3);
+});
+
+test('school oracle: sparse levels require modified materials and modification minimization still leads', () => {
+  for (const owned of [false, true]) {
+    const data = fixture([{ maxLevel: 3, maxRank: 0, effects: [1, 3] }], 1);
+    data.researchThresholds = { 0: 0, 1: 4, 2: 6, 3: 10 };
+    data.researchValues.orange = { 0: { none: 6, initial: 4 } };
+    checkAgainstOracle(data, owned ? { 'beast-0': { showMods: true, inventory: { initial: { 0: 1 } } } } : {},
+      { newRankMode: 'zero', allowNewModifications: !owned }, `sparse modified only ${owned}`);
+  }
+});
+
+test('school oracle: randomized sparse research and modified stocks retain exact-level optima', () => {
+  let seed = 1089;
+  const random = limit => { seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0; return seed % limit; };
+  for (let index = 0; index < 80; index++) {
+    const data = fixture([{ maxLevel: 3, maxRank: 0, effects: [1, 3] },
+      { maxLevel: 3, maxRank: 0, effects: [2] }], 1 + random(6));
+    data.researchValues.orange = { 0: { none: 2 + random(10), initial: 1 + random(8) } };
+    data.resourceRules.blueprintDivisor = 1 + random(7);
+    const progress = { 'beast-0': { research: random(5), showMods: true, inventory: { initial: { 0: random(3) } } },
+      'beast-1': { research: random(5), fragments: random(6), inventory: { none: { 0: random(3) } } } };
+    const options = { newRankMode: 'zero', allowNewModifications: true,
+      referenceCostSettings: { awakeningBlueprintPrice: index % 3 ? 0 : 1.1, awakeningBlueprintStock: random(10) } };
+    checkAgainstOracle(data, progress, options, `sparse seed1089 ${index}`);
+  }
 });
 
 test("school oracle: 100 seeded random small instances match complete quantity enumeration and reversed traversal", () => {
@@ -255,9 +301,10 @@ test("school oracle: 100 seeded random small instances match complete quantity e
       referenceCostSettings: { awakeningBlueprintStock: index % 11 === 0 ? 1000 : random(15),
         awakeningBlueprintPrice: index % 13 === 0 ? 1.1 : index % 17 === 0 ? 1e-7 : random(8),
         useAwakeningBlueprintStock: index % 9 !== 0 } };
-    checkAgainstOracle(data, progress, options, `seed1088 case${index}`);
+    const forward = checkAgainstOracle(data, progress, options, `seed1088 case${index}`);
     const reversed = { ...data, beasts: data.beasts.slice().reverse(), modifications: data.modifications.slice().reverse(),
       schools: [{ ...data.schools[0], beastIds: data.schools[0].beastIds.slice().reverse() }] };
-    checkAgainstOracle(reversed, progress, options, `seed1088 reversed case${index}`);
+    const backward = checkAgainstOracle(reversed, progress, options, `seed1088 reversed case${index}`);
+    assert.deepEqual(backward.plans?.map(p => [p.kind, p.stableKey]), forward.plans?.map(p => [p.kind, p.stableKey]), `stable traversal case${index}`);
   }
 });

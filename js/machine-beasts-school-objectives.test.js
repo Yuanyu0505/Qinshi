@@ -29,12 +29,13 @@ test('blue purple inventory restriction cannot be bypassed by fragments or globa
   const allowed=mode(solve(d,{}, {bluePurpleInventoryOnly:false}),'cost');
   assert.ok(allowed.totals.newInvestedCount>0);assert.ok(allowed.cost.unpricedResources.length>0);
 });
-test('effects objective continues to legal beast caps and counts actual crossed effect nodes',()=>{
+test('effects objective stops at the exact school gain and counts actual crossed effect nodes',()=>{
   const r=solve(input(['war-demon'],10),{'war-demon':{research:277000}},{newRankMode:'zero'});
   const cheap=mode(r,'cost'),effects=mode(r,'effects');
   assert.equal(cheap.totals.unlockedEffects,1);
-  assert.equal(effects.totals.unlockedEffects,3);assert.equal(effects.beasts[0].endLevel,20);
-  assert.ok(effects.totals.pricedYuan>cheap.totals.pricedYuan);
+  assert.equal(effects.totals.unlockedEffects,1);assert.equal(effects.beasts[0].endLevel,10);
+  assert.equal(effects.totals.projectedTotalLevel,10);
+  assert.equal(effects.totals.pricedYuan,cheap.totals.pricedYuan);
 });
 test('modified bodies never displace feasible zero-modification plans because their count is first',()=>{
   const r=solve(input(['red-serpent'],9),{}, {allowNewModifications:true,newRankMode:'zeroToSeven'});

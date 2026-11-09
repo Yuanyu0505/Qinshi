@@ -76,7 +76,7 @@ test('real purple inventory result reports priced resources without pretending b
   assert.equal(result.plans[0].kind, 'merged');
   const body = page.locator('.machine-school-plan');
   assert.match(await body.textContent(), /两种目标得到相同方案/);
-  assert.match(await body.textContent(), /新增解锁效果/);
+  assert.match(await body.textContent(), /新增效果解锁节点数/);
   assert.match(await body.textContent(), /已计价参考元宝/);
   assert.equal(await body.locator('[data-reference-cost-total]').textContent(), '3,360');
   assert.match(await body.textContent(), /未计价|获取成本未计入/);
@@ -84,6 +84,65 @@ test('real purple inventory result reports priced resources without pretending b
   assert.equal(result.plans[0].totals.ownedInvestedCount, 2);
   assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth), true);
 }, 360));
+
+for (const width of [320, 820, 1280]) test(width + 'px exact 97 to 135 renders honest comparison and highest active effects', async () => scenario(async page => {
+  await page.locator('[data-school-calc-school]').selectOption('nonAttack');
+  await page.evaluate(() => {
+    const view = window.MACHINE_BEAST_UI.captureView(), draft = view.schoolDraft, data = window.MACHINE_BEAST_DATA;
+    let remaining = 97;
+    for (const id of Object.keys(draft.progressByBeast)) {
+      const b = data.beasts.find(b => b.id === id), participate = ['mechanical-white-tiger', 'mechanical-black-tortoise'].includes(id);
+      const level = participate ? 0 : Math.min(remaining, b.maxLevel); remaining -= level;
+      Object.assign(draft.progressByBeast[id], { research: data.researchThresholds[level], inventory: {}, fragments: 0 });
+      draft.participating[id] = participate;
+      draft.ownedPoliciesByBeast[id] = { useOwnedInventory: true, limits: {} };
+    }
+    draft.targetStage = 3; view.schoolResult = null;
+    window.MACHINE_BEAST_UI.restoreView(view);
+  });
+  const r = await calculate(page);
+  assert.equal(r.valid, true);
+  assert.ok(r.plans.every(p => p.totals.projectedTotalLevel === 135));
+  const comparison = page.locator('.machine-school-comparison');
+  assert.equal(await comparison.count(), 1);
+  for (const [metric, value] of [['current', '97'], ['target', '135'], ['final', '135'], ['gain', '38']]) {
+    const cells = comparison.locator('[data-school-metric="' + metric + '"] td');
+    assert.equal(await cells.count(), r.plans.length);
+    for (const text of await cells.allTextContents()) assert.equal(text, value);
+  }
+  assert.match(await comparison.textContent(), /新增效果解锁节点数/);
+  const finalLists = page.locator('.machine-school-final-effects');
+  assert.equal(await finalLists.count(), r.plans.length);
+  for (let index = 0; index < r.plans.length; index++) {
+    assert.equal(await finalLists.nth(index).locator('dl > div').count(), 13);
+    assert.match(await finalLists.nth(index).textContent(), /原等级不变/);
+    for (const row of r.plans[index].finalEffects) {
+      const cell = finalLists.nth(index).locator('[data-final-beast="' + row.beastId + '"]');
+      if (row.effect) assert.match(await cell.textContent(), new RegExp(row.effect.level + '级档位'));
+      assert.equal(await cell.locator('[data-active-effect]').count(), 1);
+    }
+  }
+  await comparison.screenshot({ path: 'test-results/school-1089-comparison-' + width + '.png' });
+  await page.screenshot({ path: 'test-results/school-1089-' + width + '.png', fullPage: true });
+  const overflow = await page.evaluate(() => ({ width: document.documentElement.clientWidth, scroll: document.documentElement.scrollWidth, x: window.scrollX,
+    elements: Array.from(document.querySelectorAll('body *')).filter(el => el.getBoundingClientRect().right + window.scrollX > document.documentElement.clientWidth).slice(0, 12).map(el => [el.tagName, el.className, el.id, Math.round(el.getBoundingClientRect().width), getComputedStyle(el).whiteSpace, el.textContent.slice(0, 80)]) }));
+  assert.equal(overflow.scroll <= overflow.width, true, JSON.stringify(overflow));
+}, width));
+
+test('reached school target displays stop message without new purchase panels', async () => scenario(async page => {
+  page.setDefaultTimeout(5000);
+  await preparePurple(page);
+  await page.evaluate(() => {
+    const v = window.MACHINE_BEAST_UI.captureView();
+    v.schoolDraft.progressByBeast['eight-claw-centipede'].research = window.MACHINE_BEAST_DATA.researchThresholds[1];
+    window.MACHINE_BEAST_UI.restoreView(v);
+  });
+  await page.locator('[data-reference-cost-field="awakeningBlueprintPrice"]').fill('');
+  const r = await calculate(page);
+  assert.equal(r.alreadyReached, true); assert.deepEqual(r.plans, []);
+  assert.match(await page.locator('#machine-beast-calculator-result').textContent(), /目标已达成/);
+  assert.equal(await page.locator('[data-reference-cost-panel^="school-"]').count(), 0);
+}));
 test('editing any optimization price invalidates cached school results and requires a fresh solve', async () => scenario(async page => {
   await preparePurple(page); await calculate(page);
   await page.evaluate(() => { window.__oldSchoolView = window.MACHINE_BEAST_UI.captureView(); });

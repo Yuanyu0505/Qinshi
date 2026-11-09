@@ -9,7 +9,7 @@ const DATA = require('../data/machine-beasts.js');
 // These are resource-safety guards for isolated diagnostic processes, not a
 // claim that a 30-second calculation is an acceptable interactive experience.
 const TIMEOUT_MS = 30000;
-const LOG = path.join(__dirname, '..', 'test-results', 'school-1088-performance.log');
+const LOG = path.join(__dirname, '..', 'test-results', 'school-1089-performance.log');
 const CASES = DATA.schools.flatMap(school => [
   { id: `${school.id}-default`, schoolId: school.id, stock: 0, price: 70, inventory: false },
   { id: `${school.id}-heterogeneous-high-inventory`, schoolId: school.id, stock: 10000, price: 70, inventory: true },
@@ -51,7 +51,7 @@ function assertLegal(result, input) {
   assert.equal(result.valid, true, JSON.stringify(result.errors));
   assert.ok(result.plans.length >= 1 && result.plans.length <= 2);
   for (const plan of result.plans) {
-    assert.ok(plan.totals.projectedTotalLevel >= result.target.totalLevel);
+    assert.equal(plan.totals.projectedTotalLevel, result.target.totalLevel);
     assert.equal(plan.totals.pricedYuan, plan.cost.totalYuan);
     assert.ok(Number.isSafeInteger(plan.totals.pricedYuan));
     assert.equal(plan.totals.modifiedInvestedCount, 0);

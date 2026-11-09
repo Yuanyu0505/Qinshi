@@ -580,7 +580,7 @@
       '<p class="muted-tip">蓝紫限制开启后，只允许使用已保存的完整蓝紫库存及指定阶数使用上限，不会通过碎片补出新本体；关闭使用已有库存时，蓝紫不能新增投入。蓝紫本体获取成本未计入，神图等其他消耗正常计价。</p>' +
       newRankModeSelector("school", draft.newRankMode) +
       '<div class="machine-calculator-actions"><button type="button" class="seg" data-machine-action="reload-school-calculator">从个人进度重新读取</button><button type="button" class="seg active" data-machine-action="calculate-school">计算两套最优方案</button></div>' +
-      '<p class="muted-tip">投入最小方案：已计价元宝最少 → 新增解锁效果最多 → 等级内研发度溢出最少 → 神图总消耗最少。最多效果档位方案：新增解锁效果最多 → 已计价元宝最少 → 溢出最少 → 神图总消耗最少。允许改造参与时，两套目标均先比较改造本体折算投入数量（已有与新增均计入），再按上述顺序比较；完全相同时按稳定键确定。效果按该兽实际效果解锁等级统计跨越节点。</p>' +
+      '<p class="muted-tip">两套方案都必须精确达到目标累计等级，不得超额培养；已达到或超过目标则不再投入。投入最小方案：已计价元宝最少 → 新增效果解锁节点数最多 → 等级内研发度溢出最少 → 神图总消耗最少。最多效果档位方案：新增效果解锁节点数最多 → 已计价元宝最少 → 溢出最少 → 神图总消耗最少。允许改造参与时，两套目标均先比较改造本体折算投入数量（已有与新增均计入），再按上述顺序比较；完全相同时按稳定键确定。新增节点按实际effects统计；高档替换低档，最终仅生效最高已解锁档位。</p>' +
       '<div class="machine-school-beast-controls">' + orderedBeastIds.map(function (beastId) {
         var beast = beastById(beastId);
         return renderSchoolBeastControl(beast, draft, Boolean(calculatorQuery) && isSearchMatch(beast, "calculator"));
@@ -660,7 +660,31 @@
     return '<article class="machine-school-plan-beast"><header><strong>' + escapeHtml(detail.beastName) + '</strong><b>' + detail.startLevel + '级 → ' + detail.endLevel + '级</b></header>' +
       '<div class="machine-school-plan-beast-metrics"><span>研发度 ' + formatNumber(detail.startResearch) + ' → ' + formatNumber(detail.endResearch) + '</span><span>增加 ' + formatNumber(detail.addedResearch) + '</span><span>溢出 ' + formatNumber(detail.overflowResearch) + '</span></div>' +
       '<div class="machine-result-columns"><article><h3>使用已有库存</h3>' + itemList(ownedItems, "不使用已有完整机关兽", "owned") + '</article><article><h3>新增投入</h3>' + itemList(newItems, "无需新增机关兽", true) + '</article></div>' +
-      '<div class="machine-school-plan-resources"><span>折算投入 <b>' + detail.investedCount + '只</b></span><span>新增解锁效果 <b>' + formatNumber(detail.unlockedEffects) + '</b></span><span>机关兽碎片缺口 <b>' + formatNumber(detail.resources.fragments) + '</b></span><span>神图总消耗 <b>' + formatNumber(detail.resources.awakeningBlueprints) + '</b></span><span>机关破片 <b>' + formatNumber(detail.resources.organPieces) + '</b></span><span>改造本体折算投入 <b>' + formatNumber(detail.modifiedInvestedCount) + '</b>（已有 ' + formatNumber(detail.ownedModifiedInvestedCount) + '／新增 ' + formatNumber(detail.newModifiedInvestedCount) + '）</span></div></article>';
+      '<div class="machine-school-plan-resources"><span>折算投入 <b>' + detail.investedCount + '只</b></span><span>新增效果解锁节点数 <b>' + formatNumber(detail.unlockedEffects) + '</b></span><span>最终生效档位 <b>' + (detail.finalEffect ? detail.finalEffect.level + '级' : '尚未解锁') + '</b></span><span>机关兽碎片缺口 <b>' + formatNumber(detail.resources.fragments) + '</b></span><span>神图总消耗 <b>' + formatNumber(detail.resources.awakeningBlueprints) + '</b></span><span>机关破片 <b>' + formatNumber(detail.resources.organPieces) + '</b></span><span>改造本体折算投入 <b>' + formatNumber(detail.modifiedInvestedCount) + '</b>（已有 ' + formatNumber(detail.ownedModifiedInvestedCount) + '／新增 ' + formatNumber(detail.newModifiedInvestedCount) + '）</span></div></article>';
+  }
+
+  function schoolComparison(result) {
+    var rows = [
+      ["current", "当前累计等级", function () { return result.current.totalLevel; }],
+      ["target", "目标累计等级", function () { return result.target.totalLevel; }],
+      ["final", "推荐最终等级", function (p) { return p.totals.projectedTotalLevel; }],
+      ["gain", "新增研发等级", function (p) { return p.totals.projectedTotalLevel - result.current.totalLevel; }],
+      ["nodes", "新增效果解锁节点数", function (p) { return p.totals.unlockedEffects; }],
+      ["yuan", "已计价参考元宝", function (p) { return formatNumber(p.totals.pricedYuan); }]
+    ];
+    return '<section class="panel machine-school-comparison"><h2>精确达标方案对照</h2><table><thead><tr><th scope="col">指标</th>' + result.plans.map(function (p) {
+      return '<th scope="col">' + escapeHtml(schoolPlanTitle(p.kind)) + '</th>';
+    }).join("") + '</tr></thead><tbody>' + rows.map(function (row) {
+      return '<tr data-school-metric="' + row[0] + '"><th scope="row">' + row[1] + '</th>' + result.plans.map(function (p) { return '<td>' + row[2](p) + '</td>'; }).join("") + '</tr>';
+    }).join("") + '<tr><th scope="row">最终生效效果</th>' + result.plans.map(function (_, index) {
+      return '<td><a href="#machine-school-final-effects-' + index + '">查看逐兽最高档位</a></td>';
+    }).join("") + '</tr></tbody></table><p class="muted-tip">新增节点用于方案排序，不代表低档效果仍在叠加生效。蓝紫本体、机关破片及制作成本未计入参考元宝。</p></section>';
+  }
+
+  function schoolFinalEffects(plan, index) {
+    return '<section class="machine-school-final-effects" id="machine-school-final-effects-' + index + '"><h3>最终生效效果 · 按机关兽展示</h3><p class="muted-tip">高档替换低档，每只机关兽只展示最终最高已解锁档位；未培养的机关兽维持原等级与效果。</p><dl>' + (plan.finalEffects || []).map(function (row) {
+      return '<div data-final-beast="' + escapeHtml(row.beastId) + '"><dt>' + escapeHtml(row.beastName) + ' · ' + row.level + '级' + (row.changed ? '' : '<small>原等级不变</small>') + '</dt><dd data-active-effect>' + (row.effect ? '<b>' + row.effect.level + '级档位</b> ' + escapeHtml(row.effect.text) : '尚未解锁效果') + '</dd></div>';
+    }).join("") + '</dl></section>';
   }
 
   function renderSchoolPlan(plan, result, index) {
@@ -668,13 +692,13 @@
     var physical = { owned: 0, new: 0 };
     plan.beasts.forEach(function (detail) { detail.items.forEach(function (item) { physical[item.source] += item.count; }); });
     return '<section class="panel machine-result machine-school-plan"><div class="machine-result-head"><div><h2>' + escapeHtml(schoolPlanTitle(plan.kind)) + '</h2></div><b>' + result.target.stage + '阶 · 累计' + result.target.totalLevel + '级</b></div>' +
-      '<div class="machine-school-plan-summary"><div><span>当前累计等级</span><b>' + result.current.totalLevel + '</b></div><div><span>推荐后累计等级</span><b>' + totals.projectedTotalLevel + '</b></div>' +
+      '<div class="machine-school-plan-summary"><div><span>当前累计等级</span><b>' + result.current.totalLevel + '</b></div><div><span>目标累计等级</span><b>' + result.target.totalLevel + '</b></div><div><span>推荐最终等级</span><b>' + totals.projectedTotalLevel + '</b></div><div><span>新增研发等级</span><b>' + (totals.projectedTotalLevel - result.current.totalLevel) + '</b></div>' +
       '<div><span>折算投入总只数</span><b>' + totals.investedCount + '</b></div><div><span>已有完整机关兽消耗</span><b>' + physical.owned + '只</b><span>折算 ' + totals.ownedInvestedCount + '只</span></div><div><span>新增完整机关兽需求</span><b>' + physical.new + '只</b><span>折算 ' + totals.newInvestedCount + '只</span></div>' +
-      '<div><span>新增解锁效果</span><b>' + formatNumber(totals.unlockedEffects) + '</b></div><div><span>研发度溢出</span><b>' + formatNumber(totals.overflowResearch) + '</b></div><div><span>觉醒神图总消耗</span><b>' + formatNumber(totals.awakeningBlueprints) + '</b></div>' +
+      '<div><span>新增效果解锁节点数</span><b>' + formatNumber(totals.unlockedEffects) + '</b></div><div><span>研发度溢出</span><b>' + formatNumber(totals.overflowResearch) + '</b></div><div><span>觉醒神图总消耗</span><b>' + formatNumber(totals.awakeningBlueprints) + '</b></div>' +
       '<div><span>机关破片</span><b>' + formatNumber(totals.organPieces) + '</b></div><div><span>机关兽碎片缺口</span><b>' + formatNumber(totals.fragments) + '</b></div><div><span>已计价参考元宝' + (plan.cost && !plan.cost.complete ? '（已知小计）' : '') + '</span><b>' + formatNumber(plan.cost ? plan.cost.knownYuan : totals.pricedYuan) + '</b></div>' +
       '<div><span>改造本体折算投入</span><b>' + formatNumber(totals.modifiedInvestedCount) + '</b><span>已有 ' + formatNumber(totals.ownedModifiedInvestedCount) + '／新增 ' + formatNumber(totals.newModifiedInvestedCount) + '</span></div></div>' +
       costSlot("school-" + index, { awakeningBlueprints: totals.awakeningBlueprints, beasts: plan.beasts.map(function (detail) { return { beastId: detail.beastId, fragments: detail.resources.fragments }; }) }) +
-      (plan.beasts.length ? '<div class="machine-school-plan-beasts">' + plan.beasts.map(renderSchoolBeastPlan).join("") + '</div>' : '<p class="machine-school-complete">目标已达成，无需新增投入。</p>') + '</section>';
+      (plan.beasts.length ? '<div class="machine-school-plan-beasts">' + plan.beasts.map(renderSchoolBeastPlan).join("") + '</div>' : '<p class="machine-school-complete">目标已达成，无需新增投入。</p>') + schoolFinalEffects(plan, index) + '</section>';
   }
 
   function renderSchoolCalculatorResult(result, scroll) {
@@ -684,7 +708,11 @@
       el.calculatorResult.innerHTML = '<section class="panel machine-result is-error"><h2>无法计算</h2><ul>' + result.errors.map(function (error) { return '<li>' + escapeHtml(error) + '</li>'; }).join("") + '</ul></section>';
       return;
     }
-    el.calculatorResult.innerHTML = result.plans.map(function (plan, index) { return renderSchoolPlan(plan, result, index); }).join("");
+    if (result.alreadyReached) {
+      el.calculatorResult.innerHTML = '<section class="panel machine-result"><h2>目标已达成，无需新增投入</h2><p>当前累计等级 ' + result.current.totalLevel + '，目标累计等级 ' + result.target.totalLevel + '。不再为新增效果继续培养。</p></section>';
+    } else {
+      el.calculatorResult.innerHTML = schoolComparison(result) + result.plans.map(function (plan, index) { return renderSchoolPlan(plan, result, index); }).join("");
+    }
     if (scroll !== false) el.calculatorResult.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
@@ -1013,6 +1041,16 @@
       el.calculatorResult.hidden = true;
       renderCalculatorControls();
     } else if (action === "calculate-school") {
+      var draft = state.schoolDraft;
+      var school = DATA.schools.find(function (item) { return item.id === draft.schoolId; });
+      var target = school.stages.find(function (stage) { return stage.stage === draft.targetStage; });
+      if (target && CORE.schoolSnapshot(school, draft.progressByBeast, DATA).totalLevel >= target.requiredTotalLevel) {
+        cancelCalculation(false);
+        clearError();
+        state.schoolResult = PLANNER.calculateSchoolPlans(DATA, school, draft.progressByBeast, { targetStage: draft.targetStage });
+        renderSchoolCalculatorResult(state.schoolResult);
+        return;
+      }
       var costError = referenceCostInputError();
       if (costError) {
         cancelCalculation(false);
@@ -1020,8 +1058,6 @@
         return;
       }
       clearError();
-      var draft = state.schoolDraft;
-      var school = DATA.schools.find(function (item) { return item.id === draft.schoolId; });
       var participatingIds = school.beastIds.filter(function (beastId) { return draft.participating[beastId]; });
       var limits = {};
       school.beastIds.forEach(function (beastId) { limits[beastId] = draft.ownedPoliciesByBeast[beastId].limits; });

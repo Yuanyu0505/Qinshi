@@ -1,16 +1,11 @@
 /* Shared responsive presentation. Keep business modules' layouts and data intact. */
-.responsive-partition-jump, .responsive-filter-toggle, .responsive-back-top,
+.responsive-filter-toggle, .responsive-back-top,
 .tactics-reference-cards, .tactics-reference-presentation { display: none; }
 .responsive-back-top[hidden] { display: none !important; }
 #app input[type="number"], #app td { font-variant-numeric: tabular-nums; }
 @media (max-width: 1024px) {
   #app .muted-tip, #app .filter-label, #app .pilots-category-notes { font-size: 14px; line-height: 1.65; }
   [role="dialog"], dialog { max-height: calc(100dvh - 24px); overflow-y: auto; overscroll-behavior: contain; }
-}
-@media (min-width: 768px) and (max-width: 1366px) {
-  header.top { flex-wrap: wrap; }
-  .responsive-partition-jump { display: flex; align-items: center; gap: 10px; flex: 1 0 100%; font-size: 14px; color: var(--muted); }
-  .responsive-partition-jump select { flex: 1; min-width: 0; min-height: 44px; font-size: 16px; padding: 8px 12px; }
 }
 @media (min-width: 768px) {
   #partition-tactics .tactics-calculator-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; }

@@ -21,6 +21,7 @@ for (const [width, height] of [[320,568],[390,844],[600,800],[820,1180],[1024,76
   await p.route('**/*', r => new URL(r.request().url()).origin === url ? r.continue() : r.abort());
   try {
    await openApp(p, url);
+   assert.equal(await p.getByRole('combobox', { name: '快速切换分区', includeHidden: true }).count(), 0);
    if (width < 768) {
     const search = p.locator('#atlas-search'); await search.fill('攻');
     await p.locator('#partition-atlas .responsive-filter-toggle').click();
@@ -28,8 +29,7 @@ for (const [width, height] of [[320,568],[390,844],[600,800],[820,1180],[1024,76
     await p.locator('#partition-atlas .responsive-filter-toggle').click();
     assert.equal(await search.inputValue(), '攻');
    }
-   if (width >= 768 && width <= 1366) await p.locator('.responsive-partition-jump select').selectOption('tactics');
-   else await p.evaluate(() => document.querySelector('.tab[data-partition="tactics"]').click());
+   await p.evaluate(() => document.querySelector('.tab[data-partition="tactics"]').click());
    await p.locator('[data-tactic-id="wind"]').click();
    await p.locator('[data-reference-mode="all"]').click();
    const table = p.locator('.tactics-reference-table');

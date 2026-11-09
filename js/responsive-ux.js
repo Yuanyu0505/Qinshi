@@ -2,26 +2,6 @@
   'use strict';
   // Presentation only: no progress, account or business data is written here.
   function init() {
-    var tabs = Array.from(document.querySelectorAll('.tabs .tab[data-partition]'));
-    var jump = document.createElement('label');
-    jump.className = 'responsive-partition-jump';
-    jump.append(document.createTextNode('快速切换分区'));
-    var select = document.createElement('select');
-    select.setAttribute('aria-label', '快速切换分区');
-    tabs.forEach(function (tab) { select.add(new Option(tab.textContent.trim(), tab.dataset.partition)); });
-    select.addEventListener('change', function () {
-      var tab = tabs.find(function (item) { return item.dataset.partition === select.value; });
-      if (tab) tab.click();
-    });
-    function updateJump() {
-      var active = tabs.find(function (tab) { return tab.classList.contains('active'); });
-      if (active) select.value = active.dataset.partition;
-    }
-    jump.append(select);
-    document.querySelector('header.top').append(jump);
-    updateJump();
-    document.addEventListener('qinshi:partitionchange', updateJump);
-
     document.querySelectorAll('#partition-atlas > .panel, #partition-equipment > .panel:not(.equipment-compare-panel)').forEach(function (panel, index) {
       var body = document.createElement('div');
       body.id = 'responsive-filter-body-' + index;

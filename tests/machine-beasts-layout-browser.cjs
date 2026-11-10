@@ -59,6 +59,14 @@ for (const width of [320,1280]) test(`alignment: ${width}px reference return but
     const blue=columns.find(p=>p.quality==='blue'),purple=columns.find(p=>p.quality==='purple');
     assert.ok(blue.top>=purple.bottom);
     assert.ok([blue,purple].every(p=>Math.abs(p.width-p.tableWidth)<=1));
+    const tables=await page.locator('.machine-research-matrix-scroll table').evaluateAll(nodes=>nodes.map(table=>({quality:table.closest('[data-quality]').dataset.quality,cells:Array.from(table.querySelector('tbody tr').children,c=>({left:c.getBoundingClientRect().left,right:c.getBoundingClientRect().right,text:c.textContent})),empty:table.querySelector('tbody tr').querySelectorAll('.machine-research-empty').length})));
+    const orange=tables.find(t=>t.quality==='orange');
+    for(const t of tables.filter(t=>t.quality!=='orange')){
+      assert.equal(t.cells.length,7);assert.equal(t.empty,5);
+      for(let i=0;i<7;i++)assert.ok(Math.abs(t.cells[i].left-orange.cells[i].left)<=1&&Math.abs(t.cells[i].right-orange.cells[i].right)<=1);
+      assert.equal(t.cells[1].text,t.quality==='blue'?'1,000':'12,000');
+      assert.ok(t.cells.slice(2).every(c=>c.text===''));
+    }
   } else {
     assert.equal(await page.locator('.machine-research-matrix-scroll[data-quality="blue"]').isVisible(),false);
     assert.equal(await page.locator('#machine-reference-values > .machine-reference-group').last().locator('.machine-research-card-grid').isVisible(),true);

@@ -115,7 +115,7 @@ for (const width of [320, 820, 1280]) test(width + 'px exact 97 to 135 renders h
   for (const detail of await page.locator('.machine-school-plan > details').filter({has:page.locator('.machine-school-plan-beasts')}).all()) {
     if (!await detail.evaluate(node => node.open)) await detail.locator(':scope > summary').click();
   }
-  const primaryGrids = page.locator('.machine-school-plan > details > .machine-disclosure-body > .machine-school-plan-beasts');
+  const primaryGrids = page.locator('.machine-cultivation-layout > .machine-school-plan-beasts');
   const aligned = await primaryGrids.evaluateAll(grids => grids.every(grid => {
     const cards = Array.from(grid.children);
     if (!cards.every(card=>card.getBoundingClientRect().width>0)) return false;
@@ -179,7 +179,7 @@ test('reached school target displays stop message without new purchase panels', 
   assert.match(await page.locator('#machine-beast-calculator-result').textContent(), /目标已达成/);
   assert.equal(await page.locator('[data-reference-cost-panel^="school-"]').count(), 0);
 }));
-test('all equal optimum combinations live inside cultivation materials, not extra top-level plans or account storage', async () => scenario(async page => {
+for (const width of [1280,1440]) test(width+'px equal optimum combinations share the main cultivation grid without extra plans or account writes', async () => scenario(async page => {
   await page.locator('[data-school-calc-school]').selectOption('nonAttack');
   const before=await getAccountJson(page,'qinshi_machine_beasts_progress_v1');
   await page.evaluate(()=>{
@@ -193,16 +193,30 @@ test('all equal optimum combinations live inside cultivation materials, not extr
   assert.equal(await page.locator('.machine-school-plan').count(),result.plans.length);
   const main=page.locator('.machine-school-plan').nth(index),materials=main.locator(':scope > details').filter({has:page.locator('.machine-equivalent-materials')});
   await materials.locator(':scope > summary').click();
-  const rows=await materials.locator(':scope > .machine-disclosure-body > .machine-school-plan-beasts .machine-school-plan-beast').evaluateAll(cards=>cards.map(card=>{
+  const rows=await materials.locator('.machine-cultivation-layout > .machine-school-plan-beasts .machine-school-plan-beast').evaluateAll(cards=>cards.map(card=>{
     const summary=card.querySelector('.machine-plan-primary'),metrics=card.querySelector('.machine-school-plan-beast-metrics');
     return {summaryTops:Array.from(summary.children,n=>n.getBoundingClientRect().top),metricTops:Array.from(metrics.children,n=>n.getBoundingClientRect().top),inline:Array.from(summary.children,n=>{const label=document.createRange();label.selectNode(n.firstChild);return Math.abs(label.getBoundingClientRect().top-n.querySelector('b').getBoundingClientRect().top)<=2;})};
   }));
   assert.ok(rows.length>0);assert.ok(rows.every(row=>row.inline.every(Boolean)&&Math.max(...row.summaryTops)-Math.min(...row.summaryTops)<=1&&Math.max(...row.metricTops)-Math.min(...row.metricTops)<=1));
   const others=materials.locator('.machine-equivalent-combination');assert.equal(await others.count(),1);
   await others.locator(':scope > summary').click();
+  const aligned=await materials.evaluate(root=>{
+    const primary=root.querySelector('.machine-cultivation-layout > .machine-school-plan-beasts');
+    const other=root.querySelector('.machine-equivalent-combination .machine-school-plan-beasts');
+    const a=primary.getBoundingClientRect(),b=other.getBoundingClientRect();
+    if(a.width<=0||b.width<=0||Math.abs(a.x-b.x)>1||Math.abs(a.width-b.width)>1||getComputedStyle(primary).gridTemplateColumns!==getComputedStyle(other).gridTemplateColumns)return false;
+    return Array.from(primary.children).every((card,index)=>{
+      const otherCard=other.children[index];if(!otherCard)return false;
+      const selectors=[...Array.from({length:3},(_,n)=>'.machine-plan-primary > span:nth-child('+(n+1)+')'),...Array.from({length:3},(_,n)=>'.machine-school-plan-beast-metrics > span:nth-child('+(n+1)+')'),...Array.from({length:7},(_,n)=>'.machine-school-plan-resources > span:nth-child('+(n+1)+')')];
+      const x=selectors.map(s=>card.querySelector(s).getBoundingClientRect().x),y=selectors.map(s=>otherCard.querySelector(s).getBoundingClientRect().x);
+      return x.every((value,n)=>Math.abs(value-y[n])<=1)&&Math.abs(x[4]-x[7])<=1;
+    });
+  });
+  assert.equal(aligned,true,'primary and alternative share card columns and internal column origins');
+  if(width===1440)assert.equal(await materials.locator('.machine-cultivation-layout > .machine-school-plan-beasts').evaluate(n=>getComputedStyle(n).gridTemplateColumns.split(' ').length),3);
   assert.match(await others.textContent(),/机关年兽/);assert.match(await others.textContent(),/机关白虎|机关玄武/);
   assert.deepEqual(await getAccountJson(page,'qinshi_machine_beasts_progress_v1'),before);
-},1280));
+},width));
 test('alignment: real mixed-rank owned materials and new-only materials share visible content tracks', async () => scenario(async page => {
   await page.locator('[data-school-calc-school]').selectOption('nonAttack');
   await page.evaluate(() => {

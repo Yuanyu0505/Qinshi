@@ -8,19 +8,19 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Qin">
-<link rel="manifest" href="manifest.webmanifest?v=1.0.98-r2">
-<link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png?v=1.0.98-r2">
-<link rel="stylesheet" href="css/style.css?v=1.0.98-r2">
-<link rel="stylesheet" href="css/six-halls.css?v=1.0.98-r2">
-<link rel="stylesheet" href="css/pilots.css?v=1.0.98-r2">
-<link rel="stylesheet" href="css/secret-realm.css?v=1.0.98-r2">
-<link rel="stylesheet" href="css/inscription-crafting.css?v=1.0.98-r2">
-<link rel="stylesheet" href="css/inscription-reference.css?v=1.0.98-r2">
-<link rel="stylesheet" href="css/inscription-route-favorites.css?v=1.0.98-r2">
-<link rel="stylesheet" href="css/formation-search.css?v=1.0.98-r2">
-<link rel="stylesheet" href="css/responsive-ux.css?v=1.0.98-r2">
-<link rel="stylesheet" href="css/machine-beasts.css?v=1.0.98-r2">
-<link rel="stylesheet" href="css/atlas.css?v=1.0.98-r2">
+<link rel="manifest" href="manifest.webmanifest?v=1.0.98-r3">
+<link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png?v=1.0.98-r3">
+<link rel="stylesheet" href="css/style.css?v=1.0.98-r3">
+<link rel="stylesheet" href="css/six-halls.css?v=1.0.98-r3">
+<link rel="stylesheet" href="css/pilots.css?v=1.0.98-r3">
+<link rel="stylesheet" href="css/secret-realm.css?v=1.0.98-r3">
+<link rel="stylesheet" href="css/inscription-crafting.css?v=1.0.98-r3">
+<link rel="stylesheet" href="css/inscription-reference.css?v=1.0.98-r3">
+<link rel="stylesheet" href="css/inscription-route-favorites.css?v=1.0.98-r3">
+<link rel="stylesheet" href="css/formation-search.css?v=1.0.98-r3">
+<link rel="stylesheet" href="css/responsive-ux.css?v=1.0.98-r3">
+<link rel="stylesheet" href="css/machine-beasts.css?v=1.0.98-r3">
+<link rel="stylesheet" href="css/atlas.css?v=1.0.98-r3">
 </head>
 <body>
 <div id="account-init-overlay" class="account-init-overlay" hidden>
@@ -573,8 +573,8 @@
         <span data-item-navigation-context></span>
         <button type="button" class="seg" data-item-navigation-back>返回</button>
       </div>
-      <section class="panel atlas-filter-panel">
-        <div class="filter-row atlas-category-row">
+      <section class="panel">
+        <div class="filter-row">
           <span class="filter-label">分区</span>
           <div id="atlas-tabs" class="segs">
             <button type="button" class="seg active" data-atlas="全部">全部</button>
@@ -585,7 +585,7 @@
             <button type="button" class="seg" data-atlas="已收藏">已收藏图鉴</button>
           </div>
         </div>
-        <div class="filter-row atlas-search-row">
+        <div class="filter-row">
           <span class="filter-label">搜索</span>
           <select id="atlas-search-field">
             <option value="all">全部</option>
@@ -597,19 +597,17 @@
           </select>
           <input id="atlas-search" type="search" aria-label="搜索图鉴" placeholder="输入关键词；等级可输入 9、9级、10级以下" autocomplete="off">
         </div>
-        <div class="atlas-level-conditions">
-        <div class="filter-row atlas-range-row">
-          <span class="filter-label">等级范围</span>
+        <div class="filter-row">
+          <span class="filter-label">等级筛选</span>
           <div class="atlas-level-range">
             <input id="atlas-level-min" type="number" min="0" max="20" step="1" value="0" aria-label="最低图鉴等级">
             <span>至</span>
             <input id="atlas-level-max" type="number" min="0" max="20" step="1" value="20" aria-label="最高图鉴等级">
           </div>
         </div>
-        <div class="filter-row atlas-target-row">
+        <div class="filter-row">
           <span class="filter-label">目标等级</span>
           <input id="atlas-target-level" type="number" min="1" step="1" aria-label="图鉴目标等级">
-        </div>
         </div>
         <div class="muted-tip">图鉴等级为个人进度（可直接修改）；达到目标等级即视为完成，14级后不再获得成长值。</div>
         <button id="atlas-advanced-toggle" type="button" class="mobile-filter-toggle" aria-expanded="false" aria-controls="atlas-advanced-content">
@@ -647,7 +645,7 @@
           </label>
           <div id="atlas-note-filter" class="atlas-filter-control atlas-note-filter">
             <span>备注来源</span>
-            <button id="atlas-note-toggle" type="button" class="atlas-select-button" aria-controls="atlas-note-menu" aria-expanded="false" aria-haspopup="true" disabled>需先选择装备未齐全</button>
+            <button id="atlas-note-toggle" type="button" class="atlas-select-button" aria-expanded="false" aria-haspopup="true" disabled>需先选择装备未齐全</button>
             <div id="atlas-note-menu" class="atlas-note-menu" hidden>
               <label><input type="checkbox" data-atlas-note-source="禁地">禁地</label>
               <label><input type="checkbox" data-atlas-note-source="碎片">碎片</label>
@@ -953,67 +951,67 @@
   </div>
 </div>
 
-<script defer src="data/tactics.js?v=1.0.98-r2"></script>
-<script defer src="data/formations.js?v=1.0.98-r2"></script>
-<script defer src="data/six-halls.js?v=1.0.98-r2"></script>
-<script defer src="data/machine-beasts.js?v=1.0.98-r2"></script>
-<script defer src="data/battle-box-pill-pouch.js?v=1.0.98-r2"></script>
-<script defer src="data/special-equipment.js?v=1.0.98-r2"></script>
-<script defer src="data/forging.js?v=1.0.98-r2"></script>
-<script defer src="data/drops.js?v=1.0.98-r2"></script>
-<script defer src="data/atlas.js?v=1.0.98-r2"></script>
-<script defer src="data/forbidden.js?v=1.0.98-r2"></script>
-<script defer src="data/quiz.js?v=1.0.98-r2"></script>
-<script defer src="data/inscription.js?v=1.0.98-r2"></script>
-<script defer src="data/zhulu.js?v=1.0.98-r2"></script>
-<script defer src="data/2026-09-content-update.js?v=1.0.98-r2"></script>
-<script defer src="data/2026-10-equipment-update.js?v=1.0.98-r2"></script>
-<script defer src="data/2026-10-forging-update.js?v=1.0.98-r2"></script>
-<script defer src="data/2026-10-three-weapons.js?v=1.0.98-r2"></script>
-<script defer src="data/2026-10-inscription-update.js?v=1.0.98-r2"></script>
-<script defer src="js/account-edit-lease.js?v=1.0.98-r2"></script>
-<script defer src="js/account-profiles.js?v=1.0.98-r2"></script>
-<script defer src="js/calculation-runner.js?v=1.0.98-r2"></script>
-<script defer src="js/partition-loader.js?v=1.0.98-r2"></script>
-<script defer src="js/query.js?v=1.0.98-r2"></script>
-<script defer src="js/equipment-compare.js?v=1.0.98-r2"></script>
-<script defer src="js/equipment-forging.js?v=1.0.98-r2"></script>
-<script defer src="js/item-navigation.js?v=1.0.98-r2"></script>
-<script defer src="js/forging.js?v=1.0.98-r2"></script>
-<script defer src="js/drops.js?v=1.0.98-r2"></script>
-<script defer src="js/progress.js?v=1.0.98-r2"></script>
-<script defer src="js/atlas.js?v=1.0.98-r2"></script>
-<script defer src="js/forbidden.js?v=1.0.98-r2"></script>
-<script defer src="js/quiz.js?v=1.0.98-r2"></script>
-<script defer src="js/ui-performance.js?v=1.0.98-r2"></script>
-<script defer src="js/inscription-performance.js?v=1.0.98-r2"></script>
-<script defer src="js/inscription-rules.js?v=1.0.98-r2"></script>
-<script defer src="js/inscription-progress-rules.js?v=1.0.98-r2"></script>
-<script defer src="js/inscription-terms.js?v=1.0.98-r2"></script>
-<script defer src="js/inscription-reference.js?v=1.0.98-r2"></script>
-<script defer src="js/inscription-reverse.js?v=1.0.98-r2"></script>
-<script defer src="js/inscription-paths.js?v=1.0.98-r2"></script>
-<script defer src="js/inscription-simulation.js?v=1.0.98-r2"></script>
-<script defer src="js/inscription-crafting-state.js?v=1.0.98-r2"></script>
-<script defer src="js/inscription-flow-model.js?v=1.0.98-r2"></script>
-<script defer src="js/inscription-flow-layout.js?v=1.0.98-r2"></script>
-<script defer src="js/inscription-flowchart.js?v=1.0.98-r2"></script>
-<script defer src="js/inscription-route-favorites.js?v=1.0.98-r2"></script>
-<script defer src="js/inscription-crafting-ui.js?v=1.0.98-r2"></script>
-<script defer src="js/inscription.js?v=1.0.98-r2"></script>
-<script defer src="js/zhulu.js?v=1.0.98-r2"></script>
-<script defer src="js/settings.js?v=1.0.98-r2"></script>
-<script defer src="js/account-profiles-ui.js?v=1.0.98-r2"></script>
-<script defer src="js/cloud-sync-config.js?v=1.0.98-r2"></script>
-<script defer src="js/cloud-sync-core.js?v=1.0.98-r2"></script>
-<script defer src="js/cloud-sync-crypto.js?v=1.0.98-r2"></script>
-<script defer src="js/cloud-sync-storage.js?v=1.0.98-r2"></script>
-<script defer src="js/cloud-sync-api.js?v=1.0.98-r2"></script>
-<script defer src="js/pwa.js?v=1.0.98-r2"></script>
-<script defer src="js/cloud-sync.js?v=1.0.98-r2"></script>
-<script defer src="js/forbidden-ui.js?v=1.0.98-r2"></script>
-<script defer src="js/zhulu-ui.js?v=1.0.98-r2"></script>
-<script defer src="js/app.js?v=1.0.98-r2"></script>
-<script defer src="js/responsive-ux.js?v=1.0.98-r2"></script>
+<script defer src="data/tactics.js?v=1.0.98-r3"></script>
+<script defer src="data/formations.js?v=1.0.98-r3"></script>
+<script defer src="data/six-halls.js?v=1.0.98-r3"></script>
+<script defer src="data/machine-beasts.js?v=1.0.98-r3"></script>
+<script defer src="data/battle-box-pill-pouch.js?v=1.0.98-r3"></script>
+<script defer src="data/special-equipment.js?v=1.0.98-r3"></script>
+<script defer src="data/forging.js?v=1.0.98-r3"></script>
+<script defer src="data/drops.js?v=1.0.98-r3"></script>
+<script defer src="data/atlas.js?v=1.0.98-r3"></script>
+<script defer src="data/forbidden.js?v=1.0.98-r3"></script>
+<script defer src="data/quiz.js?v=1.0.98-r3"></script>
+<script defer src="data/inscription.js?v=1.0.98-r3"></script>
+<script defer src="data/zhulu.js?v=1.0.98-r3"></script>
+<script defer src="data/2026-09-content-update.js?v=1.0.98-r3"></script>
+<script defer src="data/2026-10-equipment-update.js?v=1.0.98-r3"></script>
+<script defer src="data/2026-10-forging-update.js?v=1.0.98-r3"></script>
+<script defer src="data/2026-10-three-weapons.js?v=1.0.98-r3"></script>
+<script defer src="data/2026-10-inscription-update.js?v=1.0.98-r3"></script>
+<script defer src="js/account-edit-lease.js?v=1.0.98-r3"></script>
+<script defer src="js/account-profiles.js?v=1.0.98-r3"></script>
+<script defer src="js/calculation-runner.js?v=1.0.98-r3"></script>
+<script defer src="js/partition-loader.js?v=1.0.98-r3"></script>
+<script defer src="js/query.js?v=1.0.98-r3"></script>
+<script defer src="js/equipment-compare.js?v=1.0.98-r3"></script>
+<script defer src="js/equipment-forging.js?v=1.0.98-r3"></script>
+<script defer src="js/item-navigation.js?v=1.0.98-r3"></script>
+<script defer src="js/forging.js?v=1.0.98-r3"></script>
+<script defer src="js/drops.js?v=1.0.98-r3"></script>
+<script defer src="js/progress.js?v=1.0.98-r3"></script>
+<script defer src="js/atlas.js?v=1.0.98-r3"></script>
+<script defer src="js/forbidden.js?v=1.0.98-r3"></script>
+<script defer src="js/quiz.js?v=1.0.98-r3"></script>
+<script defer src="js/ui-performance.js?v=1.0.98-r3"></script>
+<script defer src="js/inscription-performance.js?v=1.0.98-r3"></script>
+<script defer src="js/inscription-rules.js?v=1.0.98-r3"></script>
+<script defer src="js/inscription-progress-rules.js?v=1.0.98-r3"></script>
+<script defer src="js/inscription-terms.js?v=1.0.98-r3"></script>
+<script defer src="js/inscription-reference.js?v=1.0.98-r3"></script>
+<script defer src="js/inscription-reverse.js?v=1.0.98-r3"></script>
+<script defer src="js/inscription-paths.js?v=1.0.98-r3"></script>
+<script defer src="js/inscription-simulation.js?v=1.0.98-r3"></script>
+<script defer src="js/inscription-crafting-state.js?v=1.0.98-r3"></script>
+<script defer src="js/inscription-flow-model.js?v=1.0.98-r3"></script>
+<script defer src="js/inscription-flow-layout.js?v=1.0.98-r3"></script>
+<script defer src="js/inscription-flowchart.js?v=1.0.98-r3"></script>
+<script defer src="js/inscription-route-favorites.js?v=1.0.98-r3"></script>
+<script defer src="js/inscription-crafting-ui.js?v=1.0.98-r3"></script>
+<script defer src="js/inscription.js?v=1.0.98-r3"></script>
+<script defer src="js/zhulu.js?v=1.0.98-r3"></script>
+<script defer src="js/settings.js?v=1.0.98-r3"></script>
+<script defer src="js/account-profiles-ui.js?v=1.0.98-r3"></script>
+<script defer src="js/cloud-sync-config.js?v=1.0.98-r3"></script>
+<script defer src="js/cloud-sync-core.js?v=1.0.98-r3"></script>
+<script defer src="js/cloud-sync-crypto.js?v=1.0.98-r3"></script>
+<script defer src="js/cloud-sync-storage.js?v=1.0.98-r3"></script>
+<script defer src="js/cloud-sync-api.js?v=1.0.98-r3"></script>
+<script defer src="js/pwa.js?v=1.0.98-r3"></script>
+<script defer src="js/cloud-sync.js?v=1.0.98-r3"></script>
+<script defer src="js/forbidden-ui.js?v=1.0.98-r3"></script>
+<script defer src="js/zhulu-ui.js?v=1.0.98-r3"></script>
+<script defer src="js/app.js?v=1.0.98-r3"></script>
+<script defer src="js/responsive-ux.js?v=1.0.98-r3"></script>
 </body>
 </html>

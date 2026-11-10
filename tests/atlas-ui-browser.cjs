@@ -275,9 +275,9 @@ for (const [width,height] of sizes) test(`${width}x${height}: readable cards, ed
   const output = path.resolve('test-results/atlas-ui'); fs.mkdirSync(output, { recursive: true });
   if (process.env.ATLAS_CAPTURE_BEFORE) { await p.screenshot({path:path.join(output, `${width}-${height}-before.png`)}); return; }
   await p.screenshot({path:path.join(output, `${width}-${height}-overview.png`)});
-  assert.equal(await p.locator('.atlas-summary-metrics > div').count(), 3);
+  assert.equal(await p.locator('#atlas-upgrade-summary .atlas-upgrade-cost > span').count(), 3);
   const layout = await p.locator('#atlas-results').evaluate(n => ({width:n.clientWidth,columns:getComputedStyle(n).gridTemplateColumns.split(' ').length}));
-  assert.equal(layout.columns, layout.width >= 960 ? 2 : 1);
+  assert.equal(layout.columns, 1); // 1.0.95 single-column presentation is intentional.
   const card = p.locator('[data-atlas-item]').first();
   await card.locator('[data-atlas-favorite]').click(); await card.locator('[data-atlas-inventory-edit]').click();
   await card.locator('[data-atlas-inventory-note]').first().fill('长备注：主线、碎片、禁地，保留全部文字');

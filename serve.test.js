@@ -1269,7 +1269,7 @@ test("已收藏图鉴可保存魂魄和逐件装备库存，未收藏不展示�
     assert.match(css.body, /\.atlas-equipment-owned/);
     assert.match(app.body, /class="atlas-head-secondary"/);
     assert.match(app.body, />编辑库存<\/button>/);
-    assert.match(app.body, /class="atlas-level-label">等级/);
+    assert.match(app.body, /class="atlas-level-label">(?:图鉴)?等级/);
     assert.match(app.body, /aria-label="\$\{escapeHtml\(item.name\)\}图鉴等级"/);
   });
 });

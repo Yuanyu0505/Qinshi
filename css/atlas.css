@@ -1,102 +1,158 @@
-/* Atlas presentation only. Container widths, not device names, control density. */
-#partition-atlas { container: atlas / inline-size; }
-#partition-atlas *, #partition-atlas *::before, #partition-atlas *::after { box-sizing: border-box; }
+/* Atlas layout restored from 1.0.95 (ebb11643), scoped to atlas only.
+ * Current event, focus, draft and DOM stability protections stay in app.js. */
+#partition-atlas #atlas-search { padding: 12px 16px; font-size: 16px; background: var(--bg2); color: var(--text); border: 1px solid var(--line); border-radius: 8px; outline: none; flex: 1 1 0%; min-width: 220px; }
+#partition-atlas #atlas-search:focus { border-color: var(--gold-dim); box-shadow: rgba(212, 175, 55, 0.15) 0px 0px 0px 2px; }
+#partition-atlas #atlas-search-field,
+#partition-atlas #atlas-level-min,
+#partition-atlas #atlas-level-max,
+#partition-atlas #atlas-target-level { padding: 9px 12px; font-size: 15px; background: var(--bg2); color: var(--text); border: 1px solid var(--line); border-radius: 8px; }
+#partition-atlas #atlas-search-field { min-width: 112px; }
+#partition-atlas .atlas-level-range { display: inline-flex; align-items: center; gap: 8px; color: var(--muted); }
+#partition-atlas #atlas-level-min,
+#partition-atlas #atlas-level-max { width: 86px; }
+#partition-atlas .atlas-advanced-filters { display: grid; grid-template-columns: repeat(4, minmax(0px, 1fr)); gap: 10px; margin-top: 12px; padding-top: 12px; border-top: 1px dashed var(--line); }
+#partition-atlas .atlas-filter-control { position: relative; display: grid; min-width: 0px; gap: 5px; color: var(--muted); font-size: 12px; }
+#partition-atlas .atlas-filter-control[hidden] { display: none; }
+#partition-atlas .atlas-filter-control > select,
+#partition-atlas .atlas-select-button { box-sizing: border-box; width: 100%; min-width: 0px; min-height: 38px; padding: 8px 10px; color: var(--text); background: var(--bg2); border: 1px solid var(--line); border-radius: 7px; font-style: inherit; font-variant: inherit; font-weight: inherit; font-stretch: inherit; line-height: inherit; font-family: inherit; font-optical-sizing: inherit; font-size-adjust: inherit; font-kerning: inherit; font-feature-settings: inherit; font-variation-settings: inherit; font-language-override: inherit; font-size: 14px; text-align: left; }
+#partition-atlas .atlas-select-button { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; }
+#partition-atlas .atlas-select-button:disabled { color: var(--muted); cursor: not-allowed; opacity: 0.72; }
+#partition-atlas .atlas-filter-control > select:focus,
+#partition-atlas .atlas-select-button:focus-visible { border-color: var(--gold-dim); outline: rgba(212, 175, 55, 0.15) solid 2px; }
+#partition-atlas .atlas-note-menu { position: absolute; top: calc(100% + 5px); left: 0px; z-index: 35; display: grid; width: max-content; min-width: 100%; max-width: min(320px, 80vw); padding: 7px; background: var(--bg2); border: 1px solid var(--gold-dim); border-radius: 8px; box-shadow: rgba(0, 0, 0, 0.42) 0px 10px 24px; }
+#partition-atlas .atlas-note-filter .atlas-note-menu { right: 0px; left: auto; }
+#partition-atlas .atlas-note-menu[hidden] { display: none; }
+#partition-atlas .atlas-note-menu label { display: flex; align-items: center; gap: 7px; padding: 7px 8px; color: var(--text); cursor: pointer; }
+#partition-atlas .atlas-note-menu input { accent-color: var(--red); }
+#partition-atlas .atlas-sort-controls { display: grid; grid-template-columns: minmax(160px, 220px) minmax(140px, 180px) max-content; align-items: end; gap: 10px; margin-top: 10px; }
+#partition-atlas .atlas-filter-clear { min-height: 38px; }
+#partition-atlas #atlas-results > .atlas-item { content-visibility: auto; contain-intrinsic-size: auto 420px; }
+#partition-atlas .atlas-item { background: var(--bg2); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; margin-bottom: 12px; }
+#partition-atlas .atlas-item-favorite { border-color: rgba(53, 208, 111, 0.72); box-shadow: rgb(53, 208, 111) 3px 0px 0px inset; }
+#partition-atlas .atlas-item-favorite .atlas-head .q-badge { color: rgb(53, 208, 111); background: rgba(53, 208, 111, 0.12); border-color: rgba(53, 208, 111, 0.6); }
+#partition-atlas .atlas-item-favorite .atlas-head .forge-name { color: rgb(53, 208, 111); }
+#partition-atlas .atlas-item-pinned { border-color: rgb(255, 75, 75); box-shadow: rgb(255, 75, 75) 4px 0px 0px inset; }
+#partition-atlas .atlas-item-pinned .atlas-head .q-badge { color: rgb(255, 75, 75); background: rgba(255, 75, 75, 0.12); border-color: rgb(255, 75, 75); }
+#partition-atlas .atlas-item-pinned .atlas-head .forge-name { color: rgb(255, 75, 75); }
+#partition-atlas .atlas-pin-badge { display: inline-flex; align-items: center; min-height: 24px; padding: 2px 8px; color: rgb(255, 255, 255); background: rgb(229, 57, 53); border: 2px solid rgb(255, 75, 75); border-radius: 6px; font-size: 13px; font-weight: 800; }
+#partition-atlas .atlas-pin-toggle.is-pinned { color: rgb(255, 109, 99); border-color: rgb(255, 75, 75); }
+#partition-atlas .atlas-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; }
+#partition-atlas .atlas-head-primary,
+#partition-atlas .atlas-head-secondary { display: contents; }
+#partition-atlas .atlas-favorite-toggle { display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 32px; padding: 0px; color: var(--gold); background: transparent; border: 2px solid transparent; border-radius: 7px; font-size: 20px; line-height: 1; cursor: pointer; }
+#partition-atlas .atlas-favorite-toggle.is-favorite { color: var(--gold); background: var(--red); border-color: var(--red); }
+#partition-atlas .atlas-level-label { color: var(--muted); font-size: 13px; margin-left: auto; display: flex; align-items: center; gap: 6px; }
+#partition-atlas .atlas-level { width: 74px; padding: 6px 8px; font-size: 16px; background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: 6px; }
+#partition-atlas .atlas-meta { display: flex; gap: 18px; flex-wrap: wrap; color: var(--muted); font-size: 13px; margin-bottom: 8px; }
+#partition-atlas .atlas-group { color: var(--gold); background: rgba(212, 175, 55, 0.16); border: 1px solid rgba(212, 175, 55, 0.45); border-radius: 5px; padding: 1px 6px; font-weight: 700; }
+#partition-atlas .atlas-stage-key { color: var(--gold-dim); min-width: 52px; white-space: nowrap; }
+#partition-atlas .atlas-upgrade-summary,
+#partition-atlas .atlas-upgrade { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 10px; margin-bottom: 10px; }
+#partition-atlas .atlas-upgrade-summary { margin-bottom: 14px; }
+#partition-atlas .atlas-upgrade.done { color: var(--gold); font-weight: 700; }
+#partition-atlas .atlas-upgrade-title { color: var(--gold); font-weight: 700; margin-bottom: 7px; }
+#partition-atlas .atlas-upgrade-cost { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 7px; }
+#partition-atlas .atlas-upgrade-cost b { color: var(--gold); }
+#partition-atlas .atlas-upgrade-cost .atlas-cost-knots b { color: rgb(255, 75, 75); }
+#partition-atlas .atlas-upgrade-cost .atlas-cost-growth b { color: inherit; }
+#partition-atlas .atlas-upgrade-equipment,
+#partition-atlas .atlas-summary-equipment { margin-top: 9px; }
+#partition-atlas .atlas-summary-equipment-toggle { display: inline-flex; margin: 2px 0px 4px; }
+#partition-atlas .atlas-summary-equipment { display: none; }
+#partition-atlas .atlas-summary-equipment.is-expanded { display: block; }
+#partition-atlas .atlas-equipment-title { color: var(--gold-dim); font-size: 14px; margin-bottom: 6px; }
+#partition-atlas .atlas-equipment-stage-list,
+#partition-atlas .atlas-summary-equipment-list { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; }
+#partition-atlas .atlas-equipment-stage { display: inline-flex; align-items: center; gap: 6px; }
+#partition-atlas .atlas-equipment-stage .atlas-stage-key { min-width: 0px; }
+#partition-atlas .atlas-equipment-items { display: inline-flex; flex-wrap: wrap; gap: 4px; }
+#partition-atlas .atlas-equipment-entry { display: inline-flex; align-items: center; gap: 4px; max-width: 100%; }
+#partition-atlas .atlas-equipment-owned { display: inline-flex; align-items: center; justify-content: center; min-width: 22px; min-height: 22px; padding: 0px 5px; color: rgb(255, 255, 255); background: rgb(25, 143, 70); border: 2px solid rgb(53, 208, 111); border-radius: 5px; font-weight: 900; line-height: 1; }
+#partition-atlas .atlas-equipment-note { color: rgb(255, 176, 168); font-size: 12px; overflow-wrap: anywhere; }
+#partition-atlas .atlas-inventory-suffix { color: rgb(53, 208, 111); font-weight: 700; margin-left: 2px; }
+#partition-atlas .atlas-inventory-suffix.is-short { color: var(--text); }
+#partition-atlas .atlas-inventory-suffix .atlas-inventory-missing { color: rgb(255, 51, 51); }
+#partition-atlas .atlas-inventory-edit { margin-left: 2px; }
+#partition-atlas .atlas-inventory-editor { margin-top: 10px; padding: 12px; background: rgba(0, 0, 0, 0.18); border: 1px solid rgba(53, 208, 111, 0.45); border-radius: 8px; }
+#partition-atlas .atlas-inventory-title { color: rgb(53, 208, 111); font-weight: 700; margin-bottom: 10px; }
+#partition-atlas .atlas-inventory-souls { display: flex; align-items: center; gap: 8px; color: var(--muted); margin-bottom: 10px; }
+#partition-atlas .atlas-inventory-souls input { width: 160px; }
+#partition-atlas .atlas-inventory-equipment-list { display: grid; gap: 7px; }
+#partition-atlas .atlas-inventory-equipment-row { display: grid; grid-template-columns: 62px max-content 112px minmax(180px, 1fr); align-items: center; gap: 8px; }
+#partition-atlas .atlas-inventory-equipment-row select,
+#partition-atlas .atlas-inventory-equipment-row input { min-width: 0px; width: 100%; box-sizing: border-box; }
+#partition-atlas .atlas-inventory-equipment-row input[hidden] { display: none; }
+#partition-atlas .atlas-inventory-error { color: rgb(255, 109, 99); margin-top: 8px; font-size: 13px; }
+#partition-atlas .atlas-inventory-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+#partition-atlas .forbidden-purpose-option.is-atlas { background: rgba(119, 54, 166, 0.28); border-color: rgb(155, 85, 201); }
+#partition-atlas .atlas-exact-query-status { margin-bottom: 10px; padding: 10px 12px; color: var(--text); background: rgba(74, 47, 18, 0.38); border: 1px solid var(--line); border-radius: 8px; }
+#partition-atlas .atlas-exact-query-status strong { color: var(--gold); }
+#partition-atlas .atlas-exact-query-status .is-missing { color: rgb(255, 91, 85); font-weight: 800; }
+@media (max-width: 1024px) {
+#partition-atlas .atlas-meta { gap: 6px 12px; overflow-wrap: anywhere; }
+#partition-atlas .atlas-meta > span { min-width: 0px; }
+#partition-atlas .atlas-advanced-filters { grid-template-columns: repeat(2, minmax(0px, 1fr)); }
+#partition-atlas .atlas-sort-controls { grid-template-columns: repeat(2, minmax(0px, 1fr)); }
+#partition-atlas .atlas-filter-clear { grid-column: 1 / -1; }
+#partition-atlas .atlas-filter-control > select,
+#partition-atlas .atlas-select-button { min-height: 44px; font-size: 16px; }
+#partition-atlas .atlas-note-menu { max-width: min(100%, 360px); }
+#partition-atlas .atlas-favorite-toggle { width: 44px; height: 44px; touch-action: manipulation; }
+#partition-atlas .atlas-pin-toggle,
+#partition-atlas .atlas-inventory-edit,
+#partition-atlas .atlas-inventory-actions .seg { min-height: 44px; touch-action: manipulation; }
+#partition-atlas .atlas-inventory-souls { align-items: stretch; flex-direction: column; }
+#partition-atlas .atlas-inventory-souls input { width: 100%; min-height: 44px; box-sizing: border-box; }
+#partition-atlas .atlas-inventory-equipment-row { grid-template-columns: minmax(58px, auto) minmax(90px, max-content) minmax(104px, 0.7fr) minmax(150px, 1fr); }
+#partition-atlas .atlas-inventory-equipment-row select,
+#partition-atlas .atlas-inventory-equipment-row input { min-height: 44px; font-size: 16px; }
+}
+@media (max-width: 767px), (max-width: 932px) and (max-height: 500px) and (orientation: landscape) {
+#partition-atlas .atlas-meta { display: grid; grid-template-columns: 1fr; gap: 4px; }
+#partition-atlas .atlas-level { min-height: 44px; font-size: 16px; }
+#partition-atlas .atlas-head { display: block; }
+#partition-atlas .atlas-head-primary { display: flex; align-items: center; flex-wrap: wrap; gap: 7px; margin-bottom: 7px; }
+#partition-atlas .atlas-head-secondary { display: flex; align-items: center; flex-wrap: nowrap; gap: 6px; width: 100%; min-width: 0px; }
+#partition-atlas .atlas-head-secondary .atlas-pin-toggle,
+#partition-atlas .atlas-head-secondary .atlas-inventory-edit { flex: 0 0 auto; min-height: 40px; padding: 6px 8px; font-size: 13px; white-space: nowrap; }
+#partition-atlas .atlas-head-secondary .atlas-level-label { flex: 0 0 auto; margin-left: auto; gap: 4px; white-space: nowrap; }
+#partition-atlas .atlas-head-secondary .atlas-level { box-sizing: border-box; width: 52px; min-height: 40px; padding: 5px 6px; }
+#partition-atlas .atlas-summary-equipment-list,
+#partition-atlas .atlas-equipment-stage-list { max-width: 100%; gap: 6px; }
+#partition-atlas .atlas-summary-equipment-list > *,
+#partition-atlas .atlas-equipment-stage-list > * { max-width: 100%; white-space: normal; overflow-wrap: anywhere; }
+#partition-atlas .atlas-note-menu { right: auto; left: 0px; width: 100%; max-width: 100%; }
+#partition-atlas .atlas-equipment-entry { flex-wrap: wrap; }
+#partition-atlas .atlas-inventory-equipment-row { grid-template-columns: minmax(56px, auto) minmax(0px, 1fr); padding: 8px 0px; border-bottom: 1px dashed var(--line); }
+#partition-atlas .atlas-inventory-equipment-row select,
+#partition-atlas .atlas-inventory-equipment-row input { grid-column: 1 / -1; }
+}
+#partition-atlas .atlas-item { border-color: rgba(109, 82, 43, 0.72); background-color: var(--panel); background-image: linear-gradient(135deg, rgba(240, 204, 99, 0.027), transparent 26%), linear-gradient(rgba(255, 244, 212, 0.02), rgba(0, 0, 0, 0.11)), linear-gradient(90deg, rgba(93, 66, 31, 0.027) 1px, transparent 1px); background-size: auto, auto, 9px 100%; box-shadow: rgba(0, 0, 0, 0.95) 0px 10px 24px -20px, rgba(240, 204, 99, 0.035) 0px 1px 0px inset, rgba(0, 0, 0, 0.28) 0px -1px 0px inset; }
+#partition-atlas .atlas-saved { text-shadow: rgba(69, 189, 120, 0.12) 0px 0px 10px; }
+@media (max-width: 1024px) {
+#partition-atlas .atlas-item { background-image: linear-gradient(rgba(255, 244, 212, 0.016), rgba(0, 0, 0, 0.09)); box-shadow: rgba(240, 204, 99, 0.024) 0px 1px 0px inset, rgb(0, 0, 0) 0px 8px 18px -20px; }
+}
+#partition-atlas .atlas-item { border-radius: 2px; border-color: rgba(125, 94, 43, 0.72); box-shadow: rgba(0, 0, 0, 0.32) 0px 0px 22px inset, rgb(0, 0, 0) 0px 8px 18px -19px; }
+@media (max-width: 767px), (max-width: 932px) and (max-height: 500px) and (orientation: landscape) {
+#partition-atlas .atlas-item { border-radius: 3px; }
+}
+@media (max-width: 767px), (max-width: 932px) and (max-height: 500px) and (orientation: landscape) {
+#app #partition-atlas .atlas-note-menu label { min-height: 44px; padding-block: 7px; touch-action: manipulation; }
+#partition-atlas #atlas-note-toggle { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+}
+#partition-atlas .atlas-item { border-color: var(--qin-line); border-radius: var(--qin-radius-panel); background-color: var(--qin-surface-panel); background-image: linear-gradient(135deg, rgba(239, 203, 112, 0.027), transparent 28%), linear-gradient(rgba(255, 245, 218, 0.016), rgba(0, 0, 0, 0.13)), repeating-linear-gradient(90deg, rgba(90, 66, 32, 0.02) 0px, rgba(90, 66, 32, 0.02) 1px, transparent 1px, transparent 10px); background-repeat: repeat; background-size: auto; box-shadow: var(--qin-shadow-panel); }
+#partition-atlas .atlas-saved { text-shadow: rgba(76, 183, 122, 0.12) 0px 0px 10px; }
+#partition-atlas .atlas-note-menu { border-color: var(--qin-line-strong); border-radius: var(--qin-radius-overlay); background-color: rgb(25, 19, 13); background-image: linear-gradient(rgba(239, 203, 112, 0.035), rgba(0, 0, 0, 0.14)); box-shadow: var(--qin-shadow-raised); }
+@media (min-width: 1025px) {
+#partition-atlas .atlas-grid { gap: var(--qin-space-4); }
+}
+@media (min-width: 768px) and (max-width: 1024px) {
+#partition-atlas .atlas-item { background-image: linear-gradient(rgba(255, 244, 212, 0.016), rgba(0, 0, 0, 0.1)); box-shadow: rgba(239, 203, 112, 0.024) 0px 1px 0px inset, rgb(0, 0, 0) 0px 8px 20px -22px; }
+}
+@media (max-width: 767px), (max-width: 932px) and (max-height: 500px) and (orientation: landscape) {
+#partition-atlas .atlas-item { background-image: linear-gradient(rgba(255, 244, 212, 0.01), rgba(0, 0, 0, 0.1)); box-shadow: rgba(239, 203, 112, 0.02) 0px 1px 0px inset; }
+}
 #partition-atlas [hidden] { display: none; }
-#partition-atlas .filter-row { min-width: 0; }
-#partition-atlas .atlas-category-row { align-items: start; }
-#partition-atlas #atlas-tabs { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); flex: 1; gap: 8px; }
-#partition-atlas #atlas-tabs .seg { min-width: 0; min-height: 44px; padding: 8px; white-space: normal; }
-#partition-atlas .atlas-search-row { display: grid; grid-template-columns: auto minmax(110px, .25fr) minmax(0, 1fr); gap: 10px; }
-#partition-atlas #atlas-search { width: 100%; min-width: 0; }
-#partition-atlas .atlas-level-conditions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 28px; padding-top: 4px; }
-#partition-atlas .atlas-level-conditions .filter-row { margin: 0; }
-#partition-atlas input, #partition-atlas select, #partition-atlas .atlas-select-button { min-height: 44px; font-size: 16px; max-width: 100%; }
-#partition-atlas .atlas-filter-control { font-size: 13px; }
-#partition-atlas .atlas-advanced-filters { grid-template-columns: repeat(auto-fit, minmax(min(100%, 160px), 1fr)); }
-#partition-atlas .atlas-sort-controls { grid-template-columns: minmax(0, 220px) minmax(0, 180px) auto; }
-#partition-atlas .atlas-filter-clear { justify-self: start; }
-#partition-atlas .atlas-note-menu { position: fixed; right: auto; min-width: 0; max-width: none; padding: 6px; overflow-y: auto; overscroll-behavior: contain; }
-#partition-atlas .atlas-note-menu label { min-height: 44px; padding: 8px; }
-#partition-atlas .atlas-note-menu input { min-height: 18px; }
-#partition-atlas #atlas-results:not([hidden]) { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; align-items: start; }
-#partition-atlas .atlas-item { margin: 0; min-width: 0; padding: 14px; line-height: 1.6; contain-intrinsic-size: auto 310px; }
-#partition-atlas .atlas-item-editing { grid-column: 1 / -1; content-visibility: visible; }
-#partition-atlas .atlas-head { display: grid; gap: 4px; margin-bottom: 6px; }
-#partition-atlas .atlas-head-primary { display: grid; grid-template-columns: minmax(0,1fr) auto 44px; align-items: center; gap: 2px 8px; min-width: 0; }
-#partition-atlas .atlas-head-primary > .q-badge { grid-column: 1; grid-row: 1; justify-self: start; }
-#partition-atlas .atlas-head .forge-name { grid-column: 1; grid-row: 2; color: var(--gold); font-size: 16px; overflow-wrap: anywhere; }
-#partition-atlas .atlas-head-secondary { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; width: auto; }
-#partition-atlas .atlas-head-secondary .seg { min-height: 44px; padding: 6px 10px; }
-#partition-atlas .atlas-level-label { grid-column: 2; grid-row: 1 / span 2; margin: 0; gap: 4px; font-size: 13px; white-space: nowrap; }
-#partition-atlas .atlas-head-primary .atlas-level { width: 56px; min-height: 44px; padding: 6px; font-size: 16px; }
-#partition-atlas .atlas-favorite-toggle { grid-column: 3; grid-row: 1 / span 2; width: 44px; height: 44px; margin: 0; touch-action: manipulation; }
-#partition-atlas .atlas-head-secondary:empty { display: none; }
-#partition-atlas .atlas-favorite-toggle.is-favorite { color: var(--gold); background: rgba(212,175,55,.12); border-color: var(--gold-dim); }
-#partition-atlas .atlas-item-pinned { border-color: var(--gold); box-shadow: inset 3px 0 0 var(--gold); }
-#partition-atlas .atlas-item-pinned .q-badge { color: var(--gold); border-color: var(--gold-dim); background: rgba(212,175,55,.1); }
-#partition-atlas .atlas-pin-badge { grid-column: 1; grid-row: 3; justify-self: start; color: var(--gold); border: 1px solid var(--gold-dim); background: transparent; font-size: 12px; }
-#partition-atlas .atlas-pin-toggle.is-pinned { color: var(--gold); border-color: var(--gold-dim); }
-#partition-atlas .atlas-upgrade { padding: 6px 0; margin: 0; border: 0; background: transparent; box-shadow: none; }
-#partition-atlas .atlas-upgrade-title { font-size: 14px; }
-#partition-atlas .atlas-upgrade-cost { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 8px 14px; }
-#partition-atlas .atlas-upgrade-cost > span { min-width: 0; color: var(--muted); font-size: 13px; overflow-wrap: anywhere; }
-#partition-atlas .atlas-upgrade-cost b { display: inline; font-size: 15px; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
-#partition-atlas .atlas-inventory-suffix { display: block; font-size: 12px; }
-#partition-atlas .atlas-card-details { margin-top: 4px; border-top: 1px solid var(--line); padding-top: 6px; }
-#partition-atlas .atlas-meta { display: flex; flex-wrap: wrap; gap: 2px 12px; margin: 0; line-height: 1.6; overflow-wrap: anywhere; }
-#partition-atlas .atlas-equipment-stage-list { display: flex; flex-wrap: nowrap; gap: 6px 14px; min-width: 0; max-width: 100%; overflow-x: auto; padding-bottom: 4px; }
-#partition-atlas .atlas-equipment-stage { display: flex; flex: 0 0 auto; align-items: center; gap: 6px; }
-#partition-atlas .atlas-equipment-entry { flex-wrap: nowrap; white-space: nowrap; }
-#partition-atlas .atlas-equipment-items { min-width: 0; flex-wrap: nowrap; }
-#partition-atlas .atlas-summary-metrics { display: flex; flex-wrap: wrap; gap: 4px 18px; margin: 4px 0; }
-#partition-atlas .atlas-summary-metrics > div { min-width: 0; padding: 0; }
-#partition-atlas .atlas-summary-metrics span { color: var(--muted); font-size: 13px; }
-#partition-atlas .atlas-summary-metrics b { display: inline; font-size: 15px; margin-left: 5px; }
-#partition-atlas .atlas-upgrade-summary { padding: 8px 10px; margin-bottom: 10px; }
-#partition-atlas .atlas-upgrade-summary .drop-item-title { display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: baseline; font-size: 14px; }
-#partition-atlas .atlas-upgrade-summary .drop-count { margin: 0; }
-#partition-atlas .atlas-inventory-editor { margin-top: 6px; padding: 0; border: 0; background: transparent; }
-#partition-atlas .atlas-inventory-title { margin-bottom: 4px; }
-#partition-atlas .atlas-inventory-souls { display: grid; grid-template-columns: max-content minmax(100px,160px); justify-content: start; gap: 6px; align-items: center; margin-bottom: 6px; }
-#partition-atlas .atlas-inventory-souls input { width: 100%; padding: 8px 10px; }
-#partition-atlas .atlas-inventory-error { grid-column: 1 / -1; margin: 0; font-size: 14px; line-height: 1.5; }
-#partition-atlas [aria-invalid="true"] { border-color: #ff8a80; outline: 1px solid #ff8a80; }
-#partition-atlas .atlas-inventory-equipment-list { gap: 0; }
-#partition-atlas .atlas-inventory-columns, #partition-atlas .atlas-inventory-equipment-row { display: grid; grid-template-columns: 64px minmax(100px, 1fr) minmax(112px, .6fr) minmax(180px, 1.5fr); gap: 8px 12px; align-items: center; }
-#partition-atlas .atlas-inventory-columns { color: var(--muted); font-size: 13px; padding-bottom: 6px; }
-#partition-atlas .atlas-inventory-equipment-row { padding: 5px 0; border-top: 1px solid var(--line); border-bottom: 0; }
-#partition-atlas .atlas-inventory-equipment-row > * { min-width: 0; grid-column: auto; }
-#partition-atlas .atlas-inventory-equipment-row > input, #partition-atlas .atlas-inventory-equipment-row > select { padding: 8px; }
-#partition-atlas .atlas-inventory-equipment-row .material-token { overflow-wrap: anywhere; white-space: normal; }
-#partition-atlas .atlas-inventory-actions { display: flex; gap: 10px; }
-#partition-atlas .atlas-inventory-actions .seg { min-height: 44px; }
-#partition-atlas .empty { grid-column: 1 / -1; }
-@container atlas (min-width: 960px) {
-  #partition-atlas #atlas-results:not([hidden]) { grid-template-columns: repeat(2,minmax(0,1fr)); }
-}
-@container atlas (min-width: 701px) {
-  #partition-atlas .atlas-head-primary { grid-template-columns: auto minmax(0,1fr) auto 44px; }
-  #partition-atlas .atlas-head .forge-name { grid-column: 2; grid-row: 1; }
-  #partition-atlas .atlas-level-label { grid-column: 3; grid-row: 1; }
-  #partition-atlas .atlas-favorite-toggle { grid-column: 4; grid-row: 1; }
-}
-@container atlas (max-width: 700px) {
-  #partition-atlas #atlas-tabs { grid-template-columns: repeat(3,minmax(0,1fr)); }
-  #partition-atlas .atlas-category-row { display: block; }
-  #partition-atlas .atlas-category-row > .filter-label { display: block; margin-bottom: 7px; }
-  #partition-atlas .atlas-inventory-columns { display: none; }
-  #partition-atlas .atlas-inventory-equipment-row { grid-template-columns: 60px minmax(0,1fr); }
-  #partition-atlas .atlas-inventory-equipment-row > select { grid-column: 2; width: 100%; }
-  #partition-atlas .atlas-inventory-equipment-row > input { grid-column: 1 / -1; }
-}
-@container atlas (max-width: 430px) {
-  #partition-atlas .atlas-search-row { grid-template-columns: auto minmax(0,1fr); }
-  #partition-atlas #atlas-search { grid-column: 1 / -1; }
-  #partition-atlas .atlas-level-conditions { display: grid; gap: 10px; }
-  #partition-atlas .atlas-range-row, #partition-atlas .atlas-target-row { display: grid; grid-template-columns: 80px minmax(0,1fr); gap: 8px; }
-  #partition-atlas .atlas-level-range { display: grid; grid-template-columns: minmax(0,1fr) auto minmax(0,1fr); }
-  #partition-atlas #atlas-level-min, #partition-atlas #atlas-level-max, #partition-atlas #atlas-target-level { width: 100%; min-width: 0; }
-  #partition-atlas .atlas-advanced-filters, #partition-atlas .atlas-sort-controls { grid-template-columns: repeat(2,minmax(0,1fr)); }
-  #partition-atlas .atlas-filter-clear { grid-column: 1 / -1; }
-  #partition-atlas .atlas-upgrade-cost { gap: 8px; }
-}
+#partition-atlas #atlas-results > .atlas-item-editing { content-visibility: visible; }
+/* Keep the current viewport-coordinate menu positioning and clipping guard. */
+#partition-atlas #atlas-note-menu { position: fixed; right: auto; min-width: 0; max-width: none; overflow-y: auto; overscroll-behavior: contain; }

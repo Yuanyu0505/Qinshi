@@ -646,14 +646,7 @@
 #partition-machine-beasts .machine-research-matrix-scroll { min-width: 0; max-width: 100%; overflow-x: auto; }
 #partition-machine-beasts .machine-research-matrix-scroll table { width: 100%; min-width: 0; table-layout: fixed; border-collapse: collapse; }
 #partition-machine-beasts .machine-research-matrix-scroll[data-quality="orange"] table { min-width: 620px; }
-#partition-machine-beasts .machine-research-matrix-scroll:not([data-quality="orange"]) table { width: min(100%, 320px); }
-#partition-machine-beasts .machine-research-matrix-scroll th:first-child { width: 84px; text-align: left; }
-#partition-machine-beasts .machine-research-pair { display: grid; grid-template-columns: 84px repeat(6, minmax(0, 1fr)); gap: 0; min-width: 0; max-width: 100%; overflow-x: auto; margin-top: 14px; }
-#partition-machine-beasts .machine-research-pair > .machine-reference-group { min-width: 0; margin: 0; }
-#partition-machine-beasts .machine-research-pair > .machine-reference-group:first-child { grid-column: 1 / span 2; }
-#partition-machine-beasts .machine-research-pair > .machine-reference-group:last-child { grid-column: 4 / span 2; }
-#partition-machine-beasts .machine-research-pair .machine-research-matrix-scroll table { width: 100%; }
-#partition-machine-beasts .machine-research-pair [data-quality="purple"] th:first-child { width: 50%; }
+#partition-machine-beasts .machine-research-matrix-scroll[data-quality="orange"] th:first-child { width: 84px; text-align: left; }
 #partition-machine-beasts .machine-research-matrix-scroll th,
 #partition-machine-beasts .machine-research-matrix-scroll td { padding: 9px 10px; border-bottom: 1px solid var(--line); text-align: right; white-space: normal; overflow-wrap: anywhere; }
 #partition-machine-beasts .machine-research-matrix-scroll th { color: var(--gold); }
@@ -666,12 +659,6 @@
 }
 
 @container machine-beasts (max-width: 640px) {
-  #partition-machine-beasts .machine-research-pair { grid-template-columns: repeat(2, minmax(150px, 1fr)); gap: 12px; }
-  #partition-machine-beasts .machine-research-pair > .machine-reference-group:first-child,
-  #partition-machine-beasts .machine-research-pair > .machine-reference-group:last-child { grid-column: auto; }
-  #partition-machine-beasts .machine-research-pair .machine-research-matrix-scroll { display: block; }
-  #partition-machine-beasts .machine-research-pair .machine-research-card-grid.machine-reference-mobile-only { display: none; }
-  #partition-machine-beasts .machine-research-pair .machine-research-matrix-scroll th:first-child { width: 56px; }
   #partition-machine-beasts .machine-search-bar { grid-template-columns: minmax(0, 1fr); }
   #partition-machine-beasts .machine-editor-grid,
   #partition-machine-beasts .machine-calculator-top { grid-template-columns: repeat(2, minmax(0, 1fr)); }

@@ -5,7 +5,7 @@ function loadKind(kind) {
   var paths;
   if (kind === "wooden") paths = ["../data/wooden-man-alley.js", "wooden-man-alley.js", "wooden-man-alley-planner.js"];
   else if (kind === "secret-realm") paths = ["secret-realm-planner.js"];
-  else if (kind === "beast-single" || kind === "beast-school") paths = ["../data/machine-beasts.js", "machine-beasts.js", "machine-beast-school-planner.js"];
+  else if (kind === "beast-single" || kind === "beast-school") paths = ["../data/machine-beasts.js", "machine-beasts.js", "machine-beast-equivalents.js", "machine-beast-school-planner.js"];
   else throw new Error("未知计算类型");
   paths.forEach(function (path) { importScripts(path + self.location.search); });
   loadedKinds[kind] = true;

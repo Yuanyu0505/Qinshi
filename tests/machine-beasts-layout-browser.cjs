@@ -55,8 +55,11 @@ for (const width of [320,1280]) test(`alignment: ${width}px reference return but
   assert.equal(await page.getByRole('navigation',{name:'流派阶数定位'}).count(),0);
   assert.equal(await page.locator('.machine-school-stage-card').count(),5);
   if (width===1280) {
-    const positions = await page.locator('.machine-research-matrix-scroll').evaluateAll(nodes=>nodes.map(n=>({left:n.querySelector('th').getBoundingClientRect().left,width:n.querySelector('table').getBoundingClientRect().width})));
-    assert.ok(positions.slice(1).every(p=>Math.abs(p.left-positions[0].left)<=1 && p.width<=320));
+    const columns = await page.locator('.machine-research-matrix-scroll').evaluateAll(nodes=>nodes.map(n=>({quality:n.dataset.quality,left:n.getBoundingClientRect().left,top:n.getBoundingClientRect().top,cols:Array.from(n.querySelectorAll('thead th'),c=>({left:c.getBoundingClientRect().left,right:c.getBoundingClientRect().right}))})));
+    const orange=columns.find(p=>p.quality==='orange'),blue=columns.find(p=>p.quality==='blue'),purple=columns.find(p=>p.quality==='purple');
+    assert.ok(Math.abs(blue.cols[0].left-orange.cols[0].left)<=1);
+    assert.ok(Math.abs(blue.cols[1].right-orange.cols[1].right)<=1);
+    assert.ok(Math.abs(purple.top-blue.top)<=1);assert.ok(purple.left>blue.left);
   }
   await page.locator('.machine-reference-return').last().click();
   assert.equal(await page.evaluate(()=>document.activeElement.id),'machine-reference-index');

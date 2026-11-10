@@ -26,7 +26,7 @@ const NEW_ASSETS = [
   'css/inscription-reference.css', 'js/inscription-reference.js', 'js/inscription-reverse.js',
   'css/pilots.css', 'data/pilots.js', 'js/pilots.js', 'js/pilots-ui.js',
   'css/machine-beasts.css', 'data/machine-beasts.js', 'js/machine-beasts.js',
-  'js/machine-beast-school-planner.js', 'js/machine-beasts-ui.js'
+  'js/machine-beast-equivalents.js', 'js/machine-beast-school-planner.js', 'js/machine-beasts-ui.js'
 ];
 let artifacts;
 

@@ -1,14 +1,14 @@
 (function (root) {
   "use strict";
   // Static paths also work when index.html is opened directly (file:).
-  var version = "1.0.93";
+  var version = "1.0.94";
   var registry = {
     pilots: { scripts: ["data/pilots.js", "js/pilots.js", "js/pilots-ui.js"], api: "PILOTS_UI" },
     "secret-realm": { scripts: ["data/secret-realm.js", "js/secret-realm-core.js", "js/secret-realm-planner.js", "js/secret-realm-ui.js"], api: "SECRET_REALM_UI", rootArgument: true },
     tactics: { scripts: ["js/tactics.js", "js/tactics-ui.js"], api: "TACTICS_UI" },
     formations: { scripts: ["js/formations.js", "js/formations-ui.js"], api: "FORMATIONS_UI" },
     "six-halls": { scripts: ["js/six-halls.js", "js/six-halls-ui.js"], api: "SIX_HALLS_UI", rootArgument: true },
-    "machine-beasts": { scripts: ["js/machine-beasts.js", "js/machine-beast-school-planner.js", "js/machine-beasts-ui.js"], api: "MACHINE_BEAST_UI" },
+    "machine-beasts": { scripts: ["js/machine-beasts.js", "js/machine-beast-equivalents.js", "js/machine-beast-school-planner.js", "js/machine-beasts-ui.js"], api: "MACHINE_BEAST_UI" },
     "battle-box-pill-pouch": { scripts: ["js/battle-box-pill-pouch.js", "js/battle-box-pill-pouch-ui.js"], api: "BATTLE_BOX_PILL_POUCH_UI" },
     "wooden-man-alley": { scripts: ["data/wooden-man-alley.js", "js/wooden-man-alley.js", "js/wooden-man-alley-planner.js", "js/wooden-man-alley-ui.js"], api: "WOODEN_MAN_ALLEY_UI", rootArgument: true }
   };

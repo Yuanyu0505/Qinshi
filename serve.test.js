@@ -933,8 +933,8 @@ test("首页提供机关兽个人进度、方案计算、资料图表及其三�
     assert.match(page.body, /data-machine-beast-mode="calculator">方案计算/);
     assert.match(page.body, /data-machine-beast-mode="reference">资料图表/);
     assert.match(page.body, versionedScriptPattern("data/machine-beasts.js"));
-    assert.deepStrictEqual(await loadedPartition('machine-beasts', 'MACHINE_BEAST_UI'), ['js/machine-beasts.js', 'js/machine-beast-school-planner.js', 'js/machine-beasts-ui.js'].map(asset => asset + '?v=' + APP_VERSION));
-    for (const resource of ["/data/machine-beasts.js", "/js/machine-beasts.js", "/js/machine-beast-school-planner.js", "/js/machine-beasts-ui.js"]) {
+    assert.deepStrictEqual(await loadedPartition('machine-beasts', 'MACHINE_BEAST_UI'), ['js/machine-beasts.js', 'js/machine-beast-equivalents.js', 'js/machine-beast-school-planner.js', 'js/machine-beasts-ui.js'].map(asset => asset + '?v=' + APP_VERSION));
+    for (const resource of ["/data/machine-beasts.js", "/js/machine-beasts.js", "/js/machine-beast-equivalents.js", "/js/machine-beast-school-planner.js", "/js/machine-beasts-ui.js"]) {
       const response = await get(port, resource);
       assert.strictEqual(response.status, 200, resource);
       assert.match(response.headers["content-type"], /javascript/, resource);

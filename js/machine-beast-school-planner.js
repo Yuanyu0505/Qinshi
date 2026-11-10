@@ -1,10 +1,11 @@
 (function (root, factory) {
   var core = root && root.MACHINE_BEAST_CORE;
-  if (typeof module === "object" && module.exports) core = require("./machine-beasts.js");
-  var api = factory(core);
+  var equivalents = root && root.MACHINE_BEAST_EQUIVALENTS;
+  if (typeof module === "object" && module.exports) { core = require("./machine-beasts.js"); equivalents = require("./machine-beast-equivalents.js"); }
+  var api = factory(core, equivalents);
   if (typeof module === "object" && module.exports) module.exports = api;
   if (root) root.MACHINE_BEAST_SCHOOL_PLANNER = api;
-})(typeof globalThis !== "undefined" ? globalThis : this, function (CORE) {
+})(typeof globalThis !== "undefined" ? globalThis : this, function (CORE, EQUIVALENTS) {
   "use strict";
 
   function schoolById(data, id) {
@@ -281,9 +282,15 @@
         CORE.calculateSchoolReferenceCost(data, { awakeningBlueprints: b, beasts: [] }, settings).blueprints.yuan);
       return feeCache.get(b);
     }
-    function order(s) {
+    function order(s, withoutStable) {
       var yuan = sumSafe(s.body, fee(s.blueprints));
-      return [s.modified].concat(effectMode ? [-s.effects, yuan, s.overflow, s.blueprints, s.key] : [yuan, -s.effects, s.overflow, s.blueprints, s.key]);
+      return [s.modified].concat(effectMode ? [-s.effects, yuan, s.overflow, s.blueprints] : [yuan, -s.effects, s.overflow, s.blueprints]).concat(withoutStable ? [] : [s.key]);
+    }
+    function mergeEquivalent(prior, value) {
+      var trace = EQUIVALENTS.merge(prior.trace, value.trace);
+      var chosen = value.key < prior.key ? value : prior;
+      chosen.trace = trace;
+      return chosen;
     }
     // Exact remaining gain, with modification count first and crossed nodes
     // second. This is a feasibility bound, not a cost/frontier replacement.
@@ -328,7 +335,7 @@
       var hi=sets.reduce(function(n,cs){return n+Math.max.apply(null,cs.map(function(c){return c.resources.awakeningBlueprints;}));},0),lo=0;
       while(lo<hi){var mid=Math.ceil((lo+hi)/2);if(fee(mid)<=bestFee)lo=mid;else hi=mid-1;}blueprintBudget=lo;
     }
-    var states = new Map([[0, [{ gain: 0, modified: 0, body: 0, blueprints: 0, effects: 0, overflow: 0, key: "", beasts: [] }]]]);
+    var states = new Map([[0, [{ gain: 0, modified: 0, body: 0, blueprints: 0, effects: 0, overflow: 0, key: "", beasts: [], trace: null }]]]);
     sets.forEach(function (allCandidates,setIndex) {
       var candidates = allCandidates;
       var collected = new Map();
@@ -346,19 +353,22 @@
               blueprints: sumSafe(s.blueprints, c.resources.awakeningBlueprints),
               effects: s.effects + c.unlockedEffects, overflow: sumSafe(s.overflow, c.overflowResearch),
               key: s.key + c.beastId + ":" + c.stableKey + "|",
-              beasts: changed ? s.beasts.concat([c]) : s.beasts };
+              beasts: changed ? s.beasts.concat([c]) : s.beasts, trace: EQUIVALENTS.append(s.trace, c) };
             if(v.gain+suffixGain[setIndex+1]<needed||v.blueprints>blueprintBudget)return;
             if(requiredEffects!==null&&(v.effects>requiredEffects||v.effects+suffixEffects[setIndex+1]<requiredEffects))return;
             if(effectMode&&v.effects+tail.effects<requiredEffects)return;
             var key = v.gain, bucket = collected.get(key);
             if (!bucket) { bucket = { saturated: null, values: new Map() }; collected.set(key, bucket); }
             if (Number.isInteger(price) && v.blueprints >= stock) {
-              if (!bucket.saturated || cmp(order(v), order(bucket.saturated)) < 0) bucket.saturated = v;
+              var comparison = bucket.saturated ? cmp(order(v, true), order(bucket.saturated, true)) : -1;
+              if (comparison < 0) bucket.saturated = v;
+              else if (comparison === 0) bucket.saturated = mergeEquivalent(bucket.saturated, v);
               return;
             }
-            var identity = v.body + "/" + v.blueprints + "/" + v.effects;
+            var identity = v.modified + "/" + v.body + "/" + v.blueprints + "/" + v.effects;
             var prior = bucket.values.get(identity);
-            if (!prior || cmp([v.overflow,v.key],[prior.overflow,prior.key]) < 0) bucket.values.set(identity,v);
+            if (!prior || v.overflow < prior.overflow) bucket.values.set(identity,v);
+            else if (v.overflow === prior.overflow) bucket.values.set(identity,mergeEquivalent(prior,v));
           });
         });
       });
@@ -403,7 +413,7 @@
       totals.contribution = totals.contribution === null || b.resources.contribution === null ? null : totals.contribution + b.resources.contribution;
       totals.yuan += b.resources.pricedBodyYuan;
     });
-    return { kind: effectMode ? "effects" : "cost", totals: totals, beasts: best.beasts, cost: cost, stableKey: best.key };
+    return { kind: effectMode ? "effects" : "cost", totals: totals, beasts: best.beasts, cost: cost, stableKey: best.key, _trace: best.trace };
   }
 
   function calculateSchoolPlans(data, id, progressByBeast, options) {
@@ -421,7 +431,7 @@
       var settings = CORE.normalizeReferenceCostSettings(data, config.referenceCostSettings);
       if (settings.awakeningBlueprintPrice === null) throw Error("请先设置有效的觉醒神图单价再计算");
       var participating = new Set(config.participatingBeastIds || school.beastIds);
-      var cache = new Map(), sets = [];
+      var cache = new Map(), sets = [], equivalentSources = {};
       function buildSets(plainOnly) {
         sets = [];
         school.beastIds.slice().sort().forEach(function (beastId) {
@@ -432,12 +442,17 @@
           if (beast.quality === "orange" && beast.contributionPerFragment === null &&
               CORE.levelForResearch(current.research, data.researchThresholds, beast.maxLevel) < beast.maxLevel &&
               settings.beastPrices[beastId] === null) throw Error(beast.name + "缺少本体参考价格，请先补齐再计算");
-          sets.push(machineBeastCandidates(data, beast, current, Object.assign({}, config, {
+          var beastConfig = Object.assign({}, config, {
             plainOnly: plainOnly, maxAddedLevel: needed,
             materialCache: cache, referenceCostSettings: settings,
             bluePurpleInventoryOnly: config.bluePurpleInventoryOnly === undefined ? settings.bluePurpleInventoryOnly : config.bluePurpleInventoryOnly,
             ownedLimits: config.ownedLimitsByBeast && config.ownedLimitsByBeast[beastId]
-          })));
+          });
+          sets.push(machineBeastCandidates(data, beast, current, beastConfig));
+          // Keep the full type domain for tied-material reconstruction, including
+          // new types removed from the representative search by owned-stock ties.
+          equivalentSources[beastId] = { fragments: current.fragments, types: materialTypes(data, beast, current, beastConfig,
+            Math.max(0, CORE.thresholdForLevel(beast.maxLevel, data.researchThresholds) - current.research)) };
         });
       }
       function exactReachable() {
@@ -470,11 +485,13 @@
           var level = detail ? detail.endLevel : CORE.levelForResearch((progress[beastId] || {}).research, data.researchThresholds, beast.maxLevel);
           return { beastId: beastId, beastName: beast.name, level: level, changed: Boolean(detail), effect: CORE.activeBeastEffect(beast, level) };
         }).filter(Boolean);
+        plan.equivalents = EQUIVALENTS.pack(data, plan._trace, equivalentSources, settings);
+        delete plan._trace;
       });
       return Object.assign(resultBase, { alreadyReached: false, plans: plans,
         model: { exact: true, modificationMinimum: cost.totals.modifiedInvestedCount, bluePurpleInventoryOnly: config.bluePurpleInventoryOnly === undefined ? settings.bluePurpleInventoryOnly : config.bluePurpleInventoryOnly,
           excludedCosts: ["蓝紫本体获取", "机关破片获取", "高阶制作", "改造制作"] } });
     } catch (error) { return { valid: false, errors: [error.message || "流派计算失败"] }; }
   }
-  return { defaultTargetStage: defaultTargetStage, machineBeastCandidates: machineBeastCandidates, calculateSchoolPlans: calculateSchoolPlans };
+  return { defaultTargetStage: defaultTargetStage, machineBeastCandidates: machineBeastCandidates, calculateSchoolPlans: calculateSchoolPlans, equivalentPlansPage: EQUIVALENTS.page };
 });

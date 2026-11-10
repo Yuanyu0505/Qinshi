@@ -368,13 +368,19 @@
 
 #partition-machine-beasts .machine-school-plan-beasts { display: grid; gap: 8px; margin-top: 10px; }
 
-#partition-machine-beasts .machine-school-plan-beast { display: grid; grid-template-rows: auto auto auto auto auto 1fr; gap: 8px; min-width: 0; padding: 10px; background: rgba(25, 22, 17, .72); border: 1px solid var(--line); border-radius: 8px; }
-#partition-machine-beasts .machine-plan-primary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px 10px; margin-top: 0; align-items: start; }
-#partition-machine-beasts .machine-plan-primary > span { display: grid; gap: 4px; font-size: 14px; }
+#partition-machine-beasts .machine-school-plan-beast { display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto auto auto auto auto 1fr; gap: 8px; min-width: 0; padding: 10px; background: rgba(25, 22, 17, .72); border: 1px solid var(--line); border-radius: 8px; }
+#partition-machine-beasts .machine-plan-primary { display: grid; grid-template-columns: repeat(3, minmax(max-content, 1fr)); gap: 4px; margin-top: 0; align-items: baseline; overflow-x: auto; }
+#partition-machine-beasts .machine-plan-primary > span { display: block; white-space: nowrap; font-size: 13px; }
 #partition-machine-beasts .machine-school-plan-material ul { margin: 8px 0 0; padding-left: 20px; overflow-wrap: anywhere; }
 #partition-machine-beasts .machine-school-plan-material .muted-tip { margin-bottom: 0; }
-#partition-machine-beasts .machine-school-plan-beast-metrics,
+#partition-machine-beasts .machine-equivalent-materials { min-width: 0; margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--line); }
+#partition-machine-beasts .machine-equivalent-materials > h3 { color: var(--gold); font-size: 16px; }
+#partition-machine-beasts .machine-equivalent-effects { display: grid; gap: 8px; margin-block: 12px 0; }
+#partition-machine-beasts .machine-equivalent-effects dt { color: var(--muted); }
+#partition-machine-beasts .machine-equivalent-effects dd { margin: 4px 0 0; overflow-wrap: anywhere; }
 #partition-machine-beasts .machine-school-plan-resources { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-content: start; }
+#partition-machine-beasts .machine-school-plan-beast-metrics { display: grid; grid-template-columns: minmax(max-content, 1.8fr) minmax(max-content, 1fr) minmax(max-content, .8fr); column-gap: 4px; overflow-x: auto; }
+#partition-machine-beasts .machine-school-plan-beast-metrics > span { white-space: nowrap; }
 #partition-machine-beasts .machine-school-plan-beast-metrics > span,
 #partition-machine-beasts .machine-school-plan-resources > span { min-width: 0; overflow-wrap: anywhere; }
 #partition-machine-beasts .machine-school-plan-resources > span:last-child { grid-column: 1 / -1; }
@@ -388,8 +394,8 @@
 #partition-machine-beasts .machine-school-plan-beast > header strong,
 #partition-machine-beasts .machine-school-plan-beast > header b { color: var(--gold); }
 
-#partition-machine-beasts .machine-school-plan-beast-metrics,
 #partition-machine-beasts .machine-school-plan-resources { gap: 6px 14px; margin-top: 0; color: var(--muted); font-size: 12px; }
+#partition-machine-beasts .machine-school-plan-beast-metrics { margin-top: 0; color: var(--muted); font-size: 12px; }
 
 #partition-machine-beasts .machine-school-plan-resources b { color: var(--text); }
 
@@ -642,6 +648,12 @@
 #partition-machine-beasts .machine-research-matrix-scroll[data-quality="orange"] table { min-width: 620px; }
 #partition-machine-beasts .machine-research-matrix-scroll:not([data-quality="orange"]) table { width: min(100%, 320px); }
 #partition-machine-beasts .machine-research-matrix-scroll th:first-child { width: 84px; text-align: left; }
+#partition-machine-beasts .machine-research-pair { display: grid; grid-template-columns: 84px repeat(6, minmax(0, 1fr)); gap: 0; min-width: 0; max-width: 100%; overflow-x: auto; margin-top: 14px; }
+#partition-machine-beasts .machine-research-pair > .machine-reference-group { min-width: 0; margin: 0; }
+#partition-machine-beasts .machine-research-pair > .machine-reference-group:first-child { grid-column: 1 / span 2; }
+#partition-machine-beasts .machine-research-pair > .machine-reference-group:last-child { grid-column: 4 / span 2; }
+#partition-machine-beasts .machine-research-pair .machine-research-matrix-scroll table { width: 100%; }
+#partition-machine-beasts .machine-research-pair [data-quality="purple"] th:first-child { width: 50%; }
 #partition-machine-beasts .machine-research-matrix-scroll th,
 #partition-machine-beasts .machine-research-matrix-scroll td { padding: 9px 10px; border-bottom: 1px solid var(--line); text-align: right; white-space: normal; overflow-wrap: anywhere; }
 #partition-machine-beasts .machine-research-matrix-scroll th { color: var(--gold); }
@@ -654,6 +666,12 @@
 }
 
 @container machine-beasts (max-width: 640px) {
+  #partition-machine-beasts .machine-research-pair { grid-template-columns: repeat(2, minmax(150px, 1fr)); gap: 12px; }
+  #partition-machine-beasts .machine-research-pair > .machine-reference-group:first-child,
+  #partition-machine-beasts .machine-research-pair > .machine-reference-group:last-child { grid-column: auto; }
+  #partition-machine-beasts .machine-research-pair .machine-research-matrix-scroll { display: block; }
+  #partition-machine-beasts .machine-research-pair .machine-research-card-grid.machine-reference-mobile-only { display: none; }
+  #partition-machine-beasts .machine-research-pair .machine-research-matrix-scroll th:first-child { width: 56px; }
   #partition-machine-beasts .machine-search-bar { grid-template-columns: minmax(0, 1fr); }
   #partition-machine-beasts .machine-editor-grid,
   #partition-machine-beasts .machine-calculator-top { grid-template-columns: repeat(2, minmax(0, 1fr)); }

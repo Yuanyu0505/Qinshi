@@ -155,6 +155,10 @@
       var latest=c.core.advance(read(c),Date.now(),c.data);if(readonly(c))latest=c.core.updateTotals(latest,realmId,values,c.data);
       if(JSON.stringify(c.core.buildPlanningInput(latest,realmId,Date.now(),c.data))!==fingerprint){load(c);render(c);showError(c,'记录或活动时间已变化，请重新计算。');return;}
       c.result=result;c.results[realmId]={fingerprint:fingerprint,result:result};c.busy=false;c.host.setAttribute('aria-busy','false');if(button)button.disabled=false;renderResults(c);
+      // Only an accepted, current calculation navigates to its own results.
+      // Restoring a cached result or receiving a stale worker reply must not scroll.
+      var results=c.host.querySelector('[data-realm-results]');
+      if(results){results.tabIndex=-1;results.focus({preventScroll:true});results.scrollIntoView({block:'start',behavior:'instant'});}
     }catch(e){if(e.name==='AbortError')return;c.busy=false;c.host.setAttribute('aria-busy','false');var b=c.host.querySelector('[data-realm-calculate]');if(b)b.disabled=false;restoreResult(c);renderResults(c);showError(c,e);}
   }
   function attach(c){

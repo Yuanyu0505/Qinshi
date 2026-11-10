@@ -1819,16 +1819,15 @@
           <option value="missing"${value.owned ? "" : " selected"}>未拥有</option>
           <option value="owned"${value.owned ? " selected" : ""}>已拥有</option>
         </select>
-        <input type="text" data-atlas-inventory-note="${escapeHtml(key)}" aria-label="${escapeHtml(stage.key)} ${escapeHtml(token.n)}未拥有备注" value="${escapeHtml(value.note)}" placeholder="未拥有备注（可选）"${value.owned ? " hidden" : ""}>
+        <input type="text" data-atlas-inventory-note="${escapeHtml(key)}" value="${escapeHtml(value.note)}" placeholder="未拥有备注（可选）"${value.owned ? " hidden" : ""}>
       </div>`;
     })).join("");
-    return `<div class="atlas-inventory-editor" role="group" aria-label="${escapeHtml((ATLAS_DATA.items.find(item => String(item.id) === itemId) || {}).name || "")}个人库存">
+    return `<div class="atlas-inventory-editor">
       <div class="atlas-inventory-title">个人库存</div>
       <label class="atlas-inventory-souls">已有魂魄
-        <input type="number" min="0" step="1" data-atlas-inventory-souls value="${escapeHtml(draft.soulsOwned)}" placeholder="未填写" aria-describedby="atlas-souls-error-${escapeHtml(itemId)}" aria-invalid="${Boolean(atlasState.inventoryError)}">
+        <input type="number" min="0" step="1" data-atlas-inventory-souls value="${escapeHtml(draft.soulsOwned)}" placeholder="未填写" aria-invalid="${Boolean(atlasState.inventoryError)}" aria-describedby="atlas-souls-error-${escapeHtml(itemId)}">
         <span id="atlas-souls-error-${escapeHtml(itemId)}" class="atlas-inventory-error" role="alert"${atlasState.inventoryError ? "" : " hidden"}>${escapeHtml(atlasState.inventoryError)}</span>
       </label>
-      <div class="atlas-inventory-columns" aria-hidden="true"><span>阶段</span><span>装备</span><span>拥有状态</span><span>未拥有备注</span></div>
       <div class="atlas-inventory-equipment-list">${equipmentRows || '<span class="muted-tip">当前目标区间没有所需装备</span>'}</div>
       <div class="atlas-inventory-actions">
         <button type="button" class="seg active" data-atlas-inventory-save="${escapeHtml(itemId)}">保存库存</button>
@@ -1855,17 +1854,18 @@
     const favorite = atlasState.favorites.includes(itemId);
     const pinned = favorite && atlasState.pins.includes(itemId);
     const plan = derivedState ? derivedState.plan : ATLAS.upgradePlan(item, L, atlasState.targetLevel, ATLAS_DATA.meta.upgradeStages);
-    const editing = atlasState.inventoryEditingId === itemId;
-    const equipmentHtml = editing ? "" : atlasEquipmentHtml(itemId, plan, favorite);
+    const equipmentHtml = atlasEquipmentHtml(itemId, plan, favorite);
     const upgradeHtml = plan.reached
       ? `<div class="atlas-upgrade done">已达到目标等级（${plan.currentLevel} / ${plan.targetLevel}级）</div>`
       : `<div class="atlas-upgrade">
-          <div class="atlas-upgrade-title">${plan.currentLevel} → ${plan.targetLevel} 级 · 升级需求</div>
+          <div class="atlas-upgrade-title">升至 ${plan.targetLevel} 级</div>
           <div class="atlas-upgrade-cost">
             <span class="atlas-cost-knots">明鬼绳结 <b>${plan.knots}</b></span>
             <span>${atlasSoulHtml(itemId, plan.souls, favorite)}</span>
             <span class="atlas-cost-growth">成长值 <b>+${plan.growth}</b></span>
           </div>
+          <div class="muted-tip">14级后不再获得成长值</div>
+          <div class="atlas-upgrade-equipment"><div class="atlas-equipment-title">所需装备</div>${equipmentHtml}</div>
         </div>`;
     return `<div class="atlas-item${favorite ? " atlas-item-favorite" : ""}${pinned ? " atlas-item-pinned" : ""}${atlasState.inventoryEditingId === itemId ? " atlas-item-editing" : ""}" data-atlas-item="${escapeHtml(itemId)}">
       <div class="atlas-head">
@@ -1873,25 +1873,23 @@
           ${pinned ? '<span class="atlas-pin-badge">置顶</span>' : ""}
           <span class="q-badge q-orange">${item.atlas}图鉴</span>
           <span class="forge-name">${escapeHtml(item.name)}</span>
-          <label class="atlas-level-label">等级
-            <input type="number" class="atlas-level" data-id="${item.id}" value="${L}" min="0" max="${atlasMaxLevel()}" aria-label="${escapeHtml(item.name)}图鉴等级">
-          </label>
           <button type="button" class="atlas-favorite-toggle${favorite ? " is-favorite" : ""}" data-atlas-favorite="${escapeHtml(itemId)}" aria-pressed="${favorite}" title="${favorite ? "取消收藏" : "收藏图鉴"}" aria-label="${favorite ? "取消收藏" : "收藏图鉴"}">${favorite ? "★" : "☆"}</button>
         </div>
-        ${favorite ? '<div class="atlas-head-secondary">' : ''}
+        <div class="atlas-head-secondary">
           ${favorite ? `<button type="button" class="seg atlas-pin-toggle${pinned ? " is-pinned" : ""}" data-atlas-pin="${escapeHtml(itemId)}" aria-pressed="${pinned}">${pinned ? "取消置顶" : "置顶"}</button>` : ""}
           ${favorite ? `<button type="button" class="seg atlas-inventory-edit" data-atlas-inventory-edit="${escapeHtml(itemId)}">编辑库存</button>` : ""}
-        ${favorite ? '</div>' : ''}
+          <label class="atlas-level-label">图鉴等级
+            <input type="number" class="atlas-level" data-id="${item.id}" value="${L}" min="0" max="${atlasMaxLevel()}" aria-label="${escapeHtml(item.name)}图鉴等级">
+          </label>
+        </div>
       </div>
-      ${upgradeHtml}
-      <section class="atlas-card-details" aria-label="图鉴资料与装备">
       <div class="atlas-meta">
         <span>获取途径：${escapeHtml(item.acquire) || "—"}</span>
         <span>所属图鉴：${item.group ? `<span class="atlas-group">${escapeHtml(item.group)}</span>` : "—"}</span>
         ${element ? `<span>五行属性：${escapeHtml(element)}</span>` : ""}
       </div>
-      ${editing ? atlasInventoryEditorHtml(itemId, plan) : `<div class="atlas-upgrade-equipment"><div class="atlas-equipment-title">所需装备</div>${equipmentHtml}</div>`}
-      </section>
+      ${upgradeHtml}
+      ${atlasInventoryEditorHtml(itemId, plan)}
     </div>`;
   }
 
@@ -1931,22 +1929,25 @@
 
   function atlasUpgradeSummaryHtml(summary) {
     if (summary.total === 0) {
-      return "";
+      return '<div class="atlas-upgrade-summary"><div class="drop-item-title">当前筛选结果汇总</div><div class="muted-tip">当前条件下没有符合的图鉴</div></div>';
+    }
+    if (summary.pending === 0) {
+      return `<div class="atlas-upgrade-summary"><div class="drop-item-title">当前结果升至 ${summary.targetLevel} 级汇总</div><div class="muted-tip">当前结果已全部达到目标等级</div></div>`;
     }
     const hasEquipment = summary.equipment.length > 0;
     const equipment = hasEquipment
       ? summary.equipment.map((item) => `<span class="mat material-token ${item.q === "紫" ? "mat-purple" : "mat-orange"}">${escapeHtml(item.n)} ×${item.count}</span>`).join("")
       : '<span class="muted-tip">无需装备</span>';
     return `<div class="atlas-upgrade-summary">
-      <div class="drop-item-title">升至 ${summary.targetLevel} 级<span class="drop-count">当前 ${summary.total} 项 · ${summary.pending}/${summary.total} 名未达标</span></div>
-      <div class="atlas-summary-metrics atlas-upgrade-cost">
-        <div class="atlas-cost-knots"><span>明鬼绳结</span><b>${summary.knots.toLocaleString()}</b></div>
-        <div><span>魂魄</span><b>${summary.souls.toLocaleString()}</b></div>
-        <div class="atlas-cost-growth"><span>成长值</span><b>+${summary.growth.toLocaleString()}</b></div>
+      <div class="drop-item-title">当前结果升至 ${summary.targetLevel} 级汇总<span class="drop-count">${summary.pending}/${summary.total} 名未达标</span></div>
+      <div class="atlas-upgrade-cost">
+        <span class="atlas-cost-knots">明鬼绳结 <b>${summary.knots}</b></span>
+        <span>魂魄 <b>${summary.souls}</b></span>
+        <span class="atlas-cost-growth">成长值 <b>+${summary.growth}</b></span>
       </div>
-      ${summary.pending === 0 ? '<div class="muted-tip">当前结果已全部达到目标等级</div>' : ""}
       ${hasEquipment ? '<button type="button" class="seg atlas-summary-equipment-toggle" aria-expanded="false">展开所需装备</button>' : ""}
       <div class="atlas-summary-equipment"><div class="atlas-equipment-title">所需装备</div><div class="atlas-summary-equipment-list">${equipment}</div></div>
+      <div class="muted-tip">14级后不再获得成长值</div>
     </div>`;
   }
 

@@ -13,6 +13,7 @@ test('budget label and amount stay together without redundant rounding totals',a
  await page.locator('[data-realm-mode=planner]').click();await page.locator('[data-realm-action=none]').click();await page.locator('[data-realm-enable=pack98]').check();
  await page.locator('[name=targetEnabled]').uncheck();await page.locator('[name=currencyTargetEnabled]').check();await page.locator('[name=currencyTarget]').fill('40');await result(page);
  const plan=page.locator('.realm-plan').first();assert.doesNotMatch(await plan.innerText(),/（向上取整）|折后金额合计|预算取整差额/);
+ assert.ok(await plan.evaluate(n=>{const r=n.getBoundingClientRect();return r.top>=-2&&r.top<innerHeight/2;}),'calculation should locate its result automatically');
  assert.equal(await plan.locator('.realm-budget').count(),1);assert.equal(await plan.locator('.realm-budget').evaluate(n=>getComputedStyle(n).whiteSpace),'nowrap');
  }finally{await context.close();}
 });

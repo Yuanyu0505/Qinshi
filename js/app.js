@@ -202,7 +202,7 @@
   let atlasLevelCommitInProgress = false;
   let atlasPointerDown = false;
   let atlasDeferredLevelRender = null;
-  const atlasOpenDetails = new Set();
+  const atlasRenderedMarkup = new WeakMap();
   let forgingViewRendered = false;
 
   function initManualNumberInputs() {
@@ -1855,7 +1855,8 @@
     const favorite = atlasState.favorites.includes(itemId);
     const pinned = favorite && atlasState.pins.includes(itemId);
     const plan = derivedState ? derivedState.plan : ATLAS.upgradePlan(item, L, atlasState.targetLevel, ATLAS_DATA.meta.upgradeStages);
-    const equipmentHtml = atlasEquipmentHtml(itemId, plan, favorite);
+    const editing = atlasState.inventoryEditingId === itemId;
+    const equipmentHtml = editing ? "" : atlasEquipmentHtml(itemId, plan, favorite);
     const upgradeHtml = plan.reached
       ? `<div class="atlas-upgrade done">已达到目标等级（${plan.currentLevel} / ${plan.targetLevel}级）</div>`
       : `<div class="atlas-upgrade">
@@ -1865,7 +1866,6 @@
             <span>${atlasSoulHtml(itemId, plan.souls, favorite)}</span>
             <span class="atlas-cost-growth">成长值 <b>+${plan.growth}</b></span>
           </div>
-          <div class="muted-tip">14级后不再获得成长值</div>
         </div>`;
     return `<div class="atlas-item${favorite ? " atlas-item-favorite" : ""}${pinned ? " atlas-item-pinned" : ""}${atlasState.inventoryEditingId === itemId ? " atlas-item-editing" : ""}" data-atlas-item="${escapeHtml(itemId)}">
       <div class="atlas-head">
@@ -1873,27 +1873,25 @@
           ${pinned ? '<span class="atlas-pin-badge">置顶</span>' : ""}
           <span class="q-badge q-orange">${item.atlas}图鉴</span>
           <span class="forge-name">${escapeHtml(item.name)}</span>
+          <label class="atlas-level-label">等级
+            <input type="number" class="atlas-level" data-id="${item.id}" value="${L}" min="0" max="${atlasMaxLevel()}" aria-label="${escapeHtml(item.name)}图鉴等级">
+          </label>
           <button type="button" class="atlas-favorite-toggle${favorite ? " is-favorite" : ""}" data-atlas-favorite="${escapeHtml(itemId)}" aria-pressed="${favorite}" title="${favorite ? "取消收藏" : "收藏图鉴"}" aria-label="${favorite ? "取消收藏" : "收藏图鉴"}">${favorite ? "★" : "☆"}</button>
         </div>
-        <div class="atlas-head-secondary">
+        ${favorite ? '<div class="atlas-head-secondary">' : ''}
           ${favorite ? `<button type="button" class="seg atlas-pin-toggle${pinned ? " is-pinned" : ""}" data-atlas-pin="${escapeHtml(itemId)}" aria-pressed="${pinned}">${pinned ? "取消置顶" : "置顶"}</button>` : ""}
           ${favorite ? `<button type="button" class="seg atlas-inventory-edit" data-atlas-inventory-edit="${escapeHtml(itemId)}">编辑库存</button>` : ""}
-          <label class="atlas-level-label">图鉴等级
-            <input type="number" class="atlas-level" data-id="${item.id}" value="${L}" min="0" max="${atlasMaxLevel()}">
-          </label>
-        </div>
+        ${favorite ? '</div>' : ''}
       </div>
       ${upgradeHtml}
-      <details class="atlas-card-details"${atlasOpenDetails.has(itemId) ? " open" : ""}>
-      <summary>资料与所需装备${plan.equipmentStages.length ? ` · ${plan.equipmentStages.length} 个升级阶段` : ""}</summary>
+      <section class="atlas-card-details" aria-label="图鉴资料与装备">
       <div class="atlas-meta">
         <span>获取途径：${escapeHtml(item.acquire) || "—"}</span>
         <span>所属图鉴：${item.group ? `<span class="atlas-group">${escapeHtml(item.group)}</span>` : "—"}</span>
         ${element ? `<span>五行属性：${escapeHtml(element)}</span>` : ""}
       </div>
-      <div class="atlas-upgrade-equipment"><div class="atlas-equipment-title">所需装备</div>${equipmentHtml}</div>
-      </details>
-      ${atlasInventoryEditorHtml(itemId, plan)}
+      ${editing ? atlasInventoryEditorHtml(itemId, plan) : `<div class="atlas-upgrade-equipment"><div class="atlas-equipment-title">所需装备</div>${equipmentHtml}</div>`}
+      </section>
     </div>`;
   }
 
@@ -1940,10 +1938,8 @@
       ? summary.equipment.map((item) => `<span class="mat material-token ${item.q === "紫" ? "mat-purple" : "mat-orange"}">${escapeHtml(item.n)} ×${item.count}</span>`).join("")
       : '<span class="muted-tip">无需装备</span>';
     return `<div class="atlas-upgrade-summary">
-      <div class="drop-item-title">当前结果升至 ${summary.targetLevel} 级汇总<span class="drop-count">${summary.pending}/${summary.total} 名未达标</span></div>
+      <div class="drop-item-title">升至 ${summary.targetLevel} 级<span class="drop-count">当前 ${summary.total} 项 · ${summary.pending}/${summary.total} 名未达标</span></div>
       <div class="atlas-summary-metrics atlas-upgrade-cost">
-        <div><span>当前结果</span><b>${summary.total.toLocaleString()}</b></div>
-        <div><span>未达标</span><b>${summary.pending.toLocaleString()}</b></div>
         <div class="atlas-cost-knots"><span>明鬼绳结</span><b>${summary.knots.toLocaleString()}</b></div>
         <div><span>魂魄</span><b>${summary.souls.toLocaleString()}</b></div>
         <div class="atlas-cost-growth"><span>成长值</span><b>+${summary.growth.toLocaleString()}</b></div>
@@ -1951,24 +1947,14 @@
       ${summary.pending === 0 ? '<div class="muted-tip">当前结果已全部达到目标等级</div>' : ""}
       ${hasEquipment ? '<button type="button" class="seg atlas-summary-equipment-toggle" aria-expanded="false">展开所需装备</button>' : ""}
       <div class="atlas-summary-equipment"><div class="atlas-equipment-title">所需装备</div><div class="atlas-summary-equipment-list">${equipment}</div></div>
-      <div class="muted-tip">14级后不再获得成长值</div>
     </div>`;
   }
 
   function refreshAtlasCard(id) {
-    captureAtlasDetails();
     const card = Array.from(el.atlasResults.querySelectorAll("[data-atlas-item]"))
       .find((node) => node.dataset.atlasItem === id);
     const item = ATLAS_DATA.items.find((candidate) => String(candidate.id) === id);
     if (card && item) updateAtlasCardBody(card, item);
-  }
-
-  function captureAtlasDetails() {
-    el.atlasResults.querySelectorAll("[data-atlas-item]").forEach(card => {
-      const details = card.querySelector(".atlas-card-details");
-      if (details && details.open) atlasOpenDetails.add(card.dataset.atlasItem);
-      else atlasOpenDetails.delete(card.dataset.atlasItem);
-    });
   }
 
   function showAtlasInventoryError() {
@@ -1985,10 +1971,16 @@
     }
   }
 
-  function updateAtlasCardBody(card, item, derived) {
+  function updateAtlasCardBody(card, item, derived, markup) {
     const template = document.createElement("template");
-    template.innerHTML = atlasItemHtml(item, derived);
+    const html = markup || atlasItemHtml(item, derived);
+    template.innerHTML = html;
     const replacement = template.content.firstElementChild;
+    const oldHeader = card.querySelector('.atlas-head'), nextHeader = replacement.querySelector('.atlas-head');
+    const status = header => ['[data-atlas-favorite]', '[data-atlas-pin]'].map(selector => {
+      const control = header.querySelector(selector); return control ? control.getAttribute('aria-pressed') : null;
+    }).join(':');
+    if (status(oldHeader) !== status(nextHeader)) oldHeader.replaceWith(nextHeader);
     // Keep the header and its live controls: a level's change often fires
     // between pointerdown and click on favorite/edit buttons in this header.
     card.className = replacement.className;
@@ -1999,23 +1991,21 @@
     Array.from(replacement.children).forEach(child => {
       if (child.classList.contains("atlas-head")) return;
       if (details && child.classList.contains("atlas-card-details")) {
-        // Keep native summary focus/open state; replace only the static data.
-        details.querySelector("summary").textContent = child.querySelector("summary").textContent;
-        Array.from(details.children).forEach(node => { if (node.tagName !== "SUMMARY") node.remove(); });
-        Array.from(child.children).forEach(node => { if (node.tagName !== "SUMMARY") details.append(node); });
+        details.replaceChildren(...Array.from(child.children));
       } else if (details && child.classList.contains("atlas-upgrade")) {
         card.insertBefore(child, details);
       } else {
         card.append(child);
       }
     });
+    atlasRenderedMarkup.set(card, html);
   }
 
   function captureAtlasFocus() {
     const node = document.activeElement;
     const card = node && node.closest("[data-atlas-item]");
     if (!card || !el.atlasResults.contains(card)) return null;
-    const selector = [".atlas-level", "[data-atlas-favorite]", "[data-atlas-pin]", "[data-atlas-inventory-edit]", ".atlas-card-details > summary"]
+    const selector = [".atlas-level", "[data-atlas-favorite]", "[data-atlas-pin]", "[data-atlas-inventory-edit]"]
       .find(candidate => node.matches(candidate));
     if (selector) return { node, id: card.dataset.atlasItem, selector };
     if (node.matches("[data-atlas-inventory-save]")) return { id: card.dataset.atlasItem, selector: "[data-atlas-inventory-edit]" };
@@ -2032,7 +2022,6 @@
 
   function applyAtlas(changedId, previousEditor) {
     const focus = captureAtlasFocus();
-    captureAtlasDetails();
     const equipmentExpanded = Boolean(el.atlasUpgradeSummary.querySelector('.atlas-summary-equipment-toggle[aria-expanded="true"]'));
     atlasRefresh.cancel();
     el.atlasTabs.querySelectorAll("button").forEach((b) => {
@@ -2083,23 +2072,29 @@
       }
     }
     positionAtlasNoteFilter();
-    // Requery sorting and filters even for a local level edit; only reuse DOM when
-    // membership is unchanged. Favorites/pins may reorder when costs change.
-    if (typeof changedId === "string" && items.length) {
+    // Query remains authoritative; reconcile identities without rebuilding the
+    // other 176 cards for a favorite/pin/local inventory change.
+    if (items.length) {
       const cards = new Map(Array.from(el.atlasResults.querySelectorAll("[data-atlas-item]"))
         .map(node => [node.dataset.atlasItem, node]));
-      if (cards.size === items.length && items.every(item => cards.has(String(item.id)))) {
+      const visibleIds = new Set(items.map(item => String(item.id)));
+      cards.forEach((card, id) => { if (!visibleIds.has(id)) card.remove(); });
+      el.atlasResults.querySelectorAll('.empty').forEach(node => node.remove());
         items.forEach((item, index) => {
           const id = String(item.id);
           let card = cards.get(id);
-          if (id === changedId || id === previousEditor) {
-            updateAtlasCardBody(card, item, stateByItem.get(item));
+          const markup = atlasItemHtml(item, stateByItem.get(item));
+          if (!card) {
+            const template = document.createElement('template'); template.innerHTML = markup;
+            card = template.content.firstElementChild;
+            atlasRenderedMarkup.set(card, markup);
+          } else if (atlasRenderedMarkup.get(card) !== markup) {
+            updateAtlasCardBody(card, item, stateByItem.get(item), markup);
           }
           if (el.atlasResults.children[index] !== card) el.atlasResults.insertBefore(card, el.atlasResults.children[index] || null);
         });
         restoreAtlasFocus(focus);
         return;
-      }
     }
     el.atlasResults.innerHTML = items.length
       ? items.map(item => atlasItemHtml(item, stateByItem.get(item))).join("")

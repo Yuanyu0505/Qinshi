@@ -8,6 +8,14 @@ before(async()=>{server=createServer();await new Promise(r=>server.listen(0,'127
 after(async()=>{await browser?.close();if(server)await new Promise(r=>server.close(r));});
 async function open(width=390){const context=await browser.newContext({viewport:{width,height:844}}),page=await context.newPage();await openApp(page,url+'/#secret-realm');await page.locator('#secret-realm-content').waitFor();return {context,page};}
 async function result(page){await page.locator('[data-realm-calculate]').click();await page.waitForFunction(()=>document.querySelector('[data-realm-results] .realm-plan')&&document.querySelector('#secret-realm-content').getAttribute('aria-busy')==='false');}
+test('budget label and amount stay together without redundant rounding totals',async()=>{
+ const {context,page}=await open(1280);try{
+ await page.locator('[data-realm-mode=planner]').click();await page.locator('[data-realm-action=none]').click();await page.locator('[data-realm-enable=pack98]').check();
+ await page.locator('[name=targetEnabled]').uncheck();await page.locator('[name=currencyTargetEnabled]').check();await page.locator('[name=currencyTarget]').fill('40');await result(page);
+ const plan=page.locator('.realm-plan').first();assert.doesNotMatch(await plan.innerText(),/（向上取整）|折后金额合计|预算取整差额/);
+ assert.equal(await plan.locator('.realm-budget').count(),1);assert.equal(await plan.locator('.realm-budget').evaluate(n=>getComputedStyle(n).whiteSpace),'nowrap');
+ }finally{await context.close();}
+});
 
 test('realm switches are prominent pressed buttons and retain independent current periods',async()=>{
   const {context,page}=await open();try{const buttons=page.locator('[data-realm-id]');assert.equal(await buttons.count(),2);assert.equal(await page.locator('#secret-realm-select').count(),0);

@@ -21,55 +21,64 @@
 #partition-atlas #atlas-results:not([hidden]) { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; align-items: start; }
 #partition-atlas .atlas-item { margin: 0; min-width: 0; padding: 14px; line-height: 1.6; contain-intrinsic-size: auto 310px; }
 #partition-atlas .atlas-item-editing { grid-column: 1 / -1; content-visibility: visible; }
-#partition-atlas .atlas-head { display: grid; gap: 10px; margin-bottom: 12px; }
-#partition-atlas .atlas-head-primary { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0; min-width: 0; }
-#partition-atlas .atlas-head .forge-name { color: var(--gold); font-size: 18px; overflow-wrap: anywhere; }
+#partition-atlas .atlas-head { display: grid; gap: 4px; margin-bottom: 6px; }
+#partition-atlas .atlas-head-primary { display: grid; grid-template-columns: minmax(0,1fr) auto 44px; align-items: center; gap: 2px 8px; min-width: 0; }
+#partition-atlas .atlas-head-primary > .q-badge { grid-column: 1; grid-row: 1; justify-self: start; }
+#partition-atlas .atlas-head .forge-name { grid-column: 1; grid-row: 2; color: var(--gold); font-size: 16px; overflow-wrap: anywhere; }
 #partition-atlas .atlas-head-secondary { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; width: auto; }
 #partition-atlas .atlas-head-secondary .seg { min-height: 44px; padding: 6px 10px; }
-#partition-atlas .atlas-level-label { margin-left: auto; gap: 6px; font-size: 14px; white-space: nowrap; }
-#partition-atlas .atlas-head-secondary .atlas-level { width: 70px; min-height: 44px; font-size: 16px; }
-#partition-atlas .atlas-favorite-toggle { width: 44px; height: 44px; margin-left: auto; flex: 0 0 auto; touch-action: manipulation; }
+#partition-atlas .atlas-level-label { grid-column: 2; grid-row: 1 / span 2; margin: 0; gap: 4px; font-size: 13px; white-space: nowrap; }
+#partition-atlas .atlas-head-primary .atlas-level { width: 56px; min-height: 44px; padding: 6px; font-size: 16px; }
+#partition-atlas .atlas-favorite-toggle { grid-column: 3; grid-row: 1 / span 2; width: 44px; height: 44px; margin: 0; touch-action: manipulation; }
+#partition-atlas .atlas-head-secondary:empty { display: none; }
 #partition-atlas .atlas-favorite-toggle.is-favorite { color: var(--gold); background: rgba(212,175,55,.12); border-color: var(--gold-dim); }
 #partition-atlas .atlas-item-pinned { border-color: var(--gold); box-shadow: inset 3px 0 0 var(--gold); }
 #partition-atlas .atlas-item-pinned .q-badge { color: var(--gold); border-color: var(--gold-dim); background: rgba(212,175,55,.1); }
-#partition-atlas .atlas-pin-badge { color: var(--gold); border: 1px solid var(--gold-dim); background: transparent; font-size: 12px; }
+#partition-atlas .atlas-pin-badge { grid-column: 1; grid-row: 3; justify-self: start; color: var(--gold); border: 1px solid var(--gold-dim); background: transparent; font-size: 12px; }
 #partition-atlas .atlas-pin-toggle.is-pinned { color: var(--gold); border-color: var(--gold-dim); }
-#partition-atlas .atlas-upgrade { padding: 10px 12px; margin: 0; background: rgba(0,0,0,.12); }
+#partition-atlas .atlas-upgrade { padding: 6px 0; margin: 0; border: 0; background: transparent; box-shadow: none; }
 #partition-atlas .atlas-upgrade-title { font-size: 14px; }
 #partition-atlas .atlas-upgrade-cost { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 8px 14px; }
 #partition-atlas .atlas-upgrade-cost > span { min-width: 0; color: var(--muted); font-size: 13px; overflow-wrap: anywhere; }
-#partition-atlas .atlas-upgrade-cost b { display: block; font-size: 17px; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+#partition-atlas .atlas-upgrade-cost b { display: inline; font-size: 15px; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
 #partition-atlas .atlas-inventory-suffix { display: block; font-size: 12px; }
-#partition-atlas .atlas-card-details { margin-top: 10px; border-top: 1px solid var(--line); }
-#partition-atlas .atlas-card-details > summary { cursor: pointer; min-height: 44px; padding: 10px 0; color: var(--gold-dim); font-size: 14px; }
-#partition-atlas .atlas-meta { display: grid; gap: 7px; margin: 0; line-height: 1.7; overflow-wrap: anywhere; }
-#partition-atlas .atlas-equipment-stage-list { display: grid; gap: 8px; }
+#partition-atlas .atlas-card-details { margin-top: 4px; border-top: 1px solid var(--line); padding-top: 6px; }
+#partition-atlas .atlas-meta { display: flex; flex-wrap: wrap; gap: 2px 12px; margin: 0; line-height: 1.6; overflow-wrap: anywhere; }
+#partition-atlas .atlas-equipment-stage-list { display: grid; gap: 3px; }
 #partition-atlas .atlas-equipment-stage { display: grid; grid-template-columns: 60px minmax(0,1fr); gap: 8px; align-items: start; }
 #partition-atlas .atlas-equipment-entry { flex-wrap: wrap; }
 #partition-atlas .atlas-equipment-items { min-width: 0; }
-#partition-atlas .atlas-summary-metrics { grid-template-columns: repeat(5,minmax(0,1fr)); margin: 12px 0; }
-#partition-atlas .atlas-summary-metrics > div { min-width: 0; padding: 8px 10px; border-left: 2px solid var(--line); }
+#partition-atlas .atlas-summary-metrics { display: flex; flex-wrap: wrap; gap: 4px 18px; margin: 4px 0; }
+#partition-atlas .atlas-summary-metrics > div { min-width: 0; padding: 0; }
 #partition-atlas .atlas-summary-metrics span { color: var(--muted); font-size: 13px; }
-#partition-atlas .atlas-summary-metrics b { font-size: clamp(18px, 2.4cqi, 24px); }
-#partition-atlas .atlas-upgrade-summary .drop-item-title { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: baseline; }
+#partition-atlas .atlas-summary-metrics b { display: inline; font-size: 15px; margin-left: 5px; }
+#partition-atlas .atlas-upgrade-summary { padding: 8px 10px; margin-bottom: 10px; }
+#partition-atlas .atlas-upgrade-summary .drop-item-title { display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: baseline; font-size: 14px; }
 #partition-atlas .atlas-upgrade-summary .drop-count { margin: 0; }
-#partition-atlas .atlas-inventory-editor { margin-top: 12px; padding: 12px; }
-#partition-atlas .atlas-inventory-souls { display: grid; grid-template-columns: minmax(0, 280px); gap: 6px; align-items: start; margin-bottom: 14px; }
+#partition-atlas .atlas-inventory-editor { margin-top: 6px; padding: 0; border: 0; background: transparent; }
+#partition-atlas .atlas-inventory-title { margin-bottom: 4px; }
+#partition-atlas .atlas-inventory-souls { display: grid; grid-template-columns: max-content minmax(100px,160px); justify-content: start; gap: 6px; align-items: center; margin-bottom: 6px; }
 #partition-atlas .atlas-inventory-souls input { width: 100%; padding: 8px 10px; }
-#partition-atlas .atlas-inventory-error { margin: 0; font-size: 14px; line-height: 1.5; }
+#partition-atlas .atlas-inventory-error { grid-column: 1 / -1; margin: 0; font-size: 14px; line-height: 1.5; }
 #partition-atlas [aria-invalid="true"] { border-color: #ff8a80; outline: 1px solid #ff8a80; }
 #partition-atlas .atlas-inventory-equipment-list { gap: 0; }
 #partition-atlas .atlas-inventory-columns, #partition-atlas .atlas-inventory-equipment-row { display: grid; grid-template-columns: 64px minmax(100px, 1fr) minmax(112px, .6fr) minmax(180px, 1.5fr); gap: 8px 12px; align-items: center; }
 #partition-atlas .atlas-inventory-columns { color: var(--muted); font-size: 13px; padding-bottom: 6px; }
-#partition-atlas .atlas-inventory-equipment-row { padding: 10px 0; border-top: 1px solid var(--line); border-bottom: 0; }
+#partition-atlas .atlas-inventory-equipment-row { padding: 5px 0; border-top: 1px solid var(--line); border-bottom: 0; }
 #partition-atlas .atlas-inventory-equipment-row > * { min-width: 0; grid-column: auto; }
 #partition-atlas .atlas-inventory-equipment-row > input, #partition-atlas .atlas-inventory-equipment-row > select { padding: 8px; }
 #partition-atlas .atlas-inventory-equipment-row .material-token { overflow-wrap: anywhere; white-space: normal; }
 #partition-atlas .atlas-inventory-actions { display: flex; gap: 10px; }
 #partition-atlas .atlas-inventory-actions .seg { min-height: 44px; }
 #partition-atlas .empty { grid-column: 1 / -1; }
-@container atlas (min-width: 1000px) {
+@container atlas (min-width: 960px) {
   #partition-atlas #atlas-results:not([hidden]) { grid-template-columns: repeat(2,minmax(0,1fr)); }
+}
+@container atlas (min-width: 701px) {
+  #partition-atlas .atlas-head-primary { grid-template-columns: auto minmax(0,1fr) auto 44px; }
+  #partition-atlas .atlas-head .forge-name { grid-column: 2; grid-row: 1; }
+  #partition-atlas .atlas-level-label { grid-column: 3; grid-row: 1; }
+  #partition-atlas .atlas-favorite-toggle { grid-column: 4; grid-row: 1; }
 }
 @container atlas (max-width: 700px) {
   #partition-atlas #atlas-tabs { grid-template-columns: repeat(3,minmax(0,1fr)); }
@@ -77,10 +86,8 @@
   #partition-atlas .atlas-category-row > .filter-label { display: block; margin-bottom: 7px; }
   #partition-atlas .atlas-inventory-columns { display: none; }
   #partition-atlas .atlas-inventory-equipment-row { grid-template-columns: 60px minmax(0,1fr); }
-  #partition-atlas .atlas-inventory-equipment-row > select { grid-column: 1 / -1; width: min(100%, 200px); }
+  #partition-atlas .atlas-inventory-equipment-row > select { grid-column: 2; width: 100%; }
   #partition-atlas .atlas-inventory-equipment-row > input { grid-column: 1 / -1; }
-  #partition-atlas .atlas-inventory-souls { grid-template-columns: minmax(0,1fr); }
-  #partition-atlas .atlas-summary-metrics { grid-template-columns: repeat(3,minmax(0,1fr)); }
 }
 @container atlas (max-width: 430px) {
   #partition-atlas .atlas-search-row { grid-template-columns: auto minmax(0,1fr); }
@@ -91,6 +98,5 @@
   #partition-atlas #atlas-level-min, #partition-atlas #atlas-level-max, #partition-atlas #atlas-target-level { width: 100%; min-width: 0; }
   #partition-atlas .atlas-advanced-filters, #partition-atlas .atlas-sort-controls { grid-template-columns: repeat(2,minmax(0,1fr)); }
   #partition-atlas .atlas-filter-clear { grid-column: 1 / -1; }
-  #partition-atlas .atlas-head-secondary .atlas-level-label { flex-basis: 100%; justify-content: space-between; }
   #partition-atlas .atlas-upgrade-cost { gap: 8px; }
 }

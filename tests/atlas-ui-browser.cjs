@@ -50,11 +50,12 @@ test('level commit displays the same parsed integer used by existing storage rul
     assert.equal(await card.locator('.atlas-level').inputValue(),normalized);
   }
 }));
-test('level blur does not swallow direct details summary click',async()=>scenario(async p=>{
+test('level blur preserves directly visible equipment and metadata',async()=>scenario(async p=>{
   const card=p.locator('[data-atlas-item]').first();
   await card.locator('.atlas-level').fill('3');
-  await card.locator('.atlas-card-details > summary').click();
-  assert.equal(await card.locator('.atlas-card-details').getAttribute('open'),'');
+  await card.locator('.atlas-level').press('Tab');
+  assert.equal(await card.locator('.atlas-meta').isVisible(),true);
+  assert.equal(await card.locator('.atlas-equipment-stage-list').isVisible(),true);
 }));
 test('focused level changes requery favorite cost order without a nested replacement',async()=>scenario(async p=>{
   await p.locator('[data-atlas-item]').nth(0).locator('[data-atlas-favorite]').click();
@@ -108,12 +109,11 @@ test('inventory decimal error stays beside souls, focuses field, preserves note 
 test('details and inventory drafts survive unrelated favorite redraw without changing saved inventory', async () => scenario(async p => {
   const card = p.locator('[data-atlas-item]').first();
   await card.locator('[data-atlas-favorite]').click();
-  await card.locator('.atlas-card-details > summary').click();
   await card.locator('[data-atlas-inventory-edit]').click();
   await card.locator('[data-atlas-inventory-note]').first().fill('主线草稿');
   await card.locator('[data-atlas-inventory-souls]').fill('7');
   await p.locator('[data-atlas-item]').nth(1).locator('[data-atlas-favorite]').click();
-  assert.equal(await card.locator('.atlas-card-details').getAttribute('open'), '');
+  assert.equal(await card.locator('.atlas-meta').isVisible(),true);
   assert.equal(await card.locator('[data-atlas-inventory-note]').first().inputValue(), '主线草稿');
   assert.equal(await card.locator('[data-atlas-inventory-souls]').inputValue(), '7');
   assert.equal(await getAccountJson(p, 'qinshi_atlas_inventory_v1'), null);
@@ -275,9 +275,9 @@ for (const [width,height] of sizes) test(`${width}x${height}: readable cards, ed
   const output = path.resolve('test-results/atlas-ui'); fs.mkdirSync(output, { recursive: true });
   if (process.env.ATLAS_CAPTURE_BEFORE) { await p.screenshot({path:path.join(output, `${width}-${height}-before.png`)}); return; }
   await p.screenshot({path:path.join(output, `${width}-${height}-overview.png`)});
-  assert.equal(await p.locator('.atlas-summary-metrics > div').count(), 5);
+  assert.equal(await p.locator('.atlas-summary-metrics > div').count(), 3);
   const layout = await p.locator('#atlas-results').evaluate(n => ({width:n.clientWidth,columns:getComputedStyle(n).gridTemplateColumns.split(' ').length}));
-  assert.equal(layout.columns, layout.width >= 1000 ? 2 : 1);
+  assert.equal(layout.columns, layout.width >= 960 ? 2 : 1);
   const card = p.locator('[data-atlas-item]').first();
   await card.locator('[data-atlas-favorite]').click(); await card.locator('[data-atlas-inventory-edit]').click();
   await card.locator('[data-atlas-inventory-note]').first().fill('长备注：主线、碎片、禁地，保留全部文字');

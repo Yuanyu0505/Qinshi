@@ -199,6 +199,10 @@
     inventoryError: ""
   };
   const quizState = { query: "", items: loadQuizItems() };
+  let atlasLevelCommitInProgress = false;
+  let atlasPointerDown = false;
+  let atlasDeferredLevelRender = null;
+  const atlasOpenDetails = new Set();
   let forgingViewRendered = false;
 
   function initManualNumberInputs() {
@@ -1455,6 +1459,31 @@
     el.atlasNoteToggle.setAttribute("aria-expanded", "false");
   }
 
+  function positionAtlasNoteFilter() {
+    if (el.atlasNoteMenu.hidden) return;
+    const viewport = window.visualViewport;
+    const left = viewport ? viewport.offsetLeft : 0;
+    const top = viewport ? viewport.offsetTop : 0;
+    const width = viewport ? viewport.width : innerWidth;
+    let bottom = top + (viewport ? viewport.height : innerHeight) - 8;
+    const nav = document.querySelector(".tabs");
+    if (nav && getComputedStyle(nav).position === "fixed") {
+      const rect = nav.getBoundingClientRect();
+      if (rect.top > top + 80) bottom = Math.min(bottom, rect.top - 8);
+    }
+    const trigger = el.atlasNoteToggle.getBoundingClientRect();
+    const menu = el.atlasNoteMenu;
+    const menuWidth = Math.min(360, Math.max(224, trigger.width), Math.max(0, width - 16));
+    menu.style.width = menuWidth + "px";
+    menu.style.left = Math.max(left + 8, Math.min(trigger.left, left + width - menuWidth - 8)) + "px";
+    const below = Math.max(0, bottom - trigger.bottom - 5);
+    const above = Math.max(0, Math.min(trigger.top - 5, bottom) - top - 8);
+    const upward = below < Math.min(menu.scrollHeight + 2, 300) && above > below;
+    const height = Math.min(menu.scrollHeight + 2, upward ? above : below);
+    menu.style.maxHeight = height + "px";
+    menu.style.top = Math.max(top + 8, upward ? Math.min(trigger.top - 5, bottom) - height : trigger.bottom + 5) + "px";
+  }
+
   function syncAtlasFilterControls() {
     el.atlasFavoriteTypeWrap.hidden = atlasState.tab !== "已收藏";
     el.atlasFavoriteType.value = atlasState.favoriteType;
@@ -1566,6 +1595,7 @@
       const open = el.atlasNoteToggle.getAttribute("aria-expanded") === "true";
       el.atlasNoteMenu.hidden = open;
       el.atlasNoteToggle.setAttribute("aria-expanded", String(!open));
+      if (!open) positionAtlasNoteFilter();
     });
     el.atlasNoteMenu.addEventListener("change", (event) => {
       const input = event.target.closest("[data-atlas-note-source]");
@@ -1585,15 +1615,52 @@
       if (!el.atlasNoteFilter.contains(event.target)) closeAtlasNoteFilter();
     });
     document.addEventListener("keydown", (event) => {
-      if (event.key === "Escape") closeAtlasNoteFilter();
+      if (event.key === "Escape" && !el.atlasNoteMenu.hidden) {
+        closeAtlasNoteFilter();
+        el.atlasNoteToggle.focus({ preventScroll: true });
+      }
     });
+    window.addEventListener("resize", positionAtlasNoteFilter, { passive: true });
+    document.addEventListener("scroll", positionAtlasNoteFilter, { capture: true, passive: true });
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener("resize", positionAtlasNoteFilter, { passive: true });
+      window.visualViewport.addEventListener("scroll", positionAtlasNoteFilter, { passive: true });
+    }
+    el.atlasResults.addEventListener("pointerdown", (event) => {
+      if (event.button === 0) atlasPointerDown = true;
+    }, { capture: true });
+    // A blur commit can change cost sorting. Do not move a pointer's target
+    // between press and click; saving still occurs synchronously on change.
+    function finishAtlasPointerInteraction() {
+      if (!atlasPointerDown && !atlasDeferredLevelRender) return;
+      atlasPointerDown = false;
+      setTimeout(() => {
+        if (atlasPointerDown || !atlasDeferredLevelRender) return;
+        const pending = atlasDeferredLevelRender;
+        atlasDeferredLevelRender = null;
+        applyAtlas(pending.id, pending.previousEditor);
+      }, 0);
+    }
+    document.addEventListener("pointerup", finishAtlasPointerInteraction, { capture: true });
+    document.addEventListener("pointercancel", finishAtlasPointerInteraction, { capture: true });
+    window.addEventListener("blur", finishAtlasPointerInteraction);
     el.atlasResults.addEventListener("change", (e) => {
       if (e.target.classList.contains("atlas-level")) {
-        const previousEditor = atlasState.inventoryEditingId;
-        closeAtlasInventoryEditor();
-        atlasState.levels[e.target.dataset.id] = parseInt(e.target.value, 10) || 0;
-        saveAtlasLevels();
-        applyAtlas(e.target.dataset.id, previousEditor);
+        // Removing/moving a focused number input can synchronously emit change
+        // again in Chromium. One user commit must only enter the render once.
+        if (atlasLevelCommitInProgress) return;
+        atlasLevelCommitInProgress = true;
+        try {
+          const previousEditor = atlasState.inventoryEditingId;
+          closeAtlasInventoryEditor();
+          atlasState.levels[e.target.dataset.id] = parseInt(e.target.value, 10) || 0;
+          e.target.value = String(atlasState.levels[e.target.dataset.id]);
+          saveAtlasLevels();
+          if (atlasPointerDown) atlasDeferredLevelRender = { id: e.target.dataset.id, previousEditor };
+          else applyAtlas(e.target.dataset.id, previousEditor);
+        } finally {
+          atlasLevelCommitInProgress = false;
+        }
         return;
       }
       if (e.target.matches("[data-atlas-inventory-owned]")) {
@@ -1611,6 +1678,10 @@
       if (!atlasState.inventoryDraft) return;
       if (e.target.matches("[data-atlas-inventory-souls]")) {
         atlasState.inventoryDraft.soulsOwned = e.target.value;
+        if (atlasState.inventoryError && (!e.target.value.trim() || /^\d+$/.test(e.target.value.trim()))) {
+          atlasState.inventoryError = "";
+          showAtlasInventoryError();
+        }
       } else if (e.target.matches("[data-atlas-inventory-note]")) {
         const key = e.target.dataset.atlasInventoryNote;
         if (atlasState.inventoryDraft.equipment[key]) atlasState.inventoryDraft.equipment[key].note = e.target.value;
@@ -1669,7 +1740,7 @@
         const rawSouls = String(atlasState.inventoryDraft.soulsOwned == null ? "" : atlasState.inventoryDraft.soulsOwned).trim();
         if (rawSouls && !/^\d+$/.test(rawSouls)) {
           atlasState.inventoryError = "已有魂魄只能填写大于或等于 0 的整数";
-          refreshAtlasCard(atlasState.inventoryEditingId);
+          showAtlasInventoryError();
           return;
         }
         const id = saveButton.dataset.atlasInventorySave;
@@ -1748,16 +1819,17 @@
           <option value="missing"${value.owned ? "" : " selected"}>未拥有</option>
           <option value="owned"${value.owned ? " selected" : ""}>已拥有</option>
         </select>
-        <input type="text" data-atlas-inventory-note="${escapeHtml(key)}" value="${escapeHtml(value.note)}" placeholder="未拥有备注（可选）"${value.owned ? " hidden" : ""}>
+        <input type="text" data-atlas-inventory-note="${escapeHtml(key)}" aria-label="${escapeHtml(stage.key)} ${escapeHtml(token.n)}未拥有备注" value="${escapeHtml(value.note)}" placeholder="未拥有备注（可选）"${value.owned ? " hidden" : ""}>
       </div>`;
     })).join("");
-    return `<div class="atlas-inventory-editor">
+    return `<div class="atlas-inventory-editor" role="group" aria-label="${escapeHtml((ATLAS_DATA.items.find(item => String(item.id) === itemId) || {}).name || "")}个人库存">
       <div class="atlas-inventory-title">个人库存</div>
       <label class="atlas-inventory-souls">已有魂魄
-        <input type="number" min="0" step="1" data-atlas-inventory-souls value="${escapeHtml(draft.soulsOwned)}" placeholder="未填写">
+        <input type="number" min="0" step="1" data-atlas-inventory-souls value="${escapeHtml(draft.soulsOwned)}" placeholder="未填写" aria-describedby="atlas-souls-error-${escapeHtml(itemId)}" aria-invalid="${Boolean(atlasState.inventoryError)}">
+        <span id="atlas-souls-error-${escapeHtml(itemId)}" class="atlas-inventory-error" role="alert"${atlasState.inventoryError ? "" : " hidden"}>${escapeHtml(atlasState.inventoryError)}</span>
       </label>
+      <div class="atlas-inventory-columns" aria-hidden="true"><span>阶段</span><span>装备</span><span>拥有状态</span><span>未拥有备注</span></div>
       <div class="atlas-inventory-equipment-list">${equipmentRows || '<span class="muted-tip">当前目标区间没有所需装备</span>'}</div>
-      ${atlasState.inventoryError ? `<div class="atlas-inventory-error">${escapeHtml(atlasState.inventoryError)}</div>` : ""}
       <div class="atlas-inventory-actions">
         <button type="button" class="seg active" data-atlas-inventory-save="${escapeHtml(itemId)}">保存库存</button>
         <button type="button" class="seg" data-atlas-inventory-cancel>取消</button>
@@ -1787,16 +1859,15 @@
     const upgradeHtml = plan.reached
       ? `<div class="atlas-upgrade done">已达到目标等级（${plan.currentLevel} / ${plan.targetLevel}级）</div>`
       : `<div class="atlas-upgrade">
-          <div class="atlas-upgrade-title">升至 ${plan.targetLevel} 级</div>
+          <div class="atlas-upgrade-title">${plan.currentLevel} → ${plan.targetLevel} 级 · 升级需求</div>
           <div class="atlas-upgrade-cost">
             <span class="atlas-cost-knots">明鬼绳结 <b>${plan.knots}</b></span>
             <span>${atlasSoulHtml(itemId, plan.souls, favorite)}</span>
             <span class="atlas-cost-growth">成长值 <b>+${plan.growth}</b></span>
           </div>
           <div class="muted-tip">14级后不再获得成长值</div>
-          <div class="atlas-upgrade-equipment"><div class="atlas-equipment-title">所需装备</div>${equipmentHtml}</div>
         </div>`;
-    return `<div class="atlas-item${favorite ? " atlas-item-favorite" : ""}${pinned ? " atlas-item-pinned" : ""}" data-atlas-item="${escapeHtml(itemId)}">
+    return `<div class="atlas-item${favorite ? " atlas-item-favorite" : ""}${pinned ? " atlas-item-pinned" : ""}${atlasState.inventoryEditingId === itemId ? " atlas-item-editing" : ""}" data-atlas-item="${escapeHtml(itemId)}">
       <div class="atlas-head">
         <div class="atlas-head-primary">
           ${pinned ? '<span class="atlas-pin-badge">置顶</span>' : ""}
@@ -1812,12 +1883,16 @@
           </label>
         </div>
       </div>
+      ${upgradeHtml}
+      <details class="atlas-card-details"${atlasOpenDetails.has(itemId) ? " open" : ""}>
+      <summary>资料与所需装备${plan.equipmentStages.length ? ` · ${plan.equipmentStages.length} 个升级阶段` : ""}</summary>
       <div class="atlas-meta">
         <span>获取途径：${escapeHtml(item.acquire) || "—"}</span>
         <span>所属图鉴：${item.group ? `<span class="atlas-group">${escapeHtml(item.group)}</span>` : "—"}</span>
         ${element ? `<span>五行属性：${escapeHtml(element)}</span>` : ""}
       </div>
-      ${upgradeHtml}
+      <div class="atlas-upgrade-equipment"><div class="atlas-equipment-title">所需装备</div>${equipmentHtml}</div>
+      </details>
       ${atlasInventoryEditorHtml(itemId, plan)}
     </div>`;
   }
@@ -1858,10 +1933,7 @@
 
   function atlasUpgradeSummaryHtml(summary) {
     if (summary.total === 0) {
-      return '<div class="atlas-upgrade-summary"><div class="drop-item-title">当前筛选结果汇总</div><div class="muted-tip">当前条件下没有符合的图鉴</div></div>';
-    }
-    if (summary.pending === 0) {
-      return `<div class="atlas-upgrade-summary"><div class="drop-item-title">当前结果升至 ${summary.targetLevel} 级汇总</div><div class="muted-tip">当前结果已全部达到目标等级</div></div>`;
+      return "";
     }
     const hasEquipment = summary.equipment.length > 0;
     const equipment = hasEquipment
@@ -1869,11 +1941,14 @@
       : '<span class="muted-tip">无需装备</span>';
     return `<div class="atlas-upgrade-summary">
       <div class="drop-item-title">当前结果升至 ${summary.targetLevel} 级汇总<span class="drop-count">${summary.pending}/${summary.total} 名未达标</span></div>
-      <div class="atlas-upgrade-cost">
-        <span class="atlas-cost-knots">明鬼绳结 <b>${summary.knots}</b></span>
-        <span>魂魄 <b>${summary.souls}</b></span>
-        <span class="atlas-cost-growth">成长值 <b>+${summary.growth}</b></span>
+      <div class="atlas-summary-metrics atlas-upgrade-cost">
+        <div><span>当前结果</span><b>${summary.total.toLocaleString()}</b></div>
+        <div><span>未达标</span><b>${summary.pending.toLocaleString()}</b></div>
+        <div class="atlas-cost-knots"><span>明鬼绳结</span><b>${summary.knots.toLocaleString()}</b></div>
+        <div><span>魂魄</span><b>${summary.souls.toLocaleString()}</b></div>
+        <div class="atlas-cost-growth"><span>成长值</span><b>+${summary.growth.toLocaleString()}</b></div>
       </div>
+      ${summary.pending === 0 ? '<div class="muted-tip">当前结果已全部达到目标等级</div>' : ""}
       ${hasEquipment ? '<button type="button" class="seg atlas-summary-equipment-toggle" aria-expanded="false">展开所需装备</button>' : ""}
       <div class="atlas-summary-equipment"><div class="atlas-equipment-title">所需装备</div><div class="atlas-summary-equipment-list">${equipment}</div></div>
       <div class="muted-tip">14级后不再获得成长值</div>
@@ -1881,13 +1956,84 @@
   }
 
   function refreshAtlasCard(id) {
+    captureAtlasDetails();
     const card = Array.from(el.atlasResults.querySelectorAll("[data-atlas-item]"))
       .find((node) => node.dataset.atlasItem === id);
     const item = ATLAS_DATA.items.find((candidate) => String(candidate.id) === id);
-    if (card && item) card.outerHTML = atlasItemHtml(item);
+    if (card && item) updateAtlasCardBody(card, item);
+  }
+
+  function captureAtlasDetails() {
+    el.atlasResults.querySelectorAll("[data-atlas-item]").forEach(card => {
+      const details = card.querySelector(".atlas-card-details");
+      if (details && details.open) atlasOpenDetails.add(card.dataset.atlasItem);
+      else atlasOpenDetails.delete(card.dataset.atlasItem);
+    });
+  }
+
+  function showAtlasInventoryError() {
+    const editor = el.atlasResults.querySelector(".atlas-inventory-editor");
+    if (!editor) return;
+    const input = editor.querySelector("[data-atlas-inventory-souls]");
+    const error = editor.querySelector(".atlas-inventory-error");
+    input.setAttribute("aria-invalid", String(Boolean(atlasState.inventoryError)));
+    error.textContent = atlasState.inventoryError;
+    error.hidden = !atlasState.inventoryError;
+    if (atlasState.inventoryError) {
+      input.focus({ preventScroll: true });
+      input.scrollIntoView({ block: "nearest", behavior: "instant" });
+    }
+  }
+
+  function updateAtlasCardBody(card, item, derived) {
+    const template = document.createElement("template");
+    template.innerHTML = atlasItemHtml(item, derived);
+    const replacement = template.content.firstElementChild;
+    // Keep the header and its live controls: a level's change often fires
+    // between pointerdown and click on favorite/edit buttons in this header.
+    card.className = replacement.className;
+    const details = card.querySelector(".atlas-card-details");
+    Array.from(card.children).forEach(child => {
+      if (!child.classList.contains("atlas-head") && child !== details) child.remove();
+    });
+    Array.from(replacement.children).forEach(child => {
+      if (child.classList.contains("atlas-head")) return;
+      if (details && child.classList.contains("atlas-card-details")) {
+        // Keep native summary focus/open state; replace only the static data.
+        details.querySelector("summary").textContent = child.querySelector("summary").textContent;
+        Array.from(details.children).forEach(node => { if (node.tagName !== "SUMMARY") node.remove(); });
+        Array.from(child.children).forEach(node => { if (node.tagName !== "SUMMARY") details.append(node); });
+      } else if (details && child.classList.contains("atlas-upgrade")) {
+        card.insertBefore(child, details);
+      } else {
+        card.append(child);
+      }
+    });
+  }
+
+  function captureAtlasFocus() {
+    const node = document.activeElement;
+    const card = node && node.closest("[data-atlas-item]");
+    if (!card || !el.atlasResults.contains(card)) return null;
+    const selector = [".atlas-level", "[data-atlas-favorite]", "[data-atlas-pin]", "[data-atlas-inventory-edit]", ".atlas-card-details > summary"]
+      .find(candidate => node.matches(candidate));
+    if (selector) return { node, id: card.dataset.atlasItem, selector };
+    if (node.matches("[data-atlas-inventory-save]")) return { id: card.dataset.atlasItem, selector: "[data-atlas-inventory-edit]" };
+    return null;
+  }
+
+  function restoreAtlasFocus(focus) {
+    if (!focus) return;
+    const card = Array.from(el.atlasResults.querySelectorAll("[data-atlas-item]"))
+      .find(node => node.dataset.atlasItem === focus.id);
+    const control = focus.node && focus.node.isConnected ? focus.node : card && card.querySelector(focus.selector);
+    if (control && document.activeElement !== control) control.focus({ preventScroll: true });
   }
 
   function applyAtlas(changedId, previousEditor) {
+    const focus = captureAtlasFocus();
+    captureAtlasDetails();
+    const equipmentExpanded = Boolean(el.atlasUpgradeSummary.querySelector('.atlas-summary-equipment-toggle[aria-expanded="true"]'));
     atlasRefresh.cancel();
     el.atlasTabs.querySelectorAll("button").forEach((b) => {
       b.classList.toggle("active", b.dataset.atlas === atlasState.tab);
@@ -1928,6 +2074,15 @@
     el.atlasUpgradeSummary.innerHTML = atlasExactQueryStatusHtml(items) + atlasUpgradeSummaryHtml(
       ATLAS.summarizeAtlasStates(visibleStates, atlasState.targetLevel)
     );
+    if (equipmentExpanded) {
+      const toggle = el.atlasUpgradeSummary.querySelector(".atlas-summary-equipment-toggle");
+      if (toggle) {
+        toggle.setAttribute("aria-expanded", "true");
+        toggle.textContent = "收起所需装备";
+        el.atlasUpgradeSummary.querySelector(".atlas-summary-equipment").classList.add("is-expanded");
+      }
+    }
+    positionAtlasNoteFilter();
     // Requery sorting and filters even for a local level edit; only reuse DOM when
     // membership is unchanged. Favorites/pins may reorder when costs change.
     if (typeof changedId === "string" && items.length) {
@@ -1938,20 +2093,18 @@
           const id = String(item.id);
           let card = cards.get(id);
           if (id === changedId || id === previousEditor) {
-            const template = document.createElement("template");
-            template.innerHTML = atlasItemHtml(item, stateByItem.get(item));
-            const replacement = template.content.firstElementChild;
-            card.replaceWith(replacement);
-            card = replacement;
+            updateAtlasCardBody(card, item, stateByItem.get(item));
           }
           if (el.atlasResults.children[index] !== card) el.atlasResults.insertBefore(card, el.atlasResults.children[index] || null);
         });
+        restoreAtlasFocus(focus);
         return;
       }
     }
     el.atlasResults.innerHTML = items.length
       ? items.map(item => atlasItemHtml(item, stateByItem.get(item))).join("")
       : '<div class="empty"><p>未找到匹配的图鉴弟子</p></div>';
+    restoreAtlasFocus(focus);
   }
 
   function loadProgress() {

@@ -1273,12 +1273,12 @@ test("已收藏图鉴可保存魂魄和逐件装备库存，未收藏不展示�
   });
 });
 
-test("图鉴提供紧凑库存筛选、排序和手机平板两行布局", async () => {
+test("图鉴库存筛选与排序控件保留，专属响应式样式可被页面加载", async () => {
   await withServer(async (port) => {
-    const [index, app, css] = await Promise.all([
+    const [index, app, atlasCss] = await Promise.all([
       get(port, "/"),
       get(port, "/js/app.js"),
-      get(port, "/css/style.css")
+      get(port, "/css/atlas.css")
     ]);
     assert.match(index.body, /id="atlas-favorite-type"/);
     assert.match(index.body, /id="atlas-soul-filter"/);
@@ -1291,8 +1291,11 @@ test("图鉴提供紧凑库存筛选、排序和手机平板两行布局", async
     assert.match(app.body, /noteSources:\s*\[\]/);
     assert.match(app.body, /sortField:\s*"default"/);
     assert.match(app.body, /equipmentFilter:\s*"all"/);
-    assert.match(css.body, /\.atlas-advanced-filters\s*\{[\s\S]*?grid-template-columns:\s*repeat\(4,/);
-    assert.match(css.body, /@media \(max-width: 1024px\)[\s\S]*?\.atlas-advanced-filters\s*\{[\s\S]*?grid-template-columns:\s*repeat\(2,/);
+    // Actual widths and interaction are covered by atlas-ui-browser.cjs.
+    // The server contract is that the dedicated stylesheet can be delivered.
+    assert.match(index.body, /href="css\/atlas\.css\?v=/);
+    assert.equal(atlasCss.status, 200);
+    assert.ok(atlasCss.body.length > 0);
   });
 });
 

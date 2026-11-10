@@ -2674,29 +2674,6 @@ figcaption { color: var(--muted); font-size: 13px; margin-top: 8px; }
   .prog-material-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (max-width: 1024px) {
-  .atlas-meta { gap: 6px 12px; overflow-wrap: anywhere; }
-  .atlas-meta > span { min-width: 0; }
-  .atlas-advanced-filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .atlas-sort-controls { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .atlas-filter-clear { grid-column: 1 / -1; }
-  .atlas-filter-control > select,
-  .atlas-select-button { min-height: 44px; font-size: 16px; }
-  .atlas-note-menu { max-width: min(100%, 360px); }
-  .atlas-favorite-toggle {
-    width: 44px;
-    height: 44px;
-    touch-action: manipulation;
-  }
-  .atlas-pin-toggle,
-  .atlas-inventory-edit,
-  .atlas-inventory-actions .seg { min-height: 44px; touch-action: manipulation; }
-  .atlas-inventory-souls { align-items: stretch; flex-direction: column; }
-  .atlas-inventory-souls input { width: 100%; min-height: 44px; box-sizing: border-box; }
-  .atlas-inventory-equipment-row {
-    grid-template-columns: minmax(58px, auto) minmax(90px, max-content) minmax(104px, .7fr) minmax(150px, 1fr);
-  }
-  .atlas-inventory-equipment-row select,
-  .atlas-inventory-equipment-row input { min-height: 44px; font-size: 16px; }
   #partition-tactics .tactics-selector .seg,
   #partition-tactics .tactics-modes .seg,
   #partition-tactics .tactics-cost-actions .seg,
@@ -2869,7 +2846,6 @@ figcaption { color: var(--muted); font-size: 13px; margin-top: 8px; }
        (max-width: 932px) and (max-height: 500px) and (orientation: landscape) {
   body { overflow-x: hidden; }
   body.mobile-menu-open { overflow: hidden; }
-  .atlas-meta { display: grid; grid-template-columns: 1fr; gap: 4px; }
   .wrap { width: 100%; padding: 12px 10px calc(82px + env(safe-area-inset-bottom)); }
   header.top { margin-left: 0; margin-bottom: 12px; padding-bottom: 9px; }
   h1 { font-size: 23px; letter-spacing: 3px; }
@@ -2992,44 +2968,7 @@ figcaption { color: var(--muted); font-size: 13px; margin-top: 8px; }
   .book-popover-stage-row { gap: 4px; padding: 6px 0; }
   .book-popover-stage-values { line-height: 1.5; overflow-wrap: anywhere; }
   #partition-tactics .tactics-form-grid select,
-  #partition-tactics .tactics-form-grid input,
-  .atlas-level { min-height: 44px; font-size: 16px; }
-  .atlas-head { display: block; }
-  .atlas-head-primary {
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 7px;
-    margin-bottom: 7px;
-  }
-  .atlas-head-secondary {
-    display: flex;
-    align-items: center;
-    flex-wrap: nowrap;
-    gap: 6px;
-    width: 100%;
-    min-width: 0;
-  }
-  .atlas-head-secondary .atlas-pin-toggle,
-  .atlas-head-secondary .atlas-inventory-edit {
-    flex: 0 0 auto;
-    min-height: 40px;
-    padding: 6px 8px;
-    font-size: 13px;
-    white-space: nowrap;
-  }
-  .atlas-head-secondary .atlas-level-label {
-    flex: 0 0 auto;
-    margin-left: auto;
-    gap: 4px;
-    white-space: nowrap;
-  }
-  .atlas-head-secondary .atlas-level {
-    box-sizing: border-box;
-    width: 52px;
-    min-height: 40px;
-    padding: 5px 6px;
-  }
+  #partition-tactics .tactics-form-grid input { min-height: 44px; font-size: 16px; }
   #partition-tactics .tactics-cost-material-row { grid-template-columns: 1fr; }
   #partition-tactics .tactics-cost-range-row { grid-template-columns: 1fr 1fr; }
   #partition-tactics .tactics-cost-range-name { grid-column: 1 / -1; }
@@ -3037,26 +2976,8 @@ figcaption { color: var(--muted); font-size: 13px; margin-top: 8px; }
   #partition-tactics .tactics-cost-material-name { grid-column: auto; }
   #partition-tactics .tactics-cost-purchase-list > div { grid-template-columns: 1fr; }
   .cards { display: block; }
-  .atlas-summary-equipment-list,
-  .atlas-equipment-stage-list { max-width: 100%; gap: 6px; }
-  .atlas-summary-equipment-list > *,
-  .atlas-equipment-stage-list > *,
   .equipment-name-badge { max-width: 100%; white-space: normal; overflow-wrap: anywhere; }
   #partition-equipment .equipment-result-name { justify-content: flex-start; }
-  .atlas-note-menu {
-    right: auto;
-    left: 0;
-    width: 100%;
-    max-width: 100%;
-  }
-  .atlas-equipment-entry { flex-wrap: wrap; }
-  .atlas-inventory-equipment-row {
-    grid-template-columns: minmax(56px, auto) minmax(0, 1fr);
-    padding: 8px 0;
-    border-bottom: 1px dashed var(--line);
-  }
-  .atlas-inventory-equipment-row select,
-  .atlas-inventory-equipment-row input { grid-column: 1 / -1; }
   .image-grid { grid-template-columns: 1fr; }
   .inscription-modes { display: flex; width: 100%; }
   .inscription-modes .seg { flex: 1; padding-left: 8px; padding-right: 8px; }

@@ -1,0 +1,96 @@
+/* Atlas presentation only. Container widths, not device names, control density. */
+#partition-atlas { container: atlas / inline-size; }
+#partition-atlas *, #partition-atlas *::before, #partition-atlas *::after { box-sizing: border-box; }
+#partition-atlas [hidden] { display: none; }
+#partition-atlas .filter-row { min-width: 0; }
+#partition-atlas .atlas-category-row { align-items: start; }
+#partition-atlas #atlas-tabs { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); flex: 1; gap: 8px; }
+#partition-atlas #atlas-tabs .seg { min-width: 0; min-height: 44px; padding: 8px; white-space: normal; }
+#partition-atlas .atlas-search-row { display: grid; grid-template-columns: auto minmax(110px, .25fr) minmax(0, 1fr); gap: 10px; }
+#partition-atlas #atlas-search { width: 100%; min-width: 0; }
+#partition-atlas .atlas-level-conditions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 28px; padding-top: 4px; }
+#partition-atlas .atlas-level-conditions .filter-row { margin: 0; }
+#partition-atlas input, #partition-atlas select, #partition-atlas .atlas-select-button { min-height: 44px; font-size: 16px; max-width: 100%; }
+#partition-atlas .atlas-filter-control { font-size: 13px; }
+#partition-atlas .atlas-advanced-filters { grid-template-columns: repeat(auto-fit, minmax(min(100%, 160px), 1fr)); }
+#partition-atlas .atlas-sort-controls { grid-template-columns: minmax(0, 220px) minmax(0, 180px) auto; }
+#partition-atlas .atlas-filter-clear { justify-self: start; }
+#partition-atlas .atlas-note-menu { position: fixed; right: auto; min-width: 0; max-width: none; padding: 6px; overflow-y: auto; overscroll-behavior: contain; }
+#partition-atlas .atlas-note-menu label { min-height: 44px; padding: 8px; }
+#partition-atlas .atlas-note-menu input { min-height: 18px; }
+#partition-atlas #atlas-results:not([hidden]) { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; align-items: start; }
+#partition-atlas .atlas-item { margin: 0; min-width: 0; padding: 14px; line-height: 1.6; contain-intrinsic-size: auto 310px; }
+#partition-atlas .atlas-item-editing { grid-column: 1 / -1; content-visibility: visible; }
+#partition-atlas .atlas-head { display: grid; gap: 10px; margin-bottom: 12px; }
+#partition-atlas .atlas-head-primary { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0; min-width: 0; }
+#partition-atlas .atlas-head .forge-name { color: var(--gold); font-size: 18px; overflow-wrap: anywhere; }
+#partition-atlas .atlas-head-secondary { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; width: auto; }
+#partition-atlas .atlas-head-secondary .seg { min-height: 44px; padding: 6px 10px; }
+#partition-atlas .atlas-level-label { margin-left: auto; gap: 6px; font-size: 14px; white-space: nowrap; }
+#partition-atlas .atlas-head-secondary .atlas-level { width: 70px; min-height: 44px; font-size: 16px; }
+#partition-atlas .atlas-favorite-toggle { width: 44px; height: 44px; margin-left: auto; flex: 0 0 auto; touch-action: manipulation; }
+#partition-atlas .atlas-favorite-toggle.is-favorite { color: var(--gold); background: rgba(212,175,55,.12); border-color: var(--gold-dim); }
+#partition-atlas .atlas-item-pinned { border-color: var(--gold); box-shadow: inset 3px 0 0 var(--gold); }
+#partition-atlas .atlas-item-pinned .q-badge { color: var(--gold); border-color: var(--gold-dim); background: rgba(212,175,55,.1); }
+#partition-atlas .atlas-pin-badge { color: var(--gold); border: 1px solid var(--gold-dim); background: transparent; font-size: 12px; }
+#partition-atlas .atlas-pin-toggle.is-pinned { color: var(--gold); border-color: var(--gold-dim); }
+#partition-atlas .atlas-upgrade { padding: 10px 12px; margin: 0; background: rgba(0,0,0,.12); }
+#partition-atlas .atlas-upgrade-title { font-size: 14px; }
+#partition-atlas .atlas-upgrade-cost { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 8px 14px; }
+#partition-atlas .atlas-upgrade-cost > span { min-width: 0; color: var(--muted); font-size: 13px; overflow-wrap: anywhere; }
+#partition-atlas .atlas-upgrade-cost b { display: block; font-size: 17px; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+#partition-atlas .atlas-inventory-suffix { display: block; font-size: 12px; }
+#partition-atlas .atlas-card-details { margin-top: 10px; border-top: 1px solid var(--line); }
+#partition-atlas .atlas-card-details > summary { cursor: pointer; min-height: 44px; padding: 10px 0; color: var(--gold-dim); font-size: 14px; }
+#partition-atlas .atlas-meta { display: grid; gap: 7px; margin: 0; line-height: 1.7; overflow-wrap: anywhere; }
+#partition-atlas .atlas-equipment-stage-list { display: grid; gap: 8px; }
+#partition-atlas .atlas-equipment-stage { display: grid; grid-template-columns: 60px minmax(0,1fr); gap: 8px; align-items: start; }
+#partition-atlas .atlas-equipment-entry { flex-wrap: wrap; }
+#partition-atlas .atlas-equipment-items { min-width: 0; }
+#partition-atlas .atlas-summary-metrics { grid-template-columns: repeat(5,minmax(0,1fr)); margin: 12px 0; }
+#partition-atlas .atlas-summary-metrics > div { min-width: 0; padding: 8px 10px; border-left: 2px solid var(--line); }
+#partition-atlas .atlas-summary-metrics span { color: var(--muted); font-size: 13px; }
+#partition-atlas .atlas-summary-metrics b { font-size: clamp(18px, 2.4cqi, 24px); }
+#partition-atlas .atlas-upgrade-summary .drop-item-title { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: baseline; }
+#partition-atlas .atlas-upgrade-summary .drop-count { margin: 0; }
+#partition-atlas .atlas-inventory-editor { margin-top: 12px; padding: 12px; }
+#partition-atlas .atlas-inventory-souls { display: grid; grid-template-columns: minmax(0, 280px); gap: 6px; align-items: start; margin-bottom: 14px; }
+#partition-atlas .atlas-inventory-souls input { width: 100%; padding: 8px 10px; }
+#partition-atlas .atlas-inventory-error { margin: 0; font-size: 14px; line-height: 1.5; }
+#partition-atlas [aria-invalid="true"] { border-color: #ff8a80; outline: 1px solid #ff8a80; }
+#partition-atlas .atlas-inventory-equipment-list { gap: 0; }
+#partition-atlas .atlas-inventory-columns, #partition-atlas .atlas-inventory-equipment-row { display: grid; grid-template-columns: 64px minmax(100px, 1fr) minmax(112px, .6fr) minmax(180px, 1.5fr); gap: 8px 12px; align-items: center; }
+#partition-atlas .atlas-inventory-columns { color: var(--muted); font-size: 13px; padding-bottom: 6px; }
+#partition-atlas .atlas-inventory-equipment-row { padding: 10px 0; border-top: 1px solid var(--line); border-bottom: 0; }
+#partition-atlas .atlas-inventory-equipment-row > * { min-width: 0; grid-column: auto; }
+#partition-atlas .atlas-inventory-equipment-row > input, #partition-atlas .atlas-inventory-equipment-row > select { padding: 8px; }
+#partition-atlas .atlas-inventory-equipment-row .material-token { overflow-wrap: anywhere; white-space: normal; }
+#partition-atlas .atlas-inventory-actions { display: flex; gap: 10px; }
+#partition-atlas .atlas-inventory-actions .seg { min-height: 44px; }
+#partition-atlas .empty { grid-column: 1 / -1; }
+@container atlas (min-width: 1000px) {
+  #partition-atlas #atlas-results:not([hidden]) { grid-template-columns: repeat(2,minmax(0,1fr)); }
+}
+@container atlas (max-width: 700px) {
+  #partition-atlas #atlas-tabs { grid-template-columns: repeat(3,minmax(0,1fr)); }
+  #partition-atlas .atlas-category-row { display: block; }
+  #partition-atlas .atlas-category-row > .filter-label { display: block; margin-bottom: 7px; }
+  #partition-atlas .atlas-inventory-columns { display: none; }
+  #partition-atlas .atlas-inventory-equipment-row { grid-template-columns: 60px minmax(0,1fr); }
+  #partition-atlas .atlas-inventory-equipment-row > select { grid-column: 1 / -1; width: min(100%, 200px); }
+  #partition-atlas .atlas-inventory-equipment-row > input { grid-column: 1 / -1; }
+  #partition-atlas .atlas-inventory-souls { grid-template-columns: minmax(0,1fr); }
+  #partition-atlas .atlas-summary-metrics { grid-template-columns: repeat(3,minmax(0,1fr)); }
+}
+@container atlas (max-width: 430px) {
+  #partition-atlas .atlas-search-row { grid-template-columns: auto minmax(0,1fr); }
+  #partition-atlas #atlas-search { grid-column: 1 / -1; }
+  #partition-atlas .atlas-level-conditions { display: grid; gap: 10px; }
+  #partition-atlas .atlas-range-row, #partition-atlas .atlas-target-row { display: grid; grid-template-columns: 80px minmax(0,1fr); gap: 8px; }
+  #partition-atlas .atlas-level-range { display: grid; grid-template-columns: minmax(0,1fr) auto minmax(0,1fr); }
+  #partition-atlas #atlas-level-min, #partition-atlas #atlas-level-max, #partition-atlas #atlas-target-level { width: 100%; min-width: 0; }
+  #partition-atlas .atlas-advanced-filters, #partition-atlas .atlas-sort-controls { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  #partition-atlas .atlas-filter-clear { grid-column: 1 / -1; }
+  #partition-atlas .atlas-head-secondary .atlas-level-label { flex-basis: 100%; justify-content: space-between; }
+  #partition-atlas .atlas-upgrade-cost { gap: 8px; }
+}

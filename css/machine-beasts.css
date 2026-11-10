@@ -16,7 +16,7 @@
   margin: 0 0 10px;
   padding: 10px 12px;
   color: var(--gold-dim);
-  background: var(--bg1);
+  background: var(--panel);
   border: 1px solid var(--line);
   border-radius: 9px;
 }
@@ -569,8 +569,9 @@
 #partition-machine-beasts .machine-result-navigation a,
 #partition-machine-beasts .machine-school-mobile-summaries nav a,
 #partition-machine-beasts .machine-reference-return { display: inline-flex; align-items: center; min-height: 44px; color: var(--gold); padding: 5px 8px; text-decoration: underline; overflow-wrap: anywhere; }
-#partition-machine-beasts .machine-calc-actionbar { position: sticky; top: 8px; z-index: 4; padding: 8px; margin-block: 10px; background: var(--bg1); border: 1px solid var(--line); border-radius: 8px; }
-#partition-machine-beasts .machine-editor-actions { position: sticky; bottom: 0; z-index: 2; padding: 8px; background: var(--bg1); }
+/* Keep actions in normal flow: floating bars must not obscure inventory fields. */
+#partition-machine-beasts .machine-calc-actionbar { position: static; padding: 8px; margin-block: 10px; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; }
+#partition-machine-beasts .machine-editor-actions { position: static; padding: 8px; background: var(--panel); }
 #partition-machine-beasts .machine-result-navigation { display: flex; flex-wrap: wrap; gap: 6px 12px; margin-block: 6px; }
 #partition-machine-beasts .machine-summary-priority { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr)); gap: var(--mb-gap); margin-block: 12px; }
 #partition-machine-beasts .machine-summary-priority > div { min-width: 0; display: grid; gap: 5px; padding: 12px; background: var(--bg2); border: 1px solid var(--line); border-radius: 8px; }
@@ -635,7 +636,6 @@
   #partition-machine-beasts .machine-calculator-modes { display: flex; width: 100%; }
   #partition-machine-beasts .machine-beast-modes .seg,
   #partition-machine-beasts .machine-calculator-modes .seg { flex: 1; min-width: 0; padding-inline: 6px; }
-  #partition-machine-beasts .machine-editor-actions { bottom: calc(76px + env(safe-area-inset-bottom)); }
   #partition-machine-beasts input:not([type="checkbox"]):not([type="radio"]),
   #partition-machine-beasts select { font-size: 16px; }
   #partition-machine-beasts .machine-rank-inputs { grid-template-columns: repeat(2, minmax(0, 1fr)); }

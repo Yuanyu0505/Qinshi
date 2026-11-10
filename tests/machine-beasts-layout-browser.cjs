@@ -30,6 +30,22 @@ async function scenario(run, width = 1280) {
 test('calculator controls precede result in actual DOM and viewport reading order', async () => scenario(async page => {
   assert.equal(await page.evaluate(() => Boolean(document.getElementById('machine-beast-calculator-controls').compareDocumentPosition(document.getElementById('machine-beast-calculator-result')) & Node.DOCUMENT_POSITION_FOLLOWING)), true);
 }));
+test('school actions scroll away instead of overlapping research and inventory fields', async () => scenario(async page => {
+  await page.locator('[data-machine-calculator-mode="school"]').click();
+  const input = page.locator('[data-school-card]').first().locator('[data-school-field="research"]');
+  await input.scrollIntoViewIfNeeded();
+  await input.evaluate(node => node.scrollIntoView({ block: 'start' }));
+  const geometry = await page.evaluate(() => {
+    const bar = document.querySelector('.machine-calc-actionbar'), input = document.querySelector('[data-school-field="research"]');
+    const a = bar.getBoundingClientRect(), b = input.getBoundingClientRect();
+    return { overlaps: a.top < b.bottom && b.top < a.bottom, background: getComputedStyle(bar).backgroundColor };
+  });
+  assert.equal(geometry.overlaps, false);
+  assert.notEqual(geometry.background, 'rgba(0, 0, 0, 0)');
+  await page.locator('[data-machine-beast-mode="progress"]').click();
+  await page.locator('[data-machine-action="edit-progress"]').first().click();
+  assert.equal(await page.locator('.machine-editor-actions').evaluate(node => getComputedStyle(node).position), 'static');
+}));
 test('inventory flags retain open state and identity; radio restoration distinguishes both values', async () => scenario(async page => {
   const inventory = page.locator('.machine-temporary-inventory');
   await inventory.locator('summary').click();

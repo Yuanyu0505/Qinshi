@@ -609,7 +609,7 @@
         }).join("") + '</optgroup>';
       }).join("") + '</select></label>' +
       '<label><span>当前累计研发度</span><input type="number" min="0" step="1" inputmode="numeric" value="' + state.calcDraft.research + '" data-calc-field="research"></label>' +
-      '<label><span>当前研发等级</span><strong data-calc-current-level>' + currentLevel + '级</strong></label>' +
+      '<label class="machine-current-level-field"><span>当前研发等级</span><strong data-calc-current-level>' + currentLevel + '级</strong></label>' +
       '<label><span>目标研发等级</span><select data-calc-target>' + calcTargetOptions(beast, state.calcTargetLevel, currentLevel) + '</select></label>' +
       '</div><p class="machine-beast-source">获取来源：' + escapeHtml(sourceText(beast)) + '</p></section>' +
       '<section class="panel machine-calculator-panel"><h2>材料与库存范围</h2><label class="machine-fragment-field"><span>当前机关兽碎片</span><input type="number" min="0" step="1" inputmode="numeric" value="' + state.calcDraft.fragments + '" data-calc-field="fragments"></label>' +
@@ -798,8 +798,8 @@
     var ownedItems = detail.items.filter(function (item) { return item.source === "owned"; });
     var newItems = detail.items.filter(function (item) { return item.source === "new"; });
     return '<article class="machine-school-plan-beast"><header><strong>' + escapeHtml(detail.beastName) + '</strong><b>' + detail.startLevel + '级 → ' + detail.endLevel + '级</b></header>' +
-      '<div class="machine-card-primary"><span>新增解锁节点 <b>' + formatNumber(detail.unlockedEffects) + '</b></span><span class="machine-owned-investment">已有投入 ' + ownedItems.reduce(function (sum, item) { return sum + item.count; }, 0) + '只</span><span class="machine-investment-demand">新增投入 ' + newItems.reduce(function (sum, item) { return sum + item.count; }, 0) + '只</span></div>' +
-      '<div class="machine-result-columns"><article><h3>使用已有库存</h3>' + itemList(ownedItems, "不使用已有完整机关兽", "owned") + '</article><article><h3>新增投入</h3>' + itemList(newItems, "无需新增机关兽", true) + '</article></div>' +
+      '<div class="machine-card-primary machine-plan-primary"><span>新增解锁节点<b>' + formatNumber(detail.unlockedEffects) + '</b></span><span class="machine-owned-investment">已有投入<b>' + ownedItems.reduce(function (sum, item) { return sum + item.count; }, 0) + '只</b></span><span class="machine-investment-demand">新增投入<b>' + newItems.reduce(function (sum, item) { return sum + item.count; }, 0) + '只</b></span></div>' +
+      '<article class="machine-school-plan-material"><h3>使用已有库存</h3>' + itemList(ownedItems, "不使用已有完整机关兽", "owned") + '</article><article class="machine-school-plan-material"><h3>新增投入</h3>' + itemList(newItems, "无需新增机关兽", true) + '</article>' +
       '<div class="machine-school-plan-beast-metrics"><span>研发度 ' + formatNumber(detail.startResearch) + ' → ' + formatNumber(detail.endResearch) + '</span><span>增加 ' + formatNumber(detail.addedResearch) + '</span><span>溢出 ' + formatNumber(detail.overflowResearch) + '</span></div>' +
       '<div class="machine-school-plan-resources"><span>折算投入 <b>' + detail.investedCount + '只</b></span><span>新增效果解锁节点数 <b>' + formatNumber(detail.unlockedEffects) + '</b></span><span>最终生效档位 <b>' + (detail.finalEffect ? detail.finalEffect.level + '级' : '尚未解锁') + '</b></span><span>机关兽碎片缺口 <b>' + formatNumber(detail.resources.fragments) + '</b></span><span>神图总消耗 <b>' + formatNumber(detail.resources.awakeningBlueprints) + '</b></span><span>机关破片 <b>' + formatNumber(detail.resources.organPieces) + '</b></span><span>改造本体折算投入 <b>' + formatNumber(detail.modifiedInvestedCount) + '</b>（已有 ' + formatNumber(detail.ownedModifiedInvestedCount) + '／新增 ' + formatNumber(detail.newModifiedInvestedCount) + '）</span></div></article>';
   }
@@ -958,9 +958,8 @@
   function schoolReference() {
     var school = schoolById(state.referenceStageSchoolId);
     return '<section class="panel" id="machine-reference-schools"><h2>霸道／非攻机关术阶数效果研发</h2>' + schoolSwitcher("reference-stages", school.id) +
-      '<nav class="machine-result-navigation" aria-label="流派阶数定位">' + school.stages.map(function (stage) { return '<a href="#machine-reference-stage-' + school.id + '-' + stage.stage + '" data-machine-jump>' + stage.stage + '阶</a>'; }).join('') + '</nav>' +
       '<div class="machine-reference-grid machine-school-stage-grid">' + school.stages.map(function (stage) {
-        return '<article class="machine-reference-card machine-school-stage-card" id="machine-reference-stage-' + school.id + '-' + stage.stage + '"><header><h3>' + stage.stage + '阶</h3><span>' + (stage.requiredTotalLevel === null ? '升阶要求：数据待补充' : '累计觉醒等级' + stage.requiredTotalLevel) + '</span></header><dl><div><dt>流派加成</dt><dd>' + escapeHtml(stage.factionBonus) + '</dd></div><div><dt>阵容特效</dt><dd>' + escapeHtml(stage.formationEffect) + '</dd></div><div><dt>机关兽特效</dt><dd>' + escapeHtml(stage.beastEffect) + '</dd></div></dl></article>';
+        return '<article class="machine-reference-card machine-school-stage-card"><header><h3>' + stage.stage + '阶</h3><span>' + (stage.requiredTotalLevel === null ? '升阶要求：数据待补充' : '累计觉醒等级' + stage.requiredTotalLevel) + '</span></header><dl><div><dt>流派加成</dt><dd>' + escapeHtml(stage.factionBonus) + '</dd></div><div><dt>阵容特效</dt><dd>' + escapeHtml(stage.formationEffect) + '</dd></div><div><dt>机关兽特效</dt><dd>' + escapeHtml(stage.beastEffect) + '</dd></div></dl></article>';
       }).join("") + '</div></section>';
   }
 
@@ -1021,7 +1020,13 @@
 
   function addReferenceReturn(section) {
     var heading = section.querySelector('h2');
-    if (heading) heading.insertAdjacentHTML('afterend', '<a class="machine-reference-return" href="#machine-reference-index" data-machine-jump>返回资料目录</a>');
+    if (heading) {
+      var header = document.createElement('div');
+      header.className = 'machine-reference-section-head';
+      heading.before(header);
+      header.appendChild(heading);
+      header.insertAdjacentHTML('beforeend', '<a class="seg machine-reference-return" href="#machine-reference-index" data-machine-jump>返回资料目录</a>');
+    }
   }
 
   function replaceReferenceSection(id, html) {

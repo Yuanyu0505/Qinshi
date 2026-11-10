@@ -30,6 +30,37 @@ async function scenario(run, width = 1280) {
 test('calculator controls precede result in actual DOM and viewport reading order', async () => scenario(async page => {
   assert.equal(await page.evaluate(() => Boolean(document.getElementById('machine-beast-calculator-controls').compareDocumentPosition(document.getElementById('machine-beast-calculator-result')) & Node.DOCUMENT_POSITION_FOLLOWING)), true);
 }));
+test('alignment: current level matches input text size and target follows without an empty column', async () => scenario(async page => {
+  const layout = await page.evaluate(() => {
+    const current = document.querySelector('[data-calc-current-level]'), research = document.querySelector('[data-calc-field="research"]'), target = document.querySelector('[data-calc-target]');
+    return { currentSize:getComputedStyle(current).fontSize, inputSize:getComputedStyle(research).fontSize, gap:target.getBoundingClientRect().left-current.getBoundingClientRect().right };
+  });
+  assert.equal(layout.currentSize, layout.inputSize);
+  assert.ok(layout.gap >= 0 && layout.gap <= 24);
+}));
+test('alignment: strategy and price disclosures share the same left edge', async () => scenario(async page => {
+  await page.locator('[data-machine-calculator-mode="school"]').click();
+  const rules = await page.locator('[data-detail-key="school:rules"] > summary').boundingBox();
+  const price = await page.locator('#machine-price-settings > summary').boundingBox();
+  assert.ok(Math.abs(rules.x-price.x)<=1);
+}));
+for (const width of [320,1280]) test(`alignment: ${width}px reference return buttons stay in section headers and stage data remains accessible`, async () => scenario(async page => {
+  await page.locator('[data-machine-beast-mode="reference"]').click();
+  for (const section of await page.locator('#machine-beast-reference-content > section.panel').all()) {
+    const header = section.locator('.machine-reference-section-head'), button = header.locator('.machine-reference-return');
+    const a = await header.boundingBox(), b = await button.boundingBox();
+    assert.ok(Math.abs(b.y-a.y)<=2); assert.ok(b.x+b.width<=a.x+a.width+1);
+    assert.equal(await button.evaluate(n=>getComputedStyle(n).textDecorationLine), 'none');
+  }
+  assert.equal(await page.getByRole('navigation',{name:'流派阶数定位'}).count(),0);
+  assert.equal(await page.locator('.machine-school-stage-card').count(),5);
+  if (width===1280) {
+    const positions = await page.locator('.machine-research-matrix-scroll').evaluateAll(nodes=>nodes.map(n=>({left:n.querySelector('th').getBoundingClientRect().left,width:n.querySelector('table').getBoundingClientRect().width})));
+    assert.ok(positions.slice(1).every(p=>Math.abs(p.left-positions[0].left)<=1 && p.width<=320));
+  }
+  await page.locator('.machine-reference-return').last().click();
+  assert.equal(await page.evaluate(()=>document.activeElement.id),'machine-reference-index');
+},width));
 test('round2: excluded card stays compact, expanded fields and participation preserve drafts', async () => scenario(async page => {
   await page.locator('[data-machine-calculator-mode="school"]').click();
   const id = await page.locator('[data-school-card]').first().getAttribute('data-school-card');

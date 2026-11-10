@@ -112,6 +112,24 @@ for (const width of [320, 820, 1280]) test(width + 'px exact 97 to 135 renders h
     for (const text of await cells.allTextContents()) assert.equal(text, value);
   }
   assert.match(await comparison.textContent(), /新增效果解锁节点数/);
+  for (const detail of await page.locator('.machine-school-plan > details').filter({has:page.locator('.machine-school-plan-beasts')}).all()) {
+    if (!await detail.evaluate(node => node.open)) await detail.locator(':scope > summary').click();
+  }
+  const aligned = await page.locator('.machine-school-plan-beasts').evaluateAll(grids => grids.every(grid => {
+    const cards = Array.from(grid.children);
+    if (!cards.every(card=>card.getBoundingClientRect().width>0)) return false;
+    return cards.every((card,index) => cards.slice(index+1).every(other => {
+      if (Math.abs(card.getBoundingClientRect().top-other.getBoundingClientRect().top)>1) return true;
+      const slots = Array.from(card.children), otherSlots = Array.from(other.children);
+      if (!slots.every((slot,n)=>Math.abs(slot.getBoundingClientRect().top-otherSlots[n].getBoundingClientRect().top)<=1)) return false;
+      return Array.from(card.querySelectorAll('.machine-school-plan-resources > span')).every((slot,n)=>Math.abs(slot.getBoundingClientRect().top-other.querySelectorAll('.machine-school-plan-resources > span')[n].getBoundingClientRect().top)<=1);
+    }));
+  }));
+  assert.equal(aligned,true,'matching content tracks align across each row of beasts');
+  if (width===1280) assert.ok(await page.locator('.machine-school-plan-beasts').evaluateAll(grids => grids.some(grid => {
+    const cards=Array.from(grid.children);
+    return cards.some((card,index)=>cards.slice(index+1).some(other=>Math.abs(card.getBoundingClientRect().top-other.getBoundingClientRect().top)<=1));
+  })), 'desktop fixture actually compares side-by-side cards');
   const cost = r.plans.find(p => p.kind === 'cost'), effects = r.plans.find(p => p.kind === 'effects');
   if (cost && effects) {
     const effectsById = new Map(effects.finalEffects.map(row => [row.beastId,row]));
@@ -160,6 +178,32 @@ test('reached school target displays stop message without new purchase panels', 
   assert.match(await page.locator('#machine-beast-calculator-result').textContent(), /目标已达成/);
   assert.equal(await page.locator('[data-reference-cost-panel^="school-"]').count(), 0);
 }));
+test('alignment: real mixed-rank owned materials and new-only materials share visible content tracks', async () => scenario(async page => {
+  await page.locator('[data-school-calc-school]').selectOption('nonAttack');
+  await page.evaluate(() => {
+    const view = window.MACHINE_BEAST_UI.captureView(), draft = view.schoolDraft, data = window.MACHINE_BEAST_DATA;
+    const levels = {'mechanical-bronze-man':15,'mechanical-azure-dragon':20,'zero-white-tiger':7};
+    for (const id of Object.keys(draft.progressByBeast)) {
+      Object.assign(draft.progressByBeast[id],{research:data.researchThresholds[levels[id]||0],fragments:0,inventory:{}});
+      draft.participating[id] = ['four-claw-spider','mechanical-white-tiger'].includes(id);
+      draft.ownedPoliciesByBeast[id] = {useOwnedInventory:true,limits:{}};
+    }
+    draft.progressByBeast['four-claw-spider'].inventory = {none:{0:1,1:1}};
+    draft.ownedPoliciesByBeast['four-claw-spider'].limits = {none:{0:1,1:1}};
+    Object.assign(draft,{targetStage:1,useOwnedInventory:true,newRankMode:'zero',allowNewHighRanks:false,allowNewModifications:false});
+    view.schoolResult = null; window.MACHINE_BEAST_UI.restoreView(view);
+  });
+  const result = await calculate(page);
+  assert.equal(result.valid,true); assert.equal(result.plans[0].beasts.length,2);
+  const details = page.locator('.machine-school-plan > details').filter({has:page.locator('.machine-school-plan-beasts')}).first();
+  await details.locator(':scope > summary').click();
+  const cards = page.locator('.machine-school-plan').first().locator('.machine-school-plan-beast');
+  assert.equal(await cards.nth(0).locator('.machine-school-plan-material').first().locator('li').count(),2);
+  assert.equal(await cards.nth(1).locator('.machine-school-plan-material').first().locator('li').count(),0);
+  const positions = await cards.evaluateAll(nodes=>nodes.map(card=>({width:card.getBoundingClientRect().width,top:card.getBoundingClientRect().top,slots:Array.from(card.children,n=>n.getBoundingClientRect().top)})));
+  assert.ok(positions.every(p=>p.width>0)); assert.ok(Math.abs(positions[0].top-positions[1].top)<=1);
+  assert.ok(positions[0].slots.every((top,index)=>Math.abs(top-positions[1].slots[index])<=1));
+},1280));
 test('editing any optimization price invalidates cached school results and requires a fresh solve', async () => scenario(async page => {
   await preparePurple(page); await calculate(page);
   await page.evaluate(() => { window.__oldSchoolView = window.MACHINE_BEAST_UI.captureView(); });

@@ -164,9 +164,11 @@
 
 #partition-machine-beasts .machine-editor-grid,
 #partition-machine-beasts .machine-calculator-top { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--mb-field-min)), 1fr)); gap: var(--mb-gap); }
+#partition-machine-beasts .machine-calculator-top { grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr) minmax(76px, .35fr) minmax(0, 1.1fr); max-width: 1040px; align-items: start; }
 
 #partition-machine-beasts .machine-editor-grid label,
 #partition-machine-beasts .machine-calculator-top label { display: grid; align-content: start; gap: 4px; min-width: 0; color: var(--muted); font-size: 12px; }
+#partition-machine-beasts [data-calc-current-level] { display: flex; align-items: center; min-height: 44px; color: var(--text); font-size: 16px; font-weight: 400; }
 
 #partition-machine-beasts input,
 #partition-machine-beasts select {
@@ -227,9 +229,11 @@
 
 #partition-machine-beasts .machine-result-columns { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); gap: 8px; margin-top: 9px; }
 
-#partition-machine-beasts .machine-result-columns article { min-width: 0; padding: 9px 10px; background: rgba(25, 22, 17, .7); border: 1px solid var(--line); border-radius: 7px; }
+#partition-machine-beasts .machine-result-columns article,
+#partition-machine-beasts .machine-school-plan-material { min-width: 0; padding: 9px 10px; background: rgba(25, 22, 17, .7); border: 1px solid var(--line); border-radius: 7px; }
 
-#partition-machine-beasts .machine-result-columns h3 { color: var(--gold); font-size: 15px; }
+#partition-machine-beasts .machine-result-columns h3,
+#partition-machine-beasts .machine-school-plan-material h3 { color: var(--gold); font-size: 15px; }
 
 #partition-machine-beasts .machine-result-columns ul,
 #partition-machine-beasts .machine-unused ul { margin: 7px 0 0; padding-left: 20px; }
@@ -364,7 +368,20 @@
 
 #partition-machine-beasts .machine-school-plan-beasts { display: grid; gap: 8px; margin-top: 10px; }
 
-#partition-machine-beasts .machine-school-plan-beast { min-width: 0; padding: 10px; background: rgba(25, 22, 17, .72); border: 1px solid var(--line); border-radius: 8px; }
+#partition-machine-beasts .machine-school-plan-beast { display: grid; grid-template-rows: auto auto auto auto auto 1fr; gap: 8px; min-width: 0; padding: 10px; background: rgba(25, 22, 17, .72); border: 1px solid var(--line); border-radius: 8px; }
+#partition-machine-beasts .machine-plan-primary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px 10px; margin-top: 0; align-items: start; }
+#partition-machine-beasts .machine-plan-primary > span { display: grid; gap: 4px; font-size: 14px; }
+#partition-machine-beasts .machine-school-plan-material ul { margin: 8px 0 0; padding-left: 20px; overflow-wrap: anywhere; }
+#partition-machine-beasts .machine-school-plan-material .muted-tip { margin-bottom: 0; }
+#partition-machine-beasts .machine-school-plan-beast-metrics,
+#partition-machine-beasts .machine-school-plan-resources { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-content: start; }
+#partition-machine-beasts .machine-school-plan-beast-metrics > span,
+#partition-machine-beasts .machine-school-plan-resources > span { min-width: 0; overflow-wrap: anywhere; }
+#partition-machine-beasts .machine-school-plan-resources > span:last-child { grid-column: 1 / -1; }
+@supports (grid-template-rows: subgrid) {
+  #partition-machine-beasts .machine-school-plan-beast { grid-row: span 9; grid-template-rows: subgrid; }
+  #partition-machine-beasts .machine-school-plan-resources { grid-row: span 4; grid-template-rows: subgrid; }
+}
 
 #partition-machine-beasts .machine-school-plan-beast > header { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 
@@ -372,7 +389,7 @@
 #partition-machine-beasts .machine-school-plan-beast > header b { color: var(--gold); }
 
 #partition-machine-beasts .machine-school-plan-beast-metrics,
-#partition-machine-beasts .machine-school-plan-resources { display: flex; flex-wrap: wrap; gap: 6px 14px; margin-top: 7px; color: var(--muted); font-size: 12px; }
+#partition-machine-beasts .machine-school-plan-resources { gap: 6px 14px; margin-top: 0; color: var(--muted); font-size: 12px; }
 
 #partition-machine-beasts .machine-school-plan-resources b { color: var(--text); }
 
@@ -383,6 +400,10 @@
 #partition-machine-beasts #machine-beast-reference .panel { margin-bottom: 0; }
 
 #partition-machine-beasts #machine-beast-reference h2 { margin-bottom: 9px; color: var(--gold); font-size: 18px; }
+#partition-machine-beasts .machine-reference-section-head { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; gap: 8px 16px; margin-bottom: 12px; }
+#partition-machine-beasts #machine-beast-reference .machine-reference-section-head h2 { min-width: 0; margin: 0; overflow-wrap: anywhere; }
+#partition-machine-beasts .machine-reference-section-head .machine-reference-return { padding: 8px 12px; border: 1px solid var(--line); border-radius: 7px; background: var(--bg2); color: var(--gold); text-decoration: none; font-size: 14px; }
+#partition-machine-beasts .machine-reference-section-head .machine-reference-return:hover { border-color: var(--gold-dim); }
 
 #partition-machine-beasts .machine-reference-group + .machine-reference-group { margin-top: 14px; }
 
@@ -611,7 +632,7 @@
 #partition-machine-beasts .machine-research-quick-values > div { display: grid; gap: 5px; padding: 10px; border: 1px solid var(--line); border-radius: 6px; }
 #partition-machine-beasts .machine-research-quick-values dt { color: var(--muted); }
 #partition-machine-beasts .machine-research-quick-values dd { margin: 0; color: var(--gold); font-variant-numeric: tabular-nums; font-weight: 700; }
-#partition-machine-beasts .machine-reference-return { margin-bottom: 8px; }
+#partition-machine-beasts .machine-school-strategy #machine-price-settings { padding: 0; background: transparent; }
 #partition-machine-beasts .machine-reference-mobile-only { display: none; }
 #partition-machine-beasts .machine-threshold-groups { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 210px), 1fr)); gap: 12px; }
 #partition-machine-beasts .machine-threshold-groups h3 { margin-bottom: 8px; color: var(--gold-dim); }
@@ -619,6 +640,8 @@
 #partition-machine-beasts .machine-research-matrix-scroll { min-width: 0; max-width: 100%; overflow-x: auto; }
 #partition-machine-beasts .machine-research-matrix-scroll table { width: 100%; min-width: 0; table-layout: fixed; border-collapse: collapse; }
 #partition-machine-beasts .machine-research-matrix-scroll[data-quality="orange"] table { min-width: 620px; }
+#partition-machine-beasts .machine-research-matrix-scroll:not([data-quality="orange"]) table { width: min(100%, 320px); }
+#partition-machine-beasts .machine-research-matrix-scroll th:first-child { width: 84px; text-align: left; }
 #partition-machine-beasts .machine-research-matrix-scroll th,
 #partition-machine-beasts .machine-research-matrix-scroll td { padding: 9px 10px; border-bottom: 1px solid var(--line); text-align: right; white-space: normal; overflow-wrap: anywhere; }
 #partition-machine-beasts .machine-research-matrix-scroll th { color: var(--gold); }

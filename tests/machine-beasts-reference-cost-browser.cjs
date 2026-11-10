@@ -54,6 +54,10 @@ async function calculateSingle(page) {
   await page.locator('[data-calc-target]').selectOption('1');
   await page.locator('[data-machine-action="calculate"]').click();
   await waitForCalculation(page, 'calcResult');
+  // Since 1.0.91 the cost detail is intentionally collapsed; use its real entry.
+  await page.locator('[data-reference-cost-panel="single"]').evaluate(node => {
+    for (let detail = node.closest('details'); detail; detail = detail.parentElement.closest('details')) detail.open = true;
+  });
   await page.locator('[data-reference-cost-panel="single"] [data-reference-cost-total]').waitFor();
 }
 

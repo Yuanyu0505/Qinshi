@@ -112,6 +112,22 @@ for (const width of [320, 820, 1280]) test(width + 'px exact 97 to 135 renders h
     for (const text of await cells.allTextContents()) assert.equal(text, value);
   }
   assert.match(await comparison.textContent(), /新增效果解锁节点数/);
+  const cost = r.plans.find(p => p.kind === 'cost'), effects = r.plans.find(p => p.kind === 'effects');
+  if (cost && effects) {
+    const effectsById = new Map(effects.finalEffects.map(row => [row.beastId,row]));
+    const costIds = new Set(cost.beasts.map(b => b.beastId)), effectsIds = new Set(effects.beasts.map(b => b.beastId));
+    const differences = cost.finalEffects.filter(row => row.level !== effectsById.get(row.beastId).level || costIds.has(row.beastId) !== effectsIds.has(row.beastId));
+    assert.equal(await comparison.locator('[data-plan-difference-beast]').count(), differences.length);
+    for (const row of differences) {
+      const cell = comparison.locator('[data-plan-difference-beast="' + row.beastId + '"]');
+      assert.match(await cell.textContent(), new RegExp('投入最小 ' + row.level + '级／最多效果 ' + effectsById.get(row.beastId).level + '级'));
+    }
+  } else assert.equal(await comparison.locator('.machine-beast-differences').count(), 0);
+  for (const plan of r.plans) {
+    const counts = {owned:0,new:0};
+    plan.beasts.forEach(b => b.items.forEach(item => counts[item.source] += item.count));
+    assert.ok((await comparison.textContent()).includes('已有 ' + counts.owned + '只／新增 ' + counts.new + '只'));
+  }
   const finalLists = page.locator('.machine-school-final-effects');
   assert.equal(await finalLists.count(), r.plans.length);
   for (let index = 0; index < r.plans.length; index++) {

@@ -1560,7 +1560,10 @@ test(`PWA ${APP_VERSION} 发布响应式禁地、统一导航、逐鹿资料与�
     assert.match(css.body, /\.book-detail-popover\s*\{[\s\S]*?max-height:\s*calc\(100dvh - 24px\)/);
     assert.match(css.body, /\.book-detail-popover-body\s*\{[\s\S]*?max-height:\s*calc\(100dvh - 104px\)[\s\S]*?overscroll-behavior:\s*contain/);
     assert.match(css.body, /#partition-drops \.drop-default-orange-table\s*\{[\s\S]*?min-width:\s*0/);
-    assert.match(css.body, /#partition-machine-beasts \.machine-reference-grid\s*\{[\s\S]*?grid-template-columns:\s*repeat\(auto-fit,/);
+    // 1.0.91 extracted module styles; verify the served dedicated asset, not style.css.
+    const machineCss = await get(port, "/css/machine-beasts.css");
+    assert.strictEqual(machineCss.status, 200);
+    assert.match(machineCss.body, /#partition-machine-beasts \.machine-reference-grid\s*\{[\s\S]*?grid-template-columns:\s*repeat\(auto-fit,/);
     assert.match(css.body, /@media \(max-width: 1024px\)[\s\S]*?\.atlas-meta\s*\{[\s\S]*?overflow-wrap:\s*anywhere/);
     assert.match(css.body, /@media \(max-width: 1024px\)[\s\S]*?#partition-forbidden \.forbidden-token\s*\{[\s\S]*?min-height:\s*44px/);
     assert.match(css.body, /@media \(max-width: 767px\),[\s\S]*?#partition-forbidden \.forbidden-reward-row\.has-label\s*\{[\s\S]*?grid-template-columns:\s*38px minmax\(0, 1fr\)/);

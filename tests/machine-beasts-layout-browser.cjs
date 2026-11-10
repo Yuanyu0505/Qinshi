@@ -1,4 +1,4 @@
-// UI-only regressions for user-run acceptance. Not executed by the implementation agent.
+// UI-only regressions using isolated local accounts and browser contexts.
 const { test, before, after } = require('node:test');
 const assert = require('node:assert/strict');
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
@@ -29,6 +29,78 @@ async function scenario(run, width = 1280) {
 }
 test('calculator controls precede result in actual DOM and viewport reading order', async () => scenario(async page => {
   assert.equal(await page.evaluate(() => Boolean(document.getElementById('machine-beast-calculator-controls').compareDocumentPosition(document.getElementById('machine-beast-calculator-result')) & Node.DOCUMENT_POSITION_FOLLOWING)), true);
+}));
+test('round2: excluded card stays compact, expanded fields and participation preserve drafts', async () => scenario(async page => {
+  await page.locator('[data-machine-calculator-mode="school"]').click();
+  const id = await page.locator('[data-school-card]').first().getAttribute('data-school-card');
+  const card = page.locator('[data-school-card="' + id + '"]');
+  await card.locator('[data-school-field="fragments"]').fill('37');
+  await card.locator('[data-school-participant]').uncheck();
+  assert.equal(await card.locator('[data-school-field="fragments"]').isVisible(), false);
+  await card.locator('details > summary').first().click();
+  assert.equal(await card.locator('[data-school-field="fragments"]').inputValue(), '37');
+  await card.locator('[data-school-field="research"]').fill('22800');
+  assert.match(await card.locator('.machine-excluded-summary').textContent(), /当前 1\//);
+  await card.locator('[data-school-participant]').check();
+  assert.equal(await card.locator('[data-school-field="fragments"]').inputValue(), '37');
+}));
+test('round2: single action follows material policy and price settings, without duplicates', async () => scenario(async page => {
+  assert.equal(await page.locator('[data-machine-action="calculate"]').count(), 1);
+  assert.equal(await page.evaluate(() => {
+    const action = document.querySelector('[data-machine-action="calculate"]');
+    return ['[data-calc-field="fragments"]','[data-owned-global]','[data-new-rank-mode-scope="single"]','#machine-price-settings'].every(selector =>
+      Boolean(document.querySelector(selector).compareDocumentPosition(action) & Node.DOCUMENT_POSITION_FOLLOWING));
+  }), true);
+}));
+test('round2: inline progress save and cancel retain account data and the primary card summary', async () => scenario(async page => {
+  await page.locator('[data-machine-beast-mode="progress"]').click();
+  const id = await page.locator('[data-progress-card]').first().getAttribute('data-progress-card');
+  const card = page.locator('[data-progress-card="' + id + '"]');
+  await card.locator('[data-machine-action="edit-progress"]').click();
+  await card.locator('[data-edit-field="research"]').fill('22800');
+  await card.locator('[data-edit-field="fragments"]').fill('27');
+  await card.locator('[data-edit-inventory][data-mod="none"][data-rank="0"]').fill('9');
+  await card.locator('[data-machine-action="save-progress"]').click();
+  const raw = await getAccountItem(page, 'qinshi_machine_beasts_progress_v1');
+  const progress = JSON.parse(raw).beasts[id];
+  assert.equal(progress.research, 22800); assert.equal(progress.fragments, 27); assert.equal(progress.inventory.none['0'], 9);
+  assert.match(await card.locator('.machine-card-primary').textContent(), /1\/10级.*完整库存 9只.*碎片 27/);
+  await card.locator('[data-machine-action="edit-progress"]').click();
+  await card.locator('[data-edit-field="fragments"]').fill('999');
+  await card.locator('[data-machine-action="cancel-progress"]').click();
+  assert.equal(await getAccountItem(page, 'qinshi_machine_beasts_progress_v1'), raw);
+  await card.locator('[data-machine-action="edit-progress"]').click();
+  await card.locator('[data-edit-field="fragments"]').fill('1000000000000000');
+  await card.locator('[data-edit-inventory][data-mod="none"][data-rank="0"]').fill('1000000000000000');
+  await card.locator('[data-machine-action="save-progress"]').click();
+  assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth), true);
+}, 320));
+test('round2: quality and rank quick lookup reads actual DATA and keeps full matrix intact', async () => scenario(async page => {
+  const before = await getAccountItem(page, 'qinshi_machine_beasts_progress_v1');
+  await page.locator('[data-machine-beast-mode="reference"]').click();
+  const matrixRows = await page.locator('.machine-research-matrix-scroll tbody tr').count();
+  await page.locator('[data-research-quality]').selectOption('orange');
+  await page.locator('[data-research-rank]').selectOption('7');
+  const expected = await page.evaluate(() => window.MACHINE_BEAST_DATA.modifications.map(m => [m.name,window.MACHINE_BEAST_DATA.researchValues.orange[7][m.id]]));
+  for (const [name, value] of expected) assert.match(await page.locator('[data-research-quick-result]').textContent(), new RegExp(name + '[\\s\\S]*' + value.toLocaleString('zh-CN')));
+  assert.equal(await page.locator('.machine-research-matrix-scroll tbody tr').count(), matrixRows);
+  assert.equal(await getAccountItem(page, 'qinshi_machine_beasts_progress_v1'), before);
+  for (const quality of ['orange','purple','blue']) {
+    await page.locator('[data-research-quality]').selectOption(quality);
+    const ranks = await page.evaluate(q => Object.keys(window.MACHINE_BEAST_DATA.researchValues[q]), quality);
+    assert.deepEqual(await page.locator('[data-research-rank] option').evaluateAll(nodes => nodes.map(n => n.value)), ranks);
+    for (const rank of ranks) {
+      await page.locator('[data-research-rank]').selectOption(rank);
+      const expected = await page.evaluate(({quality,rank}) => Object.values(window.MACHINE_BEAST_DATA.researchValues[quality][rank]).map(v => v == null ? '—' : v.toLocaleString('zh-CN')), {quality,rank});
+      assert.deepEqual(await page.locator('[data-research-quick-result] dd').allTextContents(), expected);
+    }
+  }
+  const saved = await page.evaluate(() => window.MACHINE_BEAST_UI.captureView());
+  await page.locator('[data-research-quality]').selectOption('orange');
+  await page.evaluate(view => window.MACHINE_BEAST_UI.restoreView(view), saved);
+  assert.equal(await page.locator('[data-research-quality]').inputValue(), 'blue');
+  assert.equal(await page.locator('[data-research-rank]').inputValue(), '2');
+  assert.equal(await getAccountItem(page, 'qinshi_machine_beasts_progress_v1'), before);
 }));
 test('school actions scroll away instead of overlapping research and inventory fields', async () => scenario(async page => {
   await page.locator('[data-machine-calculator-mode="school"]').click();

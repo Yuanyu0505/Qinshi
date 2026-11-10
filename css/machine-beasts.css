@@ -144,11 +144,14 @@
 #partition-machine-beasts .machine-quality-orange .machine-quality-badge,
 #partition-machine-beasts .machine-name-token.machine-quality-orange { background: #c76518; border-color: #ff963d; }
 
-#partition-machine-beasts .machine-beast-summary { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 10px; }
+#partition-machine-beasts .machine-card-primary { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 18px; margin-top: 12px; font-variant-numeric: tabular-nums; }
+#partition-machine-beasts .machine-card-primary > b { color: var(--gold); font-size: 20px; }
+#partition-machine-beasts .machine-card-primary > span { max-width: 100%; overflow-wrap: anywhere; }
+#partition-machine-beasts .machine-beast-summary { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; margin-top: 10px; }
 
 #partition-machine-beasts .machine-beast-summary > div { display: grid; gap: 2px; min-width: 0; padding: 8px 9px; background: rgba(34, 29, 22, .8); border: 1px solid var(--line); border-radius: 7px; }
 
-#partition-machine-beasts .machine-beast-summary span { color: var(--muted); font-size: 12px; }
+#partition-machine-beasts .machine-beast-summary span { color: var(--muted); font-size: 14px; }
 
 #partition-machine-beasts .machine-beast-summary b { min-width: 0; overflow-wrap: anywhere; }
 
@@ -301,11 +304,12 @@
 
 #partition-machine-beasts .machine-new-rank-mode input { width: auto; min-height: 0; margin: 0; accent-color: var(--red); }
 
-#partition-machine-beasts .machine-school-beast-controls { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--mb-card-min)), 1fr)); gap: var(--mb-gap); margin-top: 12px; }
+#partition-machine-beasts .machine-school-beast-controls { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, var(--mb-card-min)), 1fr)); align-items: start; gap: var(--mb-gap); margin-top: 12px; }
 
 #partition-machine-beasts .machine-school-beast-control { min-width: 0; padding: 10px; background: rgba(25, 22, 17, .72); border: 1px solid var(--line); border-left: 3px solid var(--gold-dim); border-radius: 8px; }
 
-#partition-machine-beasts .machine-school-beast-control.is-excluded { opacity: .62; }
+#partition-machine-beasts .machine-school-beast-control.is-excluded { border-style: dashed; background: var(--bg2); }
+#partition-machine-beasts .machine-excluded-summary { color: var(--muted); margin: 10px 0; line-height: 1.6; }
 
 #partition-machine-beasts .machine-school-beast-control header { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 
@@ -585,10 +589,28 @@
 #partition-machine-beasts .machine-reference-cost-settings > summary small { display: block; padding-left: 16px; margin-top: 4px; color: var(--muted); font-size: 14px; font-weight: 400; }
 #partition-machine-beasts .machine-school-mobile-summaries { display: none; }
 #partition-machine-beasts .machine-plan-difference { margin-block: 12px; padding: 10px; background: var(--bg2); border-left: 3px solid var(--gold); overflow-wrap: anywhere; }
+#partition-machine-beasts .machine-beast-differences { margin-block: 12px; padding: 12px; background: var(--bg2); border: 1px solid var(--line); border-radius: 8px; }
+#partition-machine-beasts .machine-beast-differences h3 { color: var(--gold); font-size: 16px; }
+#partition-machine-beasts .machine-beast-differences ul { margin: 10px 0 0; padding: 0; list-style: none; }
+#partition-machine-beasts .machine-beast-differences li { display: flex; flex-wrap: wrap; gap: 4px 16px; padding-block: 8px; border-top: 1px solid var(--line); overflow-wrap: anywhere; }
+#partition-machine-beasts .machine-material-summary,
+#partition-machine-beasts .machine-final-effect { line-height: 1.7; overflow-wrap: anywhere; }
 #partition-machine-beasts .machine-exact-target { color: var(--gold); }
 #partition-machine-beasts .machine-school-plan-beasts { grid-template-columns: repeat(auto-fit, minmax(min(100%, 360px), 1fr)); }
-#partition-machine-beasts .machine-reference-index { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+#partition-machine-beasts .machine-reference-index { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 250px), 1fr)); gap: 12px; margin-bottom: 12px; }
+#partition-machine-beasts .machine-reference-index-group { padding: 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); }
+#partition-machine-beasts .machine-reference-index-group > b { display: block; margin-bottom: 8px; color: var(--gold-dim); font-size: 14px; }
+#partition-machine-beasts .machine-reference-index-group > div { display: flex; flex-wrap: wrap; gap: 8px; }
 #partition-machine-beasts .machine-reference-index a { display: inline-flex; min-height: 44px; align-items: center; padding: 8px 12px; border: 1px solid var(--line); border-radius: 8px; color: var(--gold); text-decoration: none; }
+#partition-machine-beasts .machine-research-quick { margin-block: 14px 20px; padding: 12px; background: var(--bg2); border: 1px solid var(--line); border-radius: 8px; }
+#partition-machine-beasts .machine-research-quick h3 { color: var(--gold); font-size: 16px; }
+#partition-machine-beasts .machine-research-quick-controls { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-block: 12px; }
+#partition-machine-beasts .machine-research-quick-controls label { display: grid; gap: 6px; }
+#partition-machine-beasts .machine-research-quick-controls select { width: 100%; min-width: 0; }
+#partition-machine-beasts .machine-research-quick-values { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 110px), 1fr)); gap: 8px; margin: 0; }
+#partition-machine-beasts .machine-research-quick-values > div { display: grid; gap: 5px; padding: 10px; border: 1px solid var(--line); border-radius: 6px; }
+#partition-machine-beasts .machine-research-quick-values dt { color: var(--muted); }
+#partition-machine-beasts .machine-research-quick-values dd { margin: 0; color: var(--gold); font-variant-numeric: tabular-nums; font-weight: 700; }
 #partition-machine-beasts .machine-reference-return { margin-bottom: 8px; }
 #partition-machine-beasts .machine-reference-mobile-only { display: none; }
 #partition-machine-beasts .machine-threshold-groups { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 210px), 1fr)); gap: 12px; }
@@ -603,6 +625,11 @@
 #partition-machine-beasts .machine-research-matrix-scroll caption { text-align: left; margin-bottom: 8px; }
 
 /* Container width accounts for the application's desktop/tablet side navigation. */
+@container machine-beasts (min-width: 641px) {
+  #partition-machine-beasts .machine-beast-summary { grid-template-columns: minmax(90px, .3fr) minmax(0, 1fr); }
+  #partition-machine-beasts .machine-active-effect { grid-column: auto; }
+}
+
 @container machine-beasts (max-width: 640px) {
   #partition-machine-beasts .machine-search-bar { grid-template-columns: minmax(0, 1fr); }
   #partition-machine-beasts .machine-editor-grid,

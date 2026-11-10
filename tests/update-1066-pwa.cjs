@@ -24,7 +24,9 @@ const NEW_ASSETS = [
   'data/2026-10-inscription-update.js', 'js/inscription-progress-rules.js',
   'js/inscription-route-favorites.js', 'js/inscription-flow-model.js',
   'css/inscription-reference.css', 'js/inscription-reference.js', 'js/inscription-reverse.js',
-  'css/pilots.css', 'data/pilots.js', 'js/pilots.js', 'js/pilots-ui.js'
+  'css/pilots.css', 'data/pilots.js', 'js/pilots.js', 'js/pilots-ui.js',
+  'css/machine-beasts.css', 'data/machine-beasts.js', 'js/machine-beasts.js',
+  'js/machine-beast-school-planner.js', 'js/machine-beasts-ui.js'
 ];
 let artifacts;
 
@@ -173,6 +175,13 @@ async function offlineFeatures(page, beforeCount) {
   assert.ok(await page.locator('#formation-search-results [data-formation-id]').count());
   await page.locator('#formation-search-results [data-formation-id]').first().click();
   await page.locator('#formation-workspace').waitFor({ state: 'visible' });
+  await enter(page, 'machine-beasts');
+  await page.locator('[data-machine-beast-mode="reference"]').click();
+  await page.locator('[data-research-quality]').selectOption('orange');
+  await page.locator('[data-research-rank]').selectOption('7');
+  assert.deepEqual(await page.locator('[data-research-quick-result] dd').allTextContents(),
+    await page.evaluate(() => MACHINE_BEAST_DATA.modifications.map(mod => MACHINE_BEAST_DATA.researchValues.orange[7][mod.id].toLocaleString('zh-CN'))));
+  assert.equal(await page.locator('.machine-reference-index a').count(), 7);
   return page.evaluate(key => window.QinshiAccounts.getItem(key), FAVORITES);
 }
 

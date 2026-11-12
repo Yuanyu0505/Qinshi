@@ -12,6 +12,7 @@
   var COMMON_STORE_KEY = "qinshi_inscription_common_v1";
   var commonKeys = new Set();
   var commonDefaultApplied = false;
+  var leibaoDefaultApplied = false;
   var formationNames = new Set();
   var MAIN_ORDER = {
     "天府": ["攻", "防"], "天相": ["内力", "攻"], "天同": ["血", "内力"],
@@ -155,7 +156,7 @@
   }
   function saveCommonDisciples(keys) {
     try {
-      if (ACCOUNT_STORAGE.setItem(COMMON_STORE_KEY, JSON.stringify({ version: 1, keys: Array.from(keys), gaoyueDefaultApplied: commonDefaultApplied })) === false) throw new Error('Common disciples were not saved');
+      if (ACCOUNT_STORAGE.setItem(COMMON_STORE_KEY, JSON.stringify({ version: 1, keys: Array.from(keys), gaoyueDefaultApplied: commonDefaultApplied, leibaoDefaultApplied: leibaoDefaultApplied })) === false) throw new Error('Common disciples were not saved');
       commonStatus("");
       return true;
     } catch (error) {
@@ -164,6 +165,7 @@
     }
   }
   function loadCommonDisciples() {
+    leibaoDefaultApplied = false;
     try {
       var raw = ACCOUNT_STORAGE.getItem(COMMON_STORE_KEY);
       if (raw === null) {
@@ -171,16 +173,20 @@
         commonDefaultApplied = true;
         var gaoyue = DATA.items.find(function(item){return item.name === '神千泷高月' && item.quality === '红色神将';});
         if (gaoyue) commonKeys.add(keyOf(gaoyue));
-        if (!saveCommonDisciples(commonKeys)) { commonKeys = new Set(); commonDefaultApplied = false; }
+        var leibao = DATA.items.find(function(item){return item.name === '雷豹英布' && item.quality === '普通橙色';});
+        if (leibao) { commonKeys.add(keyOf(leibao)); leibaoDefaultApplied = true; }
+        if (!saveCommonDisciples(commonKeys)) { commonKeys = new Set(); commonDefaultApplied = false; leibaoDefaultApplied = false; }
         return;
       }
       var stored = JSON.parse(raw);
       if (!stored || stored.version !== 1 || !Array.isArray(stored.keys)) throw new Error("Invalid common disciples");
       if (!stored.keys.every(function(key){return typeof key === 'string' && itemByKey(key);}) ||
-          (Object.prototype.hasOwnProperty.call(stored,'gaoyueDefaultApplied') && typeof stored.gaoyueDefaultApplied !== 'boolean')) throw new Error('Invalid common disciples migration data');
+          (Object.prototype.hasOwnProperty.call(stored,'gaoyueDefaultApplied') && typeof stored.gaoyueDefaultApplied !== 'boolean') ||
+          (Object.prototype.hasOwnProperty.call(stored,'leibaoDefaultApplied') && typeof stored.leibaoDefaultApplied !== 'boolean')) throw new Error('Invalid common disciples migration data');
       // 已保存的空名单同样有效，不再补回初始名单。
       commonKeys = new Set(stored.keys.filter(function (key) { return typeof key === "string" && itemByKey(key); }));
       commonDefaultApplied = stored.gaoyueDefaultApplied === true;
+      leibaoDefaultApplied = stored.leibaoDefaultApplied === true;
       if (!commonDefaultApplied) {
         var updated = new Set(commonKeys);
         var gaoyue = DATA.items.find(function(item){return item.name === '神千泷高月' && item.quality === '红色神将';});
@@ -188,6 +194,16 @@
         commonDefaultApplied = true;
         if (saveCommonDisciples(updated)) commonKeys = updated;
         else commonDefaultApplied = false;
+      }
+      if (!leibaoDefaultApplied) {
+        var leibao = DATA.items.find(function(item){return item.name === '雷豹英布' && item.quality === '普通橙色';});
+        if (leibao) {
+          var updated = new Set(commonKeys);
+          updated.add(keyOf(leibao));
+          leibaoDefaultApplied = true;
+          if (saveCommonDisciples(updated)) commonKeys = updated;
+          else leibaoDefaultApplied = false;
+        }
       }
     } catch (error) {
       commonKeys = new Set();

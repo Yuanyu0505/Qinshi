@@ -8,6 +8,7 @@
   function metric(kind,value){return '<span data-realm-metric="'+kind+'"'+(['voucher','cash','balance','period-draws'].includes(kind)?' class="realm-price"':'')+'>'+value+'</span>';}
   function isPack(source){return /^pack\d+$/.test(source.id);}
   function copy(v){return JSON.parse(JSON.stringify(v));}
+  function realmIds(c){return c.data.realms.filter(function(r){return !r.retired&&Object.prototype.hasOwnProperty.call(c.state.realms,r.id);}).map(function(r){return r.id;});}
   function currencyName(c){var d=c.data.realms.find(function(r){return r.id===c.realmId;});return d?d.currencyName:'兑换道具';}
   function goals(c){return Object.assign({},c.state.realms[c.realmId],c.drafts[c.realmId]||{});}
   function collectGoals(c,form){var r=c.state.realms[c.realmId],targetEnabled=get(form,'targetEnabled').checked,currencyTargetEnabled=get(form,'currencyTargetEnabled').checked;return {targetEnabled:targetEnabled,currencyTargetEnabled:currencyTargetEnabled,target:targetEnabled?inputNumber(get(form,'target').value):r.target,currencyTarget:currencyTargetEnabled?inputNumber(get(form,'currencyTarget').value):r.currencyTarget,drawMode:get(form,'drawMode').value};}
@@ -29,7 +30,7 @@
     pause(c);var nextAccount=accountId(c);if(nextAccount!==c.account){c.drafts={};c.results={};}c.account=nextAccount;c.accessWritable=!readonly(c);c.readError=false;
     try{var saved=read(c),next=c.core.advance(saved,Date.now(),c.data);if(JSON.stringify(next)!==JSON.stringify(saved)&&!readonly(c))write(c,next);c.state=next;c.error='';}
     catch(e){c.results={};c.result=null;c.readError=true;c.state=c.core.createDefault(c.data);c.error='秘境数据读取或状态保存失败，原存储未被覆盖，已暂停编辑和计算。请恢复备份或重新读取。'+e.message;}
-    var ids=Object.keys(c.state.realms);if(ids.indexOf(c.realmId)===-1)c.realmId=ids[0]||null;
+    var ids=realmIds(c);if(ids.indexOf(c.realmId)===-1)c.realmId=ids[0]||null;
     var realm=c.state.realms[c.realmId];if(realm&&(c.period<realm.currentPeriod||c.period>6))c.period=realm.currentPeriod;
   }
   function commit(c,fn,quiet){
@@ -39,7 +40,7 @@
       if(readonly(c))throw Error('当前账号为只读状态，不能保存修改。');
       var fresh=c.core.advance(read(c),Date.now(),c.data),next=fn(fresh);
       if(JSON.stringify(next)!==JSON.stringify(fresh)){write(c,next);pause(c);}c.state=next;c.error='';
-      if(!next.realms[c.realmId])c.realmId=Object.keys(next.realms)[0]||null;
+      if(realmIds(c).indexOf(c.realmId)===-1)c.realmId=realmIds(c)[0]||null;
       if(c.realmId)c.period=Math.max(c.period,next.realms[c.realmId].currentPeriod);
       if(quiet){restoreResult(c);renderResults(c);showError(c,'');var saved=c.host.querySelector('[data-realm-save-status]');if(saved)saved.textContent='已自动保存';}else render(c);return true;
     }catch(e){showError(c,e);return false;}
@@ -109,7 +110,7 @@
   function render(c){
     restoreResult(c);
     var state=c.state,realm=state.realms[c.realmId],disabled=readonly(c)||c.readError;
-    var html='<div class="realm-toolbar"><div class="segs realm-switches" aria-label="当前秘境">'+Object.keys(state.realms).map(function(id){var definition=c.data.realms.find(function(d){return d.id===id;});return '<button type="button" class="seg'+(c.realmId===id?' active':'')+'" data-realm-id="'+esc(id)+'" aria-pressed="'+(c.realmId===id)+'">'+esc(definition?definition.name:id)+'</button>';}).join('')+'</div><button type="button" class="seg" data-realm-action="reload">重新读取</button></div><div class="segs realm-modes">'+[['progress','个人进度'],['planner','目标规划'],['reference','资料参考']].map(function(m){return '<button type="button" class="seg'+(c.mode===m[0]?' active':'')+'" data-realm-mode="'+m[0]+'">'+m[1]+'</button>';}).join('')+'</div><p data-realm-error class="error" role="alert"'+(c.error?'':' hidden')+'>'+esc(c.error)+'</p>'+(readonly(c)?'<p role="status">当前账号只读，可查看及临时计算，不能保存修改。</p>':'');
+    var html='<div class="realm-toolbar"><div class="segs realm-switches" aria-label="当前秘境">'+realmIds(c).map(function(id){var definition=c.data.realms.find(function(d){return d.id===id;});return '<button type="button" class="seg'+(c.realmId===id?' active':'')+'" data-realm-id="'+esc(id)+'" aria-pressed="'+(c.realmId===id)+'">'+esc(definition?definition.name:id)+'</button>';}).join('')+'</div><button type="button" class="seg" data-realm-action="reload">重新读取</button></div><div class="segs realm-modes">'+[['progress','个人进度'],['planner','目标规划'],['reference','资料参考']].map(function(m){return '<button type="button" class="seg'+(c.mode===m[0]?' active':'')+'" data-realm-mode="'+m[0]+'">'+m[1]+'</button>';}).join('')+'</div><p data-realm-error class="error" role="alert"'+(c.error?'':' hidden')+'>'+esc(c.error)+'</p>'+(readonly(c)?'<p role="status">当前账号只读，可查看及临时计算，不能保存修改。</p>':'');
     if(c.mode==='reference')html+=referenceMarkup(c);
     else if(!realm)html+='<p>当前账号已无秘境记录。删除的秘境不会自动恢复；共用平台和代金设置仍保留。</p>'+settingsMarkup(c)+platformDeleteMarkup(c);
     else{
@@ -179,7 +180,7 @@
         var expand=!periods.every(function(period){return period.open;});
         periods.forEach(function(period){period.open=expand;});syncPeriodToggle(plan);
       }
-      else if(b.dataset.realmId){pause(c);c.realmId=b.dataset.realmId;c.period=c.state.realms[c.realmId].currentPeriod;render(c);}
+      else if(b.dataset.realmId){if(realmIds(c).indexOf(b.dataset.realmId)===-1)return;pause(c);c.realmId=b.dataset.realmId;c.period=c.state.realms[c.realmId].currentPeriod;render(c);}
       else if(b.dataset.realmDeletePlatform&&c.root.confirm('确认删除此自定义平台？若正在使用，将切换为直充无折扣；秘境进度和代金不变。'))commit(c,function(s){return c.core.deletePlatform(s,b.dataset.realmDeletePlatform,c.data);});
       else if(b.dataset.realmMode){pause(c);c.mode=b.dataset.realmMode;render(c);}
       else if(b.dataset.realmPeriod){pause(c);c.period=Number(b.dataset.realmPeriod);render(c);}

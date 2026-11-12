@@ -52,7 +52,8 @@
     quiz: "答题",
     loulan: "楼兰棋阵",
     zhulu: "逐鹿",
-    settings: "设置"
+    settings: "设置",
+    "other-reference": "其他资料"
   };
 
   const state = {
@@ -1105,7 +1106,7 @@
     const mobileMoreLayer = document.getElementById("mobile-more-layer");
     const mobileMoreClose = document.getElementById("mobile-more-close");
     const appShell = document.querySelector(".app-shell");
-    const secondaryPartitions = ["forbidden", "secret-realm", "inscription", "machine-beasts", "pilots", "tactics", "battle-box-pill-pouch", "wooden-man-alley", "formations", "six-halls", "loulan", "zhulu", "quiz", "settings"];
+    const secondaryPartitions = ["forbidden", "secret-realm", "inscription", "machine-beasts", "pilots", "tactics", "battle-box-pill-pouch", "wooden-man-alley", "formations", "six-halls", "loulan", "zhulu", "quiz", "settings", "other-reference"];
     const partitionScrollPositions = Object.create(null);
     let activePartition = "atlas";
     let mobileMoreRestoreTarget = null;
@@ -1134,7 +1135,8 @@
       "six-halls": document.getElementById("partition-six-halls"),
       "secret-realm": document.getElementById("partition-secret-realm"),
       zhulu: document.getElementById("partition-zhulu"),
-      settings: document.getElementById("partition-settings")
+      settings: document.getElementById("partition-settings"),
+      "other-reference": document.getElementById("partition-other-reference")
     };
 
     function mobileMoreFocusable() {

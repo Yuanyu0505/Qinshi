@@ -75,3 +75,8 @@ test("every core precache URL exists and is included in the Pages artifact", () 
   const copies = pageCopies();
   assert.deepEqual(precacheAssets().filter(asset => !fs.existsSync(path.join(ROOT, asset)) || !isPublished(asset, copies)), []);
 });
+test("Pages publishes every supplied other-reference image without moving its source path", () => {
+  const copies = pageCopies();
+  const data = require('../data/other-reference-data.js');
+  assert.deepEqual(data.images.map(image => 'assets/other-reference/sources/' + image.path).filter(asset => !isPublished(asset, copies)), []);
+});

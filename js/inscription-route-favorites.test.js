@@ -87,6 +87,21 @@ test('stale tab revisions and concurrent writes never replace another saved coll
   await assert.rejects(second,/其他页面更新/);
   assert.equal(f.storage.getItem(Favorites.KEY),current);assert.equal(f.store.inspect().entries.length,1);
 });
+test('a rejected write releases any available native lock and later saves can recover',{timeout:2000},async()=>{
+  const f=fixture(),input=speedRoute();
+  await toggle(f,input);
+  const before=f.storage.getItem(Favorites.KEY);
+  f.fail('false');
+  await assert.rejects(toggle(f,input),/拒绝/);
+  assert.equal(f.storage.getItem(Favorites.KEY),before);
+  if(typeof navigator!=='undefined'&&navigator.locks){
+    const snapshot=await navigator.locks.query();
+    assert.equal(snapshot.held.filter(lock=>lock.name===Favorites.KEY+':one').length,0,'failed write must release the account lock');
+  }
+  f.fail('');
+  const saved=await toggle(f,input);
+  assert.deepEqual(saved.entries,[]);
+});
 
 test('write rejection, quota and read-only ownership leave saved bytes unchanged',async()=>{
   for(const mode of ['false','throw','readonly']){

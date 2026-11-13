@@ -20,6 +20,9 @@ async function openPaths(page){
 }
 async function generate(section){
   await section.locator('[data-craft-action="generate"]').click();
+  // Existing cards remain visible while the zero-delay generation task is pending.
+  // Wait for its completion signal before querying the replacement DOM.
+  await section.locator('[data-craft-status]').waitFor({state:'hidden'});
   await section.locator('.craft-strategy').first().waitFor();
 }
 async function setup(width){
@@ -60,9 +63,16 @@ for(const width of [320,390,768,1024])test(`grouped variants switch one complete
     assert.notEqual(await card.locator('svg desc').textContent(),before);
     assert.equal(await card.locator('svg desc').textContent(),expected);
     assert.equal(await card.locator('[data-flow-viewer]').count(),1);
-    await card.locator('summary>span').click();await card.locator('summary>span').click();
+    assert.equal(await card.evaluate(el=>el.open),true);
+    await card.locator('summary>span').click();
+    assert.equal(await card.evaluate(el=>el.open),false);
+    await select.waitFor({state:'hidden'});
+    await card.locator('summary>span').click();
+    assert.equal(await card.evaluate(el=>el.open),true);
+    await select.waitFor({state:'visible'});
     assert.equal(await select.inputValue(),'3');
     await generate(section);
+    assert.equal(await chance.first().evaluate(el=>el.open),true);
     assert.equal(await chance.first().locator('[data-route-variant]').inputValue(),'3');
     assert.equal(await chance.first().locator('svg desc').textContent(),expected);
     const box=await select.boundingBox();assert.ok(box.width>80&&box.height>=40&&box.x>=0&&box.x+box.width<=width);

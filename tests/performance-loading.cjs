@@ -231,6 +231,10 @@ test('installed core demand-loads modules and executes real calculation workers 
     await page.locator('[data-calc-target]').selectOption('1');
     await page.evaluate(() => { window.MACHINE_BEAST_CORE.calculateInvestmentPlan = () => { throw Error('Main-thread fallback is not allowed by this offline-worker regression'); }; });
     await page.locator('[data-machine-action="calculate"]').click();
+    await page.waitForFunction(() => window.MACHINE_BEAST_UI.captureView().calcResult?.valid === true);
+    const costDetails = page.locator('details[data-detail-key="result:single:war-demon:1:cost"]');
+    assert.equal(await costDetails.evaluate(node => node.open), false);
+    await costDetails.locator('summary').click();
     await page.locator('[data-reference-cost-panel="single"]').waitFor();
     assert.equal(await page.evaluate(() => window.MACHINE_BEAST_UI.captureView().calcResult.valid), true);
   } catch (error) {

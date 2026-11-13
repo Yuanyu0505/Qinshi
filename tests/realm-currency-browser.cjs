@@ -18,8 +18,8 @@ test('budget label and amount stay together without redundant rounding totals',a
  }finally{await context.close();}
 });
 
-test('realm switches are prominent pressed buttons and retain independent current periods',async()=>{
-  const {context,page}=await open();try{const buttons=page.locator('[data-realm-id]');assert.equal(await buttons.count(),2);assert.equal(await page.locator('#secret-realm-select').count(),0);
+test('active realm is a prominent pressed button with Gaoyue period two and no retired entry',async()=>{
+  const {context,page}=await open();try{const buttons=page.locator('[data-realm-id]');assert.equal(await buttons.count(),1);assert.equal(await page.locator('[data-realm-id=guigu]').count(),0);assert.equal(await page.locator('#secret-realm-select').count(),0);
     await page.locator('[data-realm-id=gaoyue]').click();assert.equal(await page.locator('[data-realm-id=gaoyue]').getAttribute('aria-pressed'),'true');assert.match(await page.locator('[data-realm-status]').innerText(),/第2期/);
     const box=await page.locator('[data-realm-id=gaoyue]').boundingBox();assert.ok(box.height>=48);
   }finally{await context.close();}
@@ -27,12 +27,21 @@ test('realm switches are prominent pressed buttons and retain independent curren
 
 test('currency-only goal and overflow mode calculate on worker and merge identical plans',async()=>{
   const {context,page}=await open();try{
+    // Restrict this merge regression to the last active Gaoyue period. With
+    // periods 2..6 available, fastest and cheapest can legitimately differ.
+    await page.evaluate(()=>{
+      const state=window.SECRET_REALM_CORE.createDefault(window.SECRET_REALM_DATA);
+      state.realms.gaoyue.currentPeriod=6;
+      for(let n=1;n<6;n++)state.realms.gaoyue.periods[n]={startDate:null,locked:true,ended:true,sources:{}};
+      window.QinshiAccounts.setItem('qinshi_secret_realms_v1',JSON.stringify(state));
+    });
+    await page.locator('[data-realm-action=reload]').click();
     await page.locator('[data-realm-mode=planner]').click();await page.locator('[data-realm-action=none]').click();await page.locator('[data-realm-enable=pack98]').check();
     await page.locator('[name=targetEnabled]').uncheck();await page.locator('[name=currencyTargetEnabled]').check();await page.locator('[name=currencyTarget]').fill('40');await result(page);
     assert.equal(await page.locator('.realm-plan').count(),1);assert.match(await page.locator('.realm-plan').innerText(),/最快.*最省钱/);
-    const first=await page.locator('.realm-plan').innerText();assert.match(first,/实际计划抽取\s*25/);assert.match(first,/剩余.*5/);assert.match(first,/预计.*剑玦.*40/);
-    await page.locator('[name=drawMode]').selectOption('all');await result(page);assert.match(await page.locator('.realm-plan').innerText(),/实际计划抽取\s*30/);assert.match(await page.locator('.realm-plan').innerText(),/预计.*剑玦.*45/);
-    const state=await page.evaluate(()=>JSON.parse(window.QinshiAccounts.getItem('qinshi_secret_realms_v1')));assert.equal(state.realms.guigu.currency,0);assert.equal(state.realms.guigu.periods[6].sources.pack98.purchased,0);
+    const first=await page.locator('.realm-plan').innerText();assert.match(first,/实际计划抽取\s*25/);assert.match(first,/剩余.*5/);assert.match(first,/预计.*月石.*40/);
+    await page.locator('[name=drawMode]').selectOption('all');await result(page);assert.equal(await page.locator('.realm-plan').count(),1);assert.match(await page.locator('.realm-plan').innerText(),/实际计划抽取\s*30/);assert.match(await page.locator('.realm-plan').innerText(),/预计.*月石.*45/);
+    const state=await page.evaluate(()=>JSON.parse(window.QinshiAccounts.getItem('qinshi_secret_realms_v1')));assert.equal(state.realms.gaoyue.currency,0);assert.equal(state.realms.gaoyue.periods[6].sources.pack98.purchased,0);assert.equal(state.realms.guigu.currency,0);
   }finally{await context.close();}
 });
 
@@ -49,7 +58,10 @@ test('six yuan fixed purchase UI has no independent claim inputs and stores thre
     const today=await page.evaluate(()=>new Date(Date.now()+28800000).toISOString().slice(0,10));await page.locator('[name=startDate]').fill(today);await page.locator('[data-realm-form=date] [type=submit]').click();
     const s=page.locator('[data-realm-source=pack6]');assert.equal(await s.locator('[name=obtained]').count(),0);assert.equal(await s.locator('[name=todayObtained]').count(),0);
     await s.locator('[name=purchased]').fill('1');assert.equal(await s.locator('[name=todayPurchased]').count(),0);
-    assert.equal(await page.evaluate(()=>JSON.parse(window.QinshiAccounts.getItem('qinshi_secret_realms_v1')).realms.guigu.periods[6].sources.pack6.obtained),3);
+    const state=await page.evaluate(()=>JSON.parse(window.QinshiAccounts.getItem('qinshi_secret_realms_v1')));
+    assert.equal(state.realms.gaoyue.periods[2].sources.pack6.obtained,3);
+    assert.equal(state.realms.gaoyue.periods[2].sources.pack6.purchased,1);
+    assert.equal(state.realms.guigu.periods[6].sources.pack6.obtained,0);
   }finally{await context.close();}
 });
 
@@ -90,20 +102,38 @@ test('inscription default migration preserves malformed and unknown common keys 
 test('existing and future account common defaults are isolated and preserve other common disciples',async()=>{
   const {context,page}=await open(1440);try{
     await page.evaluate(()=>window.QinshiAccounts.setItem('qinshi_inscription_common_v1',JSON.stringify({version:1,keys:['红色神将\u0000神东皇太一']})));await page.reload();
-    const first=await page.evaluate(()=>({id:window.QinshiAccounts.currentAccount().id,list:JSON.parse(window.QinshiAccounts.getItem('qinshi_inscription_common_v1'))}));assert.deepEqual(first.list.keys,['红色神将\u0000神东皇太一','红色神将\u0000神千泷高月']);
+    const first=await page.evaluate(()=>({id:window.QinshiAccounts.currentAccount().id,list:JSON.parse(window.QinshiAccounts.getItem('qinshi_inscription_common_v1'))}));assert.deepEqual(first.list,{version:1,keys:['红色神将\u0000神东皇太一','红色神将\u0000神千泷高月','普通橙色\u0000雷豹英布'],gaoyueDefaultApplied:true,leibaoDefaultApplied:true});
     const second=await page.evaluate(()=>window.QinshiAccounts.createAccount({name:'新铭文账号',server:'测试服'}).id);await Promise.all([page.waitForNavigation({waitUntil:'networkidle'}),page.evaluate(id=>window.QinshiAccounts.switchAccount(id,{partition:'inscription'}),second)]);
-    assert.deepEqual(await page.evaluate(()=>JSON.parse(window.QinshiAccounts.getItem('qinshi_inscription_common_v1')).keys),['红色神将\u0000神千泷高月']);
-    await Promise.all([page.waitForNavigation({waitUntil:'networkidle'}),page.evaluate(id=>window.QinshiAccounts.switchAccount(id,{partition:'inscription'}),first.id)]);assert.deepEqual(await page.evaluate(()=>JSON.parse(window.QinshiAccounts.getItem('qinshi_inscription_common_v1')).keys),first.list.keys);
+    assert.deepEqual(await page.evaluate(()=>JSON.parse(window.QinshiAccounts.getItem('qinshi_inscription_common_v1'))),{version:1,keys:['红色神将\u0000神千泷高月','普通橙色\u0000雷豹英布'],gaoyueDefaultApplied:true,leibaoDefaultApplied:true});
+    await Promise.all([page.waitForNavigation({waitUntil:'networkidle'}),page.evaluate(id=>window.QinshiAccounts.switchAccount(id,{partition:'inscription'}),first.id)]);assert.deepEqual(await page.evaluate(()=>JSON.parse(window.QinshiAccounts.getItem('qinshi_inscription_common_v1'))),first.list);
   }finally{await context.close();}
 });
 
-test('currency balance and independent source receipts persist per realm without crediting predictions',async()=>{
+test('Gaoyue currency and independent period receipts survive navigation reload and backup without crediting predictions or changing retired data',async()=>{
   const {context,page}=await open();try{
+    const retired=await page.evaluate(()=>{
+      const state=window.SECRET_REALM_CORE.createDefault(window.SECRET_REALM_DATA);
+      Object.assign(state.realms.guigu,{currency:123,cumulative:777,inventory:9});
+      window.QinshiAccounts.setItem('qinshi_secret_realms_v1',JSON.stringify(state));return state.realms.guigu;
+    });
+    await page.locator('[data-realm-action=reload]').click();
     await page.locator('[name=currency]').fill('80');
     const today=await page.evaluate(()=>new Date(Date.now()+28800000).toISOString().slice(0,10));await page.locator('[name=startDate]').fill(today);await page.locator('[data-realm-form=date] [type=submit]').click();
     const source=page.locator('[data-realm-source=panda]');await source.locator('[name=currencyObtained]').fill('20');
     await page.locator('[data-realm-mode=planner]').click();await page.locator('[name=targetEnabled]').uncheck();await page.locator('[name=currencyTargetEnabled]').check();await page.locator('[name=currencyTarget]').fill('100');await result(page);
     await page.locator('[data-realm-mode=progress]').click();assert.equal(await page.locator('[name=currency]').inputValue(),'80');assert.equal(await page.locator('[data-realm-source=panda] [name=currencyObtained]').inputValue(),'20');
-    await page.locator('[data-realm-id=gaoyue]').click();assert.equal(await page.locator('[name=currency]').inputValue(),'0');await page.locator('[data-realm-id=guigu]').click();assert.equal(await page.locator('[name=currency]').inputValue(),'80');
+    await page.locator('[data-realm-period="3"]').click();assert.equal(await page.locator('[name=currency]').inputValue(),'80');assert.equal(await page.locator('[data-realm-source=panda] [name=currencyObtained]').inputValue(),'0');
+    await page.locator('[data-realm-period="2"]').click();assert.equal(await page.locator('[data-realm-source=panda] [name=currencyObtained]').inputValue(),'20');
+    await page.reload();await page.locator('#secret-realm-content').waitFor();
+    assert.equal(await page.locator('[name=currency]').inputValue(),'80');assert.equal(await page.locator('[data-realm-source=panda] [name=currencyObtained]').inputValue(),'20');
+    const backup=await page.evaluate(()=>{
+      const logical='qinshi_secret_realms_v1',payload=window.QinshiSettings.makePayload('test');window.QinshiSettings.validatePayload(payload);
+      const physical=Object.keys(payload.data).find(k=>k.endsWith(encodeURIComponent(logical)));
+      if(!physical)throw Error('Secret realm omitted from full device snapshot');
+      return {stored:JSON.parse(window.QinshiAccounts.getItem(logical)),exported:JSON.parse(payload.data[physical])};
+    });
+    assert.deepEqual(backup.exported,backup.stored);assert.deepEqual(backup.stored.realms.guigu,retired);
+    assert.equal(backup.stored.realms.gaoyue.currency,80);assert.equal(backup.stored.realms.gaoyue.periods[2].sources.panda.currencyObtained,20);assert.equal(backup.stored.realms.gaoyue.periods[3].sources.panda.currencyObtained,0);
+    assert.equal(await page.locator('[data-realm-id=guigu]').count(),0);
   }finally{await context.close();}
 });

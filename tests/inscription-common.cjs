@@ -8,6 +8,7 @@ let browser, server, url;
 const COMMON_KEY = 'qinshi_inscription_common_v1';
 const PROGRESS_KEY = 'qinshi_inscription_progress_v2';
 const key = name => '红色神将\u0000' + name;
+const LEIBAO_KEY = '普通橙色\u0000雷豹英布';
 before(async () => {
   server = createServer();
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
@@ -28,21 +29,60 @@ async function openQuery(page) {
   await page.evaluate(() => document.querySelector('.tab[data-partition="inscription"]').click());
   await page.locator('#inscription-modes [data-mode="query"]').click();
 }
-function commonButton(page, name) {
-  return page.locator('#ins-results [data-ins-common-key="' + encodeURIComponent(key(name)) + '"]');
+function commonButton(page, name, quality = '红色神将') {
+  return page.locator('#ins-results [data-ins-common-key="' + encodeURIComponent(quality + '\u0000' + name) + '"]');
 }
 
-test('首次只默认加入神千泷高月且默认红色品质，切换页签不覆盖品质筛选', async () => {
+test('首次默认加入神千泷高月与雷豹英布，默认红色且切换页签不覆盖品质筛选，取消雷豹后不补回', async () => {
   const page = await queryPage();
   try {
     assert.equal(await page.locator('#ins-quality').inputValue(), '红色神将');
     const stored = await getAccountJson(page, COMMON_KEY);
-    assert.deepEqual(stored.keys, [key('神千泷高月')]);
+    assert.deepEqual(stored, { version: 1, keys: [key('神千泷高月'), LEIBAO_KEY], gaoyueDefaultApplied: true, leibaoDefaultApplied: true });
     assert.equal(await page.locator('#ins-results .ins-quality.orange').count(), 0);
     await page.locator('#ins-quality').selectOption('普通橙色');
     await page.locator('#inscription-modes [data-mode="reference"]').click();
     await page.locator('#inscription-modes [data-mode="query"]').click();
     assert.equal(await page.locator('#ins-quality').inputValue(), '普通橙色');
+    const leibao = commonButton(page, '雷豹英布', '普通橙色');
+    assert.equal(await leibao.getAttribute('aria-pressed'), 'true');
+    const slots = leibao.locator('xpath=ancestor::article').locator('.ins-slot-title');
+    assert.equal(await slots.count(), 4);
+    assert.deepEqual(new Set(await slots.evaluateAll(nodes => nodes.map(node => node.firstChild.textContent.trim()))),
+      new Set(['天府 · 人遁', '天同 · 云遁', '天梁 · 虎遁', '天相 · 地遁']));
+    await leibao.click();
+    assert.equal(await leibao.getAttribute('aria-pressed'), 'false');
+    await page.reload();
+    await openQuery(page);
+    await page.locator('#ins-quality').selectOption('普通橙色');
+    assert.equal(await commonButton(page, '雷豹英布', '普通橙色').getAttribute('aria-pressed'), 'false');
+    assert.deepEqual(await getAccountJson(page, COMMON_KEY),
+      { version: 1, keys: [key('神千泷高月')], gaoyueDefaultApplied: true, leibaoDefaultApplied: true });
+  } finally { await page.close(); }
+});
+
+test('旧常用名单仅迁移一次雷豹默认项，保留原名单和个人进度并记录迁移标记', async () => {
+  const page = await queryPage();
+  try {
+    const originalKeys = [key('神逍遥子'), key('神千泷高月')];
+    const progressBefore = await getAccountJson(page, PROGRESS_KEY);
+    await setAccountJson(page, COMMON_KEY, { version: 1, keys: originalKeys, gaoyueDefaultApplied: true });
+    await page.reload();
+    await openQuery(page);
+    const migrated = { version: 1, keys: [...originalKeys, LEIBAO_KEY], gaoyueDefaultApplied: true, leibaoDefaultApplied: true };
+    assert.deepEqual(await getAccountJson(page, COMMON_KEY), migrated);
+    await page.reload();
+    await openQuery(page);
+    assert.deepEqual(await getAccountJson(page, COMMON_KEY), migrated);
+    await page.locator('#ins-quality').selectOption('普通橙色');
+    await commonButton(page, '雷豹英布', '普通橙色').click();
+    await page.reload();
+    await openQuery(page);
+    await page.locator('#ins-quality').selectOption('普通橙色');
+    assert.equal(await commonButton(page, '雷豹英布', '普通橙色').getAttribute('aria-pressed'), 'false');
+    assert.deepEqual(await getAccountJson(page, COMMON_KEY),
+      { version: 1, keys: originalKeys, gaoyueDefaultApplied: true, leibaoDefaultApplied: true });
+    assert.deepEqual(await getAccountJson(page, PROGRESS_KEY), progressBefore);
   } finally { await page.close(); }
 });
 
@@ -89,10 +129,15 @@ for (const width of [390, 900, 1440]) test(width + ' 常用切换保留卡片及
     await openQuery(page);
     assert.equal(await commonButton(page, '神逍遥子').getAttribute('aria-pressed'), 'false');
     assert.equal(await commonButton(page, '神东皇太一').getAttribute('aria-pressed'), 'true');
-    await setAccountJson(page, COMMON_KEY, { version: 1, keys: [], gaoyueDefaultApplied:true });
+    // Both defaults have already been applied; this is an intentional user clear,
+    // not an old pre-Leibao list that still needs the one-time migration.
+    await setAccountJson(page, COMMON_KEY, { version: 1, keys: [], gaoyueDefaultApplied:true, leibaoDefaultApplied:true });
     await page.reload();
     await openQuery(page);
     assert.equal(await page.locator('#ins-results [data-ins-common-key][aria-pressed="true"]').count(), 0);
+    await page.locator('#ins-quality').selectOption('普通橙色');
+    assert.equal(await page.locator('#ins-results [data-ins-common-key][aria-pressed="true"]').count(), 0);
+    assert.deepEqual((await getAccountJson(page, COMMON_KEY)).keys, []);
   } finally { await page.close(); }
 });
 

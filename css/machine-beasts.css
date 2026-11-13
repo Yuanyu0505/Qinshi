@@ -634,7 +634,8 @@
 @container machine-cultivation (min-width: 728px) {
   #partition-machine-beasts .machine-school-plan-beasts { --machine-plan-columns: 2; }
 }
-@container machine-cultivation (min-width: 1096px) {
+/* Three readable 350px cards plus two 8px gaps fit the 1440px desktop pane. */
+@container machine-cultivation (min-width: 1066px) {
   #partition-machine-beasts .machine-school-plan-beasts { --machine-plan-columns: 3; }
 }
 #partition-machine-beasts .machine-reference-index { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 250px), 1fr)); gap: 12px; margin-bottom: 12px; }

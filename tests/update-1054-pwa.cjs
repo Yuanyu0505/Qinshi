@@ -52,7 +52,33 @@ function releaseSnapshots() {
   }
   assert.equal(JSON.parse(old.get('version.json').toString('utf8')).version, OLD_VERSION);
   assert.equal(JSON.parse(current.get('version.json').toString('utf8')).version, NEW_VERSION);
-  return { old, current };
+  // Every dependency must come from the same historical release as its HTML.
+  // Falling back to today's scripts mixed incompatible UI APIs into 1.0.53/54.
+  const tracked = {};
+  for (const [mode, commit] of [['old', OLD_COMMIT], ['current', NEW_COMMIT]]) {
+    tracked[mode] = new Set(execFileSync('git', [
+      '-c', 'safe.directory=C:/Users/pghyl/Desktop/deepseek',
+      'ls-tree', '-r', '--name-only', '-z', commit
+    ], { cwd: ROOT, encoding: 'utf8' }).split('\0').filter(Boolean));
+    const files = [...tracked[mode]].filter(file => /^(js|css|data|assets|icons|images)\//.test(file) ||
+      !file.includes('/') && /\.(html|js|json|webmanifest|png|svg|ico)$/.test(file));
+    // Batch reads avoid spawning a Git process on each SW precache request.
+    const objects = execFileSync('git', [
+      '-c', 'safe.directory=C:/Users/pghyl/Desktop/deepseek', 'cat-file', '--batch'
+    ], { cwd: ROOT, input: files.map(file => `${commit}:${file}\n`).join(''), maxBuffer: 128 * 1024 * 1024 });
+    let offset = 0;
+    for (const file of files) {
+      const end = objects.indexOf(10, offset);
+      const header = objects.subarray(offset, end).toString('utf8');
+      assert.match(header, /^[a-f0-9]+ blob \d+$/, `Historical asset must be a blob: ${file}`);
+      const size = Number(header.split(' ')[2]);
+      snapshotsForMode(mode).set(file, objects.subarray(end + 1, end + 1 + size));
+      offset = end + 1 + size + 1;
+    }
+  }
+  return { old, current, tracked };
+
+  function snapshotsForMode(mode) { return mode === 'old' ? old : current; }
 }
 
 function contentType(filePath) {
@@ -96,7 +122,17 @@ function localReleaseServer(snapshots) {
         return;
       }
       const servedMode = mode;
-      const body = snapshots[servedMode].get(relative) || fs.readFileSync(filePath);
+      if (!snapshots.tracked[servedMode].has(relative)) {
+        response.writeHead(404).end();
+        return;
+      }
+      if (!snapshots[servedMode].has(relative)) {
+        snapshots[servedMode].set(relative, execFileSync('git', [
+          '-c', 'safe.directory=C:/Users/pghyl/Desktop/deepseek', 'show',
+          `${servedMode === 'old' ? OLD_COMMIT : NEW_COMMIT}:${relative}`
+        ], { cwd: ROOT, maxBuffer: 16 * 1024 * 1024 }));
+      }
+      const body = snapshots[servedMode].get(relative);
       if (RELEASE_FILES.includes(relative)) requests.push({ relative, mode: servedMode });
       response.writeHead(200, {
         'Content-Type': contentType(filePath),
@@ -211,7 +247,7 @@ test('真实 1.0.53 升级到 1.0.54 后更新禁地与六堂，并离线保留�
       ? route.continue() : route.abort('blockedbyclient'));
     const page = await context.newPage();
     const pageErrors = [];
-    page.on('pageerror', error => pageErrors.push(error.message));
+    page.on('pageerror', error => pageErrors.push(error.stack || error.message));
     await page.clock.setFixedTime(new Date('2026-10-22T04:00:00.000Z'));
     await page.goto(origin, { waitUntil: 'networkidle' });
     await ensureTestAccount(page);

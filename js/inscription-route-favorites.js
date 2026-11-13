@@ -175,7 +175,12 @@
       }
       // Web Locks serializes same-account writes across tabs; the account's
       // existing edit lease and raw token checks remain the fallback guard.
-      return Promise.resolve().then(function(){return locks&&typeof locks.request==='function'?locks.request(KEY+':'+id,{mode:'exclusive'},commit):commit();});
+      return Promise.resolve().then(function(){
+        // Always return a promise from the lock callback. Some LockManager
+        // implementations reject synchronous throws without releasing the lock,
+        // leaving every later write for this account waiting indefinitely.
+        return locks&&typeof locks.request==='function'?locks.request(KEY+':'+id,{mode:'exclusive'},function(){return Promise.resolve().then(commit);}):commit();
+      });
     }
     return {inspect:inspect,toggle:function(route,target,xAttr,expected,id){
       var candidate=prepare(route,target,xAttr);hydrate(candidate,options.items);

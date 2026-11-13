@@ -29,6 +29,7 @@ async function scenario(run) {
 }
 
 test('unchanged cost settings skip persistence while failed writes remain retryable', async () => scenario(async page => {
+  await page.locator('#machine-price-settings > summary').click();
   const price = page.locator('[data-reference-cost-field="awakeningBlueprintPrice"]');
   await price.fill('64');
   await page.evaluate(() => {
@@ -61,7 +62,19 @@ test('real beast workers return exactly the existing single and school calculati
     const data = window.MACHINE_BEAST_DATA, core = window.MACHINE_BEAST_CORE;
     const cases = [
       { kind: 'beast-single', payload: { beastId: 'potu-qilang', progress: { research: 1000 }, options: { targetLevel: 10, newRankMode: 'zeroToSeven', preferOwnedOnTie: true } } },
-      { kind: 'beast-school', payload: { schoolId: 'nonAttack', progressByBeast: {}, options: { targetStage: 5, useOwnedInventory: false, newRankMode: 'zeroToSeven' } } }
+      // Fixed 95 levels plus the year beast's level 2. Orange-only new bodies
+      // can reach 135 exactly without bypassing the blue-purple stock rule.
+      { kind: 'beast-school', payload: {
+        schoolId: 'nonAttack',
+        progressByBeast: {
+          'mechanical-snake': { research: 317700 }, 'mechanical-wing': { research: 317700 },
+          'four-claw-spider': { research: 551000 }, 'mechanical-bronze-man': { research: 551000 },
+          'mechanical-azure-dragon': { research: 834000 }, 'mechanical-vermilion-bird': { research: 834000 },
+          'zero-white-tiger': { research: 134000 }, 'mechanical-year-beast': { research: 47700 }
+        },
+        options: { targetStage: 3, useOwnedInventory: false, newRankMode: 'zero',
+          participatingBeastIds: ['mechanical-black-tortoise', 'mechanical-white-tiger', 'mechanical-year-beast'] }
+      } }
     ];
     const results = [];
     for (const entry of cases) {
@@ -81,7 +94,8 @@ test('real beast workers return exactly the existing single and school calculati
         const workerMs = performance.now() - workerStart;
         clearInterval(timer);
         await new Promise(resolve => setTimeout(resolve, 30)); observer.disconnect();
-        results.push({ kind: entry.kind, sample, equal: JSON.stringify(actual) === JSON.stringify(expected), valid: actual.valid, syncMs, workerMs, ticks, longTasks });
+        results.push({ kind: entry.kind, sample, equal: JSON.stringify(actual) === JSON.stringify(expected), valid: actual.valid, syncMs, workerMs, ticks, longTasks,
+          schoolPlans: entry.kind === 'beast-school' && actual.valid ? actual.plans.map(plan => [plan.kind, plan.totals.projectedTotalLevel, plan.totals.pricedYuan, plan.totals.unlockedEffects]) : null });
       }
       runner.dispose();
     }
@@ -89,6 +103,9 @@ test('real beast workers return exactly the existing single and school calculati
   });
   console.log('BEAST_MEASUREMENTS CPU4x desktop simulation; worker thread rate may differ ' + JSON.stringify(measured));
   assert.ok(measured.every(row => row.equal && row.valid));
+  for (const row of measured.filter(row => row.kind === 'beast-school')) {
+    assert.deepEqual(row.schoolPlans, [['cost', 135, 491972, 4], ['effects', 135, 647052, 6]]);
+  }
 }));
 
 test('beast UI starts a cancellable background task and never installs results for edited inputs', async () => scenario(async page => {
@@ -107,7 +124,15 @@ test('beast UI starts a cancellable background task and never installs results f
   assert.equal(await page.locator('#machine-beast-calculator-result').getAttribute('aria-busy'), null);
   assert.equal(await page.evaluate(() => window.MACHINE_BEAST_UI.captureView().calcResult), null);
   await page.locator('[data-machine-action="calculate"]').click();
-  await page.locator('[data-reference-cost-panel="single"]').waitFor();
+  await page.waitForFunction(() => {
+    const result = window.MACHINE_BEAST_UI.captureView().calcResult;
+    return result && result.valid && document.querySelector('#machine-beast-calculator-result').getAttribute('aria-busy') === null;
+  });
+  const costPanel = page.locator('[data-reference-cost-panel="single"]');
+  await costPanel.waitFor({ state: 'attached' });
+  const costDetails = costPanel.locator('xpath=ancestor::details[1]');
+  if (!await costDetails.evaluate(node => node.open)) await costDetails.locator(':scope > summary').click();
+  await costPanel.waitFor({ state: 'visible' });
   assert.equal(await page.evaluate(() => window.MACHINE_BEAST_UI.captureView().calcResult.target.level), 2);
 }));
 

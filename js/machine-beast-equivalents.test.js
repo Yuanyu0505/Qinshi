@@ -57,8 +57,35 @@ test('97 to 135 keeps both six-node 647052 alternatives and resets the uncultiva
   for(const id of d.schools.find(s=>s.id==='nonAttack').beastIds){const b=d.beasts.find(b=>b.id===id);const n=ids.includes(id)?(id==='mechanical-year-beast'?2:0):Math.min(remaining,b.maxLevel);if(!ids.includes(id))remaining-=n;progress[id]={research:d.researchThresholds[n]};}
   const result=P.calculateSchoolPlans(d,'nonAttack',progress,{targetStage:3,newRankMode:'zero',participatingBeastIds:ids});
   assert.equal(result.valid,true);const plan=result.plans.find(p=>p.kind==='effects'||p.kind==='merged');
-  assert.deepEqual(metrics(plan),[0,647052,6,60000,3360]);assert.equal(plan.equivalents.count,'2');
-  const other=all(d,plan)[0];assert.deepEqual(metrics(other),metrics(plan));
+  // Level 2 starts at 47700, not one 48000-research body: the year beast
+  // overflows by 47700 + 17 * 48000 - 834000 = 29700, not 30000.
+  assert.deepEqual(metrics(plan),[0,647052,6,59700,3360]);assert.equal(plan.equivalents.count,'2');
+  const alternatives=all(d,plan);assert.equal(alternatives.length,1);
+  const other=alternatives[0];assert.deepEqual(metrics(other),metrics(plan));
+  assert.equal(result.current.totalLevel,97);assert.equal(result.target.remaining,38);
+  assert.deepEqual(new Set([plan,other].map(p=>p.beasts.find(b=>b.beastId!=='mechanical-year-beast').beastId)),new Set(ids.slice(0,2)));
+  for(const p of [plan,other]){
+    assert.equal(p.beasts.length,2);
+    const year=p.beasts.find(b=>b.beastId==='mechanical-year-beast');
+    const partner=p.beasts.find(b=>b.beastId!=='mechanical-year-beast');
+    for(const [row,startLevel,startResearch,count,endResearch,overflow] of [[partner,0,0,18,864000,30000],[year,2,47700,17,863700,29700]]){
+      assert.deepEqual([row.startLevel,row.startResearch,row.endLevel,row.addedResearch,row.endResearch,row.overflowResearch],
+        [startLevel,startResearch,20,count*48000,endResearch,overflow]);
+      assert.deepEqual(row.items,[{source:'new',modificationId:'none',rank:0,count,researchEach:48000,sevenRankEquivalent:1}]);
+      assert.equal(row.finalEffect.level,20);
+    }
+    // Independent conservation check: 35 bodies add 1680000 research; the
+    // two level-20 thresholds consume 1668000 including the original 47700.
+    assert.equal(p.beasts.reduce((n,b)=>n+b.items.reduce((r,i)=>r+i.count*i.researchEach,0),0),1680000);
+    assert.equal(p.beasts.reduce((n,b)=>n+b.endResearch,0),1727700);
+    assert.equal(p.beasts.reduce((n,b)=>n+b.endResearch-834000,0),59700);
+    assert.equal(p.beasts.reduce((n,b)=>n+b.endLevel-b.startLevel,0),38);
+    assert.equal(p.totals.projectedTotalLevel,135);
+    assert.equal(p.finalEffects.reduce((n,b)=>n+b.level,0),135);
+    assert.deepEqual([p.totals.newInvestedCount,p.totals.fragments,p.totals.organPieces,p.totals.contribution,p.totals.yuan],
+      [35,1400,16800,1112000,411852]);
+    assert.equal(p.cost.blueprints.yuan,235200);
+  }
   const cultivated=new Set(other.beasts.map(b=>b.beastId));
   for(const id of ['mechanical-black-tortoise','mechanical-white-tiger']){const row=other.finalEffects.find(b=>b.beastId===id);assert.equal(row.level,cultivated.has(id)?20:0);assert.equal(Boolean(row.effect),cultivated.has(id));}
 });

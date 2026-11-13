@@ -140,7 +140,8 @@ test('all 177 items, empty state, IME and saved inventory keep their existing me
   assert.equal(saved[id].soulsOwned,23); assert.equal(Object.values(saved[id].equipment).filter(x=>x.owned).length,1);
   await p.locator('#atlas-search').fill('NoSuchAtlasXYZ'); await p.waitForTimeout(180);
   assert.equal(await p.locator('#atlas-results .empty').count(),1);
-  assert.equal(await p.locator('#atlas-upgrade-summary .atlas-upgrade-summary').count(),0);
+  assert.equal(await p.locator('#atlas-upgrade-summary .atlas-upgrade-summary').count(),1);
+  assert.match(await p.locator('#atlas-upgrade-summary').innerText(),/当前条件下没有符合的图鉴/);
   await p.locator('#atlas-search').fill(''); await p.waitForTimeout(180);
   assert.deepEqual(await getAccountJson(p,'qinshi_atlas_inventory_v1'),saved);
 }));
@@ -264,7 +265,9 @@ test('installed atlas stylesheet and existing progress remain available offline'
     const saved=await getAccountJson(p,'qinshi_atlas_favorites_v1');assert.ok(saved.includes(id));
     await context.setOffline(true); await p.reload({waitUntil:'networkidle'});
     await p.locator('#atlas-tabs [data-atlas="攻"]').click();
-    assert.equal(await p.locator(`#atlas-tabs`).evaluate(n=>getComputedStyle(n).gridTemplateColumns.split(' ').length),3);
+    assert.equal(await p.locator('#atlas-tabs').evaluate(n=>getComputedStyle(n).display),'flex');
+    assert.equal(await p.locator('#atlas-tabs [data-atlas]').count(),6);
+    assert.equal(await card.locator('.atlas-equipment-stage-list').isVisible(),true);
     assert.equal(await p.locator(`[data-atlas-favorite="${id}"]`).getAttribute('aria-pressed'),'true');
     assert.equal(await p.evaluate(async()=>{const response=await fetch('./css/atlas.css');return response.status;}),200);
     assert.deepEqual(await getAccountJson(p,'qinshi_atlas_favorites_v1'),saved);

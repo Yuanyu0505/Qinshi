@@ -50,7 +50,7 @@ test('levels have ten-level filters, origins search all source lists and speed s
  await p.locator('[data-ref-band]').selectOption('0');
  assert.equal(await p.locator('.ref-table tbody tr').count(),4);
  await p.locator('[data-ref-home]').click();await p.locator('.ref-index [data-ref-section="origins"]').click();
- await p.locator('[data-ref-search]').fill('东皇太一');assert.ok(await p.locator('.ref-table tbody tr').count()>1);
+ await p.locator('[data-ref-search]').fill('东皇太一');assert.equal(await p.locator('[data-ref-origin]').count(),1);assert.ok(await p.locator('[data-ref-origin-record]').count()>1);
  await p.locator('[data-ref-home]').click();await p.locator('.ref-index [data-ref-section="speed"]').click();
  await p.locator('[data-ref-search]').fill('黑龙');
  await p.locator('[data-ref-table]').selectOption('speed-free-ranking');assert.equal(await p.locator('[data-ref-search]').inputValue(),'');

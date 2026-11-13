@@ -1,5 +1,5 @@
 /* All presentation is scoped to the independent read-only partition. */
-#partition-other-reference { min-width:0; }
+#partition-other-reference { min-width:0; container-type:inline-size; }
 #partition-other-reference [hidden] { display:none !important; }
 #partition-other-reference h2 { margin:0 0 12px; color:var(--gold); font-size:22px; }
 #partition-other-reference h3 { margin:16px 0 8px; color:var(--gold); font-size:17px; }
@@ -16,7 +16,8 @@
 #partition-other-reference .ref-heading { display:flex;align-items:center;justify-content:space-between;gap:12px; }
 #partition-other-reference .ref-breadcrumb { color:#bdb29f;font-size:13px;margin:0 0 4px; }
 #partition-other-reference .ref-heading h2 { margin:0; }
-#partition-other-reference .ref-controls { display:grid;grid-template-columns:minmax(180px,2fr) minmax(180px,2fr) repeat(2,minmax(105px,1fr)) auto;gap:12px;align-items:end;margin:20px 0; }
+#partition-other-reference .ref-controls { display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:10px;align-items:end;margin:18px 0; }
+#partition-other-reference .ref-controls label:first-child { grid-column:span 2; }
 #partition-other-reference .ref-controls label { display:grid;gap:6px;font-size:14px;min-width:0; }
 #partition-other-reference input,
 #partition-other-reference select { min-height:44px;max-width:100%;width:100%;font:inherit;padding:8px 10px;color:var(--text);background:var(--bg);border:1px solid var(--line);border-radius:5px; }
@@ -25,7 +26,18 @@
 #partition-other-reference :focus-visible { outline:2px solid var(--gold);outline-offset:3px; }
 #partition-other-reference .ref-status { font-size:13px;color:#cbbfa9; }
 #partition-other-reference .ref-status span { border:1px solid var(--line);padding:3px 7px;border-radius:4px; }
-#partition-other-reference .ref-table-scroll { overflow:auto;max-width:100%;border:1px solid var(--line);border-radius:6px; }
+#partition-other-reference .ref-visually-hidden { position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap;border:0; }
+#partition-other-reference .ref-result-toolbar { display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;margin:10px 0;color:#cbbfa9;font-size:14px; }
+#partition-other-reference .ref-result-toolbar .ref-sources { margin:0; }
+#partition-other-reference .ref-result-toolbar .seg { min-height:36px; }
+#partition-other-reference .ref-quantity-note { font-size:14px;line-height:1.65;padding:10px 12px;margin:0;border-left:3px solid var(--gold);background:var(--bg2); }
+#partition-other-reference .ref-warning { color:#ffd784;background:#382a17;border:1px solid #927039;border-radius:5px;padding:9px 12px;font-size:14px;line-height:1.6; }
+#partition-other-reference .ref-quality { padding:2px 7px;border:1px solid currentColor;border-radius:4px;white-space:nowrap; }
+#partition-other-reference .ref-quality-blue { color:#85bdff; }
+#partition-other-reference .ref-quality-purple { color:#d2a2ff; }
+#partition-other-reference .ref-quality-orange { color:#ffc477; }
+#partition-other-reference .ref-quality-red { color:#ff9995; }
+#partition-other-reference .ref-table-scroll { overflow:auto;max-width:100%;border:1px solid var(--line);border-radius:6px;overscroll-behavior-inline:contain; }
 #partition-other-reference .ref-table { border-collapse:collapse;width:100%;font-size:14px;line-height:1.65;table-layout:auto; }
 #partition-other-reference .ref-table caption { text-align:left;padding:10px 12px;font-weight:600;color:var(--gold);background:var(--panel); }
 #partition-other-reference .ref-table th,
@@ -35,10 +47,44 @@
 #partition-other-reference .ref-table thead th { background:var(--panel);white-space:nowrap; }
 #partition-other-reference .ref-table tbody tr:nth-child(even) { background:rgba(255,255,255,.025); }
 #partition-other-reference .ref-table td.ref-long-text { text-align:left;min-width:240px; }
-#partition-other-reference .ref-speed-cards { display:grid;gap:12px; }
+#partition-other-reference .ref-speed-cards { display:grid;gap:0; }
+#partition-other-reference .ref-speed-head,
+#partition-other-reference .ref-speed-row > summary { display:grid;grid-template-columns:minmax(0,1.8fr) minmax(0,1fr) minmax(0,1fr);gap:8px;align-items:center;text-align:right;font-variant-numeric:tabular-nums; }
+#partition-other-reference .ref-speed-head { padding:8px 10px;color:#bdb29f;font-size:13px; }
+#partition-other-reference .ref-speed-head > :first-child,
+#partition-other-reference .ref-speed-row > summary > :first-child { text-align:left; }
+#partition-other-reference .ref-speed-row > summary { color:var(--text);font-size:14px;min-height:52px; }
+#partition-other-reference .ref-speed-row > summary strong { display:block;overflow-wrap:anywhere; }
+#partition-other-reference .ref-speed-row { margin-top:6px;padding:8px 10px; }
+#partition-other-reference .ref-detail-body dl { margin:0; }
+#partition-other-reference .ref-detail-body dl > div { display:grid;grid-template-columns:minmax(85px,1fr) minmax(0,2fr);gap:10px;padding:7px 0;border-top:1px solid var(--line); }
+#partition-other-reference .ref-detail-body dt { color:#bdb29f; }
+#partition-other-reference .ref-detail-body dd { margin:0;text-align:right;overflow-wrap:anywhere;white-space:pre-line; }
+#partition-other-reference .ref-skill-list { display:grid;gap:8px; }
+#partition-other-reference .ref-skill-list > details { margin:0; }
+#partition-other-reference .ref-skill-list summary { min-height:34px;line-height:1.7; }
+#partition-other-reference .ref-skill-list summary small { font-weight:400;color:#bdb29f;margin-left:8px; }
+#partition-other-reference .ref-skill-list dd { text-align:left;line-height:1.8; }
+#partition-other-reference .ref-origins { display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;align-items:start; }
+#partition-other-reference .ref-origins details { margin:0;padding:10px 12px; }
+#partition-other-reference .ref-origins summary { display:flex;justify-content:space-between;align-items:center;gap:10px;min-height:36px; }
+#partition-other-reference .ref-origins summary span { color:#bdb29f;font-size:13px;font-weight:400; }
+#partition-other-reference .ref-origins ol { padding-left:22px;margin-bottom:0; }
+#partition-other-reference .ref-origins li { padding:8px 0;border-top:1px solid var(--line);line-height:1.7;overflow-wrap:anywhere; }
+#partition-other-reference .ref-origins li small { display:block;color:#bdb29f; }
+#partition-other-reference .ref-timeline { list-style:none;margin:0;padding:0 0 0 12px;border-left:2px solid var(--line); }
+#partition-other-reference .ref-timeline > li { display:grid;grid-template-columns:72px minmax(0,1fr);gap:12px;padding:12px 0;border-bottom:1px solid var(--line); }
+#partition-other-reference .ref-timeline > li > strong { color:var(--gold);font-size:15px; }
+#partition-other-reference .ref-timeline dl { margin:0;line-height:1.75; }
+#partition-other-reference .ref-timeline dl > div + div { margin-top:6px; }
+#partition-other-reference .ref-timeline dt { font-size:13px;color:#bdb29f; }
+#partition-other-reference .ref-timeline dd { margin:0;white-space:pre-line;overflow-wrap:anywhere; }
 #partition-other-reference .ref-speed-cards small { font-weight:normal;font-size:12px;color:#bdb29f; }
 #partition-other-reference .ref-speed-values { display:flex;flex-wrap:wrap;gap:8px 20px;font-variant-numeric:tabular-nums; }
 #partition-other-reference .ref-sources { display:flex;flex-wrap:wrap;gap:8px;margin:14px 0; }
+#partition-other-reference .ref-source-path { display:block;color:#bdb29f;font-size:12px;overflow-wrap:anywhere;margin:6px 0; }
+#partition-other-reference [data-ref-audit],
+#partition-other-reference .ref-source-index { background:rgba(0,0,0,.12);font-size:14px; }
 #partition-other-reference details { border:1px solid var(--line);border-radius:6px;margin-top:12px;padding:12px; }
 #partition-other-reference summary { color:var(--gold);cursor:pointer;min-height:24px;font-weight:600; }
 #partition-other-reference .ref-guide-text { white-space:pre-wrap;line-height:1.9;font-size:15px;overflow-wrap:anywhere;max-width:80ch;margin:16px 0; }
@@ -60,11 +106,13 @@
 #partition-other-reference .ref-image-stage img { display:block;max-width:none;height:auto;user-select:none; }
 #partition-other-reference .ref-viewer > a { margin-top:10px; }
 #partition-other-reference .ref-image-status { font-size:13px;min-height:20px; }
+#partition-other-reference .ref-image-filename { font-size:12px;color:#bdb29f;overflow-wrap:anywhere;margin:4px 0; }
 @media(min-width:1100px){
   #partition-other-reference .ref-table tbody th:first-child { position:sticky;left:0;background:var(--bg2);z-index:1; }
 }
-@media(max-width:1100px){
+@container(max-width:760px){
   #partition-other-reference .ref-controls { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  #partition-other-reference .ref-origins { grid-template-columns:1fr; }
 }
 @media(max-width:600px){
   #partition-other-reference .panel { padding:12px; }
@@ -74,7 +122,7 @@
   #partition-other-reference .ref-index strong { font-size:14px; }
   #partition-other-reference .ref-index small { font-size:12px;line-height:1.5; }
   #partition-other-reference .ref-card-grid { grid-template-columns:1fr; }
-  #partition-other-reference .ref-table { font-size:13px; }
+  #partition-other-reference .ref-table { font-size:14px; }
   #partition-other-reference .ref-table th,
   #partition-other-reference .ref-table td { padding:9px 8px;min-width:60px; }
   #partition-other-reference .ref-heading { align-items:flex-start; }
@@ -84,4 +132,13 @@
   #partition-other-reference .ref-sources .seg { width:100%;justify-content:flex-start; }
   #partition-other-reference .ref-viewer { padding:10px; }
   #partition-other-reference .ref-image-stage { height:55dvh; }
+  #partition-other-reference .ref-viewer header strong { font-size:13px; }
+  #partition-other-reference .ref-viewer-tools { gap:5px; }
+  #partition-other-reference .ref-viewer-tools .seg { padding:6px 10px; }
+  #partition-other-reference .ref-viewer > .ref-muted { font-size:12px;margin:6px 0; }
+}
+@container(max-width:480px){
+  #partition-other-reference .ref-index { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  #partition-other-reference .ref-index button { min-height:102px;padding:12px; }
+  #partition-other-reference .ref-index strong { font-size:15px; }
 }

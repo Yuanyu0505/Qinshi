@@ -55,3 +55,11 @@
 - 1.0.86展示回归保留每期664抽、776.58现金及局部展开，验证真实计算结果总额2329.74、预算2330、内部取整差额0.26；按用户要求不再查找已移除汇总行，改检预算标题与金额同行。存储计算前后逐字节不变，5/5通过。生产现金公式与资料均未修改。
 
 最终复验日期：2026-11-13。独立代码复核发现的中文路径问题已修复并重新通过。仅两处生产修复为收藏锁回调结算与机关兽三列容器阈值；其他为过期测试修复与覆盖加强。资料中明确标记的待核对名称仍按原方案显示，不猜写、不称全部原图文字均已确认。
+
+## 合并发布结果
+
+- 已将`codex/other-reference-library`快进合并到本地`master`；代码提交`0b7cc3a7062f57b11c23299e78958de456ab27ad`已推送GitHub `main`。
+- 合并后原始单元入口再次1161/1161通过（`test-results/release-merged-unit.log`）；资料分区18项与历史升级/秘境展示8项合计26/26再次通过（`test-results/release-merged-pwa.log`），两个命令退出码均为0。
+- [GitHub Pages代码部署](https://github.com/Yuanyu0505/Qinshi/actions/runs/43346136631)已`completed/success`，提交SHA与本地相同。
+- 线上[Qin工具](https://yuanyu0505.github.io/Qinshi/)版本1.0.100；14个关键HTML/脚本/样式/版本文件与Git提交逐字节一致，31张原图SHA-256与原始清单全部一致（`test-results/release-online-assets.json`，2026-11-13T01:37:30Z）。文本对照使用Git blob，不将Windows CRLF工作副本与部署LF混淆。
+- 既有Excel修改及所有无关未跟踪资料均未暂存、回退或发布。未改真实账号、库存与云端存档。

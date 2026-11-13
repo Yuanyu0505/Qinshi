@@ -45,4 +45,4 @@ Files: docs/other-reference/DATA_AUDIT.md; version.json; service-worker.js; js/p
 - [x] 分区数量、转录行数、图片覆盖、partial状态逐项审计，提供接入说明。
 - [x] 执行项目单元测试及针对性旧模块浏览器回归；如既有失败，精确记录，不顺带改业务。
 - [x] 版本1.0.100，静态资源/延迟脚本/PWA身份一致；代码/data预缓存，原图按需缓存避免首次下载全包。
-- [ ] 审查改动范围，仅提交任务文件，合并本地master并推送main，跟踪Pages及在线资源。
+- [x] 审查改动范围，仅提交任务文件，合并本地master并推送main，跟踪Pages及在线资源；结果见RELEASE_FIXES.md末尾。

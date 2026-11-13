@@ -1,8 +1,9 @@
 'use strict';
 const test=require('node:test'),assert=require('node:assert/strict'),cp=require('node:child_process');
 const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
-const {createServer}=require('../serve.js'),{ensureTestAccount}=require('./browser-test-helpers.cjs');
-test('installed actual 1.0.100 upgrades across minor version to 1.1.0 and retains account and offline reference', {timeout:120000},async()=>{
+const {createServer}=require('../serve.js'),{ensureTestAccount,currentAppVersion}=require('./browser-test-helpers.cjs');
+const CURRENT=currentAppVersion();
+test('installed actual 1.0.100 upgrades to the working release and retains account and offline reference', {timeout:120000},async()=>{
  const commit='599ef047d2ce8f51933418ad478bac38e461eeb4',gitArgs=['-c','safe.directory=C:/Users/pghyl/Desktop/deepseek'];
  const files=cp.execFileSync('git',gitArgs.concat(['ls-tree','-r','--name-only','-z',commit]),{encoding:'utf8'}).split('\0').filter(f=>/^(js|css|data|icons|images)\//.test(f)||/^(index.html|service-worker.js|version.json|manifest.webmanifest)$/.test(f));
  const batch=cp.execFileSync('git',gitArgs.concat(['cat-file','--batch']),{input:files.map(f=>commit+':'+f+'\n').join(''),maxBuffer:256*1024*1024}),old=new Map();let offset=0;
@@ -13,8 +14,8 @@ test('installed actual 1.0.100 upgrades across minor version to 1.1.0 and retain
  await p.goto(url,{waitUntil:'networkidle'});await ensureTestAccount(p);await p.evaluate(()=>navigator.serviceWorker.ready);await p.reload({waitUntil:'networkidle'});assert.equal(await p.locator('#pwa-version').innerText(),'1.0.100');
  const saved=await p.evaluate(()=>{window.QinshiAccounts.setItem('qinshi_atlas_target_level_v1','15');return {account:window.QinshiAccounts.currentAccount().id,value:window.QinshiAccounts.getItem('qinshi_atlas_target_level_v1')};});
  oldMode=false;await p.evaluate(()=>window.QinshiPWA.checkForUpdate());await p.locator('#pwa-update-notice').waitFor({state:'visible',timeout:30000});await Promise.all([p.waitForNavigation({waitUntil:'networkidle'}),p.locator('#pwa-apply-update').click()]);
- assert.equal(await p.locator('#pwa-version').innerText(),'1.1.0');assert.equal(await p.evaluate(()=>window.QinshiAccounts.currentAccount().id),saved.account);
+ assert.equal(await p.locator('#pwa-version').innerText(),CURRENT);assert.equal(await p.evaluate(()=>window.QinshiAccounts.currentAccount().id),saved.account);
  await context.setOffline(true);await p.goto(url+'/#other-reference',{waitUntil:'networkidle'});const response=await p.reload({waitUntil:'networkidle'});assert.equal(response.fromServiceWorker(),true);await p.locator('[data-ref-section="elements"]').click();assert.match(await p.locator('[data-ref-table] option:checked').innerText(),/需求数量/);assert.equal(await p.locator('.ref-table tbody tr').count(),25);assert.equal(await p.evaluate(()=>window.QinshiAccounts.getItem('qinshi_atlas_target_level_v1')),saved.value);
- const caches=await p.evaluate(()=>window.caches.keys());assert.ok(caches.includes('qinshi-site-1.1.0'));assert.ok(!caches.includes('qinshi-site-1.0.100'));assert.deepEqual(errors,[]);
+ const caches=await p.evaluate(()=>window.caches.keys());assert.ok(caches.includes('qinshi-site-'+CURRENT));assert.ok(!caches.includes('qinshi-site-1.0.100'));assert.deepEqual(errors,[]);
  }finally{if(context)await context.close();if(browser)await browser.close();await new Promise(r=>server.close(r));}
 });

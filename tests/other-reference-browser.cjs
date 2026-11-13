@@ -32,6 +32,8 @@ test('nine sections, Chinese filter focus, independent state and source viewer a
  assert.match(await p.locator('.ref-table').innerText(),/300/);
  await p.locator('[data-ref-home]').click();await p.locator('.ref-index [data-ref-section="cards"]').click();
  assert.equal(await p.locator('[data-ref-search]').inputValue(),'');
+ assert.equal(await p.locator('[data-ref-results] [data-ref-image]').count(),0);
+ await p.locator('[data-ref-home]').click();await p.locator('.ref-index [data-ref-section="elements"]').click();
  await p.locator('[data-ref-image]').first().click();
  const viewer=p.locator('.ref-viewer');assert.equal(await viewer.isVisible(),true);
  await p.locator('[data-ref-zoom="in"]').click();
@@ -60,7 +62,7 @@ test('levels have ten-level filters, origins search all source lists and speed s
 test('touch viewer pinches the image itself and pans long content without zooming the page',async()=>{
  const {context,p}=await open(390,844,{hasTouch:true,isMobile:true});
  try{
- await p.locator('.ref-index [data-ref-section="cards"]').click();await p.locator('[data-ref-image]').first().click();
+ await p.locator('.ref-index [data-ref-section="elements"]').click();await p.locator('[data-ref-image]').first().click();
  await p.locator('.ref-viewer img').evaluate(n=>n.complete&&n.naturalWidth?true:new Promise(r=>n.onload=r));
  const box=await p.locator('.ref-image-stage').boundingBox(),client=await context.newCDPSession(p),x=box.x+box.width/2,y=box.y+Math.min(box.height/2,130);
  const points=d=>[{x:x-d,y,id:1},{x:x+d,y,id:2}];

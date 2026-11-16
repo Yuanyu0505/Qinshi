@@ -20,7 +20,11 @@
       {id:'cards-album',section:'cards',title:'传说卡册 · 已确认属性',columns:['范围','生命','攻击','防御','内力','护盾','三级迷珏消耗'],rows:[['单册','320,000','40,000','40,000','20,000','180,000','75个'],['三册合计','960,000','120,000','120,000','60,000','540,000','225个']],sourcePaths:d.guides[4].sourcePaths,verification:'user-confirmed',note:'三册总防御已按用户确认修订为12万。原图写6万，原图保留不改；此项不再待核对。'}];
     ['OTHER_REFERENCE_TABLES_A','OTHER_REFERENCE_TABLES_B','OTHER_REFERENCE_TABLES_C'].forEach(function(key){if(root[key])tables=tables.concat(root[key].tables);});
     var origins=tables.filter(function(t){return t.section==='origins';});
-    if(origins.length)tables.unshift({id:'origins-all',section:'origins',title:'弟子查来源 · 全部来源独立对照',columns:['弟子','可获得来源','出处'],rows:origins.flatMap(function(t){return t.rows.map(function(row){return [row[0],row[1],t.title];});}),sourcePaths:Array.from(new Set(origins.flatMap(function(t){return t.sourcePaths;}))),verification:'visually-transcribed',note:'检索弟子可同时看到原图07及补图07的来源；切换子栏目可按来源查看名单。各出处独立保留，不推断活动开放时间或获取概率。'});
+    if(origins.length){
+      var originKeys=new Set(),originRows=[];
+      origins.forEach(function(t){t.rows.forEach(function(row){var key=JSON.stringify([row[0],row[1]]);if(!originKeys.has(key)){originKeys.add(key);originRows.push([row[0],row[1]]);}});});
+      tables.unshift({id:'origins-all',section:'origins',title:'按弟子查来源',columns:['弟子','可获得来源'],rows:originRows,sourcePaths:Array.from(new Set(origins.flatMap(function(t){return t.sourcePaths;}))),verification:'visually-transcribed'});
+    }
     var gainIds=['elements-qiyun-gains','elements-stone-gains','elements-progression'];
     var gains=gainIds.map(function(id){return tables.find(function(t){return t.id===id;});}).filter(Boolean);
     if(gains.length){
@@ -31,13 +35,15 @@
     return tables;
   }
   // Presentation metadata only: the underlying tables and filter fields stay intact.
-  function titleFor(table){var title=table.id==='elements-cost'?'气蕴需求数量对照':table.id==='elements-stones'?'五极石五行数量对照':table.id==='cards-substats-ratio'?'副属性比例':table.title;return table.section==='elements'?title.replace(/（原图[^）]*）/g,''):title;}
+  function cleanSourceLabel(value){return String(value==null?'':value).replace(/[（(](?:原图|补图)\s*\d+[^）)]*[）)]/g,'').trim();}
+  function titleFor(table){var title=table.id==='elements-cost'?'气蕴需求数量对照':table.id==='elements-stones'?'五极石五行数量对照':table.id==='cards-substats-ratio'?'副属性比例':table.title;return cleanSourceLabel(title);}
   function isMapping(table){return Boolean(table&&table.section==='elements'&&/mappings$/.test(table.id));}
   function cellHtml(table,column,value){
-    if(!isMapping(table)||column!=='气蕴组合')return esc(value);
+    if(table.id==='elements-progression'&&String(value).includes('→'))return String(value).split('→').map(function(token){return '<span class="ref-quality-step">'+esc(token.trim())+'</span>';}).join(' → ');
+    if(!isMapping(table)||column!=='气蕴组合')return esc(cleanSourceLabel(value));
     return String(value).split('、').map(function(part){var match=part.match(/^(.*)（([蓝紫橙红])）$/);return match?'<span class="ref-member ref-quality-'+({'蓝':'blue','紫':'purple','橙':'orange','红':'red'}[match[2]])+'">'+esc(match[1])+'</span>':esc(part);}).join('、');
   }
-  function columnLabel(table,column){return /^elements-(cost|stones)$/.test(table.id)&&['金','木','水','火','土'].includes(column)?column+'需求':column;}
+  function columnLabel(table,column){return /^elements-(cost|stones)$/.test(table.id)&&['金','木','水','火','土'].includes(column)?column+'需求':cleanSourceLabel(column);}
   function displayTable(table){
     if(!table||table.section!=='cards'||!table.columns.includes('特别说明'))return table;
     var indices=table.columns.map(function(c,i){return c==='特别说明'?-1:i;}).filter(function(i){return i>=0;});
@@ -57,15 +63,16 @@
     var id=table.id;
     if(table.section==='elements')return /^elements-(cost|stones)$/.test(id)?'气蕴数量与五极石':/mappings$/.test(id)?'金／木／水／火／土抵抗组合':'';
     if(table.section==='guardians')return /materials$/.test(id)?'进阶材料':/aid-/.test(id)?'援助弟子':'守护神技能';
-    if(table.section==='origins')return id==='origins-all'?'按弟子查全部来源':id.includes('supplement')?'按来源查名单 · 补图07':'按来源查名单 · 原图07';
+    if(table.section==='origins')return id==='origins-all'?'按弟子查询':'按来源查询';
     if(table.section==='speed')return id.includes('paid')?'氪佬版':'平民版';
     if(table.section==='spirits')return id==='spirits-elements'?'五行器灵':id==='spirits-fates'?'命格属性':'搭配建议';
     if(table.section==='disciples')return id==='disciples-skill-evolution'?'技能进化材料':'神魄与神果材料';
     return '';
   }
-  function groupedOptions(list,selected){
+  function columnMenu(list,selected){
     var groups=new Map();list.forEach(function(t){var key=groupFor(t);if(!groups.has(key))groups.set(key,[]);groups.get(key).push(t);});
-    return Array.from(groups.entries()).map(function(entry){var options=entry[1].map(function(t){return '<option value="'+t.id+'"'+(t.id===selected?' selected':'')+'>'+esc(titleFor(t))+'</option>';}).join('');return entry[0]?'<optgroup label="'+esc(entry[0])+'">'+options+'</optgroup>':options;}).join('');
+    var current=list.find(function(t){return t.id===selected;})||list[0];
+    return '<div class="ref-column-control"'+(list.length===1?' hidden':'')+'><span id="ref-column-label">资料栏目</span><details class="ref-column-menu"><summary aria-labelledby="ref-column-label ref-column-current"><span id="ref-column-current" data-ref-column-title>'+esc(current?titleFor(current):'资料栏目')+'</span></summary><div class="ref-column-options">'+Array.from(groups.entries()).map(function(entry){return '<div class="ref-column-group"'+(entry[0]?' role="group" aria-label="'+esc(entry[0])+'"':'')+'>'+(entry[0]?'<strong>'+esc(entry[0])+'</strong>':'')+entry[1].map(function(t){return '<button type="button" data-ref-table-option="'+esc(t.id)+'"'+(t.id===selected?' aria-current="true"':'')+'>'+esc(titleFor(t))+'</button>';}).join('')+'</div>';}).join('')+'</div></details></div>';
   }
   function init(root){
     root=root||window;
@@ -105,7 +112,7 @@
       var s=state(),section=data.sections.find(function(x){return x.id===sectionId;}),list=sectionTables(),table=currentTable();
       if(table)s.table=table.id;
       var cards=sectionId==='cards';
-      body.innerHTML='<section class="panel ref-section"'+(cards?' data-ref-kind="cards"':'')+'><header class="ref-heading"><h2 tabindex="-1">'+esc(section.name)+'</h2><button type="button" class="seg" data-ref-home>返回目录</button></header><div class="ref-controls"><label>'+(cards?'查找属性':'查找资料')+'<input type="search" data-ref-search placeholder="'+(cards?'输入属性名称或属性数值':'名称、等级、属性或来源关键词')+'" value="'+esc(s.query)+'"></label><label'+(list.length===1?' hidden':'')+'>资料栏目<select data-ref-table>'+groupedOptions(list,s.table)+'</select></label>'+(sectionId==='elements'?'<label data-ref-attribute-label hidden>属性<select data-ref-attribute><option value="">全部属性</option></select></label>':'<label data-ref-quality-label hidden>品质<select data-ref-quality><option value="">全部品质</option></select></label>')+'<label'+(sectionId==='levels'?'':' hidden')+'>等级区间<select data-ref-band><option value="">全部等级</option>'+Array.from({length:11},function(_,i){return '<option value="'+(i*10)+'">'+(i*10)+'–'+Math.min(100,i*10+9)+'级</option>';}).join('')+'</select></label><label>展示方式<select data-ref-view></select></label><label data-ref-sort-label'+(sectionId==='speed'?'':' hidden')+'>浏览排序<select data-ref-sort><option value="source">原图顺序</option><option value="panel">面板速度降序</option><option value="pvp">PVP速度降序</option></select></label><button class="seg" type="button" data-ref-clear>清除筛选</button></div><div data-ref-results aria-live="polite"></div></section>';
+      body.innerHTML='<section class="panel ref-section"'+(cards?' data-ref-kind="cards"':'')+'><header class="ref-heading"><h2 tabindex="-1">'+esc(section.name)+'</h2><button type="button" class="seg" data-ref-home>返回目录</button></header><div class="ref-controls"><label>'+(cards?'查找属性':'查找资料')+'<input type="search" data-ref-search placeholder="'+(cards?'输入属性名称或属性数值':'名称、等级、属性或来源关键词')+'" value="'+esc(s.query)+'"></label>'+columnMenu(list,s.table)+(sectionId==='elements'?'<label data-ref-attribute-label hidden>属性<select data-ref-attribute><option value="">全部属性</option></select></label>':'<label data-ref-quality-label hidden>品质<select data-ref-quality><option value="">全部品质</option></select></label>')+'<label'+(sectionId==='levels'?'':' hidden')+'>等级区间<select data-ref-band><option value="">全部等级</option>'+Array.from({length:11},function(_,i){return '<option value="'+(i*10)+'">'+(i*10)+'–'+Math.min(100,i*10+9)+'级</option>';}).join('')+'</select></label><label>展示方式<select data-ref-view></select></label><label data-ref-sort-label'+(sectionId==='speed'?'':' hidden')+'>浏览排序<select data-ref-sort><option value="source">原图顺序</option><option value="panel">面板速度降序</option><option value="pvp">PVP速度降序</option></select></label><button class="seg" type="button" data-ref-clear>清除筛选</button></div><div data-ref-results aria-live="polite"></div></section>';
       body.querySelector('[data-ref-sort]').value=s.sort;body.querySelector('[data-ref-band]').value=s.band;
       if(sectionId==='disciples')body.querySelector('[data-ref-clear]').insertAdjacentHTML('beforebegin','<label>快捷查找等级<select data-ref-level-search><option value="">全部等级</option></select></label>');
       fillQuality();results();
@@ -127,7 +134,7 @@
       if(!rows.length)return '<p class="ref-empty" role="status">未找到匹配资料。试试其他关键词，或清除筛选。</p>';
       if(table.id==='origins-all'&&s.view==='auto'){
         var groups=new Map();rows.forEach(function(row){if(!groups.has(row[0]))groups.set(row[0],[]);groups.get(row[0]).push(row);});
-        return '<div class="ref-origins">'+Array.from(groups.entries()).map(function(entry){return '<details data-ref-origin><summary><strong>'+esc(entry[0])+'</strong><span>'+entry[1].length+'条来源记录</span></summary><ol>'+entry[1].map(function(row){return '<li data-ref-origin-record><span>'+esc(row[1])+'</span><small>'+esc(row[2])+'</small></li>';}).join('')+'</ol></details>';}).join('')+'</div>';
+        return '<div class="ref-origins">'+Array.from(groups.entries()).map(function(entry){return '<details data-ref-origin><summary><strong>'+esc(entry[0])+'</strong><span>'+entry[1].length+'项来源</span></summary><ol>'+entry[1].map(function(row){return '<li data-ref-origin-record>'+esc(row[1])+'</li>';}).join('')+'</ol></details>';}).join('')+'</div>';
       }
       if((sectionId==='levels'||sectionId==='disciples')&&s.view==='auto'&&host.getBoundingClientRect().width<760){
         return '<ol class="ref-timeline">'+rows.map(function(row){return '<li><strong>'+esc(row[0])+'</strong><dl>'+table.columns.slice(1).map(function(c,i){return '<div><dt>'+esc(c)+'</dt><dd>'+esc(row[i+1])+'</dd></div>';}).join('')+'</dl></li>';}).join('')+'</ol>';
@@ -142,7 +149,7 @@
         table=Object.assign({},table,{columns:order.map(function(i){return table.columns[i];})});rows=rows.map(function(row){return order.map(function(i){return row[i];});});
       }
       if(s.view==='cards')return '<div class="ref-card-grid">'+rows.map(function(row){return '<article class="ref-row-card"><h3>'+esc(row[0])+'</h3><dl>'+table.columns.slice(1).map(function(c,i){return '<div><dt>'+esc(columnLabel(table,c))+'</dt><dd>'+cellHtml(table,c,row[i+1])+'</dd></div>';}).join('')+'</dl></article>';}).join('')+'</div>';
-      return '<div class="ref-table-scroll" tabindex="0" role="region" aria-label="'+esc(titleFor(table))+'对照表"><table class="ref-table'+(table.section==='cards'?' ref-card-stats':'')+(isMapping(table)?' ref-element-mappings':'')+'"><caption class="ref-visually-hidden">'+esc(titleFor(table))+'</caption><thead><tr>'+table.columns.map(function(c){return '<th scope="col">'+esc(columnLabel(table,c))+'</th>';}).join('')+'</tr></thead><tbody>'+rows.map(function(row){return '<tr>'+row.map(function(v,i){var quality=table.columns[i]==='品质'&&/^[蓝紫橙红]$/.test(v);return i===0?'<th scope="row">'+esc(v)+'</th>':'<td'+(String(v).length>20?' class="ref-long-text"':'')+'>'+(quality?'<span class="ref-quality ref-quality-'+({'蓝':'blue','紫':'purple','橙':'orange','红':'red'}[v])+'">'+esc(v)+'</span>':cellHtml(table,table.columns[i],v))+'</td>';}).join('')+'</tr>';}).join('')+'</tbody></table></div>';
+      return '<div class="ref-table-scroll" tabindex="0" role="region" aria-label="'+esc(titleFor(table))+'对照表"><table class="ref-table'+(table.section==='cards'?' ref-card-stats':'')+(isMapping(table)?' ref-element-mappings':'')+(table.section==='origins'?' ref-origin-table':'')+'"><caption class="ref-visually-hidden">'+esc(titleFor(table))+'</caption><thead><tr>'+table.columns.map(function(c){return '<th scope="col">'+esc(columnLabel(table,c))+'</th>';}).join('')+'</tr></thead><tbody>'+rows.map(function(row){return '<tr>'+row.map(function(v,i){var quality=table.columns[i]==='品质'&&/^[蓝紫橙红]$/.test(v);return i===0?'<th scope="row">'+esc(v)+'</th>':'<td'+(String(v).length>20?' class="ref-long-text"':'')+'>'+(quality?'<span class="ref-quality ref-quality-'+({'蓝':'blue','紫':'purple','橙':'orange','红':'red'}[v])+'">'+esc(v)+'</span>':cellHtml(table,table.columns[i],v))+'</td>';}).join('')+'</tr>';}).join('')+'</tbody></table></div>';
     }
     function results(){
       var table=displayTable(currentTable()),s=state(),html='';
@@ -161,15 +168,29 @@
       }
       body.querySelector('[data-ref-results]').innerHTML=html;
     }
+    function closeColumnMenu(focus){var menu=body.querySelector('.ref-column-menu');if(menu&&menu.open){menu.open=false;if(focus)menu.querySelector('summary').focus({preventScroll:true});}}
+    function switchTable(id){
+      var s=state();if(!sectionTables().some(function(t){return t.id===id;}))return;
+      s.perTable[s.table]={query:s.query,quality:s.quality,attribute:s.attribute,view:s.view,sort:s.sort,band:s.band};s.table=id;
+      Object.assign(s,s.perTable[id]||{query:'',quality:'',attribute:'',view:'auto',sort:'source',band:''});
+      body.querySelector('[data-ref-band]').value=s.band;body.querySelector('[data-ref-search]').value=s.query;body.querySelector('[data-ref-sort]').value=s.sort;
+      body.querySelector('[data-ref-column-title]').textContent=titleFor(currentTable());
+      body.querySelectorAll('[data-ref-table-option]').forEach(function(button){if(button.dataset.refTableOption===id)button.setAttribute('aria-current','true');else button.removeAttribute('aria-current');});
+      fillQuality();results();closeColumnMenu(true);
+    }
+    root.document.addEventListener('click',function(e){var menu=body.querySelector('.ref-column-menu');if(menu&&!menu.contains(e.target))closeColumnMenu(false);});
+    body.addEventListener('focusout',function(e){var menu=body.querySelector('.ref-column-menu');if(menu&&menu.contains(e.target)&&e.relatedTarget&&!menu.contains(e.relatedTarget))closeColumnMenu(false);});
+    body.addEventListener('keydown',function(e){if(e.key==='Escape'&&e.target.closest('.ref-column-menu')){e.preventDefault();closeColumnMenu(true);}});
     body.addEventListener('click',function(e){var b=e.target.closest('button');if(!b)return;
       if(b.dataset.refSection){homeScroll=root.scrollY;sectionId=b.dataset.refSection;controls();root.scrollTo({top:state().scroll||0,behavior:'instant'});body.querySelector('h2').focus({preventScroll:true});}
       else if(b.hasAttribute('data-ref-home')){state().scroll=root.scrollY;sectionId='';home();root.scrollTo({top:homeScroll,behavior:'instant'});body.querySelector('h2').focus({preventScroll:true});}
       else if(b.dataset.refImage)openImage(b.dataset.refImage,b);
+      else if(b.dataset.refTableOption)switchTable(b.dataset.refTableOption);
       else if(b.hasAttribute('data-ref-clear')){var s=state();s.query='';s.quality='';s.attribute='';s.band='';body.querySelector('[data-ref-band]').value='';body.querySelector('[data-ref-search]').value='';var quality=body.querySelector('[data-ref-quality]'),attribute=body.querySelector('[data-ref-attribute]');if(quality)quality.value='';if(attribute)attribute.value='';var level=body.querySelector('[data-ref-level-search]');if(level)level.value='';results();}
     });
     body.addEventListener('input',function(e){if(e.target.hasAttribute('data-ref-search')){state().query=e.target.value;var level=body.querySelector('[data-ref-level-search]');if(level)level.value=e.target.value;if(!e.isComposing)results();}});
     body.addEventListener('compositionend',function(e){if(e.target.hasAttribute('data-ref-search')){state().query=e.target.value;results();}});
-    body.addEventListener('change',function(e){if(e.target.hasAttribute('data-ref-search')||!e.target.matches('select'))return;var s=state();if(e.target.hasAttribute('data-ref-table')){s.perTable[s.table]={query:s.query,quality:s.quality,attribute:s.attribute,view:s.view,sort:s.sort,band:s.band};s.table=e.target.value;Object.assign(s,s.perTable[s.table]||{query:'',quality:'',attribute:'',view:'auto',sort:'source',band:''});body.querySelector('[data-ref-band]').value=s.band;body.querySelector('[data-ref-search]').value=s.query;body.querySelector('[data-ref-view]').value=s.view;body.querySelector('[data-ref-sort]').value=s.sort;fillQuality();}if(e.target.hasAttribute('data-ref-band'))s.band=e.target.value;if(e.target.hasAttribute('data-ref-quality'))s.quality=e.target.value;if(e.target.hasAttribute('data-ref-attribute'))s.attribute=e.target.value;if(e.target.hasAttribute('data-ref-view'))s.view=e.target.value;if(e.target.hasAttribute('data-ref-sort'))s.sort=e.target.value;if(e.target.hasAttribute('data-ref-level-search')){s.query=e.target.value;body.querySelector('[data-ref-search]').value=s.query;}results();});
+    body.addEventListener('change',function(e){if(e.target.hasAttribute('data-ref-search')||!e.target.matches('select'))return;var s=state();if(e.target.hasAttribute('data-ref-band'))s.band=e.target.value;if(e.target.hasAttribute('data-ref-quality'))s.quality=e.target.value;if(e.target.hasAttribute('data-ref-attribute'))s.attribute=e.target.value;if(e.target.hasAttribute('data-ref-view'))s.view=e.target.value;if(e.target.hasAttribute('data-ref-sort'))s.sort=e.target.value;if(e.target.hasAttribute('data-ref-level-search')){s.query=e.target.value;body.querySelector('[data-ref-search]').value=s.query;}results();});
     root.document.addEventListener('qinshi:partitionchange',function(e){if(e.detail.name!=='other-reference')closeViewer();});
     home();
     var narrow=host.getBoundingClientRect().width<760,resizePending=false;

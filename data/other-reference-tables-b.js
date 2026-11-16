@@ -173,34 +173,26 @@
         ['决断绝断', '全体防', '白凤、张良、扶苏、项羽、钟离昧']
     ]);
     function originTable(id, title, names, source, path, note) {
-        add(id, 'origins', title, ['弟子', '可获得来源'], names.split('、').map(function (name) {
+        add(id, 'origins', title, ['弟子', '可获得来源'], Array.from(new Set(names.split('、'))).map(function (name) {
             return [name, source];
-        }), [path], note);
+        }), Array.isArray(path) ? path : [path], note);
     }
     var originalNames = '东皇太一、燕丹、木剑盖聂、胜七、鬼谷子、残虹盖聂、少司命、云中君、赵高、高渐离、晓梦大师、戎装嬴政、霸王少羽、墨眉天明、范增、琴师高渐离、姬如千泷、乐师雪女、小貅貅、少年盖聂、张良、红莲、姬无夜、魔化卫庄、小灵、少年卫庄、西蜀石兰、韩信、弄玉、胡亥、涟衣、花影、将星蒙恬、流沙紫女、伏念、颜路、少年白凤、墨鸦、小黎、黑衣张良';
-    var supplementNames = '东皇太一、燕丹、木剑盖聂、胜七、鬼谷子、残虹盖聂、少司命、云中君、赵高、高渐离、晓梦大师、戎装嬴政、霸王少羽、墨眉天明、范增、琴师高渐离、姬如千泷、乐师雪女、小貅貅、少年盖聂、张良、红莲、姬无夜、魔化卫庄、小灵、少年卫庄、西蜀石兰、韩信、弄玉、胡亥、涟衣、花影、将星蒙恬、流沙紫女、伏念、颜路、少年白凤、墨鸦、小黎、黑衣张良';
     var package1 = '东皇太一、燕丹、木剑盖聂、胜七、鬼谷子、残虹盖聂、少司命、云中君、赵高、高渐离、伏念、颜路、晓梦大师、琴师高渐离';
     var package2 = '张良、少年卫庄、戎装嬴政、姬如千泷、红莲、西蜀石兰、墨眉天明、霸王少羽、乐师雪女、姬无夜、韩信、范增、少年白凤';
     var package3 = '墨鸦、小黎、黑衣张良、小貅貅、魔化卫庄、弄玉、少年盖聂、小灵、胡亥、涟衣、花影、将星蒙恬、流沙紫女';
-    originTable('origins-original-all', '魂魄兑换—万众瞩目（原图07）', originalNames,
-        '魂魄兑换—万众瞩目', original + '07.png', '按原表逐行、从左到右录入；保留原图07独立出处，不与补图07合并。');
-    originTable('origins-original-package1', '橙色弟子自选包1（原图07）', package1,
-        '墨攻棋阵—橙色弟子自选包1', original + '07.png');
-    originTable('origins-original-package2', '橙色弟子自选包2（原图07）', package2,
-        '楼兰探秘—橙色弟子自选包2', original + '07.png');
-    originTable('origins-original-package3', '橙色弟子自选包3（原图07）', package3,
-        '蜃楼东渡—橙色弟子自选包3', original + '07.png');
-    originTable('origins-original-seven-day', '七日活动—狂欢活动弟子自选（原图07）', '星魂、王离、诺敏',
+    var originImages = [original + '07.png', supplement];
+    originTable('origins-original-all', '魂魄兑换—万众瞩目', originalNames,
+        '魂魄兑换—万众瞩目', originImages);
+    originTable('origins-original-package1', '橙色弟子自选包1', package1,
+        '周活动—墨攻棋阵—橙色弟子自选包1', originImages);
+    originTable('origins-original-package2', '橙色弟子自选包2', package2,
+        '周活动—楼兰探秘—橙色弟子自选包2', originImages);
+    originTable('origins-original-package3', '橙色弟子自选包3', package3,
+        '周活动—蜃楼东渡—橙色弟子自选包3', originImages);
+    originTable('origins-original-seven-day', '七日活动—狂欢活动弟子自选', '星魂、王离、诺敏',
         '七日活动—狂欢活动弟子自选；活动期间累计充值100元可获得，可自选其一', original + '07.png',
         '仅转录原攻略说明，不代表当前活动仍开放；补图07未收录此项，不据此判定失效。');
-    originTable('origins-supplement-all', '万众瞩目（补图07独立对照）', supplementNames,
-        '万众瞩目', supplement, '补图07题头只写“万众瞩目”，原图07另有“魂魄兑换”前缀；名单逐项相同，仍各自保留来源。');
-    originTable('origins-supplement-package1', '橙色弟子自选包1（补图07独立对照）', package1,
-        '周活动—墨攻棋阵—橙色弟子自选包1', supplement, '补图07明确标注“获取来源:周活动-墨攻棋阵”；名单与原图07一致。');
-    originTable('origins-supplement-package2', '橙色弟子自选包2（补图07独立对照）', package2,
-        '周活动—楼兰探秘—橙色弟子自选包2', supplement, '补图07明确标注周活动；名单与原图07一致。');
-    originTable('origins-supplement-package3', '橙色弟子自选包3（补图07独立对照）', package3,
-        '周活动—蜃楼东渡—橙色弟子自选包3', supplement, '补图07明确标注周活动；名单与原图07一致。');
     add('treasure-red-medium', 'treasure', '红色品质灵宝进阶所需灵媒数（原图08）',
         ['阶段', '第1子列（原图无列名）', '第2子列（原图无列名）', '第3子列（原图无列名）', '第4子列（原图无列名）', '本阶段合计', '原图总计列'], [
             ['1阶', '1', '1', '1', '1', '4', '未提供（此格为“总计”表头）'],

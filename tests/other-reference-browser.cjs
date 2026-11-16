@@ -1,4 +1,5 @@
 'use strict';
+async function selectTable(p,id){await p.locator('.ref-column-menu > summary').click();await p.locator('[data-ref-table-option="'+id+'"]').click();}
 const {test,before,after}=require('node:test');
 const assert=require('node:assert/strict'),fs=require('node:fs');
 const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
@@ -55,8 +56,8 @@ test('levels have ten-level filters, origins search all source lists and speed s
  await p.locator('[data-ref-search]').fill('东皇太一');assert.equal(await p.locator('[data-ref-origin]').count(),1);assert.ok(await p.locator('[data-ref-origin-record]').count()>1);
  await p.locator('[data-ref-home]').click();await p.locator('.ref-index [data-ref-section="speed"]').click();
  await p.locator('[data-ref-search]').fill('黑龙');
- await p.locator('[data-ref-table]').selectOption('speed-free-ranking');assert.equal(await p.locator('[data-ref-search]').inputValue(),'');
- await p.locator('[data-ref-table]').selectOption('speed-paid-ranking');assert.equal(await p.locator('[data-ref-search]').inputValue(),'黑龙');
+ await selectTable(p,'speed-free-ranking');assert.equal(await p.locator('[data-ref-search]').inputValue(),'');
+ await selectTable(p,'speed-paid-ranking');assert.equal(await p.locator('[data-ref-search]').inputValue(),'黑龙');
  }finally{await context.close();}
 });
 test('touch viewer pinches the image itself and pans long content without zooming the page',async()=>{

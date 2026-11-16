@@ -94,7 +94,7 @@
   function initRoot(mode){
     var host=document.getElementById('inscription-'+mode);roots[mode]=host;activeChildren[mode]='direct';
     host.innerHTML='<div class="craft-actions craft-locator-tabs" role="group" aria-label="查询方式">'+['direct','reverse'].map(function(child){return '<button type="button" class="seg'+(child==='direct'?' active':'')+'" data-locator-tab="'+child+'" aria-pressed="'+(child==='direct')+'">'+(child==='direct'?'按弟子／遁位查询':'按属性反查')+'</button>';}).join('')+'</div><div data-locator-panel="direct"></div><div data-locator-panel="reverse" hidden></div>'+
-      (mode==='crafting-simulator'?'<section class="craft-panel"><h3>共用模拟现场</h3><p class="craft-note">上方两种方式仅定位目标，点击应用后才更新此现场。手动填写代表洗练备料；紫色中档请从虚拟背包取用。</p><div data-craft-simulator></div></section>':'');
+      (mode==='crafting-simulator'?'<section class="craft-panel"><h3>共用模拟现场</h3><p class="craft-note">紫色中档材料从虚拟背包取用。</p><div data-craft-simulator></div></section>':'');
     init(mode,'direct',host.querySelector('[data-locator-panel="direct"]'));
     if(mode==='crafting-simulator'){
       simulationView={mode:mode,scene:true,el:host,bagSources:{},bagSelection:{}};
@@ -115,7 +115,6 @@
     var searchId=id+'-disciple-suggestions';
     el.innerHTML='<div data-craft-status class="craft-status" role="alert" hidden></div>'+
       '<section class="craft-panel"><h3>'+(mode==='crafting-paths'?'合成路径查询':'合成模拟')+'</h3>'+
-      '<p class="craft-note">两种查询各自保存筛选。'+(mode==='crafting-simulator'?'下方模拟现场与背包共用，筛选不会自动改变现场。':'本分区的目标与路线独立保存。')+'</p>'+
       '<div class="craft-controls craft-filters"'+(child==='reverse'?' hidden':'')+'><label class="craft-search">弟子搜索（可不选）'+
       '<input type="search" data-craft-field="search" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="'+searchId+'" placeholder="输入姓名，例如盖聂">'+
       '<span id="'+searchId+'" class="craft-suggestions" data-craft-suggestions role="listbox" hidden></span></label>'+
@@ -316,7 +315,7 @@
     var draft=v.reverse;
     area(v,'reverse').innerHTML='<div class="craft-controls"><label>目标品质<select data-reverse-field="quality">'+options(R.qualities,draft.quality)+'</select></label><label>遁位<select data-reverse-field="dun">'+options(X.duns(draft),draft.dun,'全部符合条件的遁位')+'</select></label></div><div class="craft-controls craft-reverse-attrs">'+draft.attrs.map(function(attr,i){
       return '<label>按属性反查'+(i+1)+'<select data-reverse-attr="'+i+'">'+options(X.options(draft,i),attr,'不限制属性')+'</select></label>';
-    }).join('')+'</div><p class="craft-note">可重复选择，次数表示至少需要几条该属性；优先填满查询词条，其余为非查询词条X。点击结果应用目标，筛选本身不会改变模拟现场。</p>';
+    }).join('')+'</div><p class="craft-note">重复选择表示所需条数；优先填满查询属性，其余记为非查询词条X。</p>';
     renderReverseResults(v);
   }
   function renderReverseResults(v,preserveFilters){
@@ -326,7 +325,7 @@
     try{v.commonToken=root.QinshiAccounts.getItem('qinshi_inscription_common_v1');var stored=JSON.parse(v.commonToken);if(stored&&Array.isArray(stored.keys))common=new Set(stored.keys);}catch(e){/* no personal classification inferred from broken data */}
     var cards=X.groupResults(rows,filters,{commonKeys:common,formationNames:root.InscriptionProgressRules.formationNames(root.FORMATIONS_DATA),atlasTargets:(root.FORBIDDEN_DATA||{}).discipleAtlasTargets});
     v.reverseCards=cards;
-    if(v.locator.resultsCollapsed){host.innerHTML='<section class="craft-reverse-results"><p class="craft-note">已选组合，反查结果已收起。</p>'+button('reverse-reselect','重新选择')+'</section>';return;}
+    if(v.locator.resultsCollapsed){host.innerHTML='<section class="craft-reverse-results">'+button('reverse-reselect','重新选择')+'</section>';return;}
     var size=30;v.reversePage=Math.max(0,Math.min(v.reversePage||0,Math.max(0,Math.ceil(cards.length/size)-1)));
     var start=v.reversePage*size,end=Math.min(cards.length,start+size);
     var content=cards.length?'<div class="craft-reverse-grid">'+cards.slice(start,end).map(function(card,i){
@@ -346,7 +345,7 @@
       '<label>弟子分类<select data-result-filter="group">'+options([{id:'all',label:'全部弟子'},{id:'formation',label:'合阵弟子'},{id:'common',label:'常用弟子'},{id:'other',label:'其他弟子'}],filters.group)+'</select></label>'+
       '<label>天位<select data-result-filter="prefix">'+options(R.prefixes,filters.prefix,'全部天位')+'</select></label>'+
       '<label>遁位<select data-result-filter="dun">'+options(R.duns.map(function(d){return d.id;}),filters.dun,'全部遁位')+'</select></label>'+
-      '<label>搜索弟子<input type="search" data-result-filter="search" value="'+esc(filters.search)+'" placeholder="输入弟子姓名"></label></div><p class="craft-note">先筛选具体弟子，再合并同位置同搭配；非查询词条X需应用后自行选择。</p><div data-reverse-cards>'+content+'</div></section>';
+      '<label>搜索弟子<input type="search" data-result-filter="search" value="'+esc(filters.search)+'" placeholder="输入弟子姓名"></label></div><p class="craft-note">非查询词条X需应用后选择。</p><div data-reverse-cards>'+content+'</div></section>';
   }
   function renderAnalysis(v) {
     var target=targetFor(v),dun=position(target).dun,host=area(v,'analysis');
@@ -375,7 +374,7 @@
   function renderMatrix(v) {
     var target=targetFor(v),dun=position(target).dun,attrs=Array.from(new Set(target.attrs.filter(Boolean)));
     area(v,'matrix').innerHTML=!attrs.length?'<p class="craft-note">先选择目标属性。</p>':
-      '<p class="craft-note">标签说明单条词条的获取方式，整枚材料仍需合法；蓝二速度不区分肉眼无法识别的档位。表格可左右滑动。</p>'+
+      '<p class="craft-note">标签说明单条词条的获取方式，整枚材料仍需合法；蓝二速度不区分肉眼无法识别的档位。</p>'+
       '<div class="craft-scroll" tabindex="0" aria-label="所选属性成长数值"><table class="craft-table craft-matrix"><thead><tr><th>属性</th>'+R.qualities.map(function(q){return '<th>'+q.label+'</th>';}).join('')+'</tr></thead><tbody>'+attrs.map(function(attr){
         return '<tr><th>'+esc(attr)+'</th>'+R.qualities.map(function(q){
           return '<td>'+R.termsFor(dun,q.id).filter(function(t){return t.attr===attr;}).map(function(t){
@@ -419,7 +418,7 @@
       '<p class="craft-note">'+(target.discipleKey?esc(itemFor(target).name+' · '+target.slot.replace('|',' · '))+'。':'通用遁位路线：全部材料必须为同一个前缀、同一个遁位。')+
       (plan.symbolicX===false?'具体杂词 X：'+T.html(plan.xTerm,target.quality)+'；按实际词条逐阶段校验并计算，不会自动替换成其他 X。':'杂词条 X 不指定具体属性，默认采用同一种词条/不分档词条；本路线需要一致的 X 不可换成多个不同杂词条。所示概率以同一种合法不分档杂词为条件。')+'</p>'+
       (plan.notes||[]).map(function(note){return '<p class="craft-note">'+esc(note)+'</p>';}).join('')+
-      '<p class="craft-note">按材料准备方式展示常规代表路线，不穷举所有材料树，也不把投料顺序变化算作新方案。每步概率均以该步材料已经备齐为条件，置换概率未知。点击星标收藏当前完整路线，收藏方案统一排在所有未收藏方案之前。</p><div data-route-groups></div></section>';
+      '<p class="craft-note">按材料准备方式展示常规代表路线，不穷举所有材料树，也不把投料顺序变化算作新方案。每步概率均以该步材料已经备齐为条件，置换概率未知。</p><div data-route-groups></div></section>';
     var groups=host.querySelector('[data-route-groups]');
     var entries=plan.strategies.map(function(route,index){return {route:route,index:index,favorite:favoriteFor(route,target,plan.xAttr)};});
     var ideas=P.groupStrategies(plan.strategies);
@@ -522,7 +521,7 @@
     var p=position(targetFor(v)),sim=state.simulation,entries=L.groups(state),capacity=L.selectionCapacity(state);
     if(!v.bagSelection)v.bagSelection={};
     if(!v.bagSources)v.bagSources={};
-    return '<section class="craft-backpack"><h4>虚拟合成背包 · 本账号共用</h4><p class="craft-note">相同铭文合并库存，分别保留合成来源。增加数量沿用所选合成来源；只有一个来源时自动沿用。原有手动数量不追溯，无制作记录的库存仍为手动材料。勾选铭文只填空材料位，不替换已填写材料。</p><p data-bag-summary role="status">剩余 '+capacity+' 个材料位</p>'+
+    return '<section class="craft-backpack"><h4>虚拟合成背包 · 本账号共用</h4><p class="craft-note">新增数量沿用所选合成来源，手动材料不追溯。勾选仅填空材料位。</p><p data-bag-summary role="status">剩余 '+capacity+' 个材料位</p>'+
       (entries.length?'<div class="craft-bag-list">'+entries.map(function(g){
         var eligible=g.available>0&&capacity>0&&!sim.pending&&!sim.legacy&&g.material.prefix===p.prefix&&g.material.dun===p.dun&&g.material.quality===sim.stage;
         var chosen=eligible?Math.min(v.bagSelection[g.id]||0,g.available,capacity):0;

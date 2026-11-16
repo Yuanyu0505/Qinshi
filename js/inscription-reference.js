@@ -74,7 +74,7 @@
   }
   function extreme(dun) { return esc(dun.id) + '（极致：' + esc(dun.high.join('、')) + '）'; }
   function wrapTable(label, head, body, className) {
-    return '<p class="mobile-scroll-hint" aria-hidden="true">左右滑动查看完整资料 →</p><div class="table-wrap mobile-scroll-region ins-ref-scroll" tabindex="0" aria-label="' + esc(label) + '，可左右滑动"><table class="ins-reference-table ' + (className || '') + '"><thead><tr>' + head.map(function (title) { return '<th scope="col">' + title + '</th>'; }).join('') + '</tr></thead><tbody>' + body + '</tbody></table></div>';
+    return '<div class="table-wrap mobile-scroll-region ins-ref-scroll" tabindex="0" aria-label="' + esc(label) + '，可左右滑动"><table class="ins-reference-table ' + (className || '') + '"><thead><tr>' + head.map(function (title) { return '<th scope="col">' + title + '</th>'; }).join('') + '</tr></thead><tbody>' + body + '</tbody></table></div>';
   }
   function amountHtml(row,q){
     if(!row)return '<span class="ins-ref-empty">—</span>';

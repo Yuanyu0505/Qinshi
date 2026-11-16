@@ -15,7 +15,6 @@
 #partition-other-reference .ref-index small { font-size:13px;color:#bdb29f; }
 #partition-other-reference .ref-heading { display:flex;align-items:center;justify-content:space-between;gap:12px; }
 #partition-other-reference .ref-heading h2 { margin:0; }
-#partition-other-reference .ref-heading-compact { justify-content:flex-end; }
 #partition-other-reference .ref-controls { display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:10px;align-items:end;margin:18px 0; }
 #partition-other-reference .ref-controls label:first-child { grid-column:span 2; }
 #partition-other-reference .ref-controls label { display:grid;gap:6px;font-size:14px;min-width:0; }
@@ -27,7 +26,6 @@
 #partition-other-reference .ref-result-toolbar { display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;margin:10px 0;color:#cbbfa9;font-size:14px; }
 #partition-other-reference .ref-result-toolbar .ref-sources { margin:0; }
 #partition-other-reference .ref-result-toolbar .seg { min-height:36px; }
-#partition-other-reference .ref-quantity-note { font-size:14px;line-height:1.65;padding:10px 12px;margin:0;border-left:3px solid var(--gold);background:var(--bg2); }
 #partition-other-reference .ref-warning { color:#ffd784;background:#382a17;border:1px solid #927039;border-radius:5px;padding:9px 12px;font-size:14px;line-height:1.6; }
 #partition-other-reference .ref-quality { padding:2px 7px;border:1px solid currentColor;border-radius:4px;white-space:nowrap; }
 #partition-other-reference .ref-quality-blue { color:#85bdff; }

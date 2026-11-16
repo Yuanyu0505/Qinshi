@@ -265,9 +265,9 @@
       '<p id="six-halls-error" class="six-halls-error" role="alert" hidden></p>' +
       '<section id="six-halls-progress" class="six-halls-page" aria-label="个人进度"><div class="panel six-halls-shared"><div class="six-halls-section-heading"><h3>玩家与共用库存</h3><span id="six-halls-account" class="six-halls-muted"></span></div>' +
       '<div class="six-halls-shared-fields">' + inputHtml("playerLevel", "玩家等级", progress.playerLevel, null, Number.MAX_SAFE_INTEGER, "可留空；留空时只计算材料，不判断等级限制。") +
-      inputHtml("herbs", "七星珠草库存（六堂共用）", progress.herbs, null, Number.MAX_SAFE_INTEGER, "规划时只在合计中抵扣一次。") + '</div><p id="six-halls-cap" class="six-halls-notice"></p></div>' +
-      '<p class="six-halls-muted">输入后自动保存。修改等级不会自动扣除或返还库存；计算也不会改写进度。</p><div class="six-halls-grid">' + progressCards + '</div></section>' +
-      '<section id="six-halls-planner" class="six-halls-page" aria-label="升级规划" hidden><div class="six-halls-section-heading"><div><h3>选择本次升级目标</h3><p class="six-halls-muted">初始不勾选，目标均为50级。切换子页或分区保留草稿，刷新或换账号后重置。</p></div>' +
+      inputHtml("herbs", "七星珠草库存（六堂共用）", progress.herbs, null, Number.MAX_SAFE_INTEGER) + '</div><p id="six-halls-cap" class="six-halls-notice"></p></div>' +
+      '<p class="six-halls-muted">修改等级不增减库存。</p><div class="six-halls-grid">' + progressCards + '</div></section>' +
+      '<section id="six-halls-planner" class="six-halls-page" aria-label="升级规划" hidden><div class="six-halls-section-heading"><div><h3>选择本次升级目标</h3></div>' +
       '<button type="button" class="seg" data-six-halls-action="calculate">计算材料</button></div><div class="six-halls-grid">' + planCards + '</div><div id="six-halls-result" class="six-halls-result" aria-live="polite" aria-atomic="true"></div></section>' +
       '<section id="six-halls-reference" class="six-halls-page" aria-label="升级资料" hidden><div class="panel"><h3>通用升级资料</h3><p class="six-halls-muted">六堂使用同一份升级消耗表，每堂0→50级共需七星珠草904、该堂信物435。累计从0级开始计算；“—”表示该步骤未单列玩家等级门槛。</p>' +
       '<div class="six-halls-reference-filter"><div class="six-halls-field"><label for="six-halls-reference-min">目标等级起点</label><input id="six-halls-reference-min" type="number" min="1" max="50" step="1" inputmode="numeric" data-six-halls-reference-bound="min" value="1"></div>' +

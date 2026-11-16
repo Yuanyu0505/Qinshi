@@ -86,7 +86,8 @@
 
   function renderProgress() {
     var result = core.locateProgressRewards(data.progressRewards, state.progressQuery);
-    elements.progressNotice.textContent = result.message || "共 40 个进度奖励节点；点击典籍奖励可查看各赛季对应典籍。";
+    elements.progressNotice.textContent = result.message || "";
+    elements.progressNotice.hidden = !elements.progressNotice.textContent;
     if (!result.items.length) {
       elements.progressResults.innerHTML = '<div class="empty"><p>未找到匹配的逐鹿奖励</p><button type="button" class="link-btn" data-zhulu-clear-progress>清除查询</button></div>';
       return;

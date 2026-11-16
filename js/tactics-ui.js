@@ -884,7 +884,7 @@
     var materialControls = '<details class="tactics-cost-material-disclosure"' + (disclosureOpen ? ' open' : '') + '><summary>库存与购买包价格</summary><section class="panel tactics-cost-materials"><div class="tactics-cost-material-head"><span>材料</span><span>库存</span><span>每包数量</span><span>每包元宝</span></div>' +
       catalog.map(costMaterialRowHtml).join('') + '</section></details>';
     var floatingCalculate = '<button type="button" class="seg active tactics-cost-floating-calculate" data-cost-action="calculate">计算元宝</button>';
-    el.costMode.innerHTML = '<section class="panel tactics-cost-toolbar"><div><div class="panel-title">综合材料与元宝计算</div><p class="muted-tip">功勋、号角、统真言碎片、极真言碎片为共享库存；其他材料分别计算。</p></div>' +
+    el.costMode.innerHTML = '<section class="panel tactics-cost-toolbar"><div><div class="panel-title">综合材料与元宝计算</div></div>' +
       '<div class="tactics-cost-actions"><button type="button" class="seg" data-cost-action="select-all">全选</button><button type="button" class="seg" data-cost-action="clear-all">清空</button>' +
       '<button type="button" class="seg" data-cost-action="restore-progress">从个人进度重新读取</button><button type="button" class="seg active" data-cost-action="calculate">计算元宝</button></div>' +
       (state.costError ? '<div class="error" role="alert">' + escapeHtml(state.costError) + '</div>' : '') + '</section>' +

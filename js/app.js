@@ -1866,7 +1866,7 @@
             <span>${atlasSoulHtml(itemId, plan.souls, favorite)}</span>
             <span class="atlas-cost-growth">成长值 <b>+${plan.growth}</b></span>
           </div>
-          <div class="muted-tip">14级后不再获得成长值</div>
+          
           <div class="atlas-upgrade-equipment"><div class="atlas-equipment-title">所需装备</div>${equipmentHtml}</div>
         </div>`;
     return `<div class="atlas-item${favorite ? " atlas-item-favorite" : ""}${pinned ? " atlas-item-pinned" : ""}${atlasState.inventoryEditingId === itemId ? " atlas-item-editing" : ""}" data-atlas-item="${escapeHtml(itemId)}">
@@ -1949,7 +1949,7 @@
       </div>
       ${hasEquipment ? '<button type="button" class="seg atlas-summary-equipment-toggle" aria-expanded="false">展开所需装备</button>' : ""}
       <div class="atlas-summary-equipment"><div class="atlas-equipment-title">所需装备</div><div class="atlas-summary-equipment-list">${equipment}</div></div>
-      <div class="muted-tip">14级后不再获得成长值</div>
+      
     </div>`;
   }
 
@@ -2687,18 +2687,14 @@
     if (forgeState.mode === "main") {
       const items = FORG.findMain(FDATA.items, q);
       el.forgeResults.innerHTML = items.length
-        ? forgeScrollHintHtml("主锻造装备材料表") + `<div class="forge-scroll forge-scroll-main mobile-scroll-region" tabindex="0" aria-label="主锻造装备材料表，可左右滑动"><table class="forge-h-table"><thead>${tableHead}</thead><tbody>${items.map((i) => forgingRowHtml(i, null)).join("")}</tbody></table></div>`
+        ? `<div class="forge-scroll forge-scroll-main mobile-scroll-region" tabindex="0" aria-label="主锻造装备材料表，可左右滑动"><table class="forge-h-table"><thead>${tableHead}</thead><tbody>${items.map((i) => forgingRowHtml(i, null)).join("")}</tbody></table></div>`
         : '<div class="empty"><p>未找到该主锻造装备</p></div>';
     } else {
       const found = FORG.findAsMaterial(FDATA.items, q);
       el.forgeResults.innerHTML = found.length
-        ? forgeScrollHintHtml("素材装备匹配表") + `<div class="forge-scroll forge-scroll-material mobile-scroll-region" tabindex="0" aria-label="素材装备匹配表，可左右滑动"><table class="forge-h-table"><thead>${tableHead}</thead><tbody>${found.map((r) => forgingRowHtml(r.item, r.hits)).join("")}</tbody></table></div>`
+        ? `<div class="forge-scroll forge-scroll-material mobile-scroll-region" tabindex="0" aria-label="素材装备匹配表，可左右滑动"><table class="forge-h-table"><thead>${tableHead}</thead><tbody>${found.map((r) => forgingRowHtml(r.item, r.hits)).join("")}</tbody></table></div>`
         : '<div class="empty"><p>未找到使用该素材的主锻造装备</p></div>';
     }
-  }
-
-  function forgeScrollHintHtml(label) {
-    return `<p class="mobile-scroll-hint" aria-hidden="true">${escapeHtml(label)} · 左右滑动查看全部阶段 →</p>`;
   }
 
   function renderChips() {

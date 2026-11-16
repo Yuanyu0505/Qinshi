@@ -129,7 +129,7 @@
       numberField("玩家等级", "playerLevel", state.account.playerLevel, 0) +
       numberField("沧海珠库存", "pearls", state.account.inventory.pearls, 0) +
       numberField("玄龟甲库存", "shells", state.account.inventory.shells, 0) +
-      '</div><p class="muted-tip">玩家46级解锁战匣与丹囊；库存由所有弟子共用。</p></section>';
+      '</div><p class="muted-tip">46级解锁战匣与丹囊。</p></section>';
   }
 
   function numberField(label, field, value, minimum, scope) {
@@ -212,13 +212,13 @@
       '</span></div><button type="button" class="link-btn" data-battle-pouch-action="cancel-edit">关闭</button></div>' +
       '<div class="battle-pouch-editor-columns"><section><h3>战匣</h3>' +
       numberField("当前战匣等级", "battleLevel", draft.battle.currentLevel, 0, "edit") +
-      capSummary("战匣等级上限", caps.battle) + '<p class="muted-tip">固定槽位：武器、防具、饰品、典籍。名称选填，品质必填；仅按品质计算上限。</p><div class="battle-pouch-equipment-slots">' +
+      capSummary("战匣等级上限", caps.battle) + '<p class="muted-tip">等级上限按品质计算，名称可选。</p><div class="battle-pouch-equipment-slots">' +
       DATA.equipmentSlots.map(function (definition, index) {
         return equipmentSlotEditor(definition, draft.battle.slots[index]);
       }).join("") + '</div></section><section><h3>丹囊</h3>' +
       numberField("当前丹囊等级", "pouchLevel", draft.pouch.currentLevel, 0, "edit") +
       capSummary("丹囊等级上限", caps.pouch) +
-      '<p class="muted-tip">八个内丹槽位只记录品质；新放入时默认橙色。</p><div class="battle-pouch-pill-slots">' +
+      '<div class="battle-pouch-pill-slots">' +
       draft.pouch.slots.map(pouchSlotEditor).join("") + '</div></section></div>' +
       '<div class="battle-pouch-editor-actions"><button type="button" class="seg active" data-battle-pouch-action="save-edit">保存</button>' +
       '<button type="button" class="seg" data-battle-pouch-action="cancel-edit">取消</button></div></div>';

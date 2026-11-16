@@ -495,7 +495,7 @@
     var cards = visibleIds.length
       ? visibleIds.map(function (id) { return beastCard(beastById(id), Boolean(query)); }).join("")
       : '<p class="machine-search-empty">当前流派没有符合条件的机关兽</p>';
-    el.progressContent.innerHTML = '<div class="machine-progress-toolbar">' + schoolSwitcher("progress", school.id) + '<label>品质<select data-progress-quality><option value="all">全部品质</option>' + [['blue','蓝色'],['purple','紫色'],['orange','橙色']].map(function (pair) { return '<option value="' + pair[0] + '"' + (presentation.progressQuality === pair[0] ? ' selected' : '') + '>' + pair[1] + '</option>'; }).join('') + '</select></label><label class="machine-check"><input type="checkbox" data-progress-stocked' + (presentation.stockedOnly ? ' checked' : '') + '>只看有库存或碎片</label><span class="muted-tip">显示 ' + visibleIds.length + '／' + school.beastIds.length + '只；筛选不改变累计等级</span></div>' +
+    el.progressContent.innerHTML = '<div class="machine-progress-toolbar">' + schoolSwitcher("progress", school.id) + '<label>品质<select data-progress-quality><option value="all">全部品质</option>' + [['blue','蓝色'],['purple','紫色'],['orange','橙色']].map(function (pair) { return '<option value="' + pair[0] + '"' + (presentation.progressQuality === pair[0] ? ' selected' : '') + '>' + pair[1] + '</option>'; }).join('') + '</select></label><label class="machine-check"><input type="checkbox" data-progress-stocked' + (presentation.stockedOnly ? ' checked' : '') + '>只看有库存或碎片</label><span class="muted-tip">显示 ' + visibleIds.length + '／' + school.beastIds.length + '只</span></div>' +
       '<section class="machine-school panel">' +
       '<div class="machine-school-head"><div><h2>' + escapeHtml(school.name) + '</h2><span>当前流派累计觉醒等级</span><strong>' + snapshot.totalLevel + '</strong></div>' +
       '<div class="machine-stage-one"><b>' + stageCopy + '</b><span>' + progressCopy + '</span><small>各阶累计觉醒等级要求：45／90／135／180／225</small></div></div>' +
@@ -688,16 +688,15 @@
       '<label><span>机关术流派</span><select data-school-calc-school>' + DATA.schools.map(function (item) { return '<option value="' + item.id + '"' + (item.id === school.id ? ' selected' : '') + '>' + escapeHtml(item.name) + '</option>'; }).join("") + '</select></label>' +
       '<label><span>目标流派阶数</span><select data-school-target>' + schoolStageOptions(school, draft.targetStage) + '</select></label>' +
       '<div><span>当前累计觉醒等级</span><b data-school-current>' + snapshot.totalLevel + '</b></div><div><span>距离目标</span><b data-school-remaining>' + Math.max(0, targetTotal - snapshot.totalLevel) + '级</b></div></div>' +
-      '<p class="muted-tip">两套方案均精确达标，不超额培养。临时修改不会覆盖个人进度或扣减真实库存。</p></section><section class="panel machine-school-strategy"><h2>策略与价格</h2>' +
+      '</section><section class="panel machine-school-strategy"><h2>策略与价格</h2>' +
       '<div class="machine-school-options"><label><input type="checkbox" data-school-option="useOwnedInventory"' + (draft.useOwnedInventory ? ' checked' : '') + '>使用已有库存</label>' +
       '<label><input type="checkbox" data-reference-cost-field="bluePurpleInventoryOnly"' + (state.referenceCostDraft.bluePurpleInventoryOnly !== false ? ' checked' : '') + '>蓝紫本体仅使用库存</label>' +
       '<label><input type="checkbox" data-school-option="allowNewHighRanks"' + (draft.allowNewHighRanks ? ' checked' : '') + (draft.newRankMode === "zero" ? ' disabled' : '') + '>允许新增8–10阶</label>' +
       '<label><input type="checkbox" data-school-option="allowNewModifications"' + (draft.allowNewModifications ? ' checked' : '') + '>允许新增改造机关兽</label></div>' +
-      '<p class="muted-tip">蓝紫库存限制开启时不通过碎片新增蓝紫本体；关闭使用已有库存时，蓝紫不能新增投入。</p>' +
       newRankModeSelector("school", draft.newRankMode) +
       disclosure('school:rules', '查看库存限制、比较规则与完整说明', '<p class="muted-tip">蓝紫限制开启后，只允许使用已保存的完整蓝紫库存及指定阶数使用上限，不会通过碎片补出新本体；关闭使用已有库存时，蓝紫不能新增投入。蓝紫本体获取成本未计入，神图等其他消耗正常计价。</p><p class="muted-tip">两套方案都必须精确达到目标累计等级，不得超额培养；已达到或超过目标则不再投入。投入最小方案：已计价元宝最少 → 新增效果节点最多 → 等级内研发度溢出最少 → 神图总消耗最少。最多效果档位方案：新增效果节点最多 → 已计价元宝最少 → 溢出最少 → 神图总消耗最少。允许改造参与时，两套目标均先比较改造本体折算投入数量（已有与新增均计入），再按上述顺序比较；实质指标完全相同时保留全部同等最优组合，稳定键仅决定主展示顺序，其他组合在培养材料中查看。新增节点按实际effects统计；高档替换低档，最终仅生效最高已解锁档位。</p>') +
       '<div data-machine-cost-slot></div></section><div class="machine-calculator-actions machine-calc-actionbar"><button type="button" class="seg" data-machine-action="reload-school-calculator">从个人进度重新读取</button><button type="button" class="seg active" data-machine-action="calculate-school">计算两套最优方案</button><a href="#machine-school-participants" data-machine-jump>参与兽与临时库存</a><a href="#machine-beast-calculator-result" data-machine-jump data-machine-result-link hidden>查看结果</a><span role="status" data-machine-calculating-status hidden></span></div>' +
-      '<section class="panel" id="machine-school-participants"><h2>参与兽与临时库存 <small>已选 <span data-school-participant-count>' + school.beastIds.filter(function (id) { return draft.participating[id]; }).length + '</span>／' + school.beastIds.length + '</small></h2><p class="muted-tip">未参与者的现有等级继续计入累计。点击单兽库存区域展开调整，不影响其他兽。</p><div class="machine-school-beast-controls">' + orderedBeastIds.map(function (beastId) {
+      '<section class="panel" id="machine-school-participants"><h2>参与兽与临时库存 <small>已选 <span data-school-participant-count>' + school.beastIds.filter(function (id) { return draft.participating[id]; }).length + '</span>／' + school.beastIds.length + '</small></h2><p class="muted-tip">未参与者的现有等级仍计入累计。</p><div class="machine-school-beast-controls">' + orderedBeastIds.map(function (beastId) {
         var beast = beastById(beastId);
         return renderSchoolBeastControl(beast, draft, Boolean(calculatorQuery) && isSearchMatch(beast, "calculator"));
       }).join("") + '</div></section>';
@@ -856,7 +855,7 @@
   }
 
   function schoolFinalEffects(plan, index) {
-    return '<details class="machine-school-final-effects machine-disclosure" id="machine-school-final-effects-' + index + '" data-detail-key="' + schoolPlanAnchor(plan) + ':' + state.schoolDraft.schoolId + ':' + state.schoolDraft.targetStage + ':effects"><summary>' + (plan.equivalents && BigInt(plan.equivalents.count)>1n ? '主展示组合 · ' : '') + '最终生效效果 · 全部机关兽最高档位</summary><div class="machine-disclosure-body"><p class="muted-tip">高档替换低档，每只机关兽只展示最终最高已解锁档位；未培养的机关兽维持原等级与效果。其他同等组合的材料及生效效果在培养材料内查看。</p><dl>' + (plan.finalEffects || []).map(function (row) {
+    return '<details class="machine-school-final-effects machine-disclosure" id="machine-school-final-effects-' + index + '" data-detail-key="' + schoolPlanAnchor(plan) + ':' + state.schoolDraft.schoolId + ':' + state.schoolDraft.targetStage + ':effects"><summary>' + (plan.equivalents && BigInt(plan.equivalents.count)>1n ? '主展示组合 · ' : '') + '最终生效效果 · 全部机关兽最高档位</summary><div class="machine-disclosure-body"><dl>' + (plan.finalEffects || []).map(function (row) {
       return '<div data-final-beast="' + escapeHtml(row.beastId) + '"><dt>' + escapeHtml(row.beastName) + ' · ' + row.level + '级' + (row.changed ? '' : '<small>原等级不变</small>') + '</dt><dd data-active-effect>' + (row.effect ? '<b>' + row.effect.level + '级档位</b> ' + escapeHtml(row.effect.text) : '尚未解锁效果') + '</dd></div>';
     }).join("") + '</dl></div></details>';
   }
@@ -889,7 +888,7 @@
       page = PLANNER.equivalentPlansPage(DATA, plan, page.nextOffset, 10);
       alternatives = alternatives.concat(page.plans);
     }
-    return '<section class="machine-equivalent-materials" data-equivalent-index="' + index + '"><h3>其他同等最优组合 · 另' + (BigInt(plan.equivalents.count)-1n).toLocaleString('zh-CN') + '套</h3><p class="muted-tip">改造投入、已计价元宝、新增效果节点、研发度溢出及神图均相同。以下是互相替代的完整组合，不要把多套材料一起投入。</p>' + alternatives.map(function (alternative, position) {
+    return '<section class="machine-equivalent-materials" data-equivalent-index="' + index + '"><h3>其他同等最优组合 · 另' + (BigInt(plan.equivalents.count)-1n).toLocaleString('zh-CN') + '套</h3><p class="muted-tip">各组合互相替代，请勿叠加投入。</p>' + alternatives.map(function (alternative, position) {
       var title = '其他组合 ' + (position+1) + ' · ' + alternative.beasts.map(function (b) { return b.beastName + ' ' + b.startLevel + '→' + b.endLevel + '级'; }).join('、');
       var effects = '<dl class="machine-equivalent-effects">' + alternative.beasts.map(function (b) { return '<div><dt>' + escapeHtml(b.beastName) + '最终最高生效效果</dt><dd>' + (b.finalEffect ? b.finalEffect.level + '级 · ' + escapeHtml(b.finalEffect.text) : '尚未解锁') + '</dd></div>'; }).join('') + '</dl>';
       return disclosure(key + ':alternative:' + alternative.stableKey, escapeHtml(title), '<p>' + schoolMaterialSummary(alternative) + '</p><div class="machine-school-plan-beasts">' + alternative.beasts.map(renderSchoolBeastPlan).join('') + '</div>' + effects, 'machine-equivalent-combination');
@@ -951,7 +950,7 @@
       }).join('') + '</tbody></table></div>';
       return '<section class="machine-reference-group"><h3>' + title + '</h3>' + matrix + '<div class="machine-reference-grid machine-research-card-grid machine-reference-mobile-only">' + cards + '</div></section>';
     }
-    return '<section class="panel" id="machine-reference-values"><h2>不同阶数与改造研发度</h2><section class="machine-research-quick"><h3>研发度按阶速查</h3><div class="machine-research-quick-controls"><label>品质<select data-research-quality>' + [['orange','橙色机关兽'],['purple','紫色机关兽'],['blue','蓝色机关兽']].map(function (entry) { return '<option value="' + entry[0] + '"' + ((presentation.researchQuality || 'orange') === entry[0] ? ' selected' : '') + '>' + entry[1] + '</option>'; }).join('') + '</select></label><label>突破阶数<select data-research-rank></select></label></div><div data-research-quick-result aria-live="polite"></div><p class="muted-tip">仅用于查阅，不影响计算、库存或下方完整资料；— 表示资料未提供。</p></section>' + qualityCards("orange", "橙色机关兽", true) + qualityCards("purple", "紫色机关兽", false) + qualityCards("blue", "蓝色机关兽", false) + '</section>';
+    return '<section class="panel" id="machine-reference-values"><h2>不同阶数与改造研发度</h2><section class="machine-research-quick"><h3>研发度按阶速查</h3><div class="machine-research-quick-controls"><label>品质<select data-research-quality>' + [['orange','橙色机关兽'],['purple','紫色机关兽'],['blue','蓝色机关兽']].map(function (entry) { return '<option value="' + entry[0] + '"' + ((presentation.researchQuality || 'orange') === entry[0] ? ' selected' : '') + '>' + entry[1] + '</option>'; }).join('') + '</select></label><label>突破阶数<select data-research-rank></select></label></div><div data-research-quick-result aria-live="polite"></div><p class="muted-tip">—：资料未提供。</p></section>' + qualityCards("orange", "橙色机关兽", true) + qualityCards("purple", "紫色机关兽", false) + qualityCards("blue", "蓝色机关兽", false) + '</section>';
   }
 
   function updateResearchQuickLookup() {
@@ -1010,7 +1009,7 @@
     if (!guide) return '';
     var levelNotes = { 10: '（蓝色）', 15: '（紫色）', 20: '（一代橙色）', 25: '（二代橙色）' };
     return '<section class="panel machine-blueprint-guide" id="machine-reference-blueprints" data-machine-blueprint-guide><h2>机关兽研发材料参考（用图纸版）</h2>' +
-      '<p class="muted-tip">表头为单只机关兽的研发等级，非霸道／非攻机关术流派阶数。仅作图片参考，不参与计算，不改变现有取整规则；—（资料未提供）表示原资料缺失，不视为0。</p>' +
+      '<p class="muted-tip">表头为单兽研发等级，非流派阶数；—表示资料未提供，不视为0。</p>' +
       '<div class="machine-blueprint-guide-scroll" tabindex="0" role="region" aria-label="机关兽研发材料参考表，可横向滚动"><table class="machine-blueprint-guide-table"><thead><tr><th scope="col">材料</th>' + guide.levels.map(function (level) {
         return '<th scope="col">' + escapeHtml(level) + '级' + escapeHtml(levelNotes[level] || '') + '</th>';
       }).join('') + '</tr></thead><tbody><tr data-blueprint-guide-plan><th scope="row">投入方案</th>' + guide.plans.map(function (plan) {
@@ -1026,7 +1025,7 @@
     var guide = DATA.breakthroughGuide;
     if (!guide) return '';
     return '<section class="panel machine-blueprint-guide" id="machine-reference-breakthrough" data-machine-breakthrough-guide><h2>机关兽突破材料参考（0—10阶）</h2>' +
-      '<p class="muted-tip">来源：' + escapeHtml(guide.source.publisher) + '《' + escapeHtml(guide.source.name) + '》。仅作原图资料参考，不参与计算，不改变现有研究值、资源消耗或优化规则。下表阶数为单只机关兽突破阶数，并非研发等级或流派阶数。</p>' +
+      '<p class="muted-tip">来源：' + escapeHtml(guide.source.publisher) + '《' + escapeHtml(guide.source.name) + '》。下表为单兽突破阶数，非研发等级或流派阶数。</p>' +
       '<h3>逐阶段所需成品材料</h3><div class="machine-blueprint-guide-scroll" tabindex="0" role="region" aria-label="机关兽突破成品材料表，可横向滚动"><table class="machine-blueprint-guide-table"><thead><tr><th scope="col">突破阶段</th><th scope="col">成品材料</th></tr></thead><tbody>' +
       guide.stages.map(function (stage) {
         return '<tr data-breakthrough-stage><th scope="row">' + escapeHtml(stage.from) + '→' + escapeHtml(stage.to) + '阶</th><td>' + stage.materials.map(function (material) {
@@ -1044,7 +1043,7 @@
   function renderReference() {
     var focused = rememberPresentation(el.referenceContent);
     var groups = [['机关兽与流派', [['effects','归属与效果'],['schools','流派效果']]], ['材料与突破', [['materials','材料来源'],['blueprints','研发材料'],['breakthrough','突破材料']]], ['等级与研发数值', [['thresholds','等级门槛'],['values','阶数与改造']]]];
-    el.referenceContent.innerHTML = '<nav class="machine-reference-index" id="machine-reference-index" aria-label="机关兽资料目录">' + groups.map(function (group) { return '<div class="machine-reference-index-group"><b>' + group[0] + '</b><div>' + group[1].map(function (entry) { return '<a href="#machine-reference-' + entry[0] + '" data-machine-jump>' + entry[1] + '</a>'; }).join('') + '</div></div>'; }).join('') + '</nav><p class="muted-tip">搜索框只筛选“机关兽归属与研发效果”；其他资料可通过目录直接定位。</p>' + beastReference() + materialReference() + blueprintGuideReference() + breakthroughGuideReference() + schoolReference() + thresholdReference() + researchReference();
+    el.referenceContent.innerHTML = '<nav class="machine-reference-index" id="machine-reference-index" aria-label="机关兽资料目录">' + groups.map(function (group) { return '<div class="machine-reference-index-group"><b>' + group[0] + '</b><div>' + group[1].map(function (entry) { return '<a href="#machine-reference-' + entry[0] + '" data-machine-jump>' + entry[1] + '</a>'; }).join('') + '</div></div>'; }).join('') + '</nav>' + beastReference() + materialReference() + blueprintGuideReference() + breakthroughGuideReference() + schoolReference() + thresholdReference() + researchReference();
     updateResearchQuickLookup();
     el.referenceContent.querySelectorAll(':scope > section.panel').forEach(addReferenceReturn);
     rendered.reference = true;

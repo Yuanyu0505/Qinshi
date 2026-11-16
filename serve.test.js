@@ -1638,17 +1638,17 @@ test("兵法综合计算在手机端折叠长表单并提供悬浮计算入口",
   assert.match(css, /\.tactics-cost-floating-calculate/);
 });
 
-test("锻造查询和铭文宽表保留滑动提示而锻造总览改为响应式布局", () => {
+test("锻造查询和铭文宽表保留可访问横滚区域而不依赖辅助说明", () => {
   const html = fs.readFileSync(path.join(__dirname, "index.html"), "utf8");
   const app = fs.readFileSync(path.join(__dirname, "js", "app.js"), "utf8");
   const inscription = fs.readFileSync(path.join(__dirname, "js", "inscription.js"), "utf8");
   const css = fs.readFileSync(path.join(__dirname, "css", "style.css"), "utf8");
   assert.match(html, /class="summary-table-scroll forging-summary-table-wrap"[^>]*aria-label="锻造材料总览"/);
   assert.doesNotMatch(html, /aria-label="锻造材料总览，可左右滑动"/);
-  assert.match(app, /forgeScrollHintHtml/);
+  assert.match(app, /forge-scroll-main mobile-scroll-region/);
   assert.match(app, /aria-label="主锻造装备材料表，可左右滑动"/);
   const reference = fs.readFileSync(path.join(__dirname, "js", "inscription-reference.js"), "utf8");
-  assert.match(reference, /mobile-scroll-hint/);
+  assert.match(reference, /table-wrap mobile-scroll-region ins-ref-scroll/);
   assert.match(inscription, /REFERENCE\.render/);
   assert.match(css, /\.mobile-scroll-region/);
 });

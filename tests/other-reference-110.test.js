@@ -3,6 +3,14 @@ const {test}=require('node:test'),assert=require('node:assert/strict'),fs=requir
 const ui=require('../js/other-reference-ui.js');
 const root={OTHER_REFERENCE_DATA:require('../data/other-reference-data.js')};
 for(const k of ['A','B','C'])root['OTHER_REFERENCE_TABLES_'+k]=require('../data/other-reference-tables-'+k.toLowerCase()+'.js');
+test('treasure material labels and user-confirmed cumulative totals are explicit',()=>{
+ const table=ui.tablesFor(root).find(t=>t.id==='treasure-red-medium');
+ assert.deepEqual(table.columns,['阶段','材料1','材料2','材料3','材料4','本阶段合计','总计']);
+ assert.deepEqual(table.rows[0],['1阶','1','1','1','1','4','4']);
+ assert.deepEqual(table.rows.at(-2),['15阶','5','5','5','5','20','184']);
+ assert.deepEqual(table.rows.at(-1),['总计','46','46','46','46','184','184']);
+ assert.equal(table.verification,'user-confirmed');
+});
 test('presentation retains source rows and merges matching disciple origins without duplicate records',()=>{
  const tables=ui.tablesFor(root),displayed=tables.flatMap(t=>t.parts||[t]);
  assert.equal(new Set(tables.map(t=>t.id)).size,tables.length);

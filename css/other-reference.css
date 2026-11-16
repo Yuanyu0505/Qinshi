@@ -69,13 +69,8 @@
 #partition-other-reference .ref-origin-table th:first-child { width:28%; }
 #partition-other-reference .ref-origin-table th:nth-child(2),
 #partition-other-reference .ref-origin-table td:nth-child(2) { text-align:left;vertical-align:middle;white-space:normal; }
-#partition-other-reference .ref-treasure-scroll { width:min(100%,600px); }
-#partition-other-reference .ref-treasure-table { table-layout:fixed;min-width:440px; }
 #partition-other-reference .ref-table.ref-treasure-table th,
-#partition-other-reference .ref-table.ref-treasure-table td { min-width:0;max-width:none;padding:7px 6px;vertical-align:middle;text-align:center; }
-#partition-other-reference .ref-treasure-table th:first-child { min-width:0;width:12%;text-align:center; }
-#partition-other-reference .ref-treasure-table th:nth-child(6) { width:22%; }
-#partition-other-reference .ref-treasure-table th:nth-child(7) { width:12%; }
+#partition-other-reference .ref-table.ref-treasure-table td { vertical-align:middle;text-align:center; }
 #partition-other-reference .ref-element-gains { display:grid;gap:16px; }
 #partition-other-reference .ref-element-gains h3 { margin-top:0; }
 #partition-other-reference .ref-card-stats { table-layout:fixed;min-width:580px; }

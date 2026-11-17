@@ -33,9 +33,18 @@ test('searches combine dates, ordinary/divine attributes and selected disciples'
   const p = DATA.occurrences[1], needs = S.normalizeNeeds(null);
   assert.equal(S.matches(DATA.occurrences[2], { query: '神血' }, needs), true);
   assert.equal(S.matches(p, { query: '11.16' }, needs), true);
-  assert.equal(S.matches(p, { query: '太子燕丹', attribute: '内', kind: 'base' }, needs), true);
-  assert.equal(S.matches(p, { query: '太子燕丹', attribute: '防', kind: 'base' }, needs), false);
+  assert.equal(S.matches(p, { query: '太子燕丹', attribute: '内' }, needs), true);
+  assert.equal(S.matches(p, { query: '太子燕丹', attribute: '防' }, needs), false);
   assert.equal(S.matches(p, { selectedOnly: true }, needs), false);
   assert.equal(S.view(DATA, '2026-11-17').current.id, p.id);
   assert.equal(S.view(DATA, '2027-01-07').next, null);
+});
+test('attribute filters return only matching disciples, including date searches and selected-only intersection', () => {
+  const p = DATA.occurrences[1], empty = S.normalizeNeeds(null);
+  assert.deepEqual(S.matchingDisciples(p, { attribute: '攻' }, empty).map(d => d.name), ['太子燕丹', '丽姬', '刺客荆轲']);
+  assert.deepEqual(S.matchingDisciples(p, { query: '11.16', attribute: '内力' }, empty).map(d => d.name), ['太子燕丹']);
+  const needs = S.changeSelection(DATA, empty, p.id, '东君焱妃', true, false, '2026-11-17');
+  assert.equal(S.matchingDisciples(p, { attribute: '攻', selectedOnly: true }, needs).length, 0);
+  assert.equal(S.matches(p, { attribute: '攻', selectedOnly: true }, needs), false);
+  assert.equal(S.matchingDisciples(p, {}, empty).length, 4);
 });

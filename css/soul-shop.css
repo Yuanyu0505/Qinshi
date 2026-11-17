@@ -15,10 +15,10 @@
 #soul-shop-panel .soul-card header span { color:var(--muted);font-size:13px; }
 #soul-shop-panel table { width:100%;min-width:0;border-collapse:collapse;table-layout:fixed; }
 #soul-shop-panel th,#soul-shop-panel td { padding:6px 3px;text-align:center;vertical-align:middle;border-bottom:1px solid var(--line);font-size:14px; }
-#soul-shop-panel thead th { position:static;color:var(--muted);font-weight:400;font-size:13px; }
+#soul-shop-panel thead th { position:static;color:var(--muted);font-weight:400;font-size:13px;white-space:normal; }
 #soul-shop-panel th:first-child,#soul-shop-panel td:first-child { width:26px; }
 #soul-shop-panel th:nth-child(2) { text-align:left; }
-#soul-shop-panel th:nth-child(3),#soul-shop-panel th:nth-child(4) { width:34px; }
+#soul-shop-panel th:nth-child(3),#soul-shop-panel th:nth-child(4) { width:29%; }
 #soul-shop-panel th:nth-child(5) { width:46px; }
 #soul-shop-panel .soul-name { display:block;min-height:44px;width:100%;font:inherit;text-align:left;overflow-wrap:anywhere;color:var(--gold);background:transparent;border:0;padding:4px;cursor:pointer; }
 #soul-shop-panel td .seg { padding:4px 6px;min-width:0;font-size:13px; }
@@ -33,5 +33,16 @@
 .soul-editor .seg { min-height:44px; }
 .soul-editor [role=alert] { color:#ff9995; }
 #soul-shop-panel :focus-visible,.soul-editor :focus-visible { outline:2px solid var(--gold);outline-offset:2px; }
-@media(max-width:1000px) { #soul-shop-panel .soul-cards { grid-template-columns:1fr; } }
+@media(max-width:1200px) { #soul-shop-panel .soul-cards { grid-template-columns:1fr; } }
+@media(max-width:600px) {
+  #soul-shop-panel thead { position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%); }
+  #soul-shop-panel tbody { display:block; }
+  #soul-shop-panel tbody tr { display:grid;grid-template-columns:28px minmax(0,1fr) 48px;gap:4px 6px;padding:8px 0;border-bottom:1px solid var(--line); }
+  #soul-shop-panel tbody td,#soul-shop-panel tbody th { display:block;width:auto;border:0;padding:0;align-self:center; }
+  #soul-shop-panel tbody td:first-child { grid-area:1/1; }
+  #soul-shop-panel tbody th { grid-area:1/2; }
+  #soul-shop-panel tbody td:nth-child(5) { grid-area:1/3; }
+  #soul-shop-panel tbody .soul-atlas-cell { grid-column:2/4;text-align:left;overflow-wrap:anywhere; }
+  #soul-shop-panel .soul-atlas-cell::before { content:attr(data-label) '：';color:var(--muted);font-size:13px; }
+}
 @media(max-width:480px) { #soul-shop-panel .soul-toolbar { gap:8px; } #soul-shop-panel .soul-card { padding:8px; } #soul-shop-panel .soul-toolbar label:first-child { flex-basis:100%; } }

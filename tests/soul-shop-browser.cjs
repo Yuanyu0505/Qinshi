@@ -51,6 +51,18 @@ for (const width of [320, 820, 1440]) test(width + ': independent soul shop sele
     assert.equal(await page.locator('.soul-card').count(), 2);
     const current = page.locator('[data-soul-period="2026-11-16"]');
     assert.equal(await current.locator('tbody tr').count(), 4);
+    assert.equal(await page.locator('[data-soul-kind]').count(), 0);
+    assert.match(await current.locator('thead').textContent(), /普通弟子图鉴.*神弟子图鉴/);
+    const yan = current.locator('tbody tr').filter({ has: page.locator('[data-soul-name="太子燕丹"]') });
+    assert.equal((await yan.locator('.soul-atlas-cell').nth(0).innerText()).replace(/\s/g, ''), '内力（青龙计划）');
+    assert.equal((await yan.locator('.soul-atlas-cell').nth(1).innerText()).replace(/\s/g, ''), '攻（侠道非攻）');
+    await page.locator('[data-soul-attribute]').selectOption('攻');
+    assert.equal(await current.locator('tbody tr').count(), 3);
+    assert.equal(await current.locator('[data-soul-name="东君焱妃"]').count(), 0);
+    await page.locator('[data-soul-attribute]').selectOption('内');
+    assert.equal(await current.locator('tbody tr').count(), 1);
+    await page.locator('[data-soul-clear]').click();
+    assert.equal(await current.locator('tbody tr').count(), 4);
     assert.equal(await current.locator('table').evaluate(n => n.getBoundingClientRect().width <= n.parentElement.clientWidth), true);
     const oldForbidden = await page.evaluate(() => window.QinshiAccounts.getItem('qinshi_forbidden_needs_v2'));
     await current.locator('[data-soul-select="太子燕丹"]').check();

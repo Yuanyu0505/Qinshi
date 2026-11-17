@@ -38,7 +38,7 @@
     atlas: "图鉴",
     drops: "关卡掉落",
     equipment: "装备属性",
-    forbidden: "禁地/魂店",
+    forbidden: "禁地魂店",
     "secret-realm": "秘境",
     forging: "橙装锻造",
     inscription: "铭文",

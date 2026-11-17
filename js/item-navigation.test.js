@@ -77,14 +77,14 @@ test("操作菜单：四类来源返回确认后的动作和统一文案", () =>
     { id: "atlas", label: "前往图鉴分区查询" },
     { id: "forging", label: "前往橙装锻造分区查询" },
     { id: "drops", label: "前往关卡掉落分区查询" },
-    { id: "forbidden", label: "前往禁地/魂店分区查询" }
+    { id: "forbidden", label: "前往禁地魂店分区查询" }
   ]);
   assert.deepStrictEqual(ItemNavigation.actionsForSource("forging"), [
     { id: "forging-progress", label: "前往个人进度查询" },
     { id: "atlas", label: "前往图鉴分区查询" },
     { id: "drops", label: "前往关卡掉落分区查询" },
     { id: "equipment", label: "前往装备属性分区查询" },
-    { id: "forbidden", label: "前往禁地/魂店分区查询" },
+    { id: "forbidden", label: "前往禁地魂店分区查询" },
     { id: "zhulu", label: "前往逐鹿分区查询" }
   ]);
   assert.deepStrictEqual(ItemNavigation.actionsForSource("drops"), [

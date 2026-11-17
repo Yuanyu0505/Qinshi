@@ -46,14 +46,16 @@
     if (match) return match[1] === '神' ? d.divine === match[2] : match[1] ? d.base === match[2] : d.base === match[2] || d.divine === match[2];
     return d.name.toLowerCase().includes(q.toLowerCase());
   }
-  function matches(p, options, needs) {
+  function matchingDisciples(p, options, needs) {
     options = options || {};
     var q = String(options.query || '').trim(), dateMatch = q && dates.dateAliases(p).some(function (s) { return dates.normalize(s).includes(dates.normalize(q)); });
-    return p.disciples.some(function (d) {
+    return p.disciples.filter(function (d) {
       if (options.selectedOnly && !selected(needs, p.id, d.name)) return false;
-      if (options.attribute && !(options.kind === 'base' ? d.base === options.attribute : options.kind === 'divine' ? d.divine === options.attribute : d.base === options.attribute || d.divine === options.attribute)) return false;
+      var attribute = options.attribute === '内力' ? '内' : options.attribute;
+      if (attribute && d.base !== attribute && d.divine !== attribute) return false;
       return !q || dateMatch || discipleMatches(d, q);
     });
   }
-  return { dayKey: dayKey, normalizeNeeds: normalizeNeeds, parseStored: parseStored, selected: selected, clearHistory: clearHistory, changeSelection: changeSelection, matches: matches, status: dates.statusFor, view: function (data, today) { return dates.getDefaultView(data.occurrences, today); } };
+  function matches(p, options, needs) { return matchingDisciples(p, options, needs).length > 0; }
+  return { dayKey: dayKey, normalizeNeeds: normalizeNeeds, parseStored: parseStored, selected: selected, clearHistory: clearHistory, changeSelection: changeSelection, matchingDisciples: matchingDisciples, matches: matches, status: dates.statusFor, view: function (data, today) { return dates.getDefaultView(data.occurrences, today); } };
 });

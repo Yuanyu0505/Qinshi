@@ -1691,15 +1691,17 @@ test("装备副属性筛选与进阶详情保持单行并自适应压缩", () =>
   assert.match(css, /\.equipment-chip-short\s*\{\s*display:\s*none;/);
 });
 
-test("锻造材料总览三端均不依赖横向滑动", () => {
+test("锻造材料总览保持可读宽表与手机逐阶段卡片", () => {
   const html = fs.readFileSync(path.join(__dirname, "index.html"), "utf8");
   const app = fs.readFileSync(path.join(__dirname, "js", "app.js"), "utf8");
   const css = fs.readFileSync(path.join(__dirname, "css", "style.css"), "utf8");
   assert.match(html, /class="summary-table-scroll forging-summary-table-wrap"[^>]*aria-label="锻造材料总览"/);
   assert.doesNotMatch(html, /锻造材料总览，可左右滑动/);
   assert.match(app, /data-label="\$\{escapeHtml\(FDATA\.meta\.stageNames\[index\]\)\}"/);
-  assert.match(css, /#partition-forging \.forging-summary-table-wrap\s*\{[^}]*overflow:\s*visible;/);
-  assert.match(css, /#partition-forging \.summary-table\s*\{[^}]*min-width:\s*0;[^}]*table-layout:\s*fixed;/);
+  assert.match(css, /#partition-forging \.forging-summary-table-wrap\s*\{[^}]*overflow-x:\s*auto;/);
+  assert.match(css, /#partition-forging \.summary-table\s*\{[^}]*min-width:\s*1420px;[^}]*table-layout:\s*auto;/);
+  assert.match(css, /#partition-forging \.summary-table td\s*\{[^}]*font-size:\s*15px;/);
+  assert.match(css, /#partition-forging \.summary-table tr > :first-child\s*\{[^}]*position:\s*sticky;/);
   assert.match(css, /#partition-forging \.forging-summary-table-wrap \.summary-table td::before/);
 });
 

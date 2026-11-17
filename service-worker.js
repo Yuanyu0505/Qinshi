@@ -1,7 +1,7 @@
 "use strict";
 
 const CACHE_PREFIX = "qinshi-site-";
-const CACHE_NAME = CACHE_PREFIX + "1.1.7";
+const CACHE_NAME = CACHE_PREFIX + "1.1.8";
 const GALLERY_CACHE_NAME = "qinshi-gallery-v1";
 const PRECACHE_URLS = [
   "./css/responsive-ux.css",
@@ -15,6 +15,10 @@ const PRECACHE_URLS = [
   "./css/style.css",
   "./css/atlas.css",
   "./css/other-reference.css",
+  "./css/soul-shop.css",
+  "./data/soul-shop.js",
+  "./js/soul-shop.js",
+  "./js/soul-shop-ui.js",
   "./data/other-reference-data.js",
   "./data/other-reference-tables-a.js",
   "./data/other-reference-tables-b.js",

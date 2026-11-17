@@ -38,7 +38,7 @@
     atlas: "图鉴",
     drops: "关卡掉落",
     equipment: "装备属性",
-    forbidden: "禁地",
+    forbidden: "禁地/魂店",
     "secret-realm": "秘境",
     forging: "橙装锻造",
     inscription: "铭文",
@@ -230,6 +230,7 @@
     initAtlas();
     initQuiz();
     if (window.FORBIDDEN_UI) window.FORBIDDEN_UI.init();
+    if (window.SOUL_SHOP_UI) window.SOUL_SHOP_UI.init();
     initItemNavigation();
     if (window.FORMATIONS_UI) window.FORMATIONS_UI.init();
     if (!DATA || !Q || !EQUIP_COMPARE) {
@@ -510,6 +511,7 @@
     if (partition === "forging") return captureForgingView();
     if (partition === "atlas") return captureAtlasQueryView();
     if (partition === "drops") return captureDropView();
+    if (partition === "forbidden" && window.SOUL_SHOP_UI && window.SOUL_SHOP_UI.active()) return window.SOUL_SHOP_UI.captureView();
     if (partition === "forbidden" && window.FORBIDDEN_UI) return window.FORBIDDEN_UI.captureView();
     if (partition === "machine-beasts" && window.MACHINE_BEAST_UI) return window.MACHINE_BEAST_UI.captureView();
     if (partition === "wooden-man-alley" && window.WOODEN_MAN_ALLEY_UI) return window.WOODEN_MAN_ALLEY_UI.captureView();
@@ -530,6 +532,10 @@
     } else if (partition === "drops") {
       restoreDropView(view);
     } else if (partition === "forbidden" && window.FORBIDDEN_UI) {
+      if (window.SOUL_SHOP_UI) {
+        if (view && view.soulShop) { window.SOUL_SHOP_UI.restoreView(view, afterRestore); return; }
+        window.SOUL_SHOP_UI.show('forbidden', false);
+      }
       window.FORBIDDEN_UI.restoreView(view, afterRestore);
       return;
     } else if (partition === "machine-beasts" && window.MACHINE_BEAST_UI) {
@@ -549,7 +555,10 @@
     if (partition === "forging") return applyForgingNavigation(item, options);
     if (partition === "atlas") return applyAtlasNavigation(item);
     if (partition === "drops") return applyDropQueryNavigation(item);
-    if (partition === "forbidden" && window.FORBIDDEN_UI) return window.FORBIDDEN_UI.applyNavigationQuery(item.forgeKey);
+    if (partition === "forbidden" && window.FORBIDDEN_UI) {
+      if (window.SOUL_SHOP_UI) window.SOUL_SHOP_UI.show('forbidden', false);
+      return window.FORBIDDEN_UI.applyNavigationQuery(item.forgeKey);
+    }
     if (partition === "machine-beasts" && window.MACHINE_BEAST_UI) return window.MACHINE_BEAST_UI.applyNavigationQuery(item.machineBeastName || item.forgeKey);
     if (partition === "zhulu" && ZHULU_UI) return ZHULU_UI.applyNavigationQuery(item.forgeKey);
     return capturePartitionView(partition);
@@ -678,7 +687,7 @@
     }
     if (await switchPartition(frame.sourcePartition, { source: "item-navigation-return", preserveEquipment: true }) === false) return;
     restorePartitionView(frame.sourcePartition, sourceView, function () {
-      if (frame.sourcePartition === "forbidden" && window.FORBIDDEN_UI && typeof window.FORBIDDEN_UI.restoreScrollPosition === "function") {
+      if (frame.sourcePartition === "forbidden" && !sourceView.soulShop && window.FORBIDDEN_UI && typeof window.FORBIDDEN_UI.restoreScrollPosition === "function") {
         window.FORBIDDEN_UI.restoreScrollPosition(sourceView.scrollPosition, frame.sourceScrollY);
         return;
       }
@@ -1106,7 +1115,7 @@
     const mobileMoreLayer = document.getElementById("mobile-more-layer");
     const mobileMoreClose = document.getElementById("mobile-more-close");
     const appShell = document.querySelector(".app-shell");
-    const secondaryPartitions = ["forbidden", "secret-realm", "inscription", "machine-beasts", "pilots", "tactics", "battle-box-pill-pouch", "wooden-man-alley", "formations", "six-halls", "loulan", "zhulu", "quiz", "settings", "other-reference"];
+    const secondaryPartitions = ["forbidden", "secret-realm", "inscription", "machine-beasts", "pilots", "tactics", "battle-box-pill-pouch", "wooden-man-alley", "formations", "six-halls", "loulan", "zhulu", "quiz", "other-reference", "settings"];
     const partitionScrollPositions = Object.create(null);
     let activePartition = "atlas";
     let mobileMoreRestoreTarget = null;

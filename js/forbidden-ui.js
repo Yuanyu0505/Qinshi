@@ -872,6 +872,7 @@
   }
 
   window.FORBIDDEN_UI = {
+    closePurposeEditor: function () { closePurposeEditor(false); },
     init: init,
     captureView: captureView,
     restoreView: restoreView,

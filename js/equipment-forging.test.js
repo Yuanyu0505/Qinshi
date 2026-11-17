@@ -25,6 +25,26 @@ function loadEquipmentItems() {
 const forgingItems = loadForgingItems();
 const equipmentItems = loadEquipmentItems();
 
+test("神兵新虹正名保留旧进度名称兼容且不改变装备标识", () => {
+  const catalog = EquipmentForging.buildProgressEquipmentCatalog(forgingItems, equipmentItems);
+  const entry = catalog.find(item => item.equipmentName === "神兵新虹");
+  assert.ok(entry);
+  assert.strictEqual(entry.equipmentId, "w-0121");
+  assert.strictEqual(entry.forgeName, "重铸渊虹");
+  const legacyName = "神兵新渊";
+  assert.strictEqual(EquipmentForging.resolveForgeTarget(legacyName, forgingItems), "重铸渊虹");
+  const Progress = require("./progress.js");
+  const normalized = Progress.normalizeProgressStore({ version: 2, disciples: [{
+    id: "rename-d", name: "正名测试", items: [{ id: "rename-i", forgeName: "重铸渊虹",
+      equipmentName: legacyName, quality: "orange", progress: 4 }]
+  }] }, catalog, forgingItems);
+  const item = normalized.disciples[0].items[0];
+  assert.strictEqual(item.equipmentName, "神兵新虹");
+  assert.strictEqual(item.equipmentId, "w-0121");
+  assert.strictEqual(item.quality, "orange");
+  assert.strictEqual(item.progress, 4);
+});
+
 test("装备锻造跳转：普通装备与同名神兵使用现有锻造名称", () => {
   assert.strictEqual(EquipmentForging.resolveForgeTarget("墨眉", forgingItems), "墨眉");
   assert.strictEqual(EquipmentForging.resolveForgeTarget("神兵墨眉", forgingItems), "墨眉");
@@ -47,7 +67,7 @@ test("装备锻造跳转：所有已确认的非同名神兵使用明确对应�
     神兵永夜: "永恒之夜",
     神兵辉光: "朔日辉光",
     神兵非攻: "非攻九变",
-    神兵新渊: "重铸渊虹",
+    神兵新虹: "重铸渊虹",
     神兵凌霄衣: "升雪凌霄衣",
     神兵醉梦: "醉梦罗裳",
     神兵万象: "万象法袍",

@@ -22,7 +22,8 @@
     "神兵永夜": "永恒之夜",
     "神兵辉光": "朔日辉光",
     "神兵非攻": "非攻九变",
-    "神兵新渊": "重铸渊虹",
+    "神兵新虹": "重铸渊虹",
+    "神兵新渊": "重铸渊虹", // Legacy saved name; never used as a display name.
     "神兵凌霄衣": "升雪凌霄衣",
     "神兵醉梦": "醉梦罗裳",
     "神兵橘裳": "映月橘裳",
@@ -138,6 +139,7 @@
 
   function progressAliases(forgeName, equipmentName) {
     var values = [forgeName, equipmentName];
+    if (equipmentName === "神兵新虹") values.push("神兵新渊");
     if (equipmentName.indexOf("神兵") === 0 && equipmentName !== "神兵鬼谷子") values.push(equipmentName.slice(2));
     if (forgeName === "地煞魔铠") values.push("魔铠");
     if (forgeName === "月光耳坠") values.push("月光");

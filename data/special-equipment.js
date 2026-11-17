@@ -6371,7 +6371,7 @@ window.SPECIAL_EQUIPMENT_DATA = {
     {
       "id": "w-0121",
       "cat": "神兵武器",
-      "name": "神兵新渊",
+      "name": "神兵新虹",
       "main": "攻",
       "tiers": {
         "橙色": [

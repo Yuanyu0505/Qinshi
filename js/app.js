@@ -40,7 +40,7 @@
     equipment: "装备属性",
     forbidden: "禁地魂店",
     "secret-realm": "秘境",
-    forging: "橙装锻造",
+    forging: "锻造",
     inscription: "铭文",
     "machine-beasts": "机关兽",
     pilots: "机师",

@@ -1186,10 +1186,10 @@ test("棋阵图片返回 200 且为 PNG", async () => {
   });
 });
 
-test("首页包含橙装锻造分区与数据引用", async () => {
+test("首页包含锻造分区与数据引用", async () => {
   await withServer(async (port) => {
     const r = await get(port, "/");
-    assert.match(r.body, /橙装锻造/);
+    assert.match(r.body, /data-partition="forging">锻造<\/button>/);
     assert.match(r.body, versionedScriptPattern("data/forging.js"));
     assert.match(r.body, versionedScriptPattern("js/forging.js"));
   });

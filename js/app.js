@@ -2134,11 +2134,7 @@
 
   function saveProgress() {
     try {
-      const saved = ACCOUNT_STORAGE.setItem(PROG_STORE_KEY, JSON.stringify({ version: 2, disciples: progState.disciples }));
-      if (saved === false) {
-        el.progSaveTip.textContent = "未保存：当前账号不可写入";
-        return;
-      }
+      ACCOUNT_STORAGE.setItem(PROG_STORE_KEY, JSON.stringify({ version: 2, disciples: progState.disciples }));
       el.progSaveTip.textContent = "已保存 " + new Date().toLocaleTimeString();
     } catch (e) {
       el.progSaveTip.textContent = "保存失败：浏览器本地存储不可用";
@@ -2445,7 +2441,7 @@
       const stageIndex = Math.max(0, it.progress | 0) + remainingIndex;
       return `<tr${hitStageIndexes.has(stageIndex) ? ' class="search-hit-row"' : ""}><td><div class="prog-stage-label">${st.stage}</div></td><td><div class="prog-stage-materials">${stageTokensHtml(st.tokens)}</div></td></tr>`;
     }).join("");
-    return `<div class="prog-equip" data-prog-card-key="${escapeHtml(opts.context || "disciple")}:${escapeHtml(d.id)}:${escapeHtml(it.id)}">
+    return `<div class="prog-equip">
       <div class="prog-equip-head">
         <span class="cat">${item.cat}</span>
         ${nameHtml}
@@ -2456,13 +2452,10 @@
       </div>
       <div class="prog-stages">${chips}</div>
       <div class="prog-next">下一阶段：${nextHtml}</div>
-      <details class="prog-material-details"${hitStageIndexes.size ? " open" : ""}>
-      <summary>剩余材料 · ${remaining.length} 阶段</summary>
       <table class="mini-table prog-material-table">
         <colgroup><col class="prog-stage-col"><col class="prog-material-col"></colgroup>
         <tbody>${remRows || '<tr><td colspan="2">已完成全部阶段</td></tr>'}</tbody>
       </table>
-      </details>
     </div>`;
   }
 
@@ -2475,13 +2468,13 @@
     const summary = PROG.discipleSummary(FDATA, d);
     return `<div class="prog-disciple" data-disciple="${d.id}">
       <div class="prog-disciple-head">
-        <input class="prog-name" data-disciple="${d.id}" aria-label="弟子名称" value="${escapeHtml(d.name)}">
+        <input class="prog-name" data-disciple="${d.id}" value="${escapeHtml(d.name)}">
         <button type="button" class="seg" data-act="toggle-add" data-disciple="${d.id}">+ 添加装备</button>
         <button type="button" class="seg danger" data-act="remove-disciple" data-disciple="${d.id}">移除弟子</button>
       </div>
       <div class="prog-add-form" data-add-form="${d.id}" hidden>
         <div class="prog-pick">
-        <input class="prog-item-search" aria-label="添加装备名称" placeholder="输入普通名或神兵名自动匹配装备…" autocomplete="off">
+        <input class="prog-item-search" placeholder="输入普通名或神兵名自动匹配装备…" autocomplete="off">
           <div class="prog-item-list" hidden></div>
         </div>
         <button type="button" class="seg" data-act="add-item" data-disciple="${d.id}">添加</button>
@@ -2534,7 +2527,7 @@
 
     const ownedHtml = result.owned.map((entry) => `<div class="prog-search-relation">
       <div class="prog-search-context">${escapeHtml(PROG.buildOwnedSearchLabel(entry))}</div>
-      ${equipmentHtml(entry.disciple, entry.progressItem, { readOnly: true, editStage: true, context: "owned" })}
+      ${equipmentHtml(entry.disciple, entry.progressItem, { readOnly: true, editStage: true })}
     </div>`).join("");
 
     const requiredHtml = result.required.map((entry) => {
@@ -2548,7 +2541,6 @@
         ${equipmentHtml(entry.disciple, entry.progressItem, {
           readOnly: true,
           editStage: true,
-          context: "required",
           hitStageIndexes: new Set(presentation.hitStageIndexes)
         })}
       </div>`;
@@ -2566,72 +2558,6 @@
   }
 
   function renderProgress() {
-    // These snapshots are ephemeral DOM state, never part of account storage.
-    const roots = [el.progDisciples, el.progSearchResults];
-    const forms = Array.from(el.progDisciples.querySelectorAll("[data-add-form]")).map((form) => ({
-      id: form.dataset.addForm,
-      hidden: form.hidden,
-      value: form.querySelector(".prog-item-search").value,
-      selected: form.dataset.selected,
-      listHidden: form.querySelector(".prog-item-list").hidden,
-      listScroll: form.querySelector(".prog-item-list").scrollTop,
-      tip: form.querySelector(".prog-add-tip").textContent
-    }));
-    const names = Array.from(el.progDisciples.querySelectorAll(".prog-name")).map((input) => ({ id: input.dataset.disciple, value: input.value }));
-    const expanded = roots.map((root) => Array.from(root.querySelectorAll("[data-prog-card-key]")).map((card) => ({
-      id: card.dataset.progCardKey,
-      open: card.querySelector("details").open
-    })));
-    const active = document.activeElement;
-    const rootIndex = roots.findIndex((root) => root.contains(active));
-    const focus = rootIndex < 0 ? null : {
-      rootIndex,
-      tag: active.tagName,
-      classes: active.className,
-      data: JSON.stringify(Object.assign({}, active.dataset)),
-      card: active.closest("[data-prog-card-key]")?.dataset.progCardKey,
-      form: active.closest("[data-add-form]")?.dataset.addForm,
-      start: active.selectionStart,
-      end: active.selectionEnd,
-      top: active.getBoundingClientRect().top
-    };
-    renderProgressContent();
-    forms.forEach((draft) => {
-      const form = Array.from(el.progDisciples.querySelectorAll("[data-add-form]")).find((node) => node.dataset.addForm === draft.id);
-      if (!form) return;
-      form.hidden = draft.hidden;
-      form.querySelector(".prog-item-search").value = draft.value;
-      if (draft.selected) form.dataset.selected = draft.selected;
-      if (!draft.hidden) renderItemOptions(form, draft.value);
-      const list = form.querySelector(".prog-item-list");
-      list.hidden = draft.listHidden;
-      list.scrollTop = draft.listScroll;
-      form.querySelector(".prog-add-tip").textContent = draft.tip;
-    });
-    names.forEach((draft) => {
-      const input = Array.from(el.progDisciples.querySelectorAll(".prog-name")).find((node) => node.dataset.disciple === draft.id);
-      if (input) input.value = draft.value;
-    });
-    roots.forEach((root, index) => {
-      const cards = Array.from(root.querySelectorAll("[data-prog-card-key]"));
-      expanded[index].forEach((entry) => {
-        const card = cards.find((node) => node.dataset.progCardKey === entry.id);
-        if (card) card.querySelector("details").open = entry.open;
-      });
-    });
-    if (!focus) return;
-    const target = Array.from(roots[focus.rootIndex].querySelectorAll("button,input,summary")).find((node) =>
-      node.tagName === focus.tag && (focus.data !== "{}" || node.className === focus.classes) &&
-      JSON.stringify(Object.assign({}, node.dataset)) === focus.data &&
-      node.closest("[data-prog-card-key]")?.dataset.progCardKey === focus.card &&
-      node.closest("[data-add-form]")?.dataset.addForm === focus.form);
-    if (!target || target.disabled) return;
-    target.focus({ preventScroll: true });
-    if (typeof focus.start === "number") target.setSelectionRange(focus.start, focus.end);
-    if (focus.top >= 0 && focus.top < window.innerHeight) window.scrollBy(0, target.getBoundingClientRect().top - focus.top);
-  }
-
-  function renderProgressContent() {
     progressRefresh.cancel();
     const total = progState.disciples.length;
     if (progState.page > total) progState.page = total;

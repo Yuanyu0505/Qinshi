@@ -602,15 +602,14 @@ td.hit-cell { background: rgba(212, 175, 55, .12); }
 }
 .mat.material-token.mat-purple { border-color: #9b4fce; background: #66308f; }
 .mat.material-token.mat-orange { border-color: #ff982f; background: #c96a18; }
-#partition-forging .mat.material-token.hit {
+.mat.material-token.hit {
   color: #fff;
-  border: 2px solid #ff736b;
+  border: 8px solid #e34843;
   background: #a92d2a;
-  box-shadow: 0 0 0 1px rgba(255, 115, 107, .3);
   font-weight: 700;
 }
-#partition-forging .mat.material-token.mat-purple.hit { color: #f0d7ff; }
-#partition-forging .mat.material-token.mat-orange.hit { color: #ffe2b8; }
+.mat.material-token.mat-purple.hit { color: #d9a0ff; }
+.mat.material-token.mat-orange.hit { color: #ffb04a; }
 .mat-dash { color: var(--status); font-style: italic; }
 tr.hit-row td { background: rgba(212, 175, 55, .06); }
 .summary-card .badge { white-space: nowrap; }
@@ -1082,15 +1081,14 @@ tr.hit-row td { background: rgba(212, 175, 55, .06); }
   box-sizing: border-box;
   white-space: nowrap;
 }
-#partition-forging .prog-material-table {
-  width: 100%;
+.prog-material-table {
+  --prog-material-shift: clamp(48px, 13vw, 150px);
   table-layout: fixed;
 }
-#partition-forging .prog-material-table .prog-stage-col { width: 116px; }
-#partition-forging .prog-material-table .prog-material-col { width: auto; }
-#partition-forging .prog-material-table td { vertical-align: middle; }
-#partition-forging .prog-material-table td:first-child { white-space: nowrap; }
-#partition-forging .prog-material-table td:last-child { text-align: left; }
+.prog-material-table .prog-stage-col { width: 36%; }
+.prog-material-table .prog-material-col { width: 64%; }
+.prog-material-table td:first-child { white-space: nowrap; }
+.prog-material-table td:last-child { text-align: center; }
 .prog-material-table tr.search-hit-row > td {
   background: rgba(212, 175, 55, .18);
   box-shadow: inset 0 2px 0 var(--gold), inset 0 -2px 0 var(--gold);
@@ -1101,34 +1099,17 @@ tr.hit-row td { background: rgba(212, 175, 55, .06); }
 .prog-material-table tr.search-hit-row > td:last-child {
   box-shadow: inset -2px 0 0 var(--gold), inset 0 2px 0 var(--gold), inset 0 -2px 0 var(--gold);
 }
+.prog-stage-label { transform: translateX(var(--prog-material-shift)); }
 .prog-stage-materials {
   display: flex;
   align-items: center;
-  justify-content: flex-start;
+  justify-content: center;
   flex-wrap: wrap;
   gap: 4px;
   box-sizing: border-box;
   min-height: 31px;
+  transform: translateX(calc(0px - var(--prog-material-shift)));
 }
-#partition-forging .prog-material-details { margin-top: 10px; border-top: 1px solid var(--line); }
-#partition-forging .prog-material-details > summary { color: var(--gold-dim); cursor: pointer; padding: 10px 0; font-weight: 700; }
-#partition-forging .prog-next { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; line-height: 1.65; margin-bottom: 0; }
-#partition-forging .prog-equip-head { gap: 8px; }
-#partition-forging .progress-forge-status { margin-right: auto; color: var(--gold); }
-#partition-forging .prog-stage { min-height: 36px; padding: 7px 10px; font-size: 14px; }
-#partition-forging .prog-stage:focus-visible,
-#partition-forging .seg:focus-visible,
-#partition-forging summary:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
-#partition-forging .prog-disciple-head { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; }
-#partition-forging .prog-name { min-width: 0; width: 100%; box-sizing: border-box; }
-#partition-forging .prog-pick { min-width: 0; flex: 1 1 240px; }
-#partition-forging .prog-item-search { box-sizing: border-box; }
-#partition-forging .prog-item-list { position: static; margin-top: 6px; max-height: min(240px, 40vh); }
-#partition-forging .prog-item-opt { min-height: 44px; gap: 8px; flex-wrap: wrap; }
-#partition-forging .prog-item-opt:focus-visible { outline: 2px solid var(--gold); outline-offset: -2px; background: var(--panel); }
-#partition-forging .prog-pager { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; gap: 8px; }
-#partition-forging .prog-pager[hidden] { display: none; }
-#partition-forging .prog-page-title { text-align: center; overflow-wrap: anywhere; }
 .mini-table { width: 100%; border-collapse: collapse; }
 .mini-table th, .mini-table td { padding: 5px 8px; border-bottom: 1px dashed rgba(58, 49, 37, .6); text-align: center; }
 .mini-table th { color: var(--gold-dim); }
@@ -2830,11 +2811,15 @@ body:has(#forbidden-purpose-editor:not([hidden])) > .responsive-back-top { visib
     max-width: 100%;
     table-layout: fixed;
   }
+  .prog-material-table .prog-stage-col { width: 34%; }
+  .prog-material-table .prog-material-col { width: 66%; }
   .prog-material-table td { padding-left: 4px; padding-right: 4px; }
+  .prog-stage-label,
+  .prog-stage-materials { transform: none; }
   .prog-stage-materials {
     width: 100%;
     min-width: 0;
-    justify-content: flex-start;
+    justify-content: center;
     overflow-wrap: anywhere;
   }
 
@@ -5784,50 +5769,34 @@ tbody tr:hover {
   }
 }
 
-/* 锻造宽表保持可读字号与局部横滚；手机复用逐阶段列表。 */
+/* 锻造材料总览：桌面与平板压缩到容器内，手机使用逐阶段列表。 */
 #partition-forging .forging-summary-table-wrap {
-  overflow-x: auto;
-  overscroll-behavior-x: contain;
+  overflow: visible;
   scrollbar-gutter: auto;
-  isolation: isolate;
 }
 
 #partition-forging .summary-table {
   width: 100%;
-  min-width: 1420px;
-  table-layout: auto;
-  border-collapse: separate;
-  border-spacing: 0;
+  min-width: 0;
+  table-layout: fixed;
 }
 
 #partition-forging .summary-table th,
 #partition-forging .summary-table td {
-  padding: 10px 12px;
-  font-size: 15px;
+  padding: 8px clamp(1px, .32vw, 5px);
+  font-size: clamp(9px, 1.05vw, 15px);
   text-align: center;
   vertical-align: middle;
 }
 
+#partition-forging .summary-table tr > :first-child { width: 7.5%; }
 #partition-forging .summary-table tr > :first-child {
-  position: sticky;
-  left: 0;
-  min-width: 76px;
-  z-index: 2;
-  background: #191611;
-  box-shadow: 1px 0 0 var(--line), 10px 0 12px -11px #000;
+  position: static;
+  min-width: 0;
+  box-shadow: none;
 }
-#partition-forging .summary-table tr > :last-child { min-width: 120px; font-weight: 700; }
+#partition-forging .summary-table tr > :last-child { width: 9%; }
 #partition-forging .summary-table .mat-line { white-space: nowrap; }
-#partition-forging .forge-h-table { border-collapse: separate; border-spacing: 0; }
-#partition-forging .forge-h-table tr > :first-child {
-  position: sticky;
-  left: 0;
-  z-index: 2;
-  background: #191611;
-  box-shadow: 1px 0 0 var(--line), 10px 0 12px -11px #000;
-}
-#partition-forging .forge-h-table thead th:first-child { background: #221d16; z-index: 3; }
-#partition-forging .forge-stage-materials { display: flex; flex-direction: column; gap: 4px; align-items: center; }
 
 @media (max-width: 767px),
        (max-width: 932px) and (max-height: 500px) and (orientation: landscape) {
@@ -5835,16 +5804,6 @@ tbody tr:hover {
   .prog-reorder-list { grid-template-columns: 1fr; }
   .prog-reorder-actions { display: grid; grid-template-columns: 1fr; }
   .prog-reorder-actions .seg { width: 100%; }
-  #partition-forging .prog-disciple-head { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  #partition-forging .prog-name { grid-column: 1 / -1; }
-  #partition-forging .prog-pager { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  #partition-forging .prog-page-title { grid-column: 1 / -1; grid-row: 1; font-size: 17px; }
-  #partition-forging #prog-reorder-toggle { grid-column: 1 / -1; }
-  #partition-forging .prog-material-table .prog-stage-col { width: 86px; }
-  #partition-forging .prog-material-table td { padding: 8px 4px; font-size: 14px; }
-  #partition-forging .prog-equip { padding: 10px; }
-  #partition-forging .prog-stage { min-height: 44px; }
-  #partition-forging .forge-h-table tr > :first-child { position: static; box-shadow: none; background: transparent; }
   .prog-search-requirement { align-items: flex-start; gap: 4px 5px; }
   .prog-search-hits { max-width: 100%; }
   .prog-search-hit { max-width: 100%; min-height: 44px; box-sizing: border-box; }
@@ -5861,11 +5820,10 @@ tbody tr:hover {
     border: 0;
     background: transparent;
     box-shadow: none;
-    overflow: visible;
   }
 
   #partition-forging .forging-summary-table-wrap .summary-table,
-  #partition-forging .forging-summary-table-wrap tbody { display: block; min-width: 0; }
+  #partition-forging .forging-summary-table-wrap tbody { display: block; }
   #partition-forging .forging-summary-table-wrap thead { display: none; }
 
   #partition-forging .forging-summary-table-wrap tbody {

@@ -54,10 +54,14 @@
     return order.map(function (k) { return groups[k]; });
   }
 
-  // Display-only families. Keep source names and positions intact; never use fuzzy name similarity.
-  var DISPLAY_ALIASES = { "醉梦": "醉梦罗裳", "升雪": "升雪凌霄衣", "星云": "星云法衣" };
+  // User-confirmed display names. These three machine-beast drops are fragments in every region.
+  // Preserve archived source names/positions; never infer a body merely from an omitted suffix.
+  var DISPLAY_ALIASES = {
+    "醉梦": "醉梦罗裳", "升雪": "升雪凌霄衣", "星云": "星云法衣",
+    "八爪铁蜈蚣": "八爪铁蜈蚣碎片", "机关蛇": "机关蛇碎片", "破土七郎": "破土七郎碎片"
+  };
   function dropFamilyName(name) {
-    var base = String(name == null ? "" : name).trim().replace(/碎片$/, "");
+    var base = String(name == null ? "" : name).trim();
     return Object.prototype.hasOwnProperty.call(DISPLAY_ALIASES, base) ? DISPLAY_ALIASES[base] : base;
   }
 

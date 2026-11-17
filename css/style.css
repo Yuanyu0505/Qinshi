@@ -647,10 +647,6 @@ tr.hit-row td { background: rgba(212, 175, 55, .06); }
 .drop-item-link { cursor: pointer; font-family: inherit; }
 .drop-result-item-link:hover,
 .drop-result-item-link:focus-visible { color: #ffe08a; text-decoration: underline; text-underline-offset: 4px; }
-#partition-drops .drop-source-row { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; }
-#partition-drops .drop-source-row + .drop-source-row { margin-top: 8px; }
-#partition-drops .drop-source-name { min-height: 36px; font-size: 13px; letter-spacing: 0; color: var(--muted); }
-#partition-drops .drop-source-row .drop-pos { margin: 0; }
 .drop-item-link:hover,
 .drop-item-link:focus-visible { filter: brightness(1.14); box-shadow: 0 0 0 2px rgba(255, 211, 105, .35); }
 .drop-title {

@@ -2590,18 +2590,12 @@
     }
   }
 
-  function dropSectionHtml(title, entries, fmt, group) {
+  function dropSectionHtml(title, entries, fmt) {
     if (!entries.length) return "";
-    const sourceNames = Array.from(new Set(entries.map((entry) => entry.item)));
-    const hasFragments = group.items.some((name) => /碎片$/.test(name));
-    const body = sourceNames.map((name) => {
-      const label = hasFragments ? (/碎片$/.test(name) ? "碎片" : "本体") : (group.items.length > 1 ? name : "");
-      const source = label ? `<button type="button" class="drop-source-name drop-result-item-link" data-drop-item="${escapeHtml(name)}" aria-label="查询${escapeHtml(name)}">${escapeHtml(label)}</button>` : "";
-      return `<div class="drop-source-row">${source}<div class="drop-pos">${entries.filter((entry) => entry.item === name).map(fmt).join("")}</div></div>`;
-    }).join("");
+    const body = entries.map(fmt).join("");
     return `<div class="drop-block">
       <h3 class="drop-title">${title}<span class="drop-count">${entries.length} 处</span></h3>
-      ${body}
+      <div class="drop-pos">${body}</div>
     </div>`;
   }
 
@@ -2610,9 +2604,9 @@
     const fmtReward = (e) => `<span class="drop-chip">第${e.chapter}章</span>`;
     return `<div class="drop-item">
       <h3 class="drop-item-title"><button type="button" class="drop-result-item-link" data-drop-item="${escapeHtml(g.item)}" title="打开${escapeHtml(g.item)}查询选项">${escapeHtml(g.item)}</button></h3>
-      ${dropSectionHtml("普通关卡", g.normal, fmtStage, g)}
-      ${dropSectionHtml("英雄关卡", g.hero, fmtStage, g)}
-      ${dropSectionHtml("声望奖励", g.reward, fmtReward, g)}
+      ${dropSectionHtml("普通关卡", g.normal, fmtStage)}
+      ${dropSectionHtml("英雄关卡", g.hero, fmtStage)}
+      ${dropSectionHtml("声望奖励", g.reward, fmtReward)}
     </div>`;
   }
 

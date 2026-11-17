@@ -76,17 +76,24 @@ test("groupDrops：空查询与无结果返回空数组", () => {
   assert.deepStrictEqual(D.groupDrops(fixture, "不存在"), []);
 });
 
-test("groupRelatedDrops：碎片精确查询也合并本体来源但保留原名与形态", () => {
+test("groupRelatedDrops：已确认的机关兽所有来源均为碎片，保留归档原名与关卡", () => {
   const data = { normal: [{item:"八爪铁蜈蚣碎片",chapter:41,stage:10}], hero: [{item:"八爪铁蜈蚣",chapter:34,stage:5}], reward: [] };
   const before = JSON.stringify(data);
   for (const query of ["八爪铁蜈蚣", "八爪铁蜈蚣碎片"]) {
     const groups = D.groupRelatedDrops(data, query);
     assert.strictEqual(groups.length, 1);
-    assert.strictEqual(groups[0].item, "八爪铁蜈蚣");
+    assert.strictEqual(groups[0].item, "八爪铁蜈蚣碎片");
     assert.deepStrictEqual(groups[0].normal, data.normal);
     assert.deepStrictEqual(groups[0].hero, data.hero);
   }
   assert.strictEqual(JSON.stringify(data), before);
+});
+
+test("groupRelatedDrops：机关蛇、破土七郎统一碎片名，其他碎片后缀不被去除", () => {
+  const data = { normal: [{item:"机关蛇碎片",chapter:15,stage:10},{item:"机关蝙蝠碎片",chapter:43,stage:10}], hero: [{item:"机关蛇",chapter:5,stage:2},{item:"破土七郎",chapter:2,stage:2}], reward: [] };
+  assert.strictEqual(D.groupRelatedDrops(data,"机关蛇")[0].item,"机关蛇碎片");
+  assert.strictEqual(D.groupRelatedDrops(data,"破土七郎")[0].item,"破土七郎碎片");
+  assert.strictEqual(D.groupRelatedDrops(data,"机关蝙蝠")[0].item,"机关蝙蝠碎片");
 });
 
 test("groupRelatedDrops：明确简称互通，空结果保留，不能模糊合并魍魉与双剑魍魉", () => {

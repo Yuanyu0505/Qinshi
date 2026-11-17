@@ -2781,7 +2781,7 @@
     } else {
       const found = FORG.findAsMaterial(FDATA.items, q);
       el.forgeResults.innerHTML = found.length
-        ? `<div class="forge-scroll forge-scroll-material mobile-scroll-region" tabindex="0" aria-label="素材装备匹配表，可左右滑动"><table class="forge-h-table"><thead>${tableHead}</thead><tbody>${found.map((r) => forgingRowHtml(r.item, r.hits)).join("")}</tbody></table></div>`
+        ? `<div class="forge-scroll forge-scroll-material mobile-scroll-region" tabindex="0" aria-label="素材装备匹配表"><table class="forge-h-table"><thead>${tableHead}</thead><tbody>${found.map((r) => forgingRowHtml(r.item, r.hits)).join("")}</tbody></table></div>`
         : '<div class="empty"><p>未找到使用该素材的主锻造装备</p></div>';
     }
   }

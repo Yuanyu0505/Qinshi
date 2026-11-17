@@ -2,6 +2,9 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const DATA = require('../data/soul-shop.js');
 const S = require('./soul-shop.js');
+test('Xu Fu explicitly maps to divine Yun Zhongjun', () => {
+  assert.equal(DATA.divineTargets['徐福'], '神·云中君');
+});
 test('only missing storage is empty; malformed and unsupported data cannot be overwritten as empty', () => {
   assert.equal(Object.keys(S.parseStored(null).events).length, 0);
   for (const raw of ['', 'null', '[]', '{"version":2,"events":{}}', '{']) assert.throws(() => S.parseStored(raw));

@@ -22,8 +22,6 @@
 #soul-shop-panel th:nth-child(5) { width:46px; }
 #soul-shop-panel .soul-name { display:block;min-height:44px;width:100%;font:inherit;text-align:left;overflow-wrap:anywhere;color:var(--gold);background:transparent;border:0;padding:4px;cursor:pointer; }
 #soul-shop-panel td .seg { padding:4px 6px;min-width:0;font-size:13px; }
-#soul-shop-panel .soul-history { margin-top:14px;border:1px solid var(--line);padding:12px;border-radius:6px; }
-#soul-shop-panel .soul-history summary { color:var(--gold);cursor:pointer;min-height:32px; }
 #soul-shop-panel .soul-sr { position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap; }
 .soul-editor { color:var(--text);background:var(--bg2);border:1px solid var(--gold-dim);border-radius:6px;width:min(420px,calc(100vw - 40px));box-sizing:border-box;max-height:85dvh;overflow:auto;padding:20px; }
 .soul-editor::backdrop { background:#000b; }

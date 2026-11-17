@@ -361,6 +361,7 @@
   }
 
   function cardHtml(occurrence, matches, role) {
+    if (core.statusFor(occurrence, new Date()) === 'history') return '';
     var resolved = core.resolveTemplate(data, occurrence);
     if (!resolved) return "";
     var expanded = expandedFor(occurrence, matches, role);
@@ -394,10 +395,9 @@
     var notice = "";
     if (view.current) entries.push({ occurrence: view.current, matches: [], role: "current" });
     else if (view.beforeSchedule) notice = noticeHtml("当前暂无开放禁地，以下为首期预测。");
-    else if (view.afterSchedule) notice = noticeHtml("暂无后续预测数据，以下为最近一期历史禁地。");
+    else if (view.afterSchedule) notice = noticeHtml("暂无后续预测数据。");
     else notice = noticeHtml("当前暂无开放禁地。");
     if (view.next) entries.push({ occurrence: view.next, matches: [], role: "next" });
-    if (!view.current && !view.next && view.latestHistory) entries.push({ occurrence: view.latestHistory, matches: [], role: "latest" });
     entries.forEach(function (entry) {
       cards.push(cardHtml(entry.occurrence, entry.matches, entry.role));
     });
@@ -416,7 +416,7 @@
       needs: state.needs,
       today: new Date()
     });
-    return results;
+    return results.filter(function (entry) { return core.statusFor(entry.occurrence, new Date()) !== 'history'; });
   }
 
   function listHeaderHtml(results) {

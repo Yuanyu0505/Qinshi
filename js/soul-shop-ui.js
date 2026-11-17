@@ -2,7 +2,7 @@
   'use strict';
   var initialized = false, host, panel, results, error, dialog, data, core, storage, timer;
   var needs, readable = false, draft = null, moduleName = 'forbidden';
-  var state = { query: '', attribute: '', selectedOnly: false, full: false, history: false };
+  var state = { query: '', attribute: '', selectedOnly: false, full: false };
   var scrolls = { forbidden: 0, 'soul-shop': 0 };
   var KEY = 'qinshi_soul_shop_needs_v1';
   function esc(value) { return String(value == null ? '' : value).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
@@ -39,6 +39,7 @@
   }
   function card(p, label) {
     var status = core.status(p, new Date()), historical = status === 'history', disabled = historical || readOnly();
+    if (historical) return '';
     var shown = label || (historical ? '历史' : status === 'current' ? '本期' : '后续');
     return '<article class="soul-card panel" data-soul-period="' + esc(p.id) + '"><header><strong>' + esc(range(p)) + '</strong><span>' + (p.predicted ? '预测 · ' : '') + esc(shown) + '</span></header>' +
       '<table><thead><tr><th scope="col"><span class="soul-sr">勾选</span></th><th scope="col">弟子</th><th scope="col">普通弟子图鉴</th><th scope="col">神弟子图鉴</th><th scope="col"><span class="soul-sr">设置</span></th></tr></thead><tbody>' +
@@ -65,17 +66,13 @@
     panel.querySelector('[data-soul-full]').textContent = state.full ? '收起完整排期' : '完整排期';
     panel.querySelector('[data-soul-full]').setAttribute('aria-pressed', String(state.full));
     if (all) {
-      var list = data.occurrences.filter(function (p) { return core.matches(p, state, needs); });
-      var active = list.filter(function (p) { return core.status(p, today) !== 'history'; });
-      var history = list.filter(function (p) { return core.status(p, today) === 'history'; }).reverse();
-      html = '<div class="soul-cards">' + active.map(function (p) { return card(p); }).join('') + '</div>';
-      if (history.length) html += '<details class="soul-history"' + (state.history || filtered() ? ' open' : '') + '><summary>历史排期 · ' + history.length + '期</summary><div class="soul-cards">' + history.map(function (p) { return card(p); }).join('') + '</div></details>';
+      var list = data.occurrences.filter(function (p) { return core.status(p, today) !== 'history' && core.matches(p, state, needs); });
+      html = '<div class="soul-cards">' + list.map(function (p) { return card(p); }).join('') + '</div>';
       if (!list.length) html = '<p role="status">未找到匹配期次。</p>';
     } else {
       var view = core.view(data, today);
       html = '<div class="soul-cards">' + (view.current ? card(view.current, '本期') : '') + (view.next ? card(view.next, '下一期') : '') + '</div>';
       if (view.afterSchedule) html += '<p role="status">暂无后续预测排期。</p>';
-      if (!view.current && !view.next && view.latestHistory) html += '<details class="soul-history"' + (state.history ? ' open' : '') + '><summary>最近一期历史排期</summary>' + card(view.latestHistory) + '</details>';
     }
     results.innerHTML = html;
     if (focusId && focusKey) {
@@ -153,7 +150,6 @@
         dialog.querySelector('[data-soul-edit-error]').hidden = true; dialog.showModal();
       }
     });
-    results.addEventListener('click', function (e) { var summary = e.target.closest('.soul-history > summary'); if (summary) state.history = !summary.parentElement.open; });
     dialog.addEventListener('cancel', function (e) { e.preventDefault(); closeEditor(true); });
     dialog.querySelector('[data-soul-close]').addEventListener('click', function () { closeEditor(true); });
     dialog.querySelector('form').addEventListener('submit', function (e) {

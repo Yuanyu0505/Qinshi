@@ -6,6 +6,45 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
 const { createServer } = require('../serve.js');
 const { openApp } = require('./browser-test-helpers.cjs');
 let server, browser, url;
+test('both modules exclude past periods from defaults, complete lists and search after time advances', async () => {
+  const context = await browser.newContext({ timezoneId: 'Asia/Shanghai', serviceWorkers: 'block' });
+  const page = await context.newPage();
+  try {
+    await page.clock.install({ time: new Date('2026-11-17T12:00:00+08:00') });
+    await openApp(page, url + '/#forbidden');
+    await page.locator('#forbidden-schedule-toggle').click();
+    assert.equal(await page.locator('[data-forbidden-card="2026-11-12_wind_forest_fire_mountain"]').count(), 0);
+    await page.locator('#forbidden-search').fill('11.12');
+    await page.clock.runFor(200);
+    assert.equal(await page.locator('[data-forbidden-card]').count(), 0);
+    await page.locator('[data-forbidden-module="soul-shop"]').click();
+    await page.locator('[data-soul-full]').click();
+    assert.equal(await page.locator('[data-soul-period="2026-11-12"]').count(), 0);
+    await page.locator('[data-soul-query]').fill('徐福');
+    const xu = page.locator('[data-soul-period="2026-11-19"] tbody tr').filter({ has: page.locator('[data-soul-name="徐福"]') });
+    assert.equal((await xu.locator('.soul-atlas-cell').nth(1).innerText()).replace(/\s/g, ''), '血（阴阳消长）');
+    await page.locator('[data-soul-clear]').click();
+    await page.locator('[data-soul-period="2026-11-16"] [data-soul-select="太子燕丹"]').check();
+    await page.clock.fastForward(37 * 60 * 60 * 1000);
+    assert.equal(await page.locator('[data-soul-period="2026-11-16"]').count(), 0);
+    assert.equal(await page.evaluate(() => Boolean(JSON.parse(window.QinshiAccounts.getItem('qinshi_soul_shop_needs_v1')).events['2026-11-16'])), false);
+    await page.locator('[data-forbidden-module="forbidden"]').click();
+    await page.locator('#forbidden-search').fill('11.16');
+    await page.clock.runFor(200);
+    assert.equal(await page.locator('[data-forbidden-card]').count(), 0);
+    await page.clock.fastForward(60 * 24 * 60 * 60 * 1000);
+    await page.locator('[data-forbidden-module="soul-shop"]').click();
+    assert.equal(await page.locator('.soul-card').count(), 0);
+    await page.locator('[data-soul-full]').click();
+    assert.equal(await page.locator('.soul-card').count(), 0);
+    await page.locator('[data-forbidden-module="forbidden"]').click();
+    await page.locator('#forbidden-search').fill('');
+    await page.clock.runFor(200);
+    assert.equal(await page.locator('[data-forbidden-card]').count(), 0);
+    await page.locator('#forbidden-schedule-toggle').click();
+    assert.equal(await page.locator('[data-forbidden-card]').count(), 0);
+  } finally { await context.close(); }
+});
 test('missing soul-shop data reports an error and later clicks retry initialization once', async () => {
   const context = await browser.newContext({ timezoneId: 'Asia/Shanghai', serviceWorkers: 'block' });
   const page = await context.newPage();

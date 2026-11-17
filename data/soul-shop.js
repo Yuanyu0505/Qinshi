@@ -27,6 +27,7 @@
     ],
     // Explicit aliases only; the UI also checks that each target actually exists.
     divineTargets: {
+      '徐福': '神·云中君',
       '无极东皇': '神·东皇太一', '李牧': '神·李牧', '田光': '神·田光', '掩日': '神·掩日',
       '荆天明': '神·荆天明', '楚王项羽': '神·项羽', '虞姬': '神·虞姬',
       '夜幕墨鸦': '神·墨鸦', '夜幕白凤': '神·白凤', '公子扶苏': '神·扶苏',

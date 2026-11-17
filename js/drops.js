@@ -54,6 +54,31 @@
     return order.map(function (k) { return groups[k]; });
   }
 
+  // Display-only families. Keep source names and positions intact; never use fuzzy name similarity.
+  var DISPLAY_ALIASES = { "醉梦": "醉梦罗裳", "升雪": "升雪凌霄衣", "星云": "星云法衣" };
+  function dropFamilyName(name) {
+    var base = String(name == null ? "" : name).trim().replace(/碎片$/, "");
+    return Object.prototype.hasOwnProperty.call(DISPLAY_ALIASES, base) ? DISPLAY_ALIASES[base] : base;
+  }
+
+  function groupRelatedDrops(data, query) {
+    var q = normalize(query);
+    if (!q) return [];
+    var groups = new Map();
+    ["normal", "hero", "reward"].forEach(function (region) {
+      (data[region] || []).forEach(function (entry) {
+        var family = dropFamilyName(entry.item);
+        if (!groups.has(family)) groups.set(family, { item: family, items: [], normal: [], hero: [], reward: [] });
+        var group = groups.get(family);
+        if (group.items.indexOf(entry.item) === -1) group.items.push(entry.item);
+        group[region].push(Object.assign({}, entry));
+      });
+    });
+    return Array.from(groups.values()).filter(function (group) {
+      return normalize(group.item).indexOf(q) !== -1 || group.items.some(function (name) { return normalize(name).indexOf(q) !== -1; });
+    });
+  }
+
   function resolveNavigationTarget(action, item) {
     var name = String(item == null ? "" : item).trim();
     if (!name) return null;
@@ -97,6 +122,7 @@
     normalize: normalize,
     findDrops: findDrops,
     groupDrops: groupDrops,
+    groupRelatedDrops: groupRelatedDrops,
     resolveNavigationTarget: resolveNavigationTarget,
     createNavigationSession: createNavigationSession,
     shouldRestoreNavigationTarget: shouldRestoreNavigationTarget

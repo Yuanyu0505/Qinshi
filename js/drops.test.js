@@ -76,6 +76,28 @@ test("groupDrops：空查询与无结果返回空数组", () => {
   assert.deepStrictEqual(D.groupDrops(fixture, "不存在"), []);
 });
 
+test("groupRelatedDrops：碎片精确查询也合并本体来源但保留原名与形态", () => {
+  const data = { normal: [{item:"八爪铁蜈蚣碎片",chapter:41,stage:10}], hero: [{item:"八爪铁蜈蚣",chapter:34,stage:5}], reward: [] };
+  const before = JSON.stringify(data);
+  for (const query of ["八爪铁蜈蚣", "八爪铁蜈蚣碎片"]) {
+    const groups = D.groupRelatedDrops(data, query);
+    assert.strictEqual(groups.length, 1);
+    assert.strictEqual(groups[0].item, "八爪铁蜈蚣");
+    assert.deepStrictEqual(groups[0].normal, data.normal);
+    assert.deepStrictEqual(groups[0].hero, data.hero);
+  }
+  assert.strictEqual(JSON.stringify(data), before);
+});
+
+test("groupRelatedDrops：明确简称互通，空结果保留，不能模糊合并魍魉与双剑魍魉", () => {
+  const data = { normal: [{item:"醉梦",chapter:55,stage:7},{item:"双剑魍魉",chapter:44,stage:10}], hero: [{item:"魍魉",chapter:20,stage:1}], reward: [{item:"醉梦罗裳",chapter:53}] };
+  assert.strictEqual(D.groupRelatedDrops(data,"醉梦罗裳")[0].normal[0].item,"醉梦");
+  assert.strictEqual(D.groupRelatedDrops(data,"醉梦").length,1);
+  assert.deepStrictEqual(D.groupRelatedDrops(data,"魍魉").map(g=>g.item),["双剑魍魉","魍魉"]);
+  assert.deepStrictEqual(D.groupRelatedDrops(data,""),[]);
+  assert.deepStrictEqual(D.groupRelatedDrops(data,"不存在"),[]);
+});
+
 test("resolveNavigationTarget：四个入口映射到正确的查询分区与模式", () => {
   assert.deepStrictEqual(D.resolveNavigationTarget("atlas", "苍云甲"), {
     target: "atlas", partition: "atlas", item: "苍云甲", view: "query", mode: null

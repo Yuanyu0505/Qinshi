@@ -148,3 +148,30 @@ if(!process.env.FORBIDDEN_BASELINE)test('forbidden transition widths and low-hei
   await page.keyboard.press('Escape');
  }finally{await context.close();}
 });
+for(const width of[320,820,1366])if(!process.env.FORBIDDEN_BASELINE)test(`${width}: orange drops remain one local row and purpose tags replace setup then reopen editing`,async()=>{
+ const{context,page}=await setup(width,844);try{
+  const drops=page.locator(current+' .is-orange-drops > .forbidden-token-list');
+  const tops=await drops.locator(':scope > .forbidden-token').evaluateAll(nodes=>nodes.map(n=>n.getBoundingClientRect().top));
+  assert.ok(tops.length>1&&tops.every(y=>Math.abs(y-tops[0])<1));
+  assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
+  const select=page.locator(current+' .forbidden-rewards [data-forbidden-select][data-forbidden-name="金乌神饰"]').first();
+  await select.click();
+  const token=select.locator('..');
+  await token.getByRole('button',{name:'设置用途',exact:true}).click();
+  await page.locator('#forbidden-purpose-options input[value="atlas"]').check();
+  await page.locator('#forbidden-purpose-options input[value="forging"]').check();
+  await page.locator('[data-forbidden-purpose-save]').click();
+  assert.equal(await token.getByRole('button',{name:'设置用途',exact:true}).count(),0);
+  assert.equal(await token.locator('button[data-forbidden-purpose-value]').count(),2);
+  await token.locator('[data-forbidden-purpose-value="forging"]').click();
+  assert.equal(await page.locator('#forbidden-purpose-options input[value="atlas"]').isChecked(),true);
+  await page.locator('#forbidden-purpose-options input[value="forging"]').uncheck();
+  await page.locator('[data-forbidden-purpose-save]').click();
+  assert.equal(await page.evaluate(()=>document.activeElement.dataset.forbiddenPurposeValue),'atlas');
+  await token.locator('[data-forbidden-purpose-value="atlas"]').click();
+  await page.locator('#forbidden-purpose-options input[value="atlas"]').uncheck();
+  await page.locator('[data-forbidden-purpose-save]').click();
+  assert.equal(await token.getByRole('button',{name:'设置用途',exact:true}).count(),1);
+  assert.equal(await page.evaluate(()=>document.activeElement.textContent),'设置用途');
+ }finally{await context.close();}
+});

@@ -268,12 +268,14 @@
     return state.purpose === "unclassified" ? purposes.length === 0 : purposes.indexOf(state.purpose) !== -1;
   }
 
-  function purposeBadgesHtml(record) {
+  function purposeBadgesHtml(record, dataAttributes, disabled) {
     if (!record) return "";
     var purposes = record.purposes || [];
-    if (!purposes.length) return '<span class="forbidden-purpose-badge is-unclassified">未分类</span>';
+    if (!purposes.length) return "";
     return purposes.map(function (purpose) {
-      return '<span class="forbidden-purpose-badge is-' + escapeHtml(purpose) + '">' + escapeHtml(PURPOSE_LABELS[purpose] || purpose) + "</span>";
+      var label = PURPOSE_LABELS[purpose] || purpose;
+      return '<button type="button" class="forbidden-purpose-badge forbidden-purpose-edit is-' + escapeHtml(purpose) + '" data-forbidden-purpose-edit' + dataAttributes +
+        ' data-forbidden-purpose-value="' + escapeHtml(purpose) + '" aria-label="' + escapeHtml(record.name + '用途：' + label + '，编辑用途') + '"' + (disabled ? ' disabled' : '') + '>' + escapeHtml(label) + '</button>';
     }).join("");
   }
 
@@ -300,8 +302,9 @@
       (selectable ? "" : ' disabled') + '>' +
       (isSelected ? '<span aria-hidden="true">✓</span>' : '<span aria-hidden="true">＋</span>') + "</button>" +
       '<button type="button" class="forbidden-token-name" data-forbidden-name-action' + dataAttributes + ">" + highlight(shownName) + "</button>" +
-      (record ? '<span class="forbidden-purpose-badges">' + purposeBadgesHtml(record) + "</span>" +
-        '<button type="button" class="forbidden-purpose-edit" data-forbidden-purpose-edit' + dataAttributes + (selectable ? '' : ' disabled') + '>设置用途</button>' : "") +
+      (record ? (record.purposes && record.purposes.length
+        ? '<span class="forbidden-purpose-badges">' + purposeBadgesHtml(record, dataAttributes, !selectable) + '</span>'
+        : '<button type="button" class="forbidden-purpose-edit" data-forbidden-purpose-edit' + dataAttributes + (selectable ? '' : ' disabled') + '>设置用途</button>') : "") +
       "</span>";
   }
 
@@ -344,7 +347,7 @@
         return '<div class="forbidden-reward-row' + (label ? " has-label" : "") + (config.choiceGroups ? " is-choice-group" : "") + '">' + label + (config.choiceGroups ? choiceLabel : '') + '<div class="forbidden-token-list">' + (renderTokens(row) || '<span class="muted-tip">—</span>') + "</div></div>";
       }).join("") + "</div>";
     }
-    return '<section class="forbidden-reward-section' + (isMatch ? " is-match" : "") + '">' +
+    return '<section class="forbidden-reward-section' + (config.key === 'orangeDrops' ? ' is-orange-drops' : '') + (isMatch ? " is-match" : "") + '">' +
       '<div class="forbidden-subtitle">' + escapeHtml(config.title.replace(/（.*）$/, "").replace(/^(贡献奖励|排名奖励) · /, "")) + (contribution ? choiceLabel : '') + "</div>" + body + "</section>";
   }
 
@@ -572,10 +575,16 @@
 
   function restoreControlFocus(eventId, attributes, position) {
     var controls = elements.content.querySelectorAll("button");
-    var replacement = Array.prototype.find.call(controls, function (button) {
-      var card = button.closest("[data-forbidden-card]");
-      return card && card.dataset.forbiddenCard === eventId && (!position || button.closest('.' + position)) && Object.keys(attributes).every(function (key) { return button.dataset[key] === attributes[key]; });
-    });
+    function findControl(ignorePurposeValue) {
+      return Array.prototype.find.call(controls, function (button) {
+        var card = button.closest("[data-forbidden-card]");
+        return card && card.dataset.forbiddenCard === eventId && (!position || button.closest('.' + position)) && Object.keys(attributes).every(function (key) {
+          return (ignorePurposeValue && key === 'forbiddenPurposeValue') || button.dataset[key] === attributes[key];
+        });
+      });
+    }
+    // A saved edit can replace the setup button, remove the focused tag, or clear every purpose.
+    var replacement = findControl(false) || findControl(true);
     (replacement || elements.search).focus({ preventScroll: true });
   }
 

@@ -33,10 +33,10 @@ assert.deepStrictEqual(windResolved.equipmentFragmentRows, [
   ["月华战袍", "七海蛟龙甲"],
   ["白玉君子佩", "黄金牡丹"]
 ]);
-assert.strictEqual(DATA.meta.lastDate, "2026-12-06");
+assert.strictEqual(DATA.meta.lastDate, "2027-01-03");
 assert.deepStrictEqual(
   [finalOccurrence.id, finalOccurrence.start, finalOccurrence.end, finalOccurrence.templateId],
-  ["2026-12-03_no_two_suns", "2026-12-03", "2026-12-06", "no_two_suns"]
+  ["2026-12-31_song_dance", "2026-12-31", "2027-01-03", "song_dance"]
 );
 assert.deepStrictEqual(
   DATA.occurrences.filter(item => item.start >= "2026-10-22").map(item => [item.id, item.start, item.end, item.size, item.templateId]),
@@ -53,7 +53,15 @@ assert.deepStrictEqual(
     ["2026-11-23_life_and_death", "2026-11-23", "2026-11-25", "小", "life_and_death"],
     ["2026-11-26_dragon_might", "2026-11-26", "2026-11-29", "大", "dragon_might"],
     ["2026-11-30_observe_the_depths", "2026-11-30", "2026-12-02", "小", "observe_the_depths"],
-    ["2026-12-03_no_two_suns", "2026-12-03", "2026-12-06", "大", "no_two_suns"]
+    ["2026-12-03_no_two_suns", "2026-12-03", "2026-12-06", "大", "wind_forest_fire_mountain"],
+    ["2026-12-07_white_snow", "2026-12-07", "2026-12-09", "小", "white_snow"],
+    ["2026-12-10_wind_forest_fire_mountain", "2026-12-10", "2026-12-13", "大", "wind_forest_fire_mountain"],
+    ["2026-12-14_soul_gathering", "2026-12-14", "2026-12-16", "小", "soul_gathering"],
+    ["2026-12-17_no_two_suns", "2026-12-17", "2026-12-20", "大", "no_two_suns"],
+    ["2026-12-21_yin_yang", "2026-12-21", "2026-12-23", "小", "yin_yang"],
+    ["2026-12-24_shadow_hunt", "2026-12-24", "2026-12-27", "大", "shadow_hunt"],
+    ["2026-12-28_life_and_death", "2026-12-28", "2026-12-30", "小", "life_and_death"],
+    ["2026-12-31_song_dance", "2026-12-31", "2027-01-03", "大", "song_dance"]
   ]
 );
 
@@ -69,16 +77,24 @@ assert.deepStrictEqual(novemberShadowHunt.disciples, [
   ]);
 });
 assert.strictEqual(F.getDefaultView(DATA.occurrences, "2026-11-04").next.id, "2026-11-05_shadow_hunt");
-const finalDayView = F.getDefaultView(DATA.occurrences, "2026-12-06");
-assert.strictEqual(finalDayView.current.id, "2026-12-03_no_two_suns");
+const finalDayView = F.getDefaultView(DATA.occurrences, "2027-01-03");
+assert.strictEqual(finalDayView.current.id, "2026-12-31_song_dance");
 assert.strictEqual(finalDayView.next, null);
 assert.strictEqual(finalDayView.afterSchedule, false);
-const afterScheduleView = F.getDefaultView(DATA.occurrences, "2026-12-07");
+const afterScheduleView = F.getDefaultView(DATA.occurrences, "2027-01-04");
 assert.strictEqual(afterScheduleView.current, null);
 assert.strictEqual(afterScheduleView.next, null);
-assert.strictEqual(afterScheduleView.latestHistory.id, "2026-12-03_no_two_suns");
+assert.strictEqual(afterScheduleView.latestHistory.id, "2026-12-31_song_dance");
 assert.strictEqual(afterScheduleView.afterSchedule, true);
-assert.strictEqual(DATA.occurrences.some(item => item.end > "2026-12-06"), false);
+assert.strictEqual(DATA.occurrences.some(item => item.end > "2027-01-03"), false);
+assert.strictEqual(F.getDefaultView(DATA.occurrences, "2026-12-06").next.id, "2026-12-07_white_snow");
+for (const id of ["2026-11-12_wind_forest_fire_mountain", "2026-12-10_wind_forest_fire_mountain"]) {
+  assert.deepStrictEqual(DATA.occurrences.find(item => item.id === id).disciples, [
+    { name: "隐虎季布", base: "", divine: "" }, { name: "雷豹英布", base: "", divine: "" }
+  ]);
+}
+assert.deepStrictEqual(DATA.occurrences.find(item => item.id === "2026-12-03_no_two_suns").disciples.map(item => item.name), ["将威龙且", "贯侯钟离昧"]);
+assert.strictEqual(DATA.occurrences.find(item => item.id === "2026-12-10_wind_forest_fire_mountain").note, "神雷豹英布首发");
 
 assert.strictEqual(F.shouldToggleToken({ x: 10, y: 10 }, { x: 12, y: 13 }, ""), true);
 assert.strictEqual(F.shouldToggleToken({ x: 10, y: 10 }, { x: 25, y: 10 }, ""), false);

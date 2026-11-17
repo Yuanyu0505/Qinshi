@@ -229,6 +229,7 @@
     "将威龙且": ["将威龙且", "神·将威龙且"],
     "贯侯钟离昧": ["贯侯钟离昧", "神·贯侯钟离昧"],
     "隐虎季布": [],
+    "雷豹英布": [],
     "红莲赤练": ["红莲赤练", "神·红莲赤练"],
     "墨家雪女": ["墨家雪女", "神·墨家雪女"],
     "人宗逍遥子": ["人宗逍遥子", "神·逍遥子"],
@@ -283,17 +284,26 @@
     occurrence("2026-11-02_white_snow", "2026-11-02", "2026-11-04", "小", "white_snow"),
     occurrence("2026-11-05_shadow_hunt", "2026-11-05", "2026-11-08", "大", "shadow_hunt", [disciple("秋水晓梦", "血", "攻"), disciple("龙骧章邯", "攻", "攻")]),
     occurrence("2026-11-09_soul_gathering", "2026-11-09", "2026-11-11", "小", "soul_gathering"),
-    occurrence("2026-11-12_wind_forest_fire_mountain", "2026-11-12", "2026-11-15", "大", "wind_forest_fire_mountain"),
+    occurrence("2026-11-12_wind_forest_fire_mountain", "2026-11-12", "2026-11-15", "大", "wind_forest_fire_mountain", [disciple("隐虎季布"), disciple("雷豹英布")]),
     occurrence("2026-11-16_yin_yang", "2026-11-16", "2026-11-18", "小", "yin_yang"),
     occurrence("2026-11-19_song_dance", "2026-11-19", "2026-11-22", "大", "song_dance"),
     occurrence("2026-11-23_life_and_death", "2026-11-23", "2026-11-25", "小", "life_and_death"),
     occurrence("2026-11-26_dragon_might", "2026-11-26", "2026-11-29", "大", "dragon_might"),
     occurrence("2026-11-30_observe_the_depths", "2026-11-30", "2026-12-02", "小", "observe_the_depths"),
-    occurrence("2026-12-03_no_two_suns", "2026-12-03", "2026-12-06", "大", "no_two_suns")
+    // 已有期次ID保持不变；本期弟子与奖励模板按最新周期图修订。
+    occurrence("2026-12-03_no_two_suns", "2026-12-03", "2026-12-06", "大", "wind_forest_fire_mountain", [disciple("将威龙且"), disciple("贯侯钟离昧")]),
+    occurrence("2026-12-07_white_snow", "2026-12-07", "2026-12-09", "小", "white_snow"),
+    Object.assign(occurrence("2026-12-10_wind_forest_fire_mountain", "2026-12-10", "2026-12-13", "大", "wind_forest_fire_mountain", [disciple("隐虎季布"), disciple("雷豹英布")]), { note: "神雷豹英布首发" }),
+    occurrence("2026-12-14_soul_gathering", "2026-12-14", "2026-12-16", "小", "soul_gathering"),
+    occurrence("2026-12-17_no_two_suns", "2026-12-17", "2026-12-20", "大", "no_two_suns"),
+    occurrence("2026-12-21_yin_yang", "2026-12-21", "2026-12-23", "小", "yin_yang"),
+    occurrence("2026-12-24_shadow_hunt", "2026-12-24", "2026-12-27", "大", "shadow_hunt"),
+    occurrence("2026-12-28_life_and_death", "2026-12-28", "2026-12-30", "小", "life_and_death"),
+    occurrence("2026-12-31_song_dance", "2026-12-31", "2027-01-03", "大", "song_dance")
   ];
 
   return {
-    meta: { year: 2026, firstDate: "2026-07-30", lastDate: "2026-12-06" },
+    meta: { year: 2026, firstDate: "2026-07-30", lastDate: "2027-01-03" },
     templates: templates,
     occurrences: occurrences,
     discipleAtlasTargets: discipleAtlasTargets

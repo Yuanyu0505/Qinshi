@@ -378,6 +378,7 @@
       '<button type="button" class="seg forbidden-expand" data-forbidden-expand="' + escapeHtml(occurrence.id) + '" aria-expanded="' + String(expanded) + '">' + (expanded ? "收起奖励" : "展开奖励") + "</button></header>" +
       matchReasonHtml(matches) +
       '<section class="forbidden-disciples' + (hasDiscipleMatch ? " is-match" : "") + '"><div class="forbidden-subtitle">禁地弟子</div><div class="forbidden-token-list">' + discipleTokens + "</div></section>" +
+      (occurrence.note ? '<p class="muted-tip">' + escapeHtml(occurrence.note) + '</p>' : '') +
       requirementSummaryHtml(occurrence) +
       (expanded ? '<div class="forbidden-rewards"><div class="forbidden-reward-grid">' + rewardSections + "</div></div>" : "") + "</article>";
   }

@@ -26,6 +26,7 @@
     selectedOnly: false,
     showSchedule: false,
     expanded: {},
+    needsExpanded: {},
     needs: { version: 2, events: {} }
   };
 
@@ -317,10 +318,10 @@
       var record = entry.rewards[key];
       return tokenHtml(occurrence, "reward", record.rawName || record.name, record.name, record.sectionKey || "legacy", record);
     }).join("");
-    return '<section class="forbidden-needs"><div class="forbidden-subtitle">本期需求</div>' +
+    return '<details class="forbidden-needs" data-forbidden-needs="' + escapeHtml(occurrence.id) + '"' + (state.needsExpanded[occurrence.id] ? ' open' : '') + '><summary><span>个人需求 · 弟子 ' + entry.disciples.length + ' · 奖励道具 ' + rewardKeys.length + '</span><span class="forbidden-needs-toggle">' + (state.needsExpanded[occurrence.id] ? '收起明细' : '查看明细') + '</span></summary><div class="forbidden-needs-detail">' +
       (discipleTokens ? '<div class="forbidden-need-line"><span>需要的弟子</span><div class="forbidden-token-list">' + discipleTokens + "</div></div>" : "") +
       (itemTokens ? '<div class="forbidden-need-line"><span>需要的奖励道具</span><div class="forbidden-token-list">' + itemTokens + "</div></div>" : "") +
-      "</section>";
+      "</div></details>";
   }
 
   function rewardSectionHtml(occurrence, resolved, config, matches) {
@@ -344,7 +345,7 @@
       }).join("") + "</div>";
     }
     return '<section class="forbidden-reward-section' + (isMatch ? " is-match" : "") + '">' +
-      '<div class="forbidden-subtitle">' + escapeHtml(config.title.replace(/（.*）$/, "")) + (contribution ? choiceLabel : '') + "</div>" + body + "</section>";
+      '<div class="forbidden-subtitle">' + escapeHtml(config.title.replace(/（.*）$/, "").replace(/^(贡献奖励|排名奖励) · /, "")) + (contribution ? choiceLabel : '') + "</div>" + body + "</section>";
   }
 
   function rewardMatch(matches) {
@@ -386,15 +387,15 @@
       return tokenHtml(occurrence, "disciple", disciple.name, formatDisciple(disciple));
     }).join("");
     var rewardSections = expanded ? [SECTION_CONFIG.slice(0, 2), SECTION_CONFIG.slice(2, 5), SECTION_CONFIG.slice(5)].map(function (configs, index) {
-      return '<div class="forbidden-reward-grid is-' + ["contribution", "ranking", "materials"][index] + '">' + configs.map(function (config) {
+      return '<section class="forbidden-reward-group"><h3>' + ["贡献奖励", "排名奖励", "材料与其他奖励"][index] + '</h3><div class="forbidden-reward-grid is-' + ["contribution", "ranking", "materials"][index] + '">' + configs.map(function (config) {
         return rewardSectionHtml(occurrence, resolved, config, matches);
-      }).join("") + '</div>';
+      }).join("") + '</div></section>';
     }).join("") : "";
     var hasMetaMatch = matches.indexOf("meta") !== -1;
     var hasDiscipleMatch = matches.indexOf("disciples") !== -1;
     return '<article class="forbidden-card' + (hasMetaMatch || hasDiscipleMatch ? " is-search-match" : "") + '" data-forbidden-card="' + escapeHtml(occurrence.id) + '" data-forbidden-role="' + escapeHtml(role) + '">' +
-      '<header class="forbidden-card-head"><div><span class="forbidden-status">' + escapeHtml(statusLabel(occurrence, role)) + "</span>" +
-      '<strong class="forbidden-date">' + highlight(formatRange(occurrence)) + '</strong><span class="forbidden-size forbidden-size-' + escapeHtml(occurrence.size) + '">' + escapeHtml(occurrence.size + "禁地") + "</span></div>" +
+      '<header class="forbidden-card-head"><div><h2 class="forbidden-date">' + highlight(formatRange(occurrence)) + '</h2><span class="forbidden-status">' + escapeHtml(statusLabel(occurrence, role)) + "</span>" +
+      '<span class="forbidden-size forbidden-size-' + escapeHtml(occurrence.size) + '">' + escapeHtml(occurrence.size + "禁地") + "</span></div>" +
       '<button type="button" class="seg forbidden-expand" data-forbidden-expand="' + escapeHtml(occurrence.id) + '" aria-expanded="' + String(expanded) + '">' + (expanded ? "收起奖励" : "展开奖励") + "</button></header>" +
       matchReasonHtml(matches) +
       '<section class="forbidden-disciples' + (hasDiscipleMatch ? " is-match" : "") + '"><div class="forbidden-subtitle">禁地弟子</div><div class="forbidden-token-list">' + discipleTokens + "</div></section>" +
@@ -601,6 +602,7 @@
       selectedOnly: state.selectedOnly,
       showSchedule: state.showSchedule,
       expanded: clone(state.expanded),
+      needsExpanded: clone(state.needsExpanded),
       scrollPosition: captureScrollPosition()
     };
   }
@@ -613,6 +615,7 @@
     state.selectedOnly = Boolean(saved.selectedOnly);
     state.showSchedule = Boolean(saved.showSchedule);
     state.expanded = clone(saved.expanded);
+    state.needsExpanded = clone(saved.needsExpanded);
     if (elements.search) elements.search.value = state.query;
     render(onComplete);
   }
@@ -832,6 +835,14 @@
       render();
     });
     elements.expandAll.addEventListener("click", toggleAllVisibleRewards);
+    elements.content.addEventListener('toggle', function (event) {
+      var details = event.target;
+      if (!details.hasAttribute('data-forbidden-needs')) return;
+      // Ignore replaced nodes whose queued toggle event no longer belongs to this view.
+      if (!elements.content.contains(details)) return;
+      state.needsExpanded[details.dataset.forbiddenNeeds] = details.open;
+      details.querySelector('.forbidden-needs-toggle').textContent = details.open ? '收起明细' : '查看明细';
+    }, true);
     elements.content.addEventListener("click", function (event) {
       var selectButton = event.target.closest("[data-forbidden-select]");
       if (selectButton) {

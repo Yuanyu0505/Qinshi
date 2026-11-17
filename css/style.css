@@ -2209,16 +2209,22 @@ figcaption { color: var(--muted); font-size: 13px; margin-top: 8px; }
 /* 禁地 */
 #partition-forbidden { min-width: 0; }
 #partition-forbidden .forbidden-toolbar { margin-bottom: 14px; container-type: inline-size; }
-#partition-forbidden .forbidden-purpose-row { margin-top: 10px; }
+#partition-forbidden .forbidden-query-controls { display: grid; grid-template-columns: minmax(220px, 1fr) auto; align-items: end; gap: 10px 18px; }
+#partition-forbidden .forbidden-search-row { display: grid; gap: 6px; margin: 0; }
+#partition-forbidden #forbidden-search { width: 100%; min-width: 0; box-sizing: border-box; }
+#partition-forbidden .forbidden-secondary-controls { display: flex; flex-wrap: wrap; align-items: end; gap: 12px 20px; border-top: 1px solid var(--line); margin-top: 12px; padding-top: 12px; }
+#partition-forbidden .forbidden-purpose-row { flex: 1 1 470px; margin: 0; }
 #partition-forbidden .forbidden-purpose-row .segs { flex-wrap: wrap; }
+#partition-forbidden .forbidden-browse-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+#partition-forbidden .forbidden-browse-actions .seg { font-weight: 400; color: var(--muted); }
 #partition-forbidden .forbidden-control-row {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
   gap: 10px 18px;
-  margin-top: 10px;
+  margin-top: 0;
 }
-#partition-forbidden .forbidden-size-row { flex: 1 1 260px; margin: 0; }
+#partition-forbidden .forbidden-size-row { flex: 0 1 auto; margin: 0; }
 #partition-forbidden .forbidden-check-control {
   display: inline-flex;
   align-items: center;
@@ -2226,8 +2232,8 @@ figcaption { color: var(--muted); font-size: 13px; margin-top: 8px; }
   min-height: 38px;
   padding: 6px 10px;
   color: var(--text);
-  background: var(--bg2);
-  border: 1px solid var(--line);
+  background: transparent;
+  border: 1px solid transparent;
   border-radius: 7px;
   cursor: pointer;
 }
@@ -2243,12 +2249,13 @@ figcaption { color: var(--muted); font-size: 13px; margin-top: 8px; }
 }
 #partition-forbidden .forbidden-featured-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 1fr);
   align-items: start;
   gap: 14px;
 }
 #partition-forbidden .forbidden-featured-grid > :only-child { grid-column: 1 / -1; }
-#partition-forbidden .forbidden-list { display: grid; gap: 14px; }
+#partition-forbidden .forbidden-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 480px), 1fr)); align-items: start; gap: 14px; }
+#partition-forbidden .forbidden-list .forbidden-card:has(.forbidden-rewards) { grid-column: 1 / -1; }
 #partition-forbidden .forbidden-list-head {
   display: flex;
   align-items: baseline;
@@ -2264,7 +2271,7 @@ figcaption { color: var(--muted); font-size: 13px; margin-top: 8px; }
   padding: 13px;
   background: var(--panel);
   border: 1px solid var(--line);
-  border-left: 3px solid var(--gold-dim);
+  border-left: 1px solid var(--line);
   border-radius: 10px;
 }
 #partition-forbidden .forbidden-list .forbidden-card {
@@ -2272,9 +2279,9 @@ figcaption { color: var(--muted); font-size: 13px; margin-top: 8px; }
   contain-intrinsic-size: auto 430px;
 }
 #partition-forbidden .forbidden-card.is-search-match {
-  border-color: #ff4a43;
-  box-shadow: inset 4px 0 0 rgba(255, 74, 67, .72);
+  border-color: var(--gold-dim);
 }
+#partition-forbidden .forbidden-card[data-forbidden-role="current"] { border-top: 2px solid var(--gold-dim); }
 #partition-forbidden .forbidden-match-reason {
   display: flex;
   align-items: baseline;
@@ -2295,15 +2302,15 @@ figcaption { color: var(--muted); font-size: 13px; margin-top: 8px; }
 #partition-forbidden .forbidden-card-head > div { display: flex; align-items: center; flex-wrap: wrap; gap: 7px; min-width: 0; }
 #partition-forbidden .forbidden-status {
   padding: 2px 7px;
-  color: #fff2c7;
-  background: rgba(176, 58, 46, .72);
-  border: 1px solid #d55c50;
-  border-radius: 999px;
+  color: var(--muted);
+  background: transparent;
+  border: 0;
+  border-radius: 4px;
   font-size: 12px;
   font-weight: 800;
   white-space: nowrap;
 }
-#partition-forbidden .forbidden-date { color: var(--gold); font-size: 18px; }
+#partition-forbidden .forbidden-date { margin: 0; color: var(--gold); font-size: 21px; line-height: 1.4; }
 #partition-forbidden .forbidden-size {
   padding: 2px 7px;
   border: 1px solid var(--line);
@@ -2319,18 +2326,23 @@ figcaption { color: var(--muted); font-size: 13px; margin-top: 8px; }
 #partition-forbidden .forbidden-needs {
   min-width: 0;
   margin-top: 9px;
-  padding: 10px;
-  background: rgba(25, 22, 17, .74);
-  border: 1px solid var(--line);
-  border-radius: 8px;
+  padding: 10px 0;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  border-radius: 0;
 }
 #partition-forbidden .forbidden-disciples.is-match {
-  background: rgba(174, 23, 20, .09);
-  border-color: #ff4a43;
-  box-shadow: inset 3px 0 0 rgba(255, 74, 67, .55);
+  background: transparent;
+  border-color: var(--gold-dim);
 }
-#partition-forbidden .forbidden-needs { border-left: 3px solid #2d9b55; }
-#partition-forbidden .forbidden-needs.is-empty { padding: 7px 10px; }
+#partition-forbidden .forbidden-needs { font-size: 13px; }
+#partition-forbidden .forbidden-needs.is-empty { padding: 7px 0; }
+#partition-forbidden .forbidden-needs summary { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 6px 12px; min-height: 44px; cursor: pointer; list-style: none; color: var(--muted); }
+#partition-forbidden .forbidden-needs summary::-webkit-details-marker { display: none; }
+#partition-forbidden .forbidden-needs-toggle { color: var(--gold-dim); white-space: nowrap; }
+#partition-forbidden .forbidden-needs-detail { padding-top: 10px; }
+#partition-forbidden .forbidden-needs summary:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
 #partition-forbidden .forbidden-subtitle { margin-bottom: 7px; color: var(--gold-dim); font-size: 13px; font-weight: 800; }
 #partition-forbidden .forbidden-reward-section > .forbidden-subtitle {
   display: flex;
@@ -2338,19 +2350,12 @@ figcaption { color: var(--muted); font-size: 13px; margin-top: 8px; }
   gap: 8px;
   min-height: 22px;
   margin-bottom: 10px;
-  color: #ffda69;
-  font-size: 15px;
-  font-weight: 900;
-  letter-spacing: .025em;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 700;
 }
 #partition-forbidden .forbidden-reward-section > .forbidden-subtitle::before {
-  content: "";
-  flex: 0 0 4px;
-  width: 4px;
-  height: 17px;
-  background: #f0bd3d;
-  border-radius: 2px;
-  box-shadow: 0 0 7px rgba(240, 189, 61, .28);
+  content: none;
 }
 #partition-forbidden .forbidden-token-list { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; min-width: 0; }
 #partition-forbidden .forbidden-token {
@@ -2362,11 +2367,11 @@ figcaption { color: var(--muted); font-size: 13px; margin-top: 8px; }
   min-height: 34px;
   padding: 3px;
   color: var(--text);
-  background: rgba(31, 26, 20, .92);
-  border: 2px solid #75501d;
-  border-radius: 7px;
+  background: rgba(0, 0, 0, .12);
+  border: 1px solid var(--line);
+  border-radius: 5px;
   font: inherit;
-  font-size: 13px;
+  font-size: 14px;
   line-height: 1.25;
   text-align: left;
   overflow-wrap: anywhere;
@@ -2394,6 +2399,7 @@ figcaption { color: var(--muted); font-size: 13px; margin-top: 8px; }
   font-weight: 900;
 }
 #partition-forbidden .forbidden-token-name {
+  flex: 1 1 auto;
   min-width: 0;
   max-width: 100%;
   padding: 4px 3px;
@@ -2413,21 +2419,25 @@ figcaption { color: var(--muted); font-size: 13px; margin-top: 8px; }
   white-space: nowrap;
 }
 #partition-forbidden .forbidden-token.is-selected {
-  color: #effff4;
-  background: rgba(24, 91, 49, .78);
-  border-color: #42d77d;
-  font-weight: 800;
-  box-shadow: inset 3px 0 0 #42d77d;
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr) auto;
+  color: var(--text);
+  background: rgba(45, 155, 85, .07);
+  border-color: #3c7450;
+  box-shadow: none;
 }
+#partition-forbidden .forbidden-token.is-selected .forbidden-token-check { color: #83d9a0; grid-area: 1 / 1; }
+#partition-forbidden .forbidden-token.is-selected .forbidden-token-name { grid-area: 1 / 2; }
+#partition-forbidden .forbidden-token.is-selected .forbidden-purpose-edit { grid-area: 1 / 3; }
+#partition-forbidden .forbidden-token.is-selected .forbidden-purpose-badges { grid-column: 2 / -1; }
 #partition-forbidden .forbidden-token.is-search-hit {
-  border-color: #ff4a43;
-  font-weight: 900;
-  box-shadow: inset 3px 0 0 #ff4a43;
+  border-color: var(--gold-dim);
+  box-shadow: none;
 }
 #partition-forbidden .forbidden-token.is-selected.is-search-hit {
-  background: rgba(24, 91, 49, .78);
-  border-color: #ff4a43;
-  box-shadow: inset 3px 0 0 #ff4a43;
+  background: rgba(45, 155, 85, .07);
+  border-color: var(--gold-dim);
+  box-shadow: none;
 }
 #partition-forbidden .forbidden-token.is-history-disabled .forbidden-token-check {
   color: var(--muted);
@@ -2445,10 +2455,10 @@ figcaption { color: var(--muted); font-size: 13px; margin-top: 8px; }
   min-height: 22px;
   padding: 2px 7px;
   color: #fff;
-  border: 1px solid currentColor;
-  border-radius: 999px;
+  border: 0;
+  border-radius: 3px;
   font-size: 11px;
-  font-weight: 900;
+  font-weight: 500;
   white-space: nowrap;
 }
 #partition-forbidden .forbidden-purpose-badge.is-atlas { color: #e5c8f7; background: rgba(119, 54, 166, .42); border-color: #9b55c9; }
@@ -2460,6 +2470,8 @@ figcaption { color: var(--muted); font-size: 13px; margin-top: 8px; }
 #partition-forbidden .forbidden-need-line + .forbidden-need-line { margin-top: 7px; }
 #partition-forbidden .forbidden-need-line > span { padding-top: 6px; color: var(--muted); font-size: 12px; }
 #partition-forbidden .forbidden-rewards { margin-top: 10px; }
+#partition-forbidden .forbidden-reward-group + .forbidden-reward-group { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--line); }
+#partition-forbidden .forbidden-reward-group > h3 { margin: 0 0 10px; color: var(--gold-dim); font-size: 16px; font-weight: 700; }
 #partition-forbidden .forbidden-reward-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -2467,19 +2479,17 @@ figcaption { color: var(--muted); font-size: 13px; margin-top: 8px; }
   align-items: start;
 }
 #partition-forbidden .forbidden-reward-grid.is-contribution { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-#partition-forbidden .forbidden-reward-grid + .forbidden-reward-grid { margin-top: 12px; }
 #partition-forbidden .forbidden-choice-label { color: var(--text); font-size: 12px; font-weight: 500; white-space: nowrap; }
 #partition-forbidden .forbidden-reward-section {
   min-width: 0;
-  padding: 9px;
-  background: rgba(20, 17, 13, .74);
-  border: 1px solid rgba(139, 99, 34, .72);
-  border-radius: 8px;
+  padding: 8px;
+  background: transparent;
+  border: 0;
+  border-radius: 5px;
 }
+#partition-forbidden .is-contribution > .forbidden-reward-section { border: 1px solid var(--gold-dim); background: rgba(126, 82, 20, .06); }
 #partition-forbidden .forbidden-reward-section.is-match {
-  background: rgba(174, 23, 20, .08);
-  border-color: #ff4a43;
-  box-shadow: inset 3px 0 0 rgba(255, 74, 67, .62);
+  background: rgba(212, 175, 55, .04);
 }
 #partition-forbidden .forbidden-reward-rows { display: grid; gap: 8px; }
 #partition-forbidden .forbidden-reward-row {
@@ -2496,7 +2506,7 @@ figcaption { color: var(--muted); font-size: 13px; margin-top: 8px; }
   display: grid;
   gap: 6px;
   padding: 8px;
-  background: rgba(126, 82, 20, .2);
+  background: rgba(126, 82, 20, .06);
   border: 1px solid var(--gold-dim);
   border-radius: 6px;
 }
@@ -2511,7 +2521,7 @@ figcaption { color: var(--muted); font-size: 13px; margin-top: 8px; }
 #partition-forbidden .forbidden-reward-row .forbidden-token-list { flex: 1 1 auto; }
 #partition-forbidden mark.forbidden-match {
   color: #fff;
-  background: #b93630;
+  background: #655021;
   border-radius: 3px;
   padding: 0 2px;
   font-weight: 800;
@@ -2585,15 +2595,24 @@ body:has(#forbidden-purpose-editor:not([hidden])) > .responsive-back-top { visib
 .forbidden-purpose-dialog button { min-height: 44px; }
 .forbidden-purpose-dialog :focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
 @container (max-width: 700px) {
-  #partition-forbidden .forbidden-reward-grid { grid-template-columns: 1fr; }
-  #partition-forbidden .forbidden-reward-grid.is-contribution { grid-template-columns: 1fr; }
+  #partition-forbidden .forbidden-query-controls { grid-template-columns: 1fr; }
+  #partition-forbidden .forbidden-reward-grid.is-ranking { grid-template-columns: 1fr; }
+  #partition-forbidden .forbidden-reward-grid.is-materials { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@container (max-width: 560px) {
+  #partition-forbidden .forbidden-reward-grid,
+  #partition-forbidden .forbidden-reward-grid.is-contribution,
+  #partition-forbidden .forbidden-reward-grid.is-materials { grid-template-columns: 1fr; }
 }
 @container (max-width: 520px) {
   #partition-forbidden .forbidden-size-row { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 8px; }
   #partition-forbidden .forbidden-size-row .segs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
   #partition-forbidden .forbidden-control-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
   #partition-forbidden .forbidden-size-row { grid-column: 1 / -1; }
-  #partition-forbidden .forbidden-control-row > .seg:last-child { grid-column: 1 / -1; }
+  #partition-forbidden .forbidden-control-row { grid-template-columns: minmax(0, 1fr); }
+  #partition-forbidden .forbidden-browse-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); width: 100%; }
+  #partition-forbidden .forbidden-card-head { align-items: flex-start; flex-wrap: wrap; }
+  #partition-forbidden .forbidden-date { font-size: 18px; }
 }
 
 .atlas-exact-query-status {
@@ -2620,7 +2639,6 @@ body:has(#forbidden-purpose-editor:not([hidden])) > .responsive-back-top { visib
   #partition-formations .formation-member-grid { grid-template-columns: 1fr; }
   #partition-formations .formation-recommend-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   #partition-forbidden .forbidden-featured-grid { grid-template-columns: 1fr; }
-  #partition-forbidden .forbidden-reward-grid { grid-template-columns: 1fr; }
 }
 
 @media (min-width: 768px) and (max-width: 1024px) {
@@ -2713,16 +2731,9 @@ body:has(#forbidden-purpose-editor:not([hidden])) > .responsive-back-top { visib
   #partition-forbidden .seg,
   #partition-forbidden button,
   #partition-forbidden input { min-height: 44px; touch-action: manipulation; }
-  #partition-forbidden .forbidden-control-row {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    align-items: stretch;
-    gap: 10px;
-  }
-  #partition-forbidden .forbidden-size-row { grid-column: 1 / -1; flex-basis: auto; }
-  #partition-forbidden .forbidden-check-control,
   #partition-forbidden #forbidden-schedule-toggle,
   #partition-forbidden #forbidden-expand-all { width: 100%; justify-content: center; }
+  #partition-forbidden .forbidden-check-control { justify-content: center; }
   #partition-forbidden .forbidden-purpose-row { display: grid; gap: 6px; }
   #partition-forbidden .forbidden-purpose-row .segs {
     display: grid;
@@ -2732,6 +2743,7 @@ body:has(#forbidden-purpose-editor:not([hidden])) > .responsive-back-top { visib
   #partition-forbidden .forbidden-purpose-row .seg { width: 100%; min-width: 0; }
   #partition-forbidden .forbidden-token { max-width: 100%; min-height: 44px; }
   #partition-forbidden .forbidden-token-check { flex-basis: 44px; width: 44px; min-height: 44px; }
+  #partition-forbidden .forbidden-token.is-selected { grid-template-columns: 44px minmax(0, 1fr) auto; }
   #partition-forbidden .forbidden-token-name,
   #partition-forbidden .forbidden-purpose-edit { min-height: 44px; }
   #partition-forbidden .forbidden-subtitle { overflow-wrap: anywhere; }
@@ -3054,18 +3066,14 @@ body:has(#forbidden-purpose-editor:not([hidden])) > .responsive-back-top { visib
   #partition-formations .formation-member-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   #partition-formations .formation-member-actions .link-btn { margin-left: 0; }
   #partition-formations .formation-section-head { align-items: flex-start; }
-  #partition-forbidden .forbidden-control-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
-  #partition-forbidden .forbidden-size-row { display: grid; grid-template-columns: auto minmax(0, 1fr); flex-basis: auto; gap: 6px; }
   #partition-forbidden .forbidden-purpose-row { display: grid; gap: 6px; }
   #partition-forbidden .forbidden-purpose-row .segs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); width: 100%; }
   #partition-forbidden .forbidden-purpose-row .seg { width: 100%; padding-left: 6px; padding-right: 6px; }
-  #partition-forbidden .forbidden-check-control,
   #partition-forbidden #forbidden-schedule-toggle,
   #partition-forbidden #forbidden-expand-all { width: 100%; justify-content: center; }
   #partition-forbidden .forbidden-card { padding: 10px; }
   #partition-forbidden .forbidden-card-head { align-items: flex-start; flex-direction: column; }
   #partition-forbidden .forbidden-expand { width: 100%; }
-  #partition-forbidden .forbidden-reward-grid { grid-template-columns: 1fr; }
   #partition-forbidden .forbidden-need-line { grid-template-columns: 1fr; gap: 4px; }
   #partition-forbidden .forbidden-need-line > span { padding-top: 0; }
   #partition-forbidden .forbidden-reward-row.has-label {
@@ -3086,6 +3094,8 @@ body:has(#forbidden-purpose-editor:not([hidden])) > .responsive-back-top { visib
   #partition-forbidden .forbidden-token.is-selected .forbidden-token-name { grid-column: 2; grid-row: 1; }
   #partition-forbidden .forbidden-token.is-selected .forbidden-purpose-badges,
   #partition-forbidden .forbidden-token.is-selected .forbidden-purpose-edit { grid-column: 2; justify-self: start; }
+  #partition-forbidden .forbidden-token.is-selected .forbidden-purpose-badges { grid-row: 2; }
+  #partition-forbidden .forbidden-token.is-selected .forbidden-purpose-edit { grid-row: 3; }
   .forbidden-purpose-dialog {
     left: 0 !important;
     right: 0;

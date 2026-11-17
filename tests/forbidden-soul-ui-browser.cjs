@@ -73,6 +73,8 @@ if (!process.env.UI_BASELINE) {
       for (let i=0;i<3;i++) await page.locator('[data-forbidden-card]').nth(i).locator('.forbidden-rewards [data-forbidden-select]').first().click();
       const id = await page.locator('[data-forbidden-card]').nth(2).getAttribute('data-forbidden-card');
       await page.locator('#forbidden-selected-only').check(); await page.clock.runFor(200);
+      const needsSummary = page.locator('[data-forbidden-card]').nth(2).locator('details.forbidden-needs summary');
+      if (await needsSummary.count()) await needsSummary.click();
       await page.locator('[data-forbidden-card]').nth(2).locator('.forbidden-needs [data-forbidden-purpose-edit]').first().click();
       await page.locator('[data-forbidden-purpose-save]').click(); await page.clock.runFor(200);
       assert.equal(await page.evaluate(() => document.activeElement.closest('[data-forbidden-card]')?.dataset.forbiddenCard), id);

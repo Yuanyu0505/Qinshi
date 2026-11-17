@@ -71,6 +71,10 @@
 #partition-other-reference .ref-origin-table td:nth-child(2) { text-align:left;vertical-align:middle;white-space:normal; }
 #partition-other-reference .ref-table.ref-treasure-table th,
 #partition-other-reference .ref-table.ref-treasure-table td { vertical-align:middle;text-align:center; }
+#partition-other-reference [data-ref-kind="speed"] .ref-table th,
+#partition-other-reference [data-ref-kind="speed"] .ref-table td { vertical-align:middle;text-align:center; }
+#partition-other-reference [data-ref-kind="speed"] .ref-detail-body dl > div,
+#partition-other-reference [data-ref-kind="speed"] .ref-row-card dl > div { align-items:center; }
 #partition-other-reference .ref-element-gains { display:grid;gap:16px; }
 #partition-other-reference .ref-element-gains h3 { margin-top:0; }
 #partition-other-reference .ref-card-stats { table-layout:fixed;min-width:580px; }

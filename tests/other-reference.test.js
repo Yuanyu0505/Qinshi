@@ -39,6 +39,16 @@ test('every transcribed row retains columns and reachable sources; filtering nev
   assert.equal(ui.filterRows(table,'<script>','').length,0);
   assert.equal(JSON.stringify(table),before);
 });
+test('both speed rankings use the three user-confirmed disciple names',()=>{
+  const tables=require('../data/other-reference-tables-c.js').tables;
+  const names={'10102':'神贯侯钟离昧','10066':'神蚩魔卫庄','10096':'神鲨齿卫庄'};
+  for(const id of ['speed-paid-ranking','speed-free-ranking']){
+    const table=tables.find(t=>t.id===id);
+    assert.equal(table.rows.length,47);
+    for(const [number,name] of Object.entries(names))assert.equal(table.rows.find(row=>row[1]===number)[2],name);
+  }
+});
+
 test('level bands include overlapping league ranges and distinguish unreadable names from absent source values',()=>{
   const ui=require('../js/other-reference-ui.js');
   assert.equal(ui.matchesLevelBand('70–100级','80'),true);

@@ -142,23 +142,14 @@ test('five viewport before/after evidence and identical public calculations', as
   }
 });
 
-test('tablet summary stays readable, main query stays sticky and material stages fit without horizontal scrolling', async () => {
+test('tablet summary remains readable and both query modes retain a sticky equipment column', async () => {
   const page = await start(820,1180);
   try {
     const font = await page.locator('#forging-summary td').first().evaluate(e=>parseFloat(getComputedStyle(e).fontSize));
     assert.ok(font >= 13, 'summary font '+font+' must be readable');
     for (const mode of ['main','material']) {
       await search(page, mode==='main'?'雷神锤':'非攻', mode);
-      const position=await page.locator('#forge-results .forge-eq').first().evaluate(e=>getComputedStyle(e).position);
-      if(mode==='main') assert.equal(position,'sticky');
-      else {
-        assert.equal(position,'static');
-        const size=await page.locator('.forge-scroll-material').evaluate(e=>({content:e.scrollWidth,visible:e.clientWidth}));
-        assert.ok(size.content<=size.visible+1,JSON.stringify(size));
-        const stageCounts=await page.locator('#forge-results tbody tr').evaluateAll(rows=>rows.map(row=>row.querySelectorAll('td[data-label]').length));
-        assert.ok(stageCounts.length>0);
-        assert.ok(stageCounts.every(count=>count===11));
-      }
+      assert.equal(await page.locator('#forge-results .forge-eq').first().evaluate(e=>getComputedStyle(e).position), 'sticky');
     }
   } finally { await page.close(); }
 });

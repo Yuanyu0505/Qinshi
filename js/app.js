@@ -175,7 +175,6 @@
     disciples: loadProgress()
   };
   const progReorderState = { active: false, draft: [], selectedId: null };
-  let progressReplacingContent = false;
   const PROG_CAT_ORDER = ["武器", "盔甲", "首饰", "典籍"];
   const atlasState = {
     activated: false,
@@ -2364,7 +2363,6 @@
       }
     });
     el.progDisciples.addEventListener("change", (e) => {
-      if (progressReplacingContent) return;
       if (e.target.classList.contains("prog-name")) {
         const d = findDisciple(e.target.dataset.disciple);
         if (d) {
@@ -2414,8 +2412,8 @@
 
   function progressSummaryHtml(materials, overall) {
     return `<div class="prog-material-grid${overall ? " prog-material-grid-overall" : ""}">${materials.map((material) => {
-      const quality = material.q === "紫" ? "紫" : "橙";
-      return `<button type="button" class="prog-material-row${quality === "紫" ? " is-purple" : " is-orange"}" data-item-menu-source="forging" data-item-name="${escapeHtml(material.n)}"><span class="prog-material-name">${escapeHtml(material.n)}</span><span class="prog-material-quality">${quality}装</span><span class="prog-material-count">×${material.count}</span></button>`;
+      const q = material.q === "紫" ? "mat-purple" : "mat-orange";
+      return `<span class="mat material-token ${q}">${escapeHtml(material.n)} ×${material.count}</span>`;
     }).join("")}</div>`;
   }
 
@@ -2439,7 +2437,6 @@
     const next = PROG.nextStage(item, it.progress, it.quality);
     const remaining = PROG.remainingStages(item, it.progress, it.quality);
     const status = PROG.progressStatus(it);
-    const qualityLabel = { orange: "橙色", "orange-gold": "橙金", red: "红色", "red-gold": "红金" }[status.tier];
     const displayName = it.equipmentName || item.name;
     const nameHtml = `<button type="button" class="progress-equipment-name progress-equipment-${status.tier} progress-equipment-link" data-item-menu-source="forging" data-item-name="${escapeHtml(displayName)}" data-progress-record="${escapeHtml(it.id)}" title="打开${escapeHtml(displayName)}查询选项">${escapeHtml(displayName)}</button>`;
     const unavailableHtml = it.equipmentId ? "" : '<span class="muted progress-equipment-unavailable">暂无装备属性</span>';
@@ -2450,19 +2447,15 @@
     }).join("");
     return `<div class="prog-equip" data-prog-card-key="${escapeHtml(opts.context || "disciple")}:${escapeHtml(d.id)}:${escapeHtml(it.id)}">
       <div class="prog-equip-head">
-        <div class="prog-equip-identity">
         <span class="cat">${item.cat}</span>
         ${nameHtml}
         ${unavailableHtml}
-        </div>
-        <div class="prog-equip-state"><span class="prog-quality-badge">${qualityLabel}</span><span class="progress-forge-status">${status.label}</span></div>
-        ${readOnly ? "" : `<div class="prog-equip-actions">`}
+        <span class="muted progress-forge-status">${status.label}</span>
         ${readOnly ? "" : `<button type="button" class="seg progress-quality-toggle" data-act="switch-quality" data-disciple="${d.id}" data-item="${it.id}" aria-label="切换${escapeHtml(displayName)}品质">切换品质</button>`}
         ${readOnly ? "" : `<button type="button" class="seg danger" data-act="remove-item" data-disciple="${d.id}" data-item="${it.id}">移除</button>`}
-        ${readOnly ? "" : `</div>`}
       </div>
       <div class="prog-stages">${chips}</div>
-      <div class="prog-next"><span class="prog-next-label">下一阶段</span><span class="prog-next-content">${nextHtml}</span></div>
+      <div class="prog-next">下一阶段：${nextHtml}</div>
       <details class="prog-material-details"${hitStageIndexes.size ? " open" : ""}>
       <summary>剩余材料 · ${remaining.length} 阶段</summary>
       <table class="mini-table prog-material-table">
@@ -2602,12 +2595,7 @@
       end: active.selectionEnd,
       top: active.getBoundingClientRect().top
     };
-    progressReplacingContent = true;
-    try {
-      renderProgressContent();
-    } finally {
-      progressReplacingContent = false;
-    }
+    renderProgressContent();
     forms.forEach((draft) => {
       const form = Array.from(el.progDisciples.querySelectorAll("[data-add-form]")).find((node) => node.dataset.addForm === draft.id);
       if (!form) return;

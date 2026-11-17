@@ -105,6 +105,16 @@ test("groupRelatedDrops：明确简称互通，空结果保留，不能模糊合
   assert.deepStrictEqual(D.groupRelatedDrops(data,"不存在"),[]);
 });
 
+test("groupRelatedDrops：管事简称与管事服全名均显示全名及原关卡", () => {
+  const data = { normal: [{item:"管事",chapter:52,stage:5}], hero: [], reward: [] };
+  for (const query of ["管事", "管事服"]) {
+    const groups = D.groupRelatedDrops(data,query);
+    assert.strictEqual(groups.length,1);
+    assert.strictEqual(groups[0].item,"管事服");
+    assert.deepStrictEqual(groups[0].normal,[{item:"管事",chapter:52,stage:5}]);
+  }
+});
+
 test("resolveNavigationTarget：四个入口映射到正确的查询分区与模式", () => {
   assert.deepStrictEqual(D.resolveNavigationTarget("atlas", "苍云甲"), {
     target: "atlas", partition: "atlas", item: "苍云甲", view: "query", mode: null

@@ -57,7 +57,7 @@
   // User-confirmed display names. These three machine-beast drops are fragments in every region.
   // Preserve archived source names/positions; never infer a body merely from an omitted suffix.
   var DISPLAY_ALIASES = {
-    "醉梦": "醉梦罗裳", "升雪": "升雪凌霄衣", "星云": "星云法衣",
+    "醉梦": "醉梦罗裳", "升雪": "升雪凌霄衣", "星云": "星云法衣", "管事": "管事服",
     "八爪铁蜈蚣": "八爪铁蜈蚣碎片", "机关蛇": "机关蛇碎片", "破土七郎": "破土七郎碎片"
   };
   function dropFamilyName(name) {

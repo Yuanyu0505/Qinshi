@@ -584,6 +584,27 @@ header.top {
 .forge-h-table tr:last-child td { border-bottom: none; }
 .forge-h-table .mat-line { text-align: center; white-space: nowrap; }
 .forge-eq { min-width: 200px; }
+#partition-forging .forge-view-bar { margin-bottom: 12px; border-bottom: 1px solid var(--line); padding-bottom: 10px; }
+#partition-forging #forge-view { gap: 6px; }
+#partition-forging #forge-view .seg { min-height: 42px; padding: 8px 16px; background: transparent; border-color: transparent; color: #c8bca7; }
+#partition-forging #forge-view .seg.active { color: #f2dfb0; background: #30281c; border-color: #7c6742; box-shadow: none; }
+#partition-forging .forge-query-panel { padding: 12px 14px; background: rgba(29, 24, 17, .85); background-image: none; box-shadow: none; }
+#partition-forging .forge-query-toolbar { display: flex; align-items: center; flex-wrap: wrap; gap: 10px 16px; }
+#partition-forging #forge-mode { flex: 0 0 auto; gap: 5px; }
+#partition-forging #forge-mode .seg { min-height: 40px; padding: 7px 10px; font-size: 14px; background: transparent; color: #c8bca7; }
+#partition-forging #forge-mode .seg.active { background: #29291f; border-color: #8e8b58; color: #e9e6c6; box-shadow: none; }
+#partition-forging #forge-search { flex: 1 1 240px; width: auto; min-width: 0; margin: 0; }
+#partition-forging .forge-quality-legend { margin-top: 9px; color: #b0a48f; font-size: 13px; line-height: 1.6; }
+#partition-forging .forging-equipment-link { font-size: 16px; border: 0; border-left: 2px solid #c89f6f; border-radius: 3px; background: transparent; color: #e9d2b0; box-shadow: none; }
+#partition-forging .forging-equipment-link.eq-purple { color: #d0bddc; border-left-color: #af8ec9; }
+#partition-forging .forging-equipment-link:hover { background: rgba(210, 180, 130, .06); box-shadow: none; filter: none; }
+#partition-forging .forging-material-link { border-width: 1px; border-radius: 4px; padding: 3px 7px; line-height: 1.5; font-weight: 500; }
+#partition-forging .forging-material-link.mat-purple { color: #cdb8dd; background: rgba(139, 105, 164, .07); border-color: rgba(166, 130, 191, .35); }
+#partition-forging .forging-material-link.mat-orange { color: #dbba8c; background: rgba(173, 128, 68, .07); border-color: rgba(192, 149, 90, .35); }
+#partition-forging .forge-h-table tr.hit-row td:not(:first-child) { background: transparent; }
+#partition-forging .forge-h-table tr.hit-row td.hit-cell { background: rgba(214, 185, 104, .045); }
+#partition-forging .forge-overview { margin-top: 18px; background: rgba(24, 20, 15, .7); background-image: none; box-shadow: none; }
+#partition-forging .forge-overview .mode-title { margin-bottom: 10px; font-size: 17px; font-weight: 600; letter-spacing: 0; color: #d7c8aa; }
 td.hit-cell { background: rgba(212, 175, 55, .12); }
 .mat {
   display: inline-block;
@@ -603,14 +624,13 @@ td.hit-cell { background: rgba(212, 175, 55, .12); }
 .mat.material-token.mat-purple { border-color: #9b4fce; background: #66308f; }
 .mat.material-token.mat-orange { border-color: #ff982f; background: #c96a18; }
 #partition-forging .mat.material-token.hit {
-  color: #fff;
-  border: 2px solid #ff736b;
-  background: #a92d2a;
-  box-shadow: 0 0 0 1px rgba(255, 115, 107, .3);
+  border: 2px solid #d6b968;
+  background: rgba(214, 185, 104, .12);
+  box-shadow: none;
   font-weight: 700;
 }
-#partition-forging .mat.material-token.mat-purple.hit { color: #f0d7ff; }
-#partition-forging .mat.material-token.mat-orange.hit { color: #ffe2b8; }
+#partition-forging .mat.material-token.mat-purple.hit { color: #ddc4ef; }
+#partition-forging .mat.material-token.mat-orange.hit { color: #f3c591; }
 .mat-dash { color: var(--status); font-style: italic; }
 tr.hit-row td { background: rgba(212, 175, 55, .06); }
 .summary-card .badge { white-space: nowrap; }
@@ -1091,15 +1111,21 @@ tr.hit-row td { background: rgba(212, 175, 55, .06); }
 #partition-forging .prog-material-table td { vertical-align: middle; }
 #partition-forging .prog-material-table td:first-child { white-space: nowrap; }
 #partition-forging .prog-material-table td:last-child { text-align: left; }
-.prog-material-table tr.search-hit-row > td {
-  background: rgba(212, 175, 55, .18);
-  box-shadow: inset 0 2px 0 var(--gold), inset 0 -2px 0 var(--gold);
+#partition-forging .prog-material-grid { gap: 0 16px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr)); }
+#partition-forging .prog-material-grid-overall { grid-template-columns: repeat(auto-fit, minmax(min(100%, 160px), 1fr)); }
+#partition-forging .prog-material-row { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(3ch, auto); align-items: center; gap: 8px; min-width: 0; min-height: 44px; padding: 8px 6px; border: 0; border-bottom: 1px solid var(--line); border-radius: 0; background: transparent; color: var(--text); font: inherit; font-size: 14px; text-align: left; cursor: pointer; }
+#partition-forging .prog-material-name { overflow-wrap: anywhere; font-weight: 600; }
+#partition-forging .prog-material-quality { font-size: 12px; color: #c3a0da; white-space: nowrap; }
+#partition-forging .is-orange .prog-material-quality { color: #d5ac7d; }
+#partition-forging .prog-material-count { text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+#partition-forging .prog-material-row:hover { background: rgba(210, 185, 135, .05); }
+#partition-forging .prog-material-row:focus-visible { outline: 2px solid var(--gold); outline-offset: -2px; }
+#partition-forging .prog-material-table tr.search-hit-row > td {
+  background: rgba(214, 185, 104, .055);
+  box-shadow: none;
 }
-.prog-material-table tr.search-hit-row > td:first-child {
-  box-shadow: inset 2px 0 0 var(--gold), inset 0 2px 0 var(--gold), inset 0 -2px 0 var(--gold);
-}
-.prog-material-table tr.search-hit-row > td:last-child {
-  box-shadow: inset -2px 0 0 var(--gold), inset 0 2px 0 var(--gold), inset 0 -2px 0 var(--gold);
+#partition-forging .prog-material-table tr.search-hit-row > td:first-child {
+  box-shadow: inset 2px 0 0 #d6b968;
 }
 .prog-stage-materials {
   display: flex;
@@ -1110,12 +1136,31 @@ tr.hit-row td { background: rgba(212, 175, 55, .06); }
   box-sizing: border-box;
   min-height: 31px;
 }
-#partition-forging .prog-material-details { margin-top: 10px; border-top: 1px solid var(--line); }
-#partition-forging .prog-material-details > summary { color: var(--gold-dim); cursor: pointer; padding: 10px 0; font-weight: 700; }
-#partition-forging .prog-next { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; line-height: 1.65; margin-bottom: 0; }
-#partition-forging .prog-equip-head { gap: 8px; }
-#partition-forging .progress-forge-status { margin-right: auto; color: var(--gold); }
+#partition-forging .prog-equip { padding: 14px; background: #18140f; background-image: none; box-shadow: none; border-radius: 8px; }
+#partition-forging .prog-equip-head { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; align-items: center; gap: 10px; margin-bottom: 12px; }
+#partition-forging .prog-equip-identity { display: flex; align-items: center; flex-wrap: wrap; min-width: 0; gap: 4px 8px; }
+#partition-forging .prog-equip-identity .cat { padding: 0; border: 0; background: transparent; color: #b0a48f; font-size: 13px; }
+#partition-forging .progress-equipment-name { max-width: 100%; min-width: 0; padding: 4px 0; border: 0; border-radius: 0; background: transparent; color: var(--text); box-shadow: none; outline: none; text-shadow: none; white-space: normal; overflow-wrap: anywhere; line-height: 1.4; font-size: 18px; text-align: left; justify-content: flex-start; }
+#partition-forging .progress-equipment-name::after { content: none; }
+#partition-forging .progress-equipment-link:hover { color: #f3d78a; filter: none; }
+#partition-forging .progress-equipment-link:focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; }
+#partition-forging .prog-equip-state { display: flex; align-items: center; gap: 8px; white-space: nowrap; }
+#partition-forging .prog-quality-badge { padding: 3px 6px; color: #c7b58e; background: #282116; border-radius: 4px; font-size: 12px; }
+#partition-forging .progress-forge-status { color: var(--text); font-weight: 700; font-size: 16px; }
+#partition-forging .prog-equip-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 4px; }
+#partition-forging .prog-equip-actions .seg { padding: 6px 8px; font-size: 13px; background: transparent; border-color: transparent; color: #b9ad97; }
+#partition-forging .prog-equip-actions .danger { color: #e0988f; }
+#partition-forging .prog-equip-actions .seg:hover { background: rgba(200, 180, 140, .07); border-color: var(--line); }
+#partition-forging .prog-material-details { margin-top: 6px; border-top: 1px solid var(--line); }
+#partition-forging .prog-material-details > summary { color: #bfb29a; cursor: pointer; padding: 9px 0; font-size: 14px; font-weight: 600; }
+#partition-forging .prog-next { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 10px; line-height: 1.65; margin: 10px 0 0; padding: 8px 10px; border-left: 2px solid #9d8751; background: rgba(174, 145, 83, .055); }
+#partition-forging .prog-next-label { color: #bfb29a; font-size: 13px; }
+#partition-forging .prog-next-content { display: flex; flex-wrap: wrap; align-items: center; min-width: 0; gap: 4px; color: var(--text); font-size: 14px; }
 #partition-forging .prog-stage { min-height: 36px; padding: 7px 10px; font-size: 14px; }
+#partition-forging .prog-stages { gap: 5px; }
+#partition-forging .prog-stage.done { color: #b0b8aa; border-color: #465044; background: transparent; }
+#partition-forging .prog-stage.next { color: #e4f2e6; background: #20382c; border-color: #6d9c7c; font-weight: 700; }
+#partition-forging .prog-stage.search-hit { box-shadow: inset 0 -2px 0 #d6b968; border-color: #a28a46; }
 #partition-forging .prog-stage:focus-visible,
 #partition-forging .seg:focus-visible,
 #partition-forging summary:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
@@ -1129,6 +1174,16 @@ tr.hit-row td { background: rgba(212, 175, 55, .06); }
 #partition-forging .prog-pager { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; gap: 8px; }
 #partition-forging .prog-pager[hidden] { display: none; }
 #partition-forging .prog-page-title { text-align: center; overflow-wrap: anywhere; }
+#partition-forging .prog-disciple { padding: 0; border: 0; background: transparent; box-shadow: none; }
+#partition-forging .prog-disciple-head { padding: 0 0 10px; border-bottom: 1px solid var(--line); }
+#partition-forging .prog-disciple-head .danger { color: #e0988f; border-color: transparent; background: transparent; }
+#partition-forging .prog-item-opt { display: grid; grid-template-columns: minmax(0, 1fr) auto; }
+#partition-forging .prog-item-opt .progress-equipment-name { font-size: 15px; }
+#partition-forging .prog-reorder-disciple { background: transparent; border-color: var(--line); }
+#partition-forging .prog-reorder-disciple.active { background: #252b23; border-color: #7d9577; color: #e3eddd; box-shadow: inset 3px 0 0 #7d9577; }
+#partition-forging .prog-reorder-actions .seg:not(.active) { background: transparent; }
+#partition-forging .prog-summary { margin-top: 16px; }
+#partition-forging .prog-summary .drop-title { font-size: 16px; }
 .mini-table { width: 100%; border-collapse: collapse; }
 .mini-table th, .mini-table td { padding: 5px 8px; border-bottom: 1px dashed rgba(58, 49, 37, .6); text-align: center; }
 .mini-table th { color: var(--gold-dim); }
@@ -5837,12 +5892,24 @@ tbody tr:hover {
   .prog-reorder-actions .seg { width: 100%; }
   #partition-forging .prog-disciple-head { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   #partition-forging .prog-name { grid-column: 1 / -1; }
-  #partition-forging .prog-pager { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  #partition-forging .prog-pager { grid-template-columns: auto minmax(0, 1fr) auto; gap: 6px; }
   #partition-forging .prog-page-title { grid-column: 1 / -1; grid-row: 1; font-size: 17px; }
-  #partition-forging #prog-reorder-toggle { grid-column: 1 / -1; }
+  #partition-forging #prog-prev { grid-column: 1; grid-row: 2; }
+  #partition-forging #prog-next { grid-column: 3; grid-row: 2; }
+  #partition-forging #prog-reorder-toggle { grid-column: 2; grid-row: 2; justify-self: center; }
+  #partition-forging .prog-pager .seg { min-height: 44px; padding-inline: 7px; font-size: 13px; }
+  #partition-forging .forge-query-panel { padding: 10px; }
+  #partition-forging .forge-query-toolbar { gap: 8px; }
+  #partition-forging #forge-mode { width: 100%; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  #partition-forging #forge-mode .seg,
+  #partition-forging #forge-view .seg { min-height: 44px; }
+  #partition-forging #forge-search { flex-basis: 100%; width: 100%; }
   #partition-forging .prog-material-table .prog-stage-col { width: 86px; }
   #partition-forging .prog-material-table td { padding: 8px 4px; font-size: 14px; }
   #partition-forging .prog-equip { padding: 10px; }
+  #partition-forging .prog-equip-head { grid-template-columns: minmax(0, 1fr) auto; gap: 6px; }
+  #partition-forging .prog-equip-identity { grid-column: 1 / -1; }
+  #partition-forging .prog-equip-actions .seg { min-height: 44px; }
   #partition-forging .prog-stage { min-height: 44px; }
   #partition-forging .forge-h-table tr > :first-child { position: static; box-shadow: none; background: transparent; }
   .prog-search-requirement { align-items: flex-start; gap: 4px 5px; }
@@ -5876,8 +5943,8 @@ tbody tr:hover {
   #partition-forging .forging-summary-table-wrap tr {
     display: grid;
     grid-template-columns: minmax(0, 1fr);
-    gap: 6px;
-    padding: 9px;
+    gap: 0;
+    padding: 8px;
     border: 1px solid var(--qin-line);
     background: rgba(16, 12, 8, .72);
   }
@@ -5888,9 +5955,10 @@ tbody tr:hover {
     align-items: center;
     gap: 5px;
     width: auto;
-    padding: 10px 8px;
-    border: 1px solid rgba(109, 82, 43, .46);
-    background: rgba(31, 23, 14, .5);
+    padding: 7px 4px;
+    border: 0;
+    border-bottom: 1px solid rgba(109, 82, 43, .25);
+    background: transparent;
     font-size: 15px;
     text-align: left;
   }
@@ -5922,8 +5990,9 @@ tbody tr:hover {
   #partition-forging .forging-summary-table-wrap .summary-table tr > :last-child {
     grid-column: 1 / -1;
     width: auto;
-    border-color: rgba(202, 157, 60, .62);
-    background: rgba(123, 82, 20, .16);
+    border-top: 1px solid rgba(202, 157, 60, .5);
+    border-bottom: 0;
+    background: transparent;
     color: var(--qin-color-gold-bright);
     font-weight: 800;
   }
@@ -5938,7 +6007,7 @@ tbody tr:hover {
   #partition-forging #forge-results .forge-h-table tbody { display: block; width: 100%; min-width: 0; }
   #forge-results .forge-h-table thead { display: none; }
   #forge-results .forge-h-table tr { display: block; margin-bottom: 14px; padding: 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg2); }
-  #forge-results .forge-h-table td { display: grid; grid-template-columns: 90px minmax(0, 1fr); gap: 8px; align-items: center; width: auto; min-width: 0; padding: 10px 0; white-space: normal; text-align: left; }
+  #forge-results .forge-h-table td { display: grid; grid-template-columns: 90px minmax(0, 1fr); gap: 8px; align-items: center; width: auto; min-width: 0; padding: 7px 0; white-space: normal; text-align: left; }
   #forge-results .forge-h-table td::before { content: attr(data-label); color: var(--gold); font-size: 14px; font-weight: 700; }
   #partition-forging #forge-results .forge-h-table .forge-eq { display: block; position: static; width: auto; min-width: 0; box-shadow: none; padding-top: 0; }
   #forge-results .forge-h-table .forge-eq::before { content: none; }
@@ -5948,7 +6017,7 @@ tbody tr:hover {
   #app input:not([type="checkbox"]):not([type="radio"]),
   #app select, #app textarea { font-size: 16px; max-width: 100%; min-width: 0; }
   #app .muted-tip { font-size: 13px; line-height: 1.65; }
-  .prog-stages { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+  .prog-stages { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
   .prog-stages .prog-stage { padding: 8px 3px; font-size: 13px; white-space: nowrap; }
   .ins-sub-tag, .ins-current-sub-tag { font-size: 14px; line-height: 1.6; }
   #partition-formations .formation-reference-card { grid-template-columns: repeat(3, minmax(0, 1fr)); font-size: 14px; }

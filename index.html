@@ -475,37 +475,29 @@
         <span data-item-navigation-context></span>
         <button type="button" class="seg" data-item-navigation-back>返回</button>
       </div>
-      <section class="panel">
-        <div class="filter-row">
-          <span class="filter-label">模式</span>
-          <div id="forge-view" class="segs">
-            <button type="button" class="seg active" data-view="query">查询</button>
+      <div class="forge-view-bar">
+          <div id="forge-view" class="segs" role="group" aria-label="锻造视图">
+            <button type="button" class="seg active" data-view="query">装备查询</button>
             <button type="button" class="seg" data-view="progress">个人进度</button>
           </div>
-        </div>
-      </section>
+      </div>
 
       <div id="forge-query">
-        <section class="panel">
-          <div class="panel-title">查找方式</div>
-          <div class="filter-row">
-            <span class="filter-label">模式</span>
-            <div id="forge-mode" class="segs">
-              <button type="button" class="seg active" data-mode="main">作为主锻造装备</button>
-              <button type="button" class="seg" data-mode="material">作为素材装备</button>
+        <section class="panel forge-query-panel">
+          <div class="forge-query-toolbar">
+            <div id="forge-mode" class="segs" role="group" aria-label="查询方式">
+              <button type="button" class="seg active" data-mode="main">主装备查询</button>
+              <button type="button" class="seg" data-mode="material">素材反查</button>
             </div>
-          </div>
-          <div class="filter-row">
-            <span class="filter-label">装备名</span>
             <input id="forge-search" type="search" aria-label="搜索锻造装备" placeholder="如：雷神锤 / 非攻" autocomplete="off">
           </div>
-          <div class="muted-tip">—：无需材料；<span class="q-dot q-dot-purple"></span>紫装；<span class="q-dot q-dot-orange"></span>橙装。</div>
+          <div class="forge-quality-legend">—：无需材料；<span class="q-dot q-dot-purple"></span>紫装；<span class="q-dot q-dot-orange"></span>橙装。</div>
         </section>
 
         <div id="forge-results"></div>
 
-        <div class="summary-card">
-          <h3 class="mode-title">锻造材料总览（四大类通用）</h3>
+        <div class="summary-card forge-overview">
+          <h3 class="mode-title">材料总览</h3>
           <div class="summary-table-scroll forging-summary-table-wrap" tabindex="0" role="region" aria-label="锻造材料总览">
             <table class="summary-table">
               <thead id="forging-summary-head"></thead>
@@ -518,7 +510,7 @@
       <section id="forge-progress" hidden>
         <div class="progress-toolbar">
           <button id="prog-add-disciple" type="button" class="seg">+ 添加弟子</button>
-          <span id="prog-save-tip" class="muted-tip">进度自动保存在本机浏览器</span>
+          <span id="prog-save-tip" class="muted-tip" role="status" aria-live="polite"></span>
         </div>
         <section class="panel prog-search-panel">
           <div class="filter-row">

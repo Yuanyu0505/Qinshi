@@ -1,5 +1,5 @@
 'use strict';
-// Authored for isolated test contexts; not executed by the implementation agent.
+// Run only in isolated test contexts; never a real account profile.
 const { test, before, after } = require('node:test');
 const assert = require('node:assert/strict');
 const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
@@ -21,6 +21,7 @@ test('both modules exclude past periods from defaults, complete lists and search
     await page.locator('[data-soul-full]').click();
     assert.equal(await page.locator('[data-soul-period="2026-11-12"]').count(), 0);
     await page.locator('[data-soul-query]').fill('徐福');
+    await page.clock.runFor(200);
     const xu = page.locator('[data-soul-period="2026-11-19"] tbody tr').filter({ has: page.locator('[data-soul-name="徐福"]') });
     assert.equal((await xu.locator('.soul-atlas-cell').nth(1).innerText()).replace(/\s/g, ''), '血（阴阳消长）');
     await page.locator('[data-soul-clear]').click();
@@ -32,7 +33,8 @@ test('both modules exclude past periods from defaults, complete lists and search
     await page.locator('#forbidden-search').fill('11.16');
     await page.clock.runFor(200);
     assert.equal(await page.locator('[data-forbidden-card]').count(), 0);
-    await page.clock.fastForward(60 * 24 * 60 * 60 * 1000);
+    // Keep each browser clock step below the signed 32-bit timer range.
+    for (let i = 0; i < 3; i++) await page.clock.fastForward(20 * 24 * 60 * 60 * 1000);
     await page.locator('[data-forbidden-module="soul-shop"]').click();
     assert.equal(await page.locator('.soul-card').count(), 0);
     await page.locator('[data-soul-full]').click();

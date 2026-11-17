@@ -96,10 +96,25 @@
 
   function saveNeeds() {
     try {
-      ACCOUNT_STORAGE.setItem(STORE_KEY, JSON.stringify(state.needs));
+      if (ACCOUNT_STORAGE.isReadOnly && ACCOUNT_STORAGE.isReadOnly()) throw new Error("当前账号为只读状态。");
+      if (ACCOUNT_STORAGE.setItem(STORE_KEY, JSON.stringify(state.needs)) === false) throw new Error("当前账号不可写入。");
+      showError("", false);
+      return true;
     } catch (error) {
-      showError("禁地需求未能保存到本机浏览器，本次页面内操作仍可继续。", true);
+      showError("禁地需求未保存：" + error.message, true);
+      return false;
     }
+  }
+
+  function writable() {
+    return !(ACCOUNT_STORAGE.isReadOnly && ACCOUNT_STORAGE.isReadOnly());
+  }
+
+  function commitNeeds(previous) {
+    if (saveNeeds()) return true;
+    state.needs = previous;
+    needsCache = {};
+    return false;
   }
 
   function clearHistoricalSelections(today) {
@@ -270,7 +285,7 @@
 
   function tokenHtml(occurrence, type, name, displayName, sectionKey, savedIdentity) {
     var shownName = displayName == null ? name : displayName;
-    var selectable = core.statusFor(occurrence, new Date()) !== "history";
+    var selectable = core.statusFor(occurrence, new Date()) !== "history" && writable();
     var identity = type === "reward" ? (savedIdentity || resolvedIdentity(sectionKey, name)) : null;
     var record = identity ? rewardRecord(occurrence, identity) : null;
     var isSelected = type === "disciple" ? discipleSelected(occurrence, name) : Boolean(record);
@@ -280,12 +295,12 @@
     var dataAttributes = tokenData(occurrence, type, name, sectionKey);
     return '<span class="' + className + '" data-forbidden-token>' +
       '<button type="button" class="forbidden-token-check" data-forbidden-select' + dataAttributes +
-      ' aria-pressed="' + String(isSelected) + '" aria-label="' + escapeHtml(selectable ? (isSelected ? "取消勾选" : "勾选") + shownName : "历史禁地不可勾选" + shownName) + '"' +
-      (selectable ? "" : ' disabled title="历史禁地已自动清除需求，不可重新勾选"') + '>' +
+      ' aria-pressed="' + String(isSelected) + '" aria-label="' + escapeHtml((isSelected ? "取消勾选" : "勾选") + shownName) + '"' +
+      (selectable ? "" : ' disabled') + '>' +
       (isSelected ? '<span aria-hidden="true">✓</span>' : '<span aria-hidden="true">＋</span>') + "</button>" +
       '<button type="button" class="forbidden-token-name" data-forbidden-name-action' + dataAttributes + ">" + highlight(shownName) + "</button>" +
       (record ? '<span class="forbidden-purpose-badges">' + purposeBadgesHtml(record) + "</span>" +
-        '<button type="button" class="forbidden-purpose-edit" data-forbidden-purpose-edit' + dataAttributes + '>设置用途</button>' : "") +
+        '<button type="button" class="forbidden-purpose-edit" data-forbidden-purpose-edit' + dataAttributes + (selectable ? '' : ' disabled') + '>设置用途</button>' : "") +
       "</span>";
   }
 
@@ -293,7 +308,7 @@
     var entry = eventNeeds(occurrence);
     var rewardKeys = Object.keys(entry.rewards);
     if (!entry.disciples.length && !rewardKeys.length) {
-      return '<section class="forbidden-needs"><div class="forbidden-subtitle">本期需求</div><div class="muted-tip">本期暂无已勾选需求</div></section>';
+      return '<section class="forbidden-needs is-empty"><span class="muted-tip">本期暂无已勾选需求</span></section>';
     }
     var discipleTokens = entry.disciples.map(function (name) {
       return tokenHtml(occurrence, "disciple", name, name);
@@ -316,6 +331,8 @@
         return tokenHtml(occurrence, "reward", name, itemDisplayName(config.key, name), config.key);
       }).join("");
     }
+    var contribution = config.key === "contribution5" || config.key === "contribution10";
+    var choiceLabel = '<span class="forbidden-choice-label">任选1项</span>';
     var body = '<div class="forbidden-token-list">' + (renderTokens(items) || '<span class="muted-tip">—</span>') + "</div>";
     if (config.rowsKey) {
       var rows = resolved[config.rowsKey] || [];
@@ -323,11 +340,11 @@
         var label = config.rowLabels && config.rowLabels[index]
           ? '<span class="forbidden-reward-row-label">' + escapeHtml(config.rowLabels[index]) + "</span>"
           : "";
-        return '<div class="forbidden-reward-row' + (label ? " has-label" : "") + (config.choiceGroups ? " is-choice-group" : "") + '">' + label + '<div class="forbidden-token-list">' + (renderTokens(row) || '<span class="muted-tip">—</span>') + "</div></div>";
+        return '<div class="forbidden-reward-row' + (label ? " has-label" : "") + (config.choiceGroups ? " is-choice-group" : "") + '">' + label + (config.choiceGroups ? choiceLabel : '') + '<div class="forbidden-token-list">' + (renderTokens(row) || '<span class="muted-tip">—</span>') + "</div></div>";
       }).join("") + "</div>";
     }
     return '<section class="forbidden-reward-section' + (isMatch ? " is-match" : "") + '">' +
-      '<div class="forbidden-subtitle">' + escapeHtml(config.title) + "</div>" + body + "</section>";
+      '<div class="forbidden-subtitle">' + escapeHtml(config.title.replace(/（.*）$/, "")) + (contribution ? choiceLabel : '') + "</div>" + body + "</section>";
   }
 
   function rewardMatch(matches) {
@@ -368,8 +385,10 @@
     var discipleTokens = (occurrence.disciples || []).map(function (disciple) {
       return tokenHtml(occurrence, "disciple", disciple.name, formatDisciple(disciple));
     }).join("");
-    var rewardSections = expanded ? SECTION_CONFIG.map(function (config) {
-      return rewardSectionHtml(occurrence, resolved, config, matches);
+    var rewardSections = expanded ? [SECTION_CONFIG.slice(0, 2), SECTION_CONFIG.slice(2, 5), SECTION_CONFIG.slice(5)].map(function (configs, index) {
+      return '<div class="forbidden-reward-grid is-' + ["contribution", "ranking", "materials"][index] + '">' + configs.map(function (config) {
+        return rewardSectionHtml(occurrence, resolved, config, matches);
+      }).join("") + '</div>';
     }).join("") : "";
     var hasMetaMatch = matches.indexOf("meta") !== -1;
     var hasDiscipleMatch = matches.indexOf("disciples") !== -1;
@@ -381,7 +400,7 @@
       '<section class="forbidden-disciples' + (hasDiscipleMatch ? " is-match" : "") + '"><div class="forbidden-subtitle">禁地弟子</div><div class="forbidden-token-list">' + discipleTokens + "</div></section>" +
       (occurrence.note ? '<p class="muted-tip">' + escapeHtml(occurrence.note) + '</p>' : '') +
       requirementSummaryHtml(occurrence) +
-      (expanded ? '<div class="forbidden-rewards"><div class="forbidden-reward-grid">' + rewardSections + "</div></div>" : "") + "</article>";
+      (expanded ? '<div class="forbidden-rewards">' + rewardSections + "</div>" : "") + "</article>";
   }
 
   function noticeHtml(text) {
@@ -526,6 +545,11 @@
   }
 
   function refreshOccurrenceCards(eventIds) {
+    var focused = document.activeElement;
+    var focusPosition = controlPosition(focused);
+    var focusCard = focused && focused.closest("[data-forbidden-card]");
+    var focusData = focusCard ? Object.assign({}, focused.dataset) : null;
+    var focusEvent = focusCard && focusCard.dataset.forbiddenCard;
     var ids = core.unique(eventIds || []);
     if (!ids.length) return;
     invalidateNeeds(ids);
@@ -537,14 +561,36 @@
       var replacement = cardNode(cardHtml(occurrence, matches, card.dataset.forbiddenRole || "list"));
       if (replacement) card.replaceWith(replacement);
     });
+    if (focusData && !document.contains(focused)) restoreControlFocus(focusEvent, focusData, focusPosition);
   }
 
-  function refreshAfterNeedsChange(eventIds) {
+  function controlPosition(control) {
+    if (!control || !control.closest) return '';
+    return ['forbidden-needs', 'forbidden-rewards', 'forbidden-disciples'].find(function (name) { return control.closest('.' + name); }) || '';
+  }
+
+  function restoreControlFocus(eventId, attributes, position) {
+    var controls = elements.content.querySelectorAll("button");
+    var replacement = Array.prototype.find.call(controls, function (button) {
+      var card = button.closest("[data-forbidden-card]");
+      return card && card.dataset.forbiddenCard === eventId && (!position || button.closest('.' + position)) && Object.keys(attributes).every(function (key) { return button.dataset[key] === attributes[key]; });
+    });
+    (replacement || elements.search).focus({ preventScroll: true });
+  }
+
+  function refreshAfterNeedsChange(eventIds, onComplete) {
     if (state.purpose || state.selectedOnly) {
-      render();
+      var focused = document.activeElement, card = focused && focused.closest('[data-forbidden-card]');
+      var attributes = card && Object.assign({}, focused.dataset), eventId = card && card.dataset.forbiddenCard;
+      var position = controlPosition(focused);
+      render(function () {
+        if (typeof onComplete === 'function') onComplete();
+        else if (attributes) restoreControlFocus(eventId, attributes, position);
+      });
       return;
     }
     refreshOccurrenceCards(eventIds);
+    if (typeof onComplete === 'function') onComplete();
   }
 
   function captureView() {
@@ -592,11 +638,13 @@
   }
 
   function toggleSelection(control) {
+    if (!writable()) { showError("禁地需求未保存：当前账号为只读状态。", true); return; }
     var occurrence = occurrenceById(control.dataset.forbiddenEvent);
     if (!occurrence) return;
     if (core.statusFor(occurrence, new Date()) === "history") return;
     var type = control.dataset.forbiddenType;
     var changedEventIds = [occurrence.id];
+    var previous = clone(state.needs);
     if (type === "disciple") {
       var selectedDisciple = discipleSelected(occurrence, control.dataset.forbiddenName);
       core.setDiscipleSelection(state.needs, occurrence.id, control.dataset.forbiddenName, !selectedDisciple);
@@ -605,7 +653,7 @@
       var selectedReward = rewardRecord(occurrence, identity);
       core.setRewardSelection(state.needs, occurrence.id, identity, !selectedReward, core.defaultPurposes(identity.category));
     }
-    saveNeeds();
+    commitNeeds(previous);
     refreshAfterNeedsChange(changedEventIds);
   }
 
@@ -627,6 +675,7 @@
   }
 
   function openPurposeEditor(control) {
+    if (!writable()) { showError("当前账号为只读状态。", true); return; }
     var occurrence = occurrenceById(control.dataset.forbiddenEvent);
     if (!occurrence || core.statusFor(occurrence, new Date()) === "history") return;
     var identity = identityFromControl(control);
@@ -636,6 +685,7 @@
       eventId: occurrence.id,
       identity: Object.assign({}, identity, record),
       purposes: (record.purposes || []).slice(),
+      position: controlPosition(control),
       trigger: control
     };
     elements.purposeTitle.textContent = record.name;
@@ -652,6 +702,7 @@
           : "本期及之后每一期（同装备系列）";
     }
     if (eventScope) eventScope.checked = true;
+    elements.purposeEditor.querySelector('[data-forbidden-purpose-error]').hidden = true;
     elements.purposeEditor.hidden = false;
     positionPurposeDialog(control);
     var first = elements.purposeOptions.querySelector("input");
@@ -661,9 +712,11 @@
   function closePurposeEditor(restoreFocus) {
     if (!elements.purposeEditor || elements.purposeEditor.hidden) return;
     var trigger = purposeDraft && purposeDraft.trigger;
+    var position = purposeDraft && purposeDraft.position;
     elements.purposeEditor.hidden = true;
     purposeDraft = null;
     if (restoreFocus && trigger && document.contains(trigger)) trigger.focus();
+    else if (restoreFocus && trigger) restoreControlFocus(trigger.dataset.forbiddenEvent, trigger.dataset, position);
   }
 
   function purposeScope() {
@@ -702,13 +755,22 @@
       return;
     }
     var purposes = selected ? selectedPurposes() : [];
+    var previous = clone(state.needs);
     var changedEventIds = [purposeDraft.eventId];
     if (purposeScope() === "family") changedEventIds = applyFamilySelection(purposeDraft.identity, selected, purposes, purposeDraft.eventId);
     else core.setRewardSelection(state.needs, purposeDraft.eventId, purposeDraft.identity, selected, purposes);
-    clearHistoricalSelections(new Date());
-    saveNeeds();
+    if (!commitNeeds(previous)) {
+      var message = elements.purposeEditor.querySelector('[data-forbidden-purpose-error]');
+      message.textContent = elements.error.textContent;
+      message.hidden = false;
+      return;
+    }
+    var trigger = purposeDraft.trigger;
+    var position = purposeDraft.position;
     closePurposeEditor(false);
-    refreshAfterNeedsChange(changedEventIds);
+    refreshAfterNeedsChange(changedEventIds, function () {
+      restoreControlFocus(trigger.dataset.forbiddenEvent, trigger.dataset, position);
+    });
   }
 
   function dispatchNavigation(control) {
@@ -807,6 +869,12 @@
     });
     document.addEventListener("keydown", function (event) {
       if (event.key === "Escape" && !elements.purposeEditor.hidden) closePurposeEditor(true);
+      if (event.key === "Tab" && !elements.purposeEditor.hidden) {
+        var controls = elements.purposeEditor.querySelector('.forbidden-purpose-dialog').querySelectorAll('button:not(:disabled),input:not(:disabled)');
+        var first = controls[0], last = controls[controls.length - 1];
+        if (event.shiftKey && (document.activeElement === first || !elements.purposeEditor.contains(document.activeElement))) { event.preventDefault(); last.focus(); }
+        else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+      }
     });
     window.addEventListener("resize", function () {
       if (purposeDraft && !elements.purposeEditor.hidden) positionPurposeDialog(purposeDraft.trigger);
@@ -842,6 +910,23 @@
     saveNeeds();
     scheduleHistoryCleanup();
     bindEvents();
+    elements.partition.addEventListener("click", function (event) {
+      var button = event.target.closest('[data-forbidden-module]');
+      if (!button) return;
+      searchRefresh.cancel();
+      cancelDeferredRender();
+      partitionRendered = false;
+      if (button.dataset.forbiddenModule === 'forbidden') render();
+    });
+    var lastWritable = writable();
+    if (ACCOUNT_STORAGE.subscribeAccess) ACCOUNT_STORAGE.subscribeAccess(function (access) {
+      var account = ACCOUNT_STORAGE.currentAccount();
+      if (!account || account.id !== access.accountId || access.writable === lastWritable) return;
+      lastWritable = access.writable;
+      closePurposeEditor(false);
+      if (!elements.partition.hidden && !document.getElementById('forbidden-main-panel').hidden) render();
+      else partitionRendered = false;
+    });
     function activatePartition(event) {
       if (event && (!event.detail || event.detail.name !== "forbidden")) {
         searchRefresh.cancel();

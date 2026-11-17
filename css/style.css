@@ -2208,7 +2208,7 @@ figcaption { color: var(--muted); font-size: 13px; margin-top: 8px; }
 
 /* 禁地 */
 #partition-forbidden { min-width: 0; }
-#partition-forbidden .forbidden-toolbar { margin-bottom: 14px; }
+#partition-forbidden .forbidden-toolbar { margin-bottom: 14px; container-type: inline-size; }
 #partition-forbidden .forbidden-purpose-row { margin-top: 10px; }
 #partition-forbidden .forbidden-purpose-row .segs { flex-wrap: wrap; }
 #partition-forbidden .forbidden-control-row {
@@ -2218,7 +2218,7 @@ figcaption { color: var(--muted); font-size: 13px; margin-top: 8px; }
   gap: 10px 18px;
   margin-top: 10px;
 }
-#partition-forbidden .forbidden-size-row { flex: 1 1 360px; margin: 0; }
+#partition-forbidden .forbidden-size-row { flex: 1 1 260px; margin: 0; }
 #partition-forbidden .forbidden-check-control {
   display: inline-flex;
   align-items: center;
@@ -2259,6 +2259,7 @@ figcaption { color: var(--muted); font-size: 13px; margin-top: 8px; }
 #partition-forbidden .forbidden-list-head strong { color: var(--gold); font-size: 18px; }
 #partition-forbidden .forbidden-list-head span { color: var(--muted); font-size: 13px; }
 #partition-forbidden .forbidden-card {
+  container-type: inline-size;
   min-width: 0;
   padding: 13px;
   background: var(--panel);
@@ -2329,6 +2330,7 @@ figcaption { color: var(--muted); font-size: 13px; margin-top: 8px; }
   box-shadow: inset 3px 0 0 rgba(255, 74, 67, .55);
 }
 #partition-forbidden .forbidden-needs { border-left: 3px solid #2d9b55; }
+#partition-forbidden .forbidden-needs.is-empty { padding: 7px 10px; }
 #partition-forbidden .forbidden-subtitle { margin-bottom: 7px; color: var(--gold-dim); font-size: 13px; font-weight: 800; }
 #partition-forbidden .forbidden-reward-section > .forbidden-subtitle {
   display: flex;
@@ -2340,7 +2342,6 @@ figcaption { color: var(--muted); font-size: 13px; margin-top: 8px; }
   font-size: 15px;
   font-weight: 900;
   letter-spacing: .025em;
-  text-shadow: 0 0 9px rgba(255, 205, 75, .2);
 }
 #partition-forbidden .forbidden-reward-section > .forbidden-subtitle::before {
   content: "";
@@ -2376,7 +2377,7 @@ figcaption { color: var(--muted); font-size: 13px; margin-top: 8px; }
 #partition-forbidden .forbidden-token-check,
 #partition-forbidden .forbidden-token-name,
 #partition-forbidden .forbidden-purpose-edit {
-  min-height: 28px;
+  min-height: 36px;
   margin: 0;
   color: inherit;
   background: transparent;
@@ -2385,8 +2386,8 @@ figcaption { color: var(--muted); font-size: 13px; margin-top: 8px; }
   font: inherit;
 }
 #partition-forbidden .forbidden-token-check {
-  flex: 0 0 28px;
-  width: 28px;
+  flex: 0 0 36px;
+  width: 36px;
   padding: 0;
   color: var(--gold-dim);
   background: rgba(212, 175, 55, .08);
@@ -2463,7 +2464,11 @@ figcaption { color: var(--muted); font-size: 13px; margin-top: 8px; }
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
+  align-items: start;
 }
+#partition-forbidden .forbidden-reward-grid.is-contribution { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+#partition-forbidden .forbidden-reward-grid + .forbidden-reward-grid { margin-top: 12px; }
+#partition-forbidden .forbidden-choice-label { color: var(--text); font-size: 12px; font-weight: 500; white-space: nowrap; }
 #partition-forbidden .forbidden-reward-section {
   min-width: 0;
   padding: 9px;
@@ -2476,7 +2481,7 @@ figcaption { color: var(--muted); font-size: 13px; margin-top: 8px; }
   border-color: #ff4a43;
   box-shadow: inset 3px 0 0 rgba(255, 74, 67, .62);
 }
-#partition-forbidden .forbidden-reward-rows { display: grid; gap: 18px; }
+#partition-forbidden .forbidden-reward-rows { display: grid; gap: 8px; }
 #partition-forbidden .forbidden-reward-row {
   display: flex;
   align-items: flex-start;
@@ -2487,14 +2492,15 @@ figcaption { color: var(--muted); font-size: 13px; margin-top: 8px; }
 #partition-forbidden .forbidden-reward-row:first-child { padding-top: 0; }
 #partition-forbidden .forbidden-reward-row:last-child { padding-bottom: 0; }
 #partition-forbidden .forbidden-reward-row + .forbidden-reward-row { border-top: 0; }
-#partition-forbidden .forbidden-reward-row.is-choice-group,
-#partition-forbidden .forbidden-reward-row.has-label {
-  padding: 10px;
+#partition-forbidden .forbidden-reward-row.is-choice-group {
+  display: grid;
+  gap: 6px;
+  padding: 8px;
   background: rgba(126, 82, 20, .2);
-  border: 2px solid rgba(210, 151, 48, .9);
-  border-radius: 8px;
-  box-shadow: inset 4px 0 0 rgba(240, 189, 61, .46), inset 0 0 18px rgba(212, 175, 55, .055);
+  border: 1px solid var(--gold-dim);
+  border-radius: 6px;
 }
+#partition-forbidden .forbidden-reward-row.has-label { border-top: 1px solid var(--line); padding: 8px 0; }
 #partition-forbidden .forbidden-reward-row-label {
   flex: 0 0 32px;
   padding-top: 7px;
@@ -2520,6 +2526,7 @@ figcaption { color: var(--muted); font-size: 13px; margin-top: 8px; }
   z-index: 1500;
 }
 .forbidden-purpose-editor[hidden] { display: none; }
+body:has(#forbidden-purpose-editor:not([hidden])) > .responsive-back-top { visibility: hidden; }
 .forbidden-purpose-backdrop {
   position: absolute;
   inset: 0;
@@ -2534,7 +2541,9 @@ figcaption { color: var(--muted); font-size: 13px; margin-top: 8px; }
   left: 50%;
   top: 50%;
   width: min(430px, calc(100vw - 24px));
-  max-height: calc(100vh - 24px);
+  max-height: calc(100dvh - 24px);
+  box-sizing: border-box;
+  overscroll-behavior: contain;
   padding: 16px;
   overflow: auto;
   background: #17120d;
@@ -2573,6 +2582,19 @@ figcaption { color: var(--muted); font-size: 13px; margin-top: 8px; }
 .forbidden-purpose-scope input { width: auto; min-height: 0; margin: 0; accent-color: var(--red); }
 .forbidden-purpose-actions { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
 .forbidden-purpose-actions .forbidden-purpose-remove { margin-right: auto; color: #ffb0aa; border-color: #a83a33; }
+.forbidden-purpose-dialog button { min-height: 44px; }
+.forbidden-purpose-dialog :focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+@container (max-width: 700px) {
+  #partition-forbidden .forbidden-reward-grid { grid-template-columns: 1fr; }
+  #partition-forbidden .forbidden-reward-grid.is-contribution { grid-template-columns: 1fr; }
+}
+@container (max-width: 520px) {
+  #partition-forbidden .forbidden-size-row { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 8px; }
+  #partition-forbidden .forbidden-size-row .segs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  #partition-forbidden .forbidden-control-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  #partition-forbidden .forbidden-size-row { grid-column: 1 / -1; }
+  #partition-forbidden .forbidden-control-row > .seg:last-child { grid-column: 1 / -1; }
+}
 
 .atlas-exact-query-status {
   margin-bottom: 10px;
@@ -3032,8 +3054,8 @@ figcaption { color: var(--muted); font-size: 13px; margin-top: 8px; }
   #partition-formations .formation-member-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   #partition-formations .formation-member-actions .link-btn { margin-left: 0; }
   #partition-formations .formation-section-head { align-items: flex-start; }
-  #partition-forbidden .forbidden-control-row { display: grid; grid-template-columns: 1fr; gap: 9px; }
-  #partition-forbidden .forbidden-size-row { display: grid; flex-basis: auto; gap: 6px; }
+  #partition-forbidden .forbidden-control-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  #partition-forbidden .forbidden-size-row { display: grid; grid-template-columns: auto minmax(0, 1fr); flex-basis: auto; gap: 6px; }
   #partition-forbidden .forbidden-purpose-row { display: grid; gap: 6px; }
   #partition-forbidden .forbidden-purpose-row .segs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); width: 100%; }
   #partition-forbidden .forbidden-purpose-row .seg { width: 100%; padding-left: 6px; padding-right: 6px; }

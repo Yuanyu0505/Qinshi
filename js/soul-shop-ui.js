@@ -1,6 +1,6 @@
 (function (root) {
   'use strict';
-  var initialized = false, host, panel, results, error, dialog, data, core, storage, timer;
+  var initialized = false, host, panel, results, error, dialog, data, core, storage, timer, searchRefresh;
   var needs, readable = false, draft = null, moduleName = 'forbidden';
   var state = { query: '', attribute: '', selectedOnly: false, full: false };
   var scrolls = { forbidden: 0, 'soul-shop': 0 };
@@ -59,6 +59,7 @@
   }
   function filtered() { return state.query.trim() || state.attribute || state.selectedOnly; }
   function render() {
+    searchRefresh.cancel();
     var focused = root.document.activeElement, focusedPeriod = focused && focused.closest('[data-soul-period]');
     var focusKey = focused && ['soulSelect', 'soulSettings', 'soulName'].find(function (key) { return focused.dataset && focused.dataset[key]; });
     var focusId = focusedPeriod && focusedPeriod.dataset.soulPeriod, focusName = focusKey && focused.dataset[focusKey];
@@ -98,6 +99,7 @@
     draft = null;
   }
   function show(name, scroll) {
+    searchRefresh.cancel();
     if (name !== 'soul-shop') name = 'forbidden';
     if (name !== moduleName) { scrolls[moduleName] = root.scrollY; closeEditor(false); }
     moduleName = name;
@@ -116,13 +118,13 @@
     if (!host.querySelector('#forbidden-main-panel')) throw new Error('禁地页面结构与脚本版本不一致，请重新加载页面。');
     if (!root.SOUL_SHOP || !root.SOUL_SHOP_DATA || !root.QinshiAccounts || !root.FORBIDDEN) throw new Error('魂店资源未完整加载，请重新加载页面或修复更新。');
     data = root.SOUL_SHOP_DATA; core = root.SOUL_SHOP; storage = root.QinshiAccounts;
+    searchRefresh = root.UI_PERFORMANCE.createRefreshQueue(render);
     panel.innerHTML = '<section class="panel soul-toolbar"><label>搜索<input type="search" data-soul-query placeholder="日期、弟子、普通/神属性" autocomplete="off"></label><label>属性<select data-soul-attribute><option value="">全部属性</option><option>攻</option><option>防</option><option>血</option><option value="内">内力</option></select></label><label class="soul-check"><input type="checkbox" data-soul-selected>只看已勾选</label><button type="button" class="seg" data-soul-clear>清除筛选</button><button type="button" class="seg" data-soul-full aria-pressed="false">完整排期</button></section><div class="error" data-soul-error role="alert" hidden></div><div data-soul-results></div>';
     results = panel.querySelector('[data-soul-results]'); error = panel.querySelector('[data-soul-error]');
     dialog = root.document.createElement('dialog'); dialog.className = 'soul-editor'; dialog.setAttribute('aria-labelledby', 'soul-editor-title');
     dialog.innerHTML = '<form><h2 id="soul-editor-title"></h2><label><input type="checkbox" data-soul-edit-selected>勾选本期</label><label><input type="checkbox" data-soul-edit-future>同步之后各期</label><div class="soul-editor-actions"><button type="button" class="seg" data-soul-close>取消</button><button type="submit" class="seg">保存</button></div><p role="alert" data-soul-edit-error hidden></p></form>';
     root.document.body.appendChild(dialog);
-    panel.addEventListener('input', function (e) { if (e.target.hasAttribute('data-soul-query')) { state.query = e.target.value; if (!e.isComposing) render(); } });
-    panel.addEventListener('compositionend', function (e) { if (e.target.hasAttribute('data-soul-query')) { state.query = e.target.value; render(); } });
+    root.UI_PERFORMANCE.bindInput(panel.querySelector('[data-soul-query]'), function (e) { state.query = e.target.value; }, searchRefresh);
     panel.addEventListener('change', function (e) {
       if (e.target.hasAttribute('data-soul-attribute')) state.attribute = e.target.value;
       if (e.target.hasAttribute('data-soul-selected')) state.selectedOnly = e.target.checked;
@@ -160,7 +162,7 @@
       if (next && persist(next)) { render(); closeEditor(true); }
       else { var message = dialog.querySelector('[data-soul-edit-error]'); message.textContent = '未保存，请检查账号只读状态及存储数据。'; message.hidden = false; }
     });
-    root.document.addEventListener('qinshi:partitionchange', function (e) { closeEditor(false); if (e.detail && e.detail.name === 'forbidden' && moduleName === 'soul-shop') { load(); cleanup(); render(); } });
+    root.document.addEventListener('qinshi:partitionchange', function (e) { searchRefresh.cancel(); closeEditor(false); if (e.detail && e.detail.name === 'forbidden' && moduleName === 'soul-shop') { load(); cleanup(); render(); } });
     function refresh() { if (root.document.hidden) return; load(); cleanup(); if (moduleName === 'soul-shop') render(); scheduleCleanup(); }
     var lastWritable = false;
     try { lastWritable = !(storage.isReadOnly && storage.isReadOnly()); }

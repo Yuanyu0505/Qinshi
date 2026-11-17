@@ -6,6 +6,39 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
 const { createServer } = require('../serve.js');
 const { openApp } = require('./browser-test-helpers.cjs');
 let server, browser, url;
+test('missing soul-shop data reports an error and later clicks retry initialization once', async () => {
+  const context = await browser.newContext({ timezoneId: 'Asia/Shanghai', serviceWorkers: 'block' });
+  const page = await context.newPage();
+  try {
+    await page.clock.install({ time: new Date('2026-11-17T12:00:00+08:00') });
+    await page.route('**/data/soul-shop.js?*', route => route.fulfill({ contentType: 'application/javascript', body: 'window.SOUL_SHOP_DATA = undefined;' }));
+    await openApp(page, url + '/');
+    await page.evaluate(() => { document.getElementById('partition-forbidden').hidden = false; });
+    await page.locator('[data-forbidden-module="soul-shop"]').click();
+    assert.equal(await page.locator('#soul-shop-start-error').isVisible(), true);
+    await page.evaluate(data => { window.SOUL_SHOP_DATA = data; }, require('../data/soul-shop.js'));
+    await page.locator('[data-forbidden-module="soul-shop"]').click();
+    assert.equal(await page.locator('#soul-shop-start-error').count(), 0);
+    for (let i = 0; i < 3; i++) await page.locator('[data-forbidden-module="soul-shop"]').click();
+    assert.equal(await page.locator('.soul-editor').count(), 1);
+    await page.locator('[data-soul-period="2026-11-16"] [data-soul-select="丽姬"]').click();
+    assert.equal(await page.locator('[data-soul-period="2026-11-16"] [data-soul-select="丽姬"]').isChecked(), true);
+  } finally { await context.close(); }
+});
+test('soul shop binds independently when the app initializer is interrupted', async () => {
+  const context = await browser.newContext({ timezoneId: 'Asia/Shanghai', serviceWorkers: 'block' });
+  const page = await context.newPage();
+  try {
+    await page.clock.install({ time: new Date('2026-11-17T12:00:00+08:00') });
+    await page.route('**/js/app.js?*', route => route.fulfill({ contentType: 'application/javascript', body: 'throw new Error("isolated startup failure");' }));
+    await openApp(page, url + '/');
+    await page.evaluate(() => { document.getElementById('partition-forbidden').hidden = false; });
+    await page.locator('[data-forbidden-module="soul-shop"]').click();
+    assert.equal(await page.locator('#soul-shop-panel').isVisible(), true);
+    assert.equal(await page.locator('.soul-card').count(), 2);
+    assert.equal(await page.locator('#forbidden-main-panel').isVisible(), false);
+  } finally { await context.close(); }
+});
 before(async () => { server = createServer(); await new Promise(r => server.listen(0, '127.0.0.1', r)); url = 'http://127.0.0.1:' + server.address().port; browser = await chromium.launch({ channel: 'msedge', headless: true }); });
 after(async () => { await browser?.close(); if (server) await new Promise(r => server.close(r)); });
 for (const width of [320, 820, 1440]) test(width + ': independent soul shop selections, dialog and navigation', async () => {

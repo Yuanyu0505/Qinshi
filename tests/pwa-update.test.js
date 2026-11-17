@@ -139,6 +139,27 @@ async function loadPwa(registration, options = {}) {
 function idleRegistration(overrides = {}) {
   return { waiting: null, installing: null, addEventListener() {}, async update() {}, ...overrides };
 }
+test('InvalidStateError reacquires registration instead of retrying the detached object', async () => {
+  let staleUpdates = 0, registrations = 0;
+  const stale = idleRegistration({ async update() { staleUpdates++; const error = new Error('The object is in an invalid state.'); error.name = 'InvalidStateError'; throw error; } });
+  const loaded = await loadPwa(stale);
+  const fresh = idleRegistration({ waiting: { state: 'installed', postMessage() {} } });
+  loaded.serviceWorker.register = async (url, options) => { registrations++; assert.equal(url, './service-worker.js'); assert.equal(options.updateViaCache, 'none'); return fresh; };
+  assert.equal(await loaded.api.checkForUpdate(), true);
+  assert.equal(staleUpdates, 1);
+  assert.equal(registrations, 1);
+  assert.equal(loaded.elements.get('pwa-update-notice').hidden, false);
+  assert.equal(loaded.localStorageData.get('qinshi-progress'), 'keep-me');
+});
+test('missing registration is registered without immediately updating the worker-less result', async () => {
+  const loaded = await loadPwa(null);
+  let updates = 0;
+  const fresh = idleRegistration({ async update() { updates++; throw new Error('must not immediately update'); } });
+  loaded.serviceWorker.register = async () => fresh;
+  assert.equal(await loaded.api.checkForUpdate(), false);
+  assert.equal(updates, 0);
+  assert.match(loaded.elements.get('pwa-status').textContent, /重新注册/);
+});
 
 for (const status of ['partial', 'ready']) {
   test(`离线准备准确区分核心与${status === 'ready' ? '完整' : '未完成'}图库`, async () => {

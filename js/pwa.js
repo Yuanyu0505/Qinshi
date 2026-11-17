@@ -1,7 +1,7 @@
 (function () {
   "use strict";
 
-  var APP_VERSION = "1.1.8";
+  var APP_VERSION = "1.1.9";
   var VERSION_URL = "./version.json";
   var UPDATE_CHECK_INTERVAL = 30 * 60 * 1000;
   var RETRY_DELAYS = [0, 500, 1500];
@@ -13,6 +13,7 @@
   var updateCheckPromise = null;
   var watchedInstallingWorker = null;
   var galleryStatusPromise = null;
+  var repairInProgress = false;
 
   function byId(id) { return document.getElementById(id); }
 
@@ -103,6 +104,8 @@
   }
 
   function watchRegistration(nextRegistration) {
+    if (repairInProgress) return;
+    if (registration === nextRegistration) { syncRegistrationState(); return; }
     registration = nextRegistration;
     syncRegistrationState();
     registration.addEventListener("updatefound", function () {
@@ -143,13 +146,49 @@
   }
 
   function updateRegistration() {
-    return withRetry(function () { return registration.update(); }).then(function () {
+    return withRetry(function () {
+      if (repairInProgress) return false;
+      return Promise.resolve().then(function () {
+        if (!registration) return recoverRegistration();
+        return registration.update();
+      }).catch(function (error) {
+        if (repairInProgress) return false;
+        if (error && (error.name === 'InvalidStateError' || /invalid state/i.test(error.message || ''))) {
+          // A detached/unregistered object cannot be repaired by update() retries.
+          registration = null; waitingWorker = null; watchedInstallingWorker = null;
+          return recoverRegistration();
+        }
+        throw error;
+      });
+    }).then(function () {
+      if (repairInProgress) return false;
       return syncRegistrationState();
     });
   }
 
+  function recoverRegistration() {
+    if (repairInProgress) return Promise.resolve(false);
+    return navigator.serviceWorker.register('./service-worker.js', { updateViaCache: 'none' }).then(function (next) {
+      if (!repairInProgress) watchRegistration(next);
+      // register() performs the update job itself; do not immediately update a new, worker-less registration.
+      return next;
+    });
+  }
+
   function performUpdateCheck(manual) {
+    if (repairInProgress) return Promise.resolve(false);
     if (!registration) {
+      if (manual && 'serviceWorker' in navigator && window.location.protocol !== 'file:') {
+        return withRetry(recoverRegistration).then(function () {
+          if (repairInProgress) return false;
+          var ready = syncRegistrationState();
+          if (!ready) setStatus('离线服务已重新注册，正在准备资源，请稍后查看更新提示。', false);
+          return ready;
+        }).catch(function (error) {
+          if (repairInProgress) return false;
+          setStatus('离线服务重新注册失败：' + error.message, true); return false;
+        });
+      }
       if (manual) {
         setStatus(window.location.protocol === "file:" ? "本地文件模式不支持自动更新。" : "离线服务尚未准备完成。", false);
       }
@@ -160,8 +199,10 @@
 
     return withRetry(fetchRemoteVersion).then(function (remoteVersion) {
       if (remoteVersion !== APP_VERSION) {
+        if (repairInProgress) return false;
         setStatus("检测到新版本 " + remoteVersion + "，正在准备更新…", false);
         return updateRegistration().then(function (hasWaitingWorker) {
+          if (repairInProgress) return false;
           if (!hasWaitingWorker && registration.installing) {
             setStatus("新版本正在下载，完成后会显示更新提示。", false);
           } else if (!hasWaitingWorker) {
@@ -172,10 +213,12 @@
       }
       if (!manual) return false;
       return updateRegistration().then(function (hasWaitingWorker) {
+        if (repairInProgress) return false;
         if (!hasWaitingWorker) setStatus("当前已是最新版本 " + APP_VERSION + "。", false);
         return hasWaitingWorker;
       });
     }).catch(function (error) {
+      if (repairInProgress) return false;
       if (manual) setStatus("检查更新失败，已自动重试：" + error.message, true);
       return false;
     });
@@ -259,10 +302,12 @@
       watchRegistration(nextRegistration);
       return navigator.serviceWorker.ready;
     }).then(function () {
+      if (repairInProgress) return false;
       if (!waitingWorker) setStatus("核心工具资源已准备离线使用。", false);
       refreshGalleryStatus();
       return checkForUpdateSilently();
     }).catch(function (error) {
+      if (repairInProgress) return;
       setModeStatus("离线缓存未启用");
       setStatus("离线功能初始化失败：" + error.message, true);
     });
@@ -288,10 +333,12 @@
   }
 
   function repairUpdate() {
+    if (repairInProgress) return Promise.resolve(false);
     if (!("serviceWorker" in navigator) || typeof caches === "undefined") {
       setStatus("当前浏览器不支持自动修复，请清除该网站缓存后重新打开。", true);
       return Promise.resolve(false);
     }
+    repairInProgress = true;
     setStatus("正在修复更新；个人进度不会被删除…", false);
     var appScope = new URL("./", window.location.href).href;
     return navigator.serviceWorker.getRegistrations().then(function (registrations) {
@@ -299,6 +346,7 @@
         return item.scope === appScope;
       }).map(function (item) { return item.unregister(); }));
     }).then(function () {
+      registration = null; waitingWorker = null; watchedInstallingWorker = null;
       return caches.keys();
     }).then(function (keys) {
       return Promise.all(keys.filter(function (key) {
@@ -310,6 +358,7 @@
       window.location.replace(target.href);
       return true;
     }).catch(function (error) {
+      repairInProgress = false;
       setStatus("修复更新失败：" + error.message, true);
       return false;
     });

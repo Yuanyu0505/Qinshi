@@ -109,14 +109,15 @@
     if (initialized) return;
     host = root.document.getElementById('partition-forbidden');
     panel = root.document.getElementById('soul-shop-panel');
-    if (!host || !panel || !root.SOUL_SHOP || !root.SOUL_SHOP_DATA || !root.QinshiAccounts) return;
-    initialized = true; data = root.SOUL_SHOP_DATA; core = root.SOUL_SHOP; storage = root.QinshiAccounts;
+    if (!host || !panel) return;
+    if (!host.querySelector('#forbidden-main-panel')) throw new Error('禁地页面结构与脚本版本不一致，请重新加载页面。');
+    if (!root.SOUL_SHOP || !root.SOUL_SHOP_DATA || !root.QinshiAccounts || !root.FORBIDDEN) throw new Error('魂店资源未完整加载，请重新加载页面或修复更新。');
+    data = root.SOUL_SHOP_DATA; core = root.SOUL_SHOP; storage = root.QinshiAccounts;
     panel.innerHTML = '<section class="panel soul-toolbar"><label>搜索<input type="search" data-soul-query placeholder="日期、弟子、普通/神属性" autocomplete="off"></label><label>属性<select data-soul-attribute><option value="">全部属性</option><option>攻</option><option>防</option><option>血</option><option>内</option></select></label><label>弟子类型<select data-soul-kind><option value="">普通/神</option><option value="base">普通</option><option value="divine">神</option></select></label><label class="soul-check"><input type="checkbox" data-soul-selected>只看已勾选</label><button type="button" class="seg" data-soul-clear>清除筛选</button><button type="button" class="seg" data-soul-full aria-pressed="false">完整排期</button></section><div class="error" data-soul-error role="alert" hidden></div><div data-soul-results></div>';
     results = panel.querySelector('[data-soul-results]'); error = panel.querySelector('[data-soul-error]');
     dialog = root.document.createElement('dialog'); dialog.className = 'soul-editor'; dialog.setAttribute('aria-labelledby', 'soul-editor-title');
     dialog.innerHTML = '<form><h2 id="soul-editor-title"></h2><label><input type="checkbox" data-soul-edit-selected>勾选本期</label><label><input type="checkbox" data-soul-edit-future>同步之后各期</label><div class="soul-editor-actions"><button type="button" class="seg" data-soul-close>取消</button><button type="submit" class="seg">保存</button></div><p role="alert" data-soul-edit-error hidden></p></form>';
     root.document.body.appendChild(dialog);
-    host.querySelectorAll('[data-forbidden-module]').forEach(function (b) { b.addEventListener('click', function () { show(b.dataset.forbiddenModule, true); }); });
     panel.addEventListener('input', function (e) { if (e.target.hasAttribute('data-soul-query')) { state.query = e.target.value; if (!e.isComposing) render(); } });
     panel.addEventListener('compositionend', function (e) { if (e.target.hasAttribute('data-soul-query')) { state.query = e.target.value; render(); } });
     panel.addEventListener('change', function (e) {
@@ -160,7 +161,9 @@
     });
     root.document.addEventListener('qinshi:partitionchange', function (e) { closeEditor(false); if (e.detail && e.detail.name === 'forbidden' && moduleName === 'soul-shop') { load(); cleanup(); render(); } });
     function refresh() { if (root.document.hidden) return; load(); cleanup(); if (moduleName === 'soul-shop') render(); scheduleCleanup(); }
-    var lastWritable = !(storage.isReadOnly && storage.isReadOnly());
+    var lastWritable = false;
+    try { lastWritable = !(storage.isReadOnly && storage.isReadOnly()); }
+    catch (e) { fail('账号状态读取失败：' + e.message); }
     if (storage.subscribeAccess) storage.subscribeAccess(function (access) {
       var account = storage.currentAccount();
       if (!account || account.id !== access.accountId || access.writable === lastWritable) return;
@@ -168,6 +171,7 @@
       closeEditor(false); cleanup(); if (moduleName === 'soul-shop') render();
     });
     root.document.addEventListener('visibilitychange', refresh); root.addEventListener('pageshow', refresh);
+    initialized = true;
     load(); cleanup(); scheduleCleanup();
   }
   root.SOUL_SHOP_UI = {
@@ -176,4 +180,21 @@
     captureView: function () { return { soulShop: Object.assign({}, state), scrollY: root.scrollY }; },
     restoreView: function (view, done) { Object.assign(state, view.soulShop); show('soul-shop', false); fillControls(); render(); root.requestAnimationFrame(function () { root.scrollTo(0, Number(view.scrollY) || 0); if (done) done(); }); }
   };
+  function reportStartupError(e) {
+    var message = root.document.getElementById('soul-shop-start-error');
+    if (!message) { message = root.document.createElement('div'); message.id = 'soul-shop-start-error'; message.className = 'error'; message.setAttribute('role', 'alert'); var parent = root.document.getElementById('partition-forbidden'); if (parent) parent.prepend(message); }
+    message.textContent = '魂店启动失败：' + e.message;
+  }
+  function start() { try { init(); return initialized; } catch (e) { reportStartupError(e); return false; } }
+  // Register independently of app.js, whose unrelated initialization can abort before soul-shop setup.
+  root.document.addEventListener('click', function (e) {
+    var b = e.target.closest('[data-forbidden-module]'); if (!b) return;
+    if (!start()) return;
+    try {
+      show(b.dataset.forbiddenModule, true);
+      var message = root.document.getElementById('soul-shop-start-error'); if (message) message.remove();
+    } catch (error) { reportStartupError(error); }
+  });
+  if (root.document.readyState === 'loading') root.document.addEventListener('DOMContentLoaded', start);
+  else start();
 })(window);

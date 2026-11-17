@@ -659,7 +659,7 @@
   }
 
   function closePurposeEditor(restoreFocus) {
-    if (elements.purposeEditor.hidden) return;
+    if (!elements.purposeEditor || elements.purposeEditor.hidden) return;
     var trigger = purposeDraft && purposeDraft.trigger;
     elements.purposeEditor.hidden = true;
     purposeDraft = null;

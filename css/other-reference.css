@@ -90,6 +90,8 @@
 #partition-other-reference [data-ref-kind="guardians"] .ref-table th,
 #partition-other-reference [data-ref-kind="guardians"] .ref-table td { min-width:0;max-width:none;padding:10px clamp(8px,1.2cqi,16px);vertical-align:middle;text-align:center;white-space:normal;overflow-wrap:anywhere; }
 #partition-other-reference [data-ref-kind="guardians"] .ref-table td.ref-long-text { text-align:justify;text-align-last:left; }
+#partition-other-reference [data-ref-kind="guardians"] .ref-table[data-ref-table-id="guardians-aid-skills"] :is(th,td):last-child,
+#partition-other-reference [data-ref-kind="guardians"] .ref-table[data-ref-table-id="guardians-aid-special"] :is(th,td):last-child { text-align:left;text-align-last:auto; }
 #partition-other-reference [data-ref-kind="guardians"] .ref-detail-body dl > div { align-items:center; }
 #partition-other-reference [data-ref-kind="guardians"] .ref-detail-body dt,
 #partition-other-reference [data-ref-kind="guardians"] .ref-detail-body dd { text-align:center; }

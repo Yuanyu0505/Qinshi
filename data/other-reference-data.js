@@ -83,7 +83,7 @@
     {
       "id": "spirits",
       "name": "器灵",
-      "description": "五行器灵、命格与原图搭配建议",
+      "description": "五行器灵、命格属性与搭配",
       "sourcePaths": [
         "01_原始资料_17张/15.jpeg"
       ]

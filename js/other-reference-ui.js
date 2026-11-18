@@ -39,6 +39,10 @@
   function titleFor(table){var title=table.id==='elements-cost'?'气蕴需求数量对照':table.id==='elements-stones'?'五极石五行数量对照':table.id==='cards-substats-ratio'?'副属性比例':table.title;return cleanSourceLabel(title).replace(/原图/g,'');}
   function isMapping(table){return Boolean(table&&table.section==='elements'&&/mappings$/.test(table.id));}
   function cellHtml(table,column,value){
+    if(table.id==='spirits-elements'&&column==='器灵名称'){
+      var quality=table.spiritQualities&&table.spiritQualities[value],color={'蓝':'blue','紫':'purple','橙':'orange'}[quality];
+      return color?'<strong class="ref-spirit-name ref-quality-'+color+'" title="'+esc(quality)+'色品质">'+esc(value)+'</strong>':esc(value);
+    }
     if(table.id==='levels-leagues'&&column==='联赛'){var note=(table.leagueNotes||[]).find(function(item){return item[0]===value;});return esc(value+(note?'（'+note[1]+'）':''));}
     if(table.section==='cards'&&column==='正高')return '<span class="ref-positive-high">'+esc(value)+'</span>';
     if(table.section==='speed'&&(column==='PVP速度'||column==='原图名次'))return '<span class="'+(column==='PVP速度'?'ref-speed-pvp':'ref-speed-rank')+'">'+esc(value)+'</span>';
@@ -84,7 +88,7 @@
     host.dataset.refReady='true';
     var data=root.OTHER_REFERENCE_DATA,tables=tablesFor(root),states={},sectionId='',homeScroll=0,restoreButton=null,zoom=1,fitWidth=0,pointers=new Map(),pinch=0;
     function state(){if(!states[sectionId])states[sectionId]={query:'',table:sectionId==='cards'?'cards-substats-10':sectionId==='guardians'?'guardians-red-materials':'',quality:'',attribute:'',view:sectionId==='cards'?'table':'auto',sort:sectionId==='speed'?'pvp':'source',band:'',scroll:0,perTable:{}};return states[sectionId];}
-    function sourceButtons(paths){return '<div class="ref-sources">'+paths.map(function(p,i){return '<button type="button" class="seg" data-ref-image="'+esc(p)+'">'+(sectionId==='guardians'?'查看图片':'查看原图')+(paths.length>1?' '+(i+1):'')+'</button>';}).join('')+'</div>';}
+    function sourceButtons(paths){return '<div class="ref-sources">'+paths.map(function(p,i){return '<button type="button" class="seg" data-ref-image="'+esc(p)+'">'+(['guardians','spirits'].includes(sectionId)?'查看图片':'查看原图')+(paths.length>1?' '+(i+1):'')+'</button>';}).join('')+'</div>';}
     var viewer=root.document.createElement('dialog');viewer.className='ref-viewer';viewer.setAttribute('aria-label','图片查看器');
     viewer.innerHTML='<header><div class="ref-viewer-tools"><button type="button" class="seg" data-ref-zoom="out" aria-label="缩小图片">−</button><output aria-live="polite">100%</output><button type="button" class="seg" data-ref-zoom="in" aria-label="放大图片">＋</button><button type="button" class="seg" data-ref-zoom="reset">适应宽度</button><button type="button" class="seg" data-ref-close>关闭</button></div></header><p class="ref-image-status" role="status"></p><button type="button" class="seg" data-ref-retry hidden>重新加载图片</button><div class="ref-image-stage" tabindex="0" aria-label="图片滚动区域"><img alt="资料图片" draggable="false"></div>';
     var body=root.document.createElement('div');host.append(body,viewer);
@@ -136,6 +140,12 @@
       var level=body.querySelector('[data-ref-level-search]');if(level){var levels=Array.from(new Set(table.rows.flatMap(function(row){return row.slice(0,2);}).filter(function(v){return /^\d+级$/.test(v);})));level.innerHTML='<option value="">全部等级</option>'+levels.map(function(v){return '<option value="'+esc(v)+'">'+esc(v)+'</option>';}).join('');level.value=levels.includes(s.query)?s.query:'';}
     }
     function renderTable(table,rows){
+      if(table.id==='spirits-elements'){
+        var spiritColumns=table.columns,qualityIndex=spiritColumns.indexOf('品质'),nameIndex=spiritColumns.indexOf('器灵名称'),qualities=Object.create(null);
+        table.rows.forEach(function(row){qualities[row[nameIndex]]=row[qualityIndex];});
+        table=Object.assign({},table,{columns:spiritColumns.filter(function(c){return c!=='品质';}),spiritQualities:qualities});
+        rows=rows.map(function(row){return row.filter(function(value,i){return i!==qualityIndex;});});
+      }
       // Fixed contributions remain in the source data and the components table.
       if(table.id==='speed-free-ranking'){
         var fixedColumns=['黑龙卷轴','焚天印','诸子卡','神行','兵法'];
@@ -146,6 +156,10 @@
       }
       var s=state();
       if(!rows.length)return '<p class="ref-empty" role="status">未找到匹配资料。试试其他关键词，或清除筛选。</p>';
+      if(table.id==='spirits-combinations'&&s.view==='cards'){
+        var elements=table.columns.map(function(element,i){return {name:element,fates:rows.map(function(row){return row[i];}).filter(function(value){return value&&value!=='—';})};}).filter(function(element){return element.fates.length;});
+        return '<div class="ref-spirit-combination-grid">'+elements.map(function(element){return '<article class="ref-spirit-combination"><h3>'+esc(element.name)+'</h3><ul>'+element.fates.map(function(fate){return '<li>'+esc(fate)+'</li>';}).join('')+'</ul></article>';}).join('')+'</div>';
+      }
       if(table.id==='levels-leagues'&&s.view==='auto'){
         var leagues=new Map();
         rows.forEach(function(row){if(!leagues.has(row[1]))leagues.set(row[1],new Map());var servers=leagues.get(row[1]);if(!servers.has(row[2]))servers.set(row[2],[]);servers.get(row[2]).push(row[0]);});
@@ -170,8 +184,10 @@
       if(s.view==='cards')return '<div class="ref-card-grid" style="--ref-card-fields:'+Math.max(1,table.columns.length-1)+';--ref-card-rows:'+Math.max(2,table.columns.length)+'">'+rows.map(function(row){return '<article class="ref-row-card"><h3>'+esc(row[0])+'</h3><dl>'+table.columns.slice(1).map(function(c,i){return '<div><dt>'+esc(columnLabel(table,c))+'</dt><dd>'+cellHtml(table,c,row[i+1])+'</dd></div>';}).join('')+'</dl></article>';}).join('')+'</div>';
       var widths=table.section==='guardians'?(/materials$/.test(table.id)?[22,26,26,26]:table.id==='guardians-base-skills'?[12,9,10,12,57]:table.id==='guardians-aid-skills'?[10,14,16,60]:table.id==='guardians-aid-special'?[10,15,75]:[14,12,74]):table.section==='origins'?[24,76]:table.section==='elements'?(/^elements-(cost|stones)$/.test(table.id)?[24,10,11,11,11,11,11,11]:isMapping(table)?[20,12,68]:table.id==='elements-qiyun-gains'?[12,12,19,19,19,19]:table.id==='elements-stone-gains'?[20,20,30,30]:table.id==='elements-progression'?[26,74]:[]):[];
       if(table.section==='levels')widths=table.id==='levels-features'?[13,37,50]:[24,52,24];
+      if(table.section==='spirits')widths=table.id==='spirits-elements'?[10,24,16,50]:table.id==='spirits-fates'?[8,18,18,24,16,16]:[20,20,20,20,20];
+      if(table.section==='disciples')widths=table.id==='disciples-skill-evolution'?[18,18,22,22,20]:[22,22,28,28];
       var colgroup=widths.length?'<colgroup>'+widths.map(function(width){return '<col style="width:'+width+'%">';}).join('')+'</colgroup>':'';
-      return '<div class="ref-table-scroll" tabindex="0" role="region" aria-label="'+esc(titleFor(table))+'对照表"><table data-ref-table-id="'+esc(table.id)+'" class="ref-table'+(table.section==='cards'?' ref-card-stats':'')+(isMapping(table)?' ref-element-mappings':'')+(table.section==='origins'?' ref-origin-table':'')+(table.section==='treasure'?' ref-treasure-table':'')+'"><caption class="ref-visually-hidden">'+esc(titleFor(table))+'</caption>'+colgroup+'<thead><tr>'+table.columns.map(function(c){return '<th scope="col">'+esc(columnLabel(table,c))+'</th>';}).join('')+'</tr></thead><tbody>'+rows.map(function(row){return '<tr>'+row.map(function(v,i){var quality=table.columns[i]==='品质'&&/^[蓝紫橙红]$/.test(v);return i===0?'<th scope="row">'+esc(v)+'</th>':'<td'+(String(v).length>20?' class="ref-long-text"':'')+'>'+(quality?'<span class="ref-quality ref-quality-'+({'蓝':'blue','紫':'purple','橙':'orange','红':'red'}[v])+'">'+esc(v)+'</span>':cellHtml(table,table.columns[i],v))+'</td>';}).join('')+'</tr>';}).join('')+'</tbody></table></div>';
+      return '<div class="ref-table-scroll" tabindex="0" role="region" aria-label="'+esc(titleFor(table))+'对照表"><table data-ref-table-id="'+esc(table.id)+'" class="ref-table'+(table.section==='cards'?' ref-card-stats':'')+(isMapping(table)?' ref-element-mappings':'')+(table.section==='origins'?' ref-origin-table':'')+(table.section==='treasure'?' ref-treasure-table':'')+'"><caption class="ref-visually-hidden">'+esc(titleFor(table))+'</caption>'+colgroup+'<thead><tr>'+table.columns.map(function(c){return '<th scope="col">'+esc(columnLabel(table,c))+'</th>';}).join('')+'</tr></thead><tbody>'+rows.map(function(row){return '<tr>'+row.map(function(v,i){var quality=table.columns[i]==='品质'&&/^[蓝紫橙红]$/.test(v);return i===0&&table.id!=='spirits-combinations'?'<th scope="row">'+esc(v)+'</th>':'<td'+(String(v).length>20?' class="ref-long-text"':'')+'>'+(quality?'<span class="ref-quality ref-quality-'+({'蓝':'blue','紫':'purple','橙':'orange','红':'red'}[v])+'">'+esc(v)+'</span>':cellHtml(table,table.columns[i],v))+'</td>';}).join('')+'</tr>';}).join('')+'</tbody></table></div>';
     }
     function results(){
       var table=displayTable(currentTable()),s=state(),html='';

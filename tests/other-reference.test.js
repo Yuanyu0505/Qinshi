@@ -93,7 +93,7 @@ test('guardian names and both formerly uncertain effects use user-confirmed text
   }
 });
 
-test('level bands include overlapping league ranges and distinguish unreadable names from absent source values',()=>{
+test('level bands include overlapping league ranges and spirit names use confirmed text',()=>{
   const ui=require('../js/other-reference-ui.js');
   assert.equal(ui.matchesLevelBand('70–100级','80'),true);
   assert.equal(ui.matchesLevelBand('70–100级','100'),true);
@@ -101,5 +101,5 @@ test('level bands include overlapping league ranges and distinguish unreadable n
   assert.equal(ui.matchesLevelBand('38级','30'),true);
   assert.equal(ui.matchesLevelBand('合计','30'),false);
   const spirits=require('../data/other-reference-tables-a.js').tables.find(t=>t.id==='spirits-elements');
-  assert.equal(spirits.rows.find(r=>r[0]==='金'&&r[1]==='紫')[2],'名称待核对');
+  assert.equal(spirits.rows.find(r=>r[0]==='金'&&r[1]==='紫')[2],'紫煞蟠龙');
 });

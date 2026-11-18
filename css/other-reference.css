@@ -97,6 +97,25 @@
 #partition-other-reference [data-ref-kind="guardians"] .ref-detail-body dd { text-align:center; }
 #partition-other-reference [data-ref-kind="guardians"] .ref-skill-list summary { display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:6px; }
 #partition-other-reference [data-ref-kind="guardians"] .ref-row-card h3 { text-align:center; }
+#partition-other-reference [data-ref-kind="spirits"] .ref-table,
+#partition-other-reference [data-ref-kind="disciples"] .ref-table { table-layout:fixed;min-width:480px; }
+#partition-other-reference [data-ref-kind="spirits"] .ref-table[data-ref-table-id="spirits-fates"] { min-width:620px; }
+#partition-other-reference [data-ref-kind="spirits"] .ref-table th,
+#partition-other-reference [data-ref-kind="spirits"] .ref-table td,
+#partition-other-reference [data-ref-kind="disciples"] .ref-table th,
+#partition-other-reference [data-ref-kind="disciples"] .ref-table td { min-width:0;max-width:none;padding:10px clamp(8px,1.2cqi,16px);vertical-align:middle;text-align:center;white-space:normal;overflow-wrap:anywhere; }
+#partition-other-reference [data-ref-kind="disciples"] .ref-timeline > li { align-items:center; }
+#partition-other-reference [data-ref-kind="disciples"] .ref-timeline dl > div { display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px;align-items:center; }
+#partition-other-reference [data-ref-kind="disciples"] .ref-timeline dd { text-align:center; }
+#partition-other-reference [data-ref-kind="spirits"] .ref-spirit-name { font-weight:800;letter-spacing:.025em; }
+#partition-other-reference [data-ref-kind="spirits"] .ref-spirit-name.ref-quality-blue { color:#67c4ff; }
+#partition-other-reference [data-ref-kind="spirits"] .ref-spirit-name.ref-quality-purple { color:#d091ff; }
+#partition-other-reference [data-ref-kind="spirits"] .ref-spirit-name.ref-quality-orange { color:#ffab42; }
+#partition-other-reference .ref-spirit-combination-grid { display:grid;grid-template-columns:repeat(auto-fit,minmax(min(140px,100%),1fr));gap:12px; }
+#partition-other-reference .ref-spirit-combination { min-width:0;border:1px solid var(--line);border-radius:6px;padding:12px; }
+#partition-other-reference .ref-spirit-combination h3 { margin:0 0 8px;text-align:center; }
+#partition-other-reference .ref-spirit-combination ul { list-style:none;margin:0;padding:0; }
+#partition-other-reference .ref-spirit-combination li { padding:8px 0;border-top:1px solid var(--line);text-align:center;line-height:1.6;overflow-wrap:anywhere; }
 #partition-other-reference .ref-element-gains { display:grid;gap:16px; }
 #partition-other-reference .ref-element-gains h3 { margin-top:0; }
 #partition-other-reference .ref-card-stats { table-layout:fixed;min-width:580px; }

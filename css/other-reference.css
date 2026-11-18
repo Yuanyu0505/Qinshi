@@ -69,6 +69,14 @@
 #partition-other-reference .ref-origin-table th:first-child { width:28%; }
 #partition-other-reference .ref-origin-table th:nth-child(2),
 #partition-other-reference .ref-origin-table td:nth-child(2) { text-align:left;vertical-align:middle;white-space:normal; }
+#partition-other-reference [data-ref-kind="elements"] .ref-table,
+#partition-other-reference [data-ref-kind="origins"] .ref-table { table-layout:fixed; }
+#partition-other-reference [data-ref-kind="elements"] .ref-table th,
+#partition-other-reference [data-ref-kind="elements"] .ref-table td,
+#partition-other-reference [data-ref-kind="origins"] .ref-table th,
+#partition-other-reference [data-ref-kind="origins"] .ref-table td { min-width:0;max-width:none;padding:10px clamp(8px,1.2cqi,16px);vertical-align:middle;text-align:center;white-space:normal;overflow-wrap:anywhere; }
+#partition-other-reference [data-ref-kind="elements"] .ref-table[data-ref-table-id="elements-cost"],
+#partition-other-reference [data-ref-kind="elements"] .ref-table[data-ref-table-id="elements-stones"] { min-width:640px; }
 #partition-other-reference .ref-table.ref-treasure-table th,
 #partition-other-reference .ref-table.ref-treasure-table td { vertical-align:middle;text-align:center; }
 #partition-other-reference [data-ref-kind="speed"] .ref-table th,
@@ -81,6 +89,7 @@
 #partition-other-reference [data-ref-kind="guardians"] .ref-table[data-ref-table-id$="materials"] { min-width:360px; }
 #partition-other-reference [data-ref-kind="guardians"] .ref-table th,
 #partition-other-reference [data-ref-kind="guardians"] .ref-table td { min-width:0;max-width:none;padding:10px clamp(8px,1.2cqi,16px);vertical-align:middle;text-align:center;white-space:normal;overflow-wrap:anywhere; }
+#partition-other-reference [data-ref-kind="guardians"] .ref-table td.ref-long-text { text-align:justify;text-align-last:left; }
 #partition-other-reference [data-ref-kind="guardians"] .ref-detail-body dl > div { align-items:center; }
 #partition-other-reference [data-ref-kind="guardians"] .ref-detail-body dt,
 #partition-other-reference [data-ref-kind="guardians"] .ref-detail-body dd { text-align:center; }
@@ -92,6 +101,8 @@
 #partition-other-reference .ref-card-stats th,
 #partition-other-reference .ref-card-stats td { text-align:center;padding:10px 8px;min-width:0;max-width:none; }
 #partition-other-reference .ref-card-stats th:first-child { width:24%;text-align:left; }
+#partition-other-reference .ref-positive-high,
+#partition-other-reference [data-ref-table-id^="cards-substats-"]:not([data-ref-table-id="cards-substats-ratio"]) thead th:nth-child(2) { color:#ff786f; }
 #partition-other-reference .ref-speed-cards { display:grid;gap:0; }
 #partition-other-reference .ref-speed-head,
 #partition-other-reference .ref-speed-row > summary { display:grid;grid-template-columns:minmax(0,1.8fr) minmax(0,1fr) minmax(0,1fr);gap:8px;align-items:center;text-align:right;font-variant-numeric:tabular-nums; }

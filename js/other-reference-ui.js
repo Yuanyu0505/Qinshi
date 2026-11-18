@@ -39,6 +39,7 @@
   function titleFor(table){var title=table.id==='elements-cost'?'气蕴需求数量对照':table.id==='elements-stones'?'五极石五行数量对照':table.id==='cards-substats-ratio'?'副属性比例':table.title;return cleanSourceLabel(title).replace(/原图/g,'');}
   function isMapping(table){return Boolean(table&&table.section==='elements'&&/mappings$/.test(table.id));}
   function cellHtml(table,column,value){
+    if(table.section==='cards'&&column==='正高')return '<span class="ref-positive-high">'+esc(value)+'</span>';
     if(table.section==='speed'&&(column==='PVP速度'||column==='原图名次'))return '<span class="'+(column==='PVP速度'?'ref-speed-pvp':'ref-speed-rank')+'">'+esc(value)+'</span>';
     if(table.id==='elements-progression'&&String(value).includes('→'))return String(value).split('→').map(function(token){return '<span class="ref-quality-step">'+esc(token.trim())+'</span>';}).join(' → ');
     if(!isMapping(table)||column!=='气蕴组合')return esc(cleanSourceLabel(value));
@@ -81,7 +82,7 @@
     if(!host||host.dataset.refReady)return;
     host.dataset.refReady='true';
     var data=root.OTHER_REFERENCE_DATA,tables=tablesFor(root),states={},sectionId='',homeScroll=0,restoreButton=null,zoom=1,fitWidth=0,pointers=new Map(),pinch=0;
-    function state(){if(!states[sectionId])states[sectionId]={query:'',table:'',quality:'',attribute:'',view:'auto',sort:sectionId==='speed'?'panel':'source',band:'',scroll:0,perTable:{}};return states[sectionId];}
+    function state(){if(!states[sectionId])states[sectionId]={query:'',table:sectionId==='cards'?'cards-substats-10':sectionId==='guardians'?'guardians-red-materials':'',quality:'',attribute:'',view:sectionId==='cards'?'table':'auto',sort:sectionId==='speed'?'pvp':'source',band:'',scroll:0,perTable:{}};return states[sectionId];}
     function sourceButtons(paths){return '<div class="ref-sources">'+paths.map(function(p,i){return '<button type="button" class="seg" data-ref-image="'+esc(p)+'">'+(sectionId==='guardians'?'查看图片':'查看原图')+(paths.length>1?' '+(i+1):'')+'</button>';}).join('')+'</div>';}
     var viewer=root.document.createElement('dialog');viewer.className='ref-viewer';viewer.setAttribute('aria-label','图片查看器');
     viewer.innerHTML='<header><div class="ref-viewer-tools"><button type="button" class="seg" data-ref-zoom="out" aria-label="缩小图片">−</button><output aria-live="polite">100%</output><button type="button" class="seg" data-ref-zoom="in" aria-label="放大图片">＋</button><button type="button" class="seg" data-ref-zoom="reset">适应宽度</button><button type="button" class="seg" data-ref-close>关闭</button></div></header><p class="ref-image-status" role="status"></p><button type="button" class="seg" data-ref-retry hidden>重新加载图片</button><div class="ref-image-stage" tabindex="0" aria-label="图片滚动区域"><img alt="资料图片" draggable="false"></div>';
@@ -114,7 +115,7 @@
       if(table)s.table=table.id;
       var cards=sectionId==='cards';
       body.innerHTML='<section class="panel ref-section"'+(cards?' data-ref-kind="cards"':sectionId==='speed'?' data-ref-kind="speed"':'')+'><header class="ref-heading"><h2 tabindex="-1">'+esc(section.name)+'</h2><button type="button" class="seg" data-ref-home>返回目录</button></header><div class="ref-controls"><label>'+(cards?'查找属性':'查找资料')+'<input type="search" data-ref-search placeholder="'+(cards?'输入属性名称或属性数值':'名称、等级、属性或来源关键词')+'" value="'+esc(s.query)+'"></label>'+columnMenu(list,s.table)+(sectionId==='elements'?'<label data-ref-attribute-label hidden>属性<select data-ref-attribute><option value="">全部属性</option></select></label>':'<label data-ref-quality-label hidden>品质<select data-ref-quality><option value="">全部品质</option></select></label>')+'<label'+(sectionId==='levels'?'':' hidden')+'>等级区间<select data-ref-band><option value="">全部等级</option>'+Array.from({length:11},function(_,i){return '<option value="'+(i*10)+'">'+(i*10)+'–'+Math.min(100,i*10+9)+'级</option>';}).join('')+'</select></label><label>展示方式<select data-ref-view></select></label><label data-ref-sort-label'+(sectionId==='speed'?'':' hidden')+'>浏览排序<select data-ref-sort><option value="panel">面板速度降序</option><option value="pvp">PVP速度降序</option></select></label><button class="seg" type="button" data-ref-clear>清除筛选</button></div><div data-ref-results aria-live="polite"></div></section>';
-      if(sectionId==='guardians')body.querySelector('.ref-section').dataset.refKind='guardians';
+      body.querySelector('.ref-section').dataset.refKind=sectionId;
       body.querySelector('[data-ref-sort]').value=s.sort;body.querySelector('[data-ref-band]').value=s.band;
       if(sectionId==='disciples')body.querySelector('[data-ref-clear]').insertAdjacentHTML('beforebegin','<label>快捷查找等级<select data-ref-level-search><option value="">全部等级</option></select></label>');
       fillQuality();results();
@@ -159,7 +160,7 @@
         table=Object.assign({},table,{columns:order.map(function(i){return table.columns[i];})});rows=rows.map(function(row){return order.map(function(i){return row[i];});});
       }
       if(s.view==='cards')return '<div class="ref-card-grid" style="--ref-card-fields:'+Math.max(1,table.columns.length-1)+';--ref-card-rows:'+Math.max(2,table.columns.length)+'">'+rows.map(function(row){return '<article class="ref-row-card"><h3>'+esc(row[0])+'</h3><dl>'+table.columns.slice(1).map(function(c,i){return '<div><dt>'+esc(columnLabel(table,c))+'</dt><dd>'+cellHtml(table,c,row[i+1])+'</dd></div>';}).join('')+'</dl></article>';}).join('')+'</div>';
-      var widths=table.section!=='guardians'?[]:/materials$/.test(table.id)?[22,26,26,26]:table.id==='guardians-base-skills'?[12,9,10,12,57]:table.id==='guardians-aid-skills'?[10,14,16,60]:table.id==='guardians-aid-special'?[10,15,75]:[14,12,74];
+      var widths=table.section==='guardians'?(/materials$/.test(table.id)?[22,26,26,26]:table.id==='guardians-base-skills'?[12,9,10,12,57]:table.id==='guardians-aid-skills'?[10,14,16,60]:table.id==='guardians-aid-special'?[10,15,75]:[14,12,74]):table.section==='origins'?[24,76]:table.section==='elements'?(/^elements-(cost|stones)$/.test(table.id)?[24,10,11,11,11,11,11,11]:isMapping(table)?[20,12,68]:table.id==='elements-qiyun-gains'?[12,12,19,19,19,19]:table.id==='elements-stone-gains'?[20,20,30,30]:table.id==='elements-progression'?[26,74]:[]):[];
       var colgroup=widths.length?'<colgroup>'+widths.map(function(width){return '<col style="width:'+width+'%">';}).join('')+'</colgroup>':'';
       return '<div class="ref-table-scroll" tabindex="0" role="region" aria-label="'+esc(titleFor(table))+'对照表"><table data-ref-table-id="'+esc(table.id)+'" class="ref-table'+(table.section==='cards'?' ref-card-stats':'')+(isMapping(table)?' ref-element-mappings':'')+(table.section==='origins'?' ref-origin-table':'')+(table.section==='treasure'?' ref-treasure-table':'')+'"><caption class="ref-visually-hidden">'+esc(titleFor(table))+'</caption>'+colgroup+'<thead><tr>'+table.columns.map(function(c){return '<th scope="col">'+esc(columnLabel(table,c))+'</th>';}).join('')+'</tr></thead><tbody>'+rows.map(function(row){return '<tr>'+row.map(function(v,i){var quality=table.columns[i]==='品质'&&/^[蓝紫橙红]$/.test(v);return i===0?'<th scope="row">'+esc(v)+'</th>':'<td'+(String(v).length>20?' class="ref-long-text"':'')+'>'+(quality?'<span class="ref-quality ref-quality-'+({'蓝':'blue','紫':'purple','橙':'orange','红':'red'}[v])+'">'+esc(v)+'</span>':cellHtml(table,table.columns[i],v))+'</td>';}).join('')+'</tr>';}).join('')+'</tbody></table></div>';
     }
@@ -173,10 +174,10 @@
         if(table.parts){
           var parts=table.parts.map(function(part){return {table:part,rows:filterRows(part,s.query,'')};}),matched=parts.reduce(function(n,p){return n+p.rows.length;},0),total=table.parts.reduce(function(n,p){return n+p.rows.length;},0);
           html='<div class="ref-result-toolbar"><span>匹配 '+matched+'／'+total+'条</span>'+sourceButtons(table.sourcePaths||[])+'</div>'+(matched?'<div class="ref-element-gains">'+parts.filter(function(p){return p.rows.length;}).map(function(p){return '<section><h3>'+esc(titleFor(p.table))+'</h3>'+renderTable(p.table,p.rows)+'</section>';}).join('')+'</div>':renderTable(table,[]));
-        }else html='<div class="ref-result-toolbar"><span>'+count+'</span>'+(sectionId==='cards'?'':sourceButtons(table.sourcePaths||[]))+'</div>'+(table.verification==='partial'?'<p class="ref-warning" role="note">部分转录 · 存在待核对内容</p>':'')+renderTable(table,rows);
+        }else html='<div class="ref-result-toolbar"><span>'+count+'</span>'+sourceButtons(table.sourcePaths||[])+'</div>'+(table.verification==='partial'?'<p class="ref-warning" role="note">部分转录 · 存在待核对内容</p>':'')+renderTable(table,rows);
       }else html='<p class="ref-empty">暂无资料。</p>';
       if(sectionId==='cards'){
-        html+='<section class="ref-guides"><h3>红卡攻略</h3><details class="ref-guide-library"><summary>查看攻略章节</summary>'+data.guides.map(function(g){return '<details data-ref-guide="'+esc(g.id)+'"><summary>'+esc(g.title)+'</summary><div class="ref-guide-text">'+esc(guideText(g,data.cardAlbum))+'</div></details>';}).join('')+'</details></section>';
+        html+='<section class="ref-guides"><h3>红卡攻略</h3><details class="ref-guide-library"><summary>查看攻略章节</summary>'+data.guides.map(function(g){return '<details data-ref-guide="'+esc(g.id)+'"><summary>'+esc(g.title)+'</summary><div class="ref-guide-text">'+esc(guideText(g,data.cardAlbum))+'</div>'+sourceButtons(g.sourcePaths||[])+'</details>';}).join('')+'</details></section>';
       }
       body.querySelector('[data-ref-results]').innerHTML=html;
     }
@@ -184,7 +185,7 @@
     function switchTable(id){
       var s=state();if(!sectionTables().some(function(t){return t.id===id;}))return;
       s.perTable[s.table]={query:s.query,quality:s.quality,attribute:s.attribute,view:s.view,sort:s.sort,band:s.band};s.table=id;
-      Object.assign(s,s.perTable[id]||{query:'',quality:'',attribute:'',view:'auto',sort:sectionId==='speed'?'panel':'source',band:''});
+      Object.assign(s,s.perTable[id]||{query:'',quality:'',attribute:'',view:sectionId==='cards'?'table':'auto',sort:sectionId==='speed'?'pvp':'source',band:''});
       body.querySelector('[data-ref-band]').value=s.band;body.querySelector('[data-ref-search]').value=s.query;body.querySelector('[data-ref-sort]').value=s.sort;
       body.querySelector('[data-ref-column-title]').textContent=titleFor(currentTable());
       body.querySelectorAll('[data-ref-table-option]').forEach(function(button){if(button.dataset.refTableOption===id)button.setAttribute('aria-current','true');else button.removeAttribute('aria-current');});

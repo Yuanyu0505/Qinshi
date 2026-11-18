@@ -75,16 +75,18 @@ test('guardian materials distinguish activation, label stages and omit redundant
   }
 });
 
-test('guardian names are confirmed without hiding the two remaining uncertain effects',()=>{
+test('guardian names and both formerly uncertain effects use user-confirmed text',()=>{
   const tables=require('../data/other-reference-tables-c.js').tables.filter(t=>t.section==='guardians');
   const skills=tables.find(t=>t.id==='guardians-aid-skills');
   const special=tables.find(t=>t.id==='guardians-aid-special');
   assert.equal(skills.rows.find(row=>row[0]==='10028')[2],'噤若寒蝉');
   for(const table of [skills,special])assert.equal(table.rows.find(row=>row[0]==='10045')[1],'神诺敏');
   assert.equal(skills.verification,'visually-transcribed');
-  assert.equal(special.verification,'partial');
+  assert.equal(special.verification,'visually-transcribed');
+  assert.ok(special.rows.find(row=>row[0]==='10037')[2].includes('残废1回合'));
+  assert.ok(special.rows.find(row=>row[0]==='10050')[2].includes('侠义誓约：永久提升5%攻和防'));
   const pending=tables.flatMap(table=>table.rows.filter(row=>row.some(value=>String(value).includes('待核对'))).map(row=>row[0]));
-  assert.deepEqual(pending,['10037','10050']);
+  assert.deepEqual(pending,[]);
   for(const table of tables){
     assert.equal(table.sourcePaths.length,1);
     assert.ok(table.columns.every(column=>!column.includes('原图')));

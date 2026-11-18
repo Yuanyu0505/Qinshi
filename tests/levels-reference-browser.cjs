@@ -6,7 +6,7 @@ const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
 const {createServer}=require('../serve.js');
 const {openApp}=require('./browser-test-helpers.cjs');
 const phase=process.env.LEVELS_UI_PHASE||'after';
-const evidence=path.resolve(__dirname,'../outputs/levels-reference-1.1.32',phase);
+const evidence=path.resolve(__dirname,'../outputs/levels-reference-1.1.33',phase);
 let server,browser,url;
 before(async()=>{fs.mkdirSync(evidence,{recursive:true});server=createServer();await new Promise(r=>server.listen(0,'127.0.0.1',r));url='http://127.0.0.1:'+server.address().port;browser=await chromium.launch({channel:'msedge',headless:true});});
 after(async()=>{await browser?.close();if(server)await new Promise(r=>server.close(r));});
@@ -33,11 +33,14 @@ for(const width of [320,390,820,1366,1920])test('levels responsive layout '+widt
       assert.ok(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),id+' page overflow');
       if(phase==='before')continue;
       if(id==='levels-leagues'){
-        assert.equal(await p.locator('.ref-table tbody tr').count(),14);
-        assert.equal(await p.locator('[data-ref-view]').inputValue(),'table');
-        assert.equal(await p.locator('[data-ref-view] option[value="auto"]').count(),0);
-        assert.ok((await p.locator('.ref-table tbody tr').first().innerText()).includes('青铜联赛（初级青龙/白虎护符）'));
+        assert.equal(await p.locator('[data-ref-league-group]').count(),4);
+        assert.equal(await p.locator('.ref-league-band').count(),14);
+        assert.equal(await p.locator('[data-ref-view]').inputValue(),'auto');
+        assert.equal(await p.locator('[data-ref-view] option[value="table"]').count(),0);
+        assert.equal(await p.locator('.ref-league-group h3').first().innerText(),'青铜联赛（初级青龙/白虎护符）');
+        assert.ok(await p.locator('.ref-league-group').evaluateAll(nodes=>nodes.every(n=>getComputedStyle(n).alignItems==='center')));
         assert.equal(await p.locator('.ref-timeline').count(),0);
+        continue;
       }
       await p.locator('[data-ref-view]').selectOption('table');
       assert.ok(await p.locator('.ref-table th,.ref-table td').evaluateAll(nodes=>nodes.every(n=>getComputedStyle(n).verticalAlign==='middle')));
@@ -62,17 +65,17 @@ test('levels search, overlapping ranges, drafts, card switching and source viewe
     await selectTable(p,'levels-leagues');
     assert.equal(await p.locator('.ref-league-notes').count(),0);
     for(const [query,count] of [['混服',3],['折扣专服',2],['83',4],['87',2],['59',1],['69',1]]){
-      await search.fill(query);assert.equal(await p.locator('.ref-table tbody tr').count(),count,query);
+      await search.fill(query);assert.equal(await p.locator('.ref-league-band').count(),count,query);
     }
     await p.locator('[data-ref-clear]').click();
     for(const [band,count] of [['50',3],['60',3],['70',3],['80',5],['90',2]]){
-      await p.locator('[data-ref-band]').selectOption(band);assert.equal(await p.locator('.ref-table tbody tr').count(),count,band);
+      await p.locator('[data-ref-band]').selectOption(band);assert.equal(await p.locator('.ref-league-band').count(),count,band);
     }
     await p.locator('[data-ref-clear]').click();await search.fill('折扣专服');
     await p.locator('[data-ref-view]').selectOption('cards');assert.equal(await p.locator('.ref-row-card').count(),2);
     await selectTable(p,'levels-features');await selectTable(p,'levels-leagues');
     assert.equal(await search.inputValue(),'折扣专服');assert.equal(await p.locator('[data-ref-view]').inputValue(),'cards');
-    await p.locator('[data-ref-clear]').click();await p.locator('[data-ref-view]').selectOption('table');
+    await p.locator('[data-ref-clear]').click();await p.locator('[data-ref-view]').selectOption('auto');
     const trigger=p.locator('[data-ref-image]').first();await trigger.click();
     await p.waitForFunction(()=>{const i=document.querySelector('.ref-viewer img');return i.complete&&i.naturalWidth>0;});
     await p.locator('[data-ref-zoom="in"]').click();assert.equal(await p.locator('.ref-viewer output').innerText(),'125%');

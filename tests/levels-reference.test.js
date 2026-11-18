@@ -8,7 +8,7 @@ const table=id=>tables.find(t=>t.id===id);
 
 test('feature search applies the current user-confirmed removals and annotations',()=>{
   const old=baseline.find(t=>t.id==='levels-features');
-  const notes={'星宿':'—','兵法':'—','机关觉醒':'通关第十四章可开启英雄关卡','图鉴':'满图鉴需要79级。','器灵强化':'—'};
+  const notes={'星宿':'—','兵法':'—','机关觉醒':'通关第十四章可开启英雄关卡','图鉴':'满图鉴需要79级','器灵强化':'—'};
   const expected=old.rows.filter(r=>!['关卡/奇遇','青铜联赛终点','白银联赛终点'].includes(r[1])).map(r=>Object.hasOwn(notes,r[1])?[r[0],r[1],notes[r[1]]]:r);
   assert.deepEqual(table('levels-features').rows,expected);
   assert.equal(expected.length,37);
@@ -51,6 +51,6 @@ test('league level-band filtering retains overlap and the former endpoint levels
   for(const level of [83,87])assert.ok(leagues.rows.filter(r=>{const n=r[0].match(/\d+/g).map(Number);return n[0]<=level&&n[1]>=level;}).length>1);
   assert.equal(ui.matchesLevelBand('100级','90'),true);
   assert.equal(ui.matchesLevelBand('89级','90'),false);
-  assert.equal(ui.hasRecommendedView(leagues,320),false);
-  assert.equal(ui.hasRecommendedView(leagues,1920),false);
+  assert.equal(ui.hasRecommendedView(leagues,320),true);
+  assert.equal(ui.hasRecommendedView(leagues,1920),true);
 });

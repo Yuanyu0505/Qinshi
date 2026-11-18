@@ -146,6 +146,19 @@
 #partition-other-reference [data-ref-kind="levels"] .ref-table td { text-align:left; }
 #partition-other-reference [data-ref-kind="levels"] .ref-timeline > li,
 #partition-other-reference [data-ref-kind="levels"] .ref-timeline dl > div { align-items:center; }
+#partition-other-reference .ref-leagues { display:grid;gap:0; }
+#partition-other-reference .ref-league-group { display:grid;grid-template-columns:minmax(0,280px) minmax(0,1fr);gap:16px;align-items:center;padding:12px 0;border-bottom:1px solid var(--line); }
+#partition-other-reference .ref-league-group h3 { margin:0;font-size:15px;line-height:1.6;overflow-wrap:anywhere; }
+#partition-other-reference .ref-league-row { display:flex;align-items:center;gap:12px;min-width:0; }
+#partition-other-reference .ref-league-row + .ref-league-row { margin-top:10px; }
+#partition-other-reference .ref-league-server { flex:0 0 5em;font-size:13px;font-weight:400;color:#bdb29f; }
+#partition-other-reference .ref-league-bands { display:flex;flex-wrap:wrap;gap:6px 18px;min-width:0;font-variant-numeric:tabular-nums; }
+#partition-other-reference .ref-league-band { white-space:nowrap; }
+@container(max-width:760px){
+  #partition-other-reference .ref-league-group { grid-template-columns:1fr;gap:8px; }
+  #partition-other-reference .ref-league-row { gap:8px; }
+  #partition-other-reference .ref-league-bands { gap:6px 12px; }
+}
 #partition-other-reference .ref-sources { display:flex;flex-wrap:wrap;gap:8px;margin:14px 0; }
 #partition-other-reference details { border:1px solid var(--line);border-radius:6px;margin-top:12px;padding:12px; }
 #partition-other-reference summary { color:var(--gold);cursor:pointer;min-height:24px;font-weight:600; }

@@ -53,7 +53,7 @@
     return Object.assign({},table,{columns:indices.map(function(i){return table.columns[i];}),rows:table.rows.map(function(row){return indices.map(function(i){return row[i];});})});
   }
   function hasRecommendedView(table,width){
-    return Boolean(table&&table.id!=='levels-leagues'&&(table.id==='origins-all'||width<760&&(['levels','disciples'].includes(table.section)||/^speed-(paid|free)-ranking$/.test(table.id)||table.section==='guardians'&&/aid-|base-skills/.test(table.id))));
+    return Boolean(table&&(table.id==='origins-all'||table.id==='levels-leagues'||width<760&&(['levels','disciples'].includes(table.section)||/^speed-(paid|free)-ranking$/.test(table.id)||table.section==='guardians'&&/aid-|base-skills/.test(table.id))));
   }
   function guideText(guide,album){
     if(guide.id==='guide-4'){
@@ -123,8 +123,9 @@
     }
     function updateViewOptions(table){
       var select=body.querySelector('[data-ref-view]'),s=state(),recommended=hasRecommendedView(table,host.getBoundingClientRect().width),selected=s.view==='auto'&&!recommended?'table':s.view;
-      if(table&&table.id==='levels-leagues'&&s.view==='auto'){s.view='table';selected='table';}
-      var choices=(recommended?[['auto','推荐视图']]:[]).concat([['table','原始对照表'],['cards','逐项卡片']]);
+      var league=table&&table.id==='levels-leagues';
+      if(league&&s.view==='table'){s.view='auto';selected='auto';}
+      var choices=(recommended?[['auto','推荐视图']]:[]).concat(league?[]:[['table','原始对照表']]).concat([['cards','逐项卡片']]);
       var html=choices.map(function(choice){return '<option value="'+choice[0]+'"'+(choice[0]===selected?' selected':'')+'>'+choice[1]+'</option>';}).join('');
       if(select.innerHTML!==html)select.innerHTML=html;
       select.value=selected;
@@ -145,6 +146,11 @@
       }
       var s=state();
       if(!rows.length)return '<p class="ref-empty" role="status">未找到匹配资料。试试其他关键词，或清除筛选。</p>';
+      if(table.id==='levels-leagues'&&s.view==='auto'){
+        var leagues=new Map();
+        rows.forEach(function(row){if(!leagues.has(row[1]))leagues.set(row[1],new Map());var servers=leagues.get(row[1]);if(!servers.has(row[2]))servers.set(row[2],[]);servers.get(row[2]).push(row[0]);});
+        return '<div class="ref-leagues">'+Array.from(leagues.entries()).map(function(league){return '<section class="ref-league-group" data-ref-league-group="'+esc(league[0])+'"><h3>'+cellHtml(table,'联赛',league[0])+'</h3><div>'+Array.from(league[1].entries()).map(function(server){return '<div class="ref-league-row">'+(server[0]?'<strong class="ref-league-server">'+esc(server[0])+'</strong>':'')+'<div class="ref-league-bands">'+server[1].map(function(band){return '<span class="ref-league-band">'+esc(band)+'</span>';}).join('')+'</div></div>';}).join('')+'</div></section>';}).join('')+'</div>';
+      }
       if(table.id==='origins-all'&&s.view==='auto'){
         var groups=new Map();rows.forEach(function(row){if(!groups.has(row[0]))groups.set(row[0],[]);groups.get(row[0]).push(row);});
         return '<div class="ref-origins">'+Array.from(groups.entries()).map(function(entry){return '<details data-ref-origin><summary><strong>'+esc(entry[0])+'</strong><span>'+entry[1].length+'项来源</span></summary><ol>'+entry[1].map(function(row){return '<li data-ref-origin-record>'+esc(row[1])+'</li>';}).join('')+'</ol></details>';}).join('')+'</div>';

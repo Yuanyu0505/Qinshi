@@ -77,6 +77,15 @@
 #partition-other-reference [data-ref-kind="speed"] .ref-row-card dl > div { align-items:center; }
 #partition-other-reference [data-ref-kind="speed"] .ref-speed-pvp { color:#69db94; }
 #partition-other-reference [data-ref-kind="speed"] .ref-speed-rank { color:#ff786f; }
+#partition-other-reference [data-ref-kind="guardians"] .ref-table { table-layout:fixed;min-width:560px; }
+#partition-other-reference [data-ref-kind="guardians"] .ref-table[data-ref-table-id$="materials"] { min-width:360px; }
+#partition-other-reference [data-ref-kind="guardians"] .ref-table th,
+#partition-other-reference [data-ref-kind="guardians"] .ref-table td { min-width:0;max-width:none;padding:10px clamp(8px,1.2cqi,16px);vertical-align:middle;text-align:center;white-space:normal;overflow-wrap:anywhere; }
+#partition-other-reference [data-ref-kind="guardians"] .ref-detail-body dl > div { align-items:center; }
+#partition-other-reference [data-ref-kind="guardians"] .ref-detail-body dt,
+#partition-other-reference [data-ref-kind="guardians"] .ref-detail-body dd { text-align:center; }
+#partition-other-reference [data-ref-kind="guardians"] .ref-skill-list summary { display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:6px; }
+#partition-other-reference [data-ref-kind="guardians"] .ref-row-card h3 { text-align:center; }
 #partition-other-reference .ref-element-gains { display:grid;gap:16px; }
 #partition-other-reference .ref-element-gains h3 { margin-top:0; }
 #partition-other-reference .ref-card-stats { table-layout:fixed;min-width:580px; }
@@ -121,13 +130,17 @@
 #partition-other-reference details { border:1px solid var(--line);border-radius:6px;margin-top:12px;padding:12px; }
 #partition-other-reference summary { color:var(--gold);cursor:pointer;min-height:24px;font-weight:600; }
 #partition-other-reference .ref-guide-text { white-space:pre-wrap;line-height:1.9;font-size:15px;overflow-wrap:anywhere;max-width:80ch;margin:16px 0; }
-#partition-other-reference .ref-card-grid { display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px; }
-#partition-other-reference .ref-row-card { border:1px solid var(--line);border-radius:6px;padding:12px;min-width:0; }
+#partition-other-reference .ref-card-grid { display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;align-items:stretch; }
+#partition-other-reference .ref-row-card { display:grid;grid-template-rows:auto 1fr;border:1px solid var(--line);border-radius:6px;padding:12px;min-width:0; }
 #partition-other-reference .ref-row-card h3 { margin-top:0; }
 #partition-other-reference .ref-row-card dl { margin:0; }
-#partition-other-reference .ref-row-card dl div { display:grid;grid-template-columns:minmax(80px,1fr) minmax(0,2fr);gap:10px;padding:6px 0;border-top:1px solid var(--line); }
-#partition-other-reference .ref-row-card dt { color:#bdb29f;font-size:13px; }
+#partition-other-reference .ref-row-card dl div { display:grid;grid-template-columns:minmax(80px,1fr) minmax(0,2fr);gap:10px;align-items:center;padding:6px 0;border-top:1px solid var(--line); }
+#partition-other-reference .ref-row-card dt { color:#bdb29f;font-size:13px;text-align:left;overflow-wrap:anywhere; }
 #partition-other-reference .ref-row-card dd { margin:0;text-align:right;white-space:pre-line;overflow-wrap:anywhere; }
+@supports (grid-template-rows:subgrid){
+  #partition-other-reference .ref-row-card { grid-row:span var(--ref-card-rows);grid-template-rows:subgrid;row-gap:0; }
+  #partition-other-reference .ref-row-card dl { display:grid;grid-row:span var(--ref-card-fields);grid-template-rows:subgrid; }
+}
 #partition-other-reference .ref-empty { padding:22px 14px;border:1px dashed var(--line); }
 #partition-other-reference .ref-viewer { color:var(--text);background:var(--bg2);border:1px solid var(--gold-dim);border-radius:8px;width:min(1400px,96vw);max-width:96vw;max-height:94dvh;padding:16px; }
 #partition-other-reference .ref-viewer::backdrop { background:rgba(0,0,0,.8); }

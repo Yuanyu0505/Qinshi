@@ -62,6 +62,35 @@ test('speed tables retain one source image per version and no stale partial stat
   }
 });
 
+test('guardian materials distinguish activation, label stages and omit redundant subtotals',()=>{
+  const tables=require('../data/other-reference-tables-c.js').tables;
+  for(const [color,activation,maxStage,total] of [['orange','25',10,['295','2200','1650']],['red','35',15,['705','7850','7850']]]){
+    const table=tables.find(t=>t.id==='guardians-'+color+'-materials');
+    assert.deepEqual(table.columns,['当前阶数','碎片','锦书残卷','淬火印记']);
+    assert.deepEqual(table.rows[0],['0阶激活',activation,'—','—']);
+    assert.equal(table.rows.length,maxStage+2);
+    for(let stage=1;stage<=maxStage;stage++)assert.equal(table.rows[stage][0],stage+'阶');
+    assert.deepEqual(table.rows.at(-1),['合计',...total]);
+    assert.ok(!table.rows.some(row=>/原图|小表/.test(row[0])));
+  }
+});
+
+test('guardian names are confirmed without hiding the two remaining uncertain effects',()=>{
+  const tables=require('../data/other-reference-tables-c.js').tables.filter(t=>t.section==='guardians');
+  const skills=tables.find(t=>t.id==='guardians-aid-skills');
+  const special=tables.find(t=>t.id==='guardians-aid-special');
+  assert.equal(skills.rows.find(row=>row[0]==='10028')[2],'噤若寒蝉');
+  for(const table of [skills,special])assert.equal(table.rows.find(row=>row[0]==='10045')[1],'神诺敏');
+  assert.equal(skills.verification,'visually-transcribed');
+  assert.equal(special.verification,'partial');
+  const pending=tables.flatMap(table=>table.rows.filter(row=>row.some(value=>String(value).includes('待核对'))).map(row=>row[0]));
+  assert.deepEqual(pending,['10037','10050']);
+  for(const table of tables){
+    assert.equal(table.sourcePaths.length,1);
+    assert.ok(table.columns.every(column=>!column.includes('原图')));
+  }
+});
+
 test('level bands include overlapping league ranges and distinguish unreadable names from absent source values',()=>{
   const ui=require('../js/other-reference-ui.js');
   assert.equal(ui.matchesLevelBand('70–100级','80'),true);

@@ -45,6 +45,7 @@
     var suffixGcd = Array(types.length + 1).fill(0);
     for (var i = types.length - 1; i >= 0; i--) suffixGcd[i] = gcd(types[i].researchEach, suffixGcd[i + 1]);
     function visit(index, research, blueprints, modified, newCount) {
+      if(source.baseLimit!=null&&newCount>source.baseLimit)return -1;
       if (research < 0 || blueprints < 0 || modified < 0 || body(newCount) > targetBody) return -1;
       var waste = blueprints * data.resourceRules.blueprintDivisor - research;
       if (waste < 0) return -1;
@@ -59,7 +60,7 @@
       if (mod) cap = Math.min(cap, Math.floor(modified / mod));
       var edges = [], count = 0n;
       for (var quantity = 0; quantity <= cap; quantity++) {
-        var nextNew = newCount + (t.source === 'new' && beast.quality === 'orange' ? quantity * t.weight : 0);
+        var nextNew = newCount + (source.convertible || t.source === 'new' && beast.quality === 'orange' ? quantity * t.weight : 0);
         var child = visit(index + 1, research - quantity * t.researchEach, blueprints - quantity * t.blueprints, modified - quantity * mod, nextNew);
         if (child < 0) continue;
         edges.push([quantity, child]); count += BigInt(nodes[child].count);
@@ -80,7 +81,7 @@
       var source = sources[candidate.beastId];
       var materials = candidate.items.length ? materialGraph(data, candidate, source, settings) : { types: [], nodes: [{ count: '1', edges: [] }], root: 0, count: '1' };
       var id = candidates.length;
-      candidates.push({ detail: candidate, fragmentsBefore: source.fragments, materials: materials });
+      candidates.push({ detail: candidate, fragmentsBefore: source.originalFragments===undefined?source.fragments:source.originalFragments, materials: materials,conversionPool:source.conversionPool });
       candidateIds.set(candidate, id); return id;
     }
     function visit(node) {
@@ -123,6 +124,7 @@
     var detail = Object.assign({}, base, { items: items, investedCount: 0, ownedInvestedCount: 0, newInvestedCount: 0,
       ownedPhysicalCount: 0, newPhysicalCount: 0, ownedModifiedInvestedCount: 0, newModifiedInvestedCount: 0 });
     var pieces = 0;
+    var allocation=packed.conversionPool?CORE.allocateConvertedInventory(data,beast,packed.conversionPool,items):null;
     items.forEach(function (item) {
       var weight = item.count * item.sevenRankEquivalent, owned = item.source === 'owned';
       detail.investedCount += weight;
@@ -131,6 +133,12 @@
       if (item.modificationId !== 'none') detail[owned ? 'ownedModifiedInvestedCount' : 'newModifiedInvestedCount'] += weight;
       pieces += item.count * Math.ceil(item.researchEach / data.resourceRules.organPieceDivisor);
     });
+    if(allocation){
+      detail.items=allocation.items;detail.investedCount=allocation.invested;detail.ownedInvestedCount=allocation.owned;detail.newInvestedCount=allocation.newCount;
+      detail.ownedPhysicalCount=allocation.ownedPhysical;detail.newPhysicalCount=allocation.newPhysical;
+      detail.ownedModifiedInvestedCount=allocation.ownedModified;detail.newModifiedInvestedCount=allocation.newModified;
+      detail.inventoryConversion=allocation.inventoryConversion;
+    }
     var fragments = Math.max(0, detail.newInvestedCount * beast.fragmentsPerBody - packed.fragmentsBefore);
     var cost = CORE.calculateSchoolReferenceCost(data, { awakeningBlueprints: 0, beasts: [{ beastId: beast.id, fragments: fragments }] }, settings);
     detail.resources = Object.assign({}, base.resources, { organPieces: pieces, fragments: fragments,

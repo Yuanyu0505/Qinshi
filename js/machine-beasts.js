@@ -517,6 +517,144 @@
     return types.filter(function (item) { return item.researchEach > 0; });
   }
 
+  function baseBodies(rank) { return rank > 7 ? Math.pow(2, rank - 7) : 1; }
+  function conversionMaterials(data, beast, progress, config) {
+    var origins = [], excluded=[], limits = config.ownedLimits || {};
+    data.modifications.forEach(function (mod) {
+      Object.keys(progress.inventory[mod.id] || {}).forEach(function (key) {
+        var rank = integer(key), recorded=progress.inventory[mod.id][key],count=config.useOwnedInventory===false?0:recorded;
+        if (limits[mod.id] && Object.prototype.hasOwnProperty.call(limits[mod.id], key)) count = Math.min(count, integer(limits[mod.id][key]));
+        if (count > 0) origins.push({ rank: rank, modificationId: mod.id, count: count, weight: baseBodies(rank), researchEach: researchFor(data, beast, rank, mod.id) });
+        if(recorded>count)excluded.push({rank:rank,modificationId:mod.id,count:recorded-count,researchEach:researchFor(data,beast,rank,mod.id)});
+      });
+    });
+    origins.sort(function (a,b) { return a.weight-b.weight || a.modificationId.localeCompare(b.modificationId) || a.rank-b.rank; });
+    var pool = { origins: origins, excluded:excluded,baseCount: origins.reduce(function (n,o) { return n+o.count*o.weight; },0) };
+    var maximumRank = config.newRankMode === 'zero' ? 0 : config.allowNewHighRanks ? beast.maxRank : Math.min(7, beast.maxRank);
+    var types = [];
+    origins.forEach(function (o) {
+      // Plain forms inside the processing domain are identical to pool output.
+      // Only zero-only explicitly permits original forms above that domain.
+      if (config.newRankMode !== 'zero' && o.rank > maximumRank) return;
+      if (o.rank <= maximumRank && (o.modificationId === 'none' || !config.plainOnly && beast.quality==='orange' && config.allowNewModifications)) return;
+      if (config.plainOnly && o.modificationId !== 'none') return;
+      types.push(Object.assign({ source:'owned', available:o.count },o));
+    });
+    for (var rank=0;rank<=maximumRank;rank++) data.modifications.forEach(function (mod) {
+      if (mod.id !== 'none' && (config.plainOnly || beast.quality !== 'orange' || !config.allowNewModifications)) return;
+      var research=researchFor(data,beast,rank,mod.id);
+      if (research) types.push({source:'new',rank:rank,modificationId:mod.id,researchEach:research,weight:baseBodies(rank),available:null});
+    });
+    types.forEach(function (t) { t.blueprints=Math.ceil(t.researchEach/data.resourceRules.blueprintDivisor);t.pieces=Math.ceil(t.researchEach/data.resourceRules.organPieceDivisor); });
+    return {pool:pool,types:types};
+  }
+
+  // Reserve original inputs first, then fund all processed inputs from the SAME
+  // remaining original stock. Allocation is deterministic, not another solution.
+  function allocateConvertedInventory(data, beast, pool, rawItems) {
+    var remaining=pool.origins.map(function(o){return Object.assign({},o);}),items=[],sources=[],unused=(pool.excluded||[]).map(function(o){return Object.assign({},o);}),remainingBase=0;
+    rawItems.filter(function(i){return i.source==='owned';}).forEach(function(i){
+      var origin=remaining.find(function(o){return o.rank===i.rank&&o.modificationId===i.modificationId;});
+      if(!origin||origin.count<i.count)throw Error('库存原形投入超出使用上限');
+      origin.count-=i.count;items.push(Object.assign({},i));
+    });
+    var processing=[];
+    rawItems.filter(function(i){return i.source!=='owned';}).forEach(function(i){
+      var weight=baseBodies(i.rank),same=remaining.find(function(o){return o.rank===i.rank&&o.modificationId===i.modificationId;}),unchanged=same?Math.min(i.count,same.count):0;
+      if(unchanged){same.count-=unchanged;items.push(Object.assign({},i,{source:'owned',count:unchanged}));}
+      if(i.count>unchanged)processing.push(Object.assign({},i,{count:i.count-unchanged}));
+    });
+    var credit=remaining.reduce(function(n,o){return n+o.count*o.weight;},0),usedProcessed=0;
+    processing.forEach(function(i){
+      var weight=baseBodies(i.rank),requested=i.count,owned=Math.min(requested,Math.floor(credit/weight));
+      if(owned){items.push(Object.assign({},i,{source:'owned',count:owned,converted:true}));credit-=owned*weight;usedProcessed+=owned*weight;}
+      var left=requested-owned;
+      if(left&&credit){var used=credit;items.push(Object.assign({},i,{count:1,converted:true,ownedBaseBodies:used,newBaseBodies:weight-used}));usedProcessed+=used;credit=0;left--;}
+      if(left)items.push(Object.assign({},i,{count:left}));
+    });
+    var needed=usedProcessed;
+    remaining.forEach(function(o){
+      var count=Math.min(o.count,Math.ceil(needed/o.weight));
+      if(count){var supplied=count*o.weight,used=Math.min(needed,supplied);needed-=used;remainingBase+=supplied-used;sources.push(Object.assign({},o,{count:count,baseBodies:supplied,sevenRankEquivalent:o.weight}));o.count-=count;}
+      if(o.count)unused.push({rank:o.rank,modificationId:o.modificationId,count:o.count,researchEach:o.researchEach});
+    });
+    if(remainingBase)unused.push({rank:0,modificationId:'none',count:remainingBase,researchEach:researchFor(data,beast,0,'none'),converted:true});
+    var total=rawItems.reduce(function(n,i){return n+i.count*baseBodies(i.rank);},0),added=Math.max(0,total-pool.baseCount);
+    var allocatedNew=items.reduce(function(n,i){return n+(i.source==='owned'?0:i.newBaseBodies===undefined?i.count*baseBodies(i.rank):i.newBaseBodies);},0);
+    if(allocatedNew!==added)throw Error('库存转换本体分配不守恒');
+    return {items:items,unused:unused,invested:total,newCount:added,owned:total-added,
+      ownedPhysical:items.filter(function(i){return i.source==='owned';}).reduce(function(n,i){return n+i.count;},0),
+      newPhysical:items.filter(function(i){return i.source!=='owned';}).reduce(function(n,i){return n+i.count;},0),
+      ownedModified:items.filter(function(i){return i.source==='owned'&&i.modificationId!=='none';}).reduce(function(n,i){return n+i.count*baseBodies(i.rank);},0),
+      newModified:items.filter(function(i){return i.source!=='owned'&&i.modificationId!=='none';}).reduce(function(n,i){return n+i.count*baseBodies(i.rank);},0),
+      inventoryConversion:{sources:sources,usedBaseBodies:usedProcessed,remainingBaseBodies:remainingBase,availableBaseBodies:pool.baseCount}};
+  }
+
+  // Sparse exact-research frontiers: both original inputs and processing use
+  // base-body budget n. Per-origin bounded processing prevents double spending;
+  // componentwise dominance is safe for every remaining type and shared fee.
+  function conversionCandidates(data, beast, progress, config, gap, terminalAllowed) {
+    var domain=conversionMaterials(data,beast,progress,config),types=domain.types,pool=domain.pool;
+    if(!gap||!types.length)return [];
+    function gcd(a,b){while(b){var c=a%b;a=b;b=c;}return a;}
+    var unit=types.reduce(function(n,t){return gcd(n,t.researchEach);},0),stop=Math.ceil(gap/unit);
+    var maximum=Math.max.apply(null,types.map(function(t){return t.researchEach/unit;}));
+    var rows=Array(stop+maximum),limited=beast.quality!=='orange'&&config.bluePurpleInventoryOnly!==false;
+    rows[0]=[{r:0,n:0,m:0,b:0,p:0,counts:Array(types.length).fill(0)}];
+    function stable(counts){return counts.map(function(n){return String(n).padStart(16,'0');}).join('');}
+    function put(from,index,quantity){
+      var type=types[index],r=from.r+type.researchEach/unit*quantity,n=from.n+type.weight*quantity;
+      if(r>=rows.length||(!terminalAllowed&&r>=stop)||limited&&n>pool.baseCount)return;
+      var m=from.m+(type.modificationId==='none'?0:type.weight*quantity),b=from.b+type.blueprints*quantity,p=from.p+type.pieces*quantity;
+      var bucket=rows[r]||[],counts=from.counts.slice();counts[index]+=quantity;
+      for(var i=0;i<bucket.length;i++){
+        var old=bucket[i];
+        if(old.n<=n&&old.m<=m&&old.b<=b&&old.p<=p){
+          if(old.n!==n||old.m!==m||old.b!==b||old.p!==p||stable(old.counts)<=stable(counts))return;
+        }
+      }
+      bucket=bucket.filter(function(old){return !(n<=old.n&&m<=old.m&&b<=old.b&&p<=old.p);});
+      bucket.push({r:r,n:n,m:m,b:b,p:p,counts:counts});rows[r]=bucket;
+    }
+    types.forEach(function(type,index){
+      if(type.available!==null){
+        var left=Math.min(type.available,Math.ceil(gap/type.researchEach)),chunk=1;
+        while(left>0){var q=Math.min(left,chunk);for(var r=stop-1;r>=0;r--)if(rows[r])rows[r].slice().forEach(function(s){put(s,index,q);});left-=q;chunk*=2;}
+      }else for(var r=0;r<stop;r++)if(rows[r])rows[r].slice().forEach(function(s){put(s,index,1);});
+    });
+    var compact=new Map(),start=levelForResearch(progress.research,data.researchThresholds,beast.maxLevel);
+    rows.forEach(function(bucket){if(!bucket)return;bucket.forEach(function(s){
+      if(!s.r)return;
+      var research=s.r*unit,level=levelForResearch(progress.research+research,data.researchThresholds,beast.maxLevel);
+      if(level<=start)return;
+      var key=[level,s.n,s.b,s.m,s.p].join('/'),prior=compact.get(key),order=stable(s.counts);
+      if(prior&&(prior.research<research||prior.research===research&&prior.stable<=order))return;
+      var rawItems=[];s.counts.forEach(function(count,index){if(count){var t=types[index];rawItems.push({source:t.source,rank:t.rank,modificationId:t.modificationId,count:count,researchEach:t.researchEach,sevenRankEquivalent:t.weight});}});
+      var allocation=allocateConvertedInventory(data,beast,pool,rawItems);
+      compact.set(key,Object.assign(allocation,{endLevel:level,research:research,blueprints:s.b,pieces:s.p,modified:s.m,stable:order,rawItems:rawItems}));
+    });});
+    return Array.from(compact.values());
+  }
+
+  function conversionInvestmentPlan(data,beast,progress,config,targetLevel) {
+    var target=thresholdForLevel(targetLevel,data.researchThresholds),current=levelForResearch(progress.research,data.researchThresholds,beast.maxLevel),gap=Math.max(0,target-progress.research);
+    if(!gap)return emptyPlan(data,beast,progress,current,targetLevel,target);
+    var candidates=conversionCandidates(data,beast,progress,Object.assign({},config,{bluePurpleInventoryOnly:false}),gap,true),best=null;
+    candidates.forEach(function(r){
+      if(r.research<gap)return;
+      var state={items:r.items,newCount:r.newCount,newInvestedCount:r.newCount,research:r.research,awakeningBlueprints:r.blueprints,organPieces:r.pieces};
+      var metrics=planMetrics(state,gap,beast,progress,data,Object.assign({},config,{investedCountMode:'equivalent'}));
+      var candidate={state:state,metrics:metrics,raw:r};
+      if(betterPlan(candidate,best,true,config.useOwnedInventory!==false))best=candidate;
+    });
+    if(!best)return {valid:false,errors:['当前条件下无法生成库存转换方案']};
+    var r=best.raw,missing=best.metrics.missingFragments,contribution=beast.contributionPerFragment===null?null:missing*beast.contributionPerFragment;
+    return {valid:true,errors:[],current:{level:current,research:progress.research},target:{level:targetLevel,research:target,deficit:gap},
+      selected:{ownedItems:r.items.filter(function(i){return i.source==='owned';}),newItems:r.items.filter(function(i){return i.source!=='owned';})},unused:r.unused,inventoryConversion:r.inventoryConversion,
+      totals:{investedCount:r.invested,newInvestedCount:r.newCount,research:r.research,overflow:r.research-gap,awakeningBlueprints:r.blueprints,organPieces:r.pieces,projectedLevel:r.endLevel},
+      shortage:{bodies:r.newCount,bodyEquivalent:r.newCount,fragments:missing},exchange:{available:contribution!==null,contribution:contribution,yuan:contribution===null?null:Math.ceil(contribution/contributionPerYuan(data))}};
+  }
+
   function minimumInvestedCount(deficit, newMaximumResearch, owned) {
     var premiums = [];
     owned.forEach(function (type) {
@@ -577,9 +715,9 @@
     };
   }
 
-  function betterPlan(candidate, best, preferOwned) {
+  function betterPlan(candidate, best, preferOwned, stockFirst) {
     if (!best) return true;
-    var keys = preferOwned ? ["investedCount", "newInvestedCount", "overflow", "missingFragments", "contribution", "yuan", "awakeningBlueprints", "organPieces"] :
+    var keys = stockFirst ? ["newInvestedCount", "investedCount", "overflow", "missingFragments", "contribution", "yuan", "awakeningBlueprints", "organPieces"] : preferOwned ? ["investedCount", "newInvestedCount", "overflow", "missingFragments", "contribution", "yuan", "awakeningBlueprints", "organPieces"] :
       ["investedCount", "overflow", "missingFragments", "contribution", "yuan", "awakeningBlueprints", "organPieces"];
     for (var index = 0; index < keys.length; index += 1) {
       if (candidate.metrics[keys[index]] !== best.metrics[keys[index]]) {
@@ -618,7 +756,17 @@
     owned.forEach(function (item) { maximumResearch = Math.max(maximumResearch, item.researchEach); });
     var limit = maximumDeficit + maximumResearch;
     var maximumInvestedCount = Math.ceil(maximumDeficit / bestNewType.researchEach) * bestNewType.investedWeight + bestNewType.investedWeight;
-    var ownedStates = buildBoundedStates(owned, maximumInvestedCount, limit, data);
+    var ownedMaximumCount = maximumInvestedCount;
+    if (config.prioritizeOwnedInventory && config.useOwnedInventory !== false && owned.length) {
+      // Stock-first may need MORE total bodies than the all-new minimum. Any
+      // irredundant owned subset has weight <= (gap-1)/minRate + maxWeight.
+      // Never cap it at the count of a newly purchased high-rank solution.
+      var minimumOwnedRate = Math.min.apply(null, owned.map(function (type) { return type.researchEach / type.investedWeight; }));
+      var maximumOwnedWeight = Math.max.apply(null, owned.map(function (type) { return type.investedWeight; }));
+      var availableWeight = owned.reduce(function (sum, type) { return sum + type.available * type.investedWeight; }, 0);
+      ownedMaximumCount = Math.min(availableWeight, Math.floor((maximumDeficit - 1) / minimumOwnedRate) + maximumOwnedWeight);
+    }
+    var ownedStates = buildBoundedStates(owned, ownedMaximumCount, limit, data);
     return {
       beastId: beast.id,
       progressResearch: progress.research,
@@ -648,6 +796,7 @@
     if (targetLevel > beast.maxLevel) errors.push("目标研发等级不能超过该机关兽研发上限");
     if (!data.researchThresholds[targetLevel]) errors.push("目标研发等级无对应累计研发度");
     if (errors.length) return { valid: false, errors: errors };
+    if (config.convertOwnedInventory) return conversionInvestmentPlan(data,beast,progress,config,targetLevel);
     var targetResearch = thresholdForLevel(targetLevel, data.researchThresholds);
     var deficit = Math.max(0, targetResearch - progress.research);
     if (!deficit) return emptyPlan(data, beast, progress, currentLevel, targetLevel, targetResearch);
@@ -667,6 +816,25 @@
     var newStateCache = workspace.newStateCache;
     var newStateMinimums = workspace.newStateMinimums;
     var best = null;
+    var stockFirst = config.prioritizeOwnedInventory && config.useOwnedInventory !== false;
+
+    function considerCounts(ownedCount, newCount, minimumNeeded) {
+      if (!ownedStates[ownedCount] || !ownedStates[ownedCount].size) return;
+      if (stockFirst && best && ownedCount + newCount > best.metrics.investedCount) return;
+      if (!newStateCache[newCount] || newStateMinimums[newCount] > minimumNeeded) {
+        newStateCache[newCount] = buildExactUnlimitedStates(purchasable, newCount, minimumNeeded, limit, data);
+        newStateMinimums[newCount] = minimumNeeded;
+      }
+      if (!newStateCache[newCount].length) return;
+      ownedStates[ownedCount].forEach(function (ownedState) {
+        var addedState = lowerBound(newStateCache[newCount], Math.max(0, deficit - ownedState.research));
+        if (!addedState) return;
+        var state = combineStates(ownedState, addedState);
+        if (state.research < deficit) return;
+        var candidate = { state: state, metrics: planMetrics(state, deficit, beast, progress, data, config) };
+        if (betterPlan(candidate, best, config.preferOwnedOnTie, stockFirst)) best = candidate;
+      });
+    }
 
     // 即使假定最佳库存可以无限使用，少于此投入数也不可能达标。
     // 采用单位投入研发度，兼容高阶机关兽的七阶等价权重。
@@ -675,25 +843,22 @@
     }));
     var minimumCount = Math.ceil(deficit / maximumResearchPerInvestment);
 
-    for (var totalCount = minimumCount; totalCount <= maximumInvestedCount && !best; totalCount += 1) {
+    if (stockFirst) {
+      var ownedMaximumResearch = workspace.ownedMaximums.reduce(function (maximum, research) { return Math.max(maximum, research); }, 0);
+      var minimumNeeded = Math.max(0, deficit - ownedMaximumResearch);
+      var maximumNewRate = Math.max.apply(null, purchasable.map(function (type) { return type.researchEach / type.investedWeight; }));
+      // Enumerate new investment first, then all bounded owned counts. Only
+      // stop after every owned combination for this new count is compared.
+      for (var newCount = Math.ceil(minimumNeeded / maximumNewRate); newCount <= maximumInvestedCount && !best; newCount += 1) {
+        for (var ownedCount = 0; ownedCount < ownedStates.length; ownedCount += 1) considerCounts(ownedCount, newCount, minimumNeeded);
+      }
+    } else for (var totalCount = minimumCount; totalCount <= maximumInvestedCount && !best; totalCount += 1) {
       for (var ownedCount = 0; ownedCount <= totalCount; ownedCount += 1) {
         var newCount = totalCount - ownedCount;
         if (!ownedStates[ownedCount] || !ownedStates[ownedCount].size) continue;
         var minimumNeeded = Math.max(0, deficit - workspace.ownedMaximums[ownedCount]);
         // 缓存可供更高缺口复用；缺口变小时必须重建，不能漏掉低研发组合。
-        if (!newStateCache[newCount] || newStateMinimums[newCount] > minimumNeeded) {
-          newStateCache[newCount] = buildExactUnlimitedStates(purchasable, newCount, minimumNeeded, limit, data);
-          newStateMinimums[newCount] = minimumNeeded;
-        }
-        if (!newStateCache[newCount].length) continue;
-        ownedStates[ownedCount].forEach(function (ownedState) {
-          var addedState = lowerBound(newStateCache[newCount], Math.max(0, deficit - ownedState.research));
-          if (!addedState) return;
-          var state = combineStates(ownedState, addedState);
-          if (state.research < deficit) return;
-          var candidate = { state: state, metrics: planMetrics(state, deficit, beast, progress, data, config) };
-          if (betterPlan(candidate, best, config.preferOwnedOnTie)) best = candidate;
-        });
+        considerCounts(ownedCount, newCount, minimumNeeded);
       }
     }
 
@@ -743,6 +908,7 @@
     var currentLevel = levelForResearch(progress.research, data.researchThresholds, beast.maxLevel);
     var maximumTargetLevel = Math.min(beast.maxLevel, Math.max(currentLevel,
       integer(config.maximumTargetLevel, beast.maxLevel)));
+    if(config.convertOwnedInventory){var converted=[];for(var target=currentLevel+1;target<=maximumTargetLevel;target++)converted.push(calculateInvestmentPlan(data,beast,progress,Object.assign({},config,{targetLevel:target})));return converted;}
     var workspace = buildInvestmentWorkspace(data, beast, progress, config, maximumTargetLevel);
     if (!workspace) return [];
     var results = [];
@@ -768,6 +934,9 @@
     normalizeBeastProgress: normalizeBeastProgress,
     schoolSnapshot: schoolSnapshot,
     researchFor: researchFor,
+    conversionMaterials: conversionMaterials,
+    allocateConvertedInventory: allocateConvertedInventory,
+    conversionCandidates: conversionCandidates,
     calculateInvestmentPlan: calculateInvestmentPlan,
     calculateInvestmentCandidates: calculateInvestmentCandidates
   };

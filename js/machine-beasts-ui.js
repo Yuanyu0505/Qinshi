@@ -547,9 +547,9 @@
 
   function newRankModeSelector(scope, selected) {
     var name = "machine-" + scope + "-new-rank-mode";
-    return '<div class="machine-new-rank-mode"><span>新增机关兽阶数范围</span>' +
+    return '<div class="machine-new-rank-mode"><span>新增与转换阶数范围</span>' +
       '<label><input type="radio" name="' + name + '" value="zero" data-new-rank-mode-scope="' + scope + '"' + (selected === "zero" ? " checked" : "") + '>仅0阶</label>' +
-      '<label><input type="radio" name="' + name + '" value="zeroToSeven" data-new-rank-mode-scope="' + scope + '"' + (selected !== "zero" ? " checked" : "") + '>0–7阶</label></div>';
+      '<label><input type="radio" name="' + name + '" value="zeroToSeven" data-new-rank-mode-scope="' + scope + '"' + (selected !== "zero" ? " checked" : "") + '>0–7阶</label><small>仅0阶仍可原形投入；转换时改造归0</small></div>';
   }
 
   function resetCalculator(beastId) {
@@ -691,7 +691,7 @@
       '</section><section class="panel machine-school-strategy"><h2>策略与价格</h2>' +
       '<div class="machine-school-options"><label><input type="checkbox" data-school-option="useOwnedInventory"' + (draft.useOwnedInventory ? ' checked' : '') + '>使用已有库存</label>' +
       '<label><input type="checkbox" data-reference-cost-field="bluePurpleInventoryOnly"' + (state.referenceCostDraft.bluePurpleInventoryOnly !== false ? ' checked' : '') + '>蓝紫本体仅使用库存</label>' +
-      '<label><input type="checkbox" data-school-option="allowNewHighRanks"' + (draft.allowNewHighRanks ? ' checked' : '') + (draft.newRankMode === "zero" ? ' disabled' : '') + '>允许新增8–10阶</label>' +
+      '<label><input type="checkbox" data-school-option="allowNewHighRanks"' + (draft.allowNewHighRanks ? ' checked' : '') + (draft.newRankMode === "zero" ? ' disabled' : '') + '>允许加工及新增8–10阶</label>' +
       '<label><input type="checkbox" data-school-option="allowNewModifications"' + (draft.allowNewModifications ? ' checked' : '') + '>允许新增改造机关兽</label></div>' +
       newRankModeSelector("school", draft.newRankMode) +
       disclosure('school:rules', '查看库存限制、比较规则与完整说明', '<p class="muted-tip">蓝紫限制开启后，只允许使用已保存的完整蓝紫库存及指定阶数使用上限，不会通过碎片补出新本体；关闭使用已有库存时，蓝紫不能新增投入。蓝紫本体获取成本未计入，神图等其他消耗正常计价。</p><p class="muted-tip">两套方案都必须精确达到目标累计等级，不得超额培养；已达到或超过目标则不再投入。投入最小方案：已计价元宝最少 → 新增效果节点最多 → 等级内研发度溢出最少 → 神图总消耗最少。最多效果档位方案：新增效果节点最多 → 已计价元宝最少 → 溢出最少 → 神图总消耗最少。允许改造参与时，两套目标均先比较改造本体折算投入数量（已有与新增均计入），再按上述顺序比较；实质指标完全相同时保留全部同等最优组合，稳定键仅决定主展示顺序，其他组合在培养材料中查看。新增节点按实际effects统计；高档替换低档，最终仅生效最高已解锁档位。</p>') +
@@ -740,8 +740,15 @@
     return items.length ? '<ul>' + items.map(function (item) {
       if (!emphasizeRequirement) return '<li>' + escapeHtml(itemLabel(item)) + '</li>';
       var emphasisClass = emphasizeRequirement === "owned" ? "machine-owned-investment" : "machine-investment-demand";
-      return '<li><strong class="' + emphasisClass + '">' + escapeHtml(itemRequirementLabel(item)) + '</strong><span>，单只' + formatNumber(item.researchEach) + '研发度</span></li>';
+      var mixed=item.ownedBaseBodies?'（库存'+item.ownedBaseBodies+'＋新增'+item.newBaseBodies+'只0阶本体）':'';
+      return '<li><strong class="' + emphasisClass + '">' + escapeHtml(itemRequirementLabel(item)) + '</strong><span>，单只' + formatNumber(item.researchEach) + '研发度'+mixed+'</span></li>';
     }).join("") + '</ul>' : '<p class="muted-tip">' + escapeHtml(empty) + '</p>';
+  }
+
+  function conversionSummary(conversion) {
+    if(!conversion||!conversion.sources.length)return '';
+    return '<section class="machine-inventory-conversion"><h4>库存转换</h4>'+itemList(conversion.sources,'')+
+      '<p>提供'+conversion.sources.reduce(function(n,s){return n+s.baseBodies;},0)+'只0阶本体，使用'+conversion.usedBaseBodies+'只，余下'+conversion.remainingBaseBodies+'只；还原时改造归0</p></section>';
   }
 
   function renderCalculatorResult(result, scroll) {
@@ -762,15 +769,15 @@
       ? '<div><span>仍需贡献</span><b>' + formatNumber(result.exchange.contribution) + '</b></div><div><span>约需元宝</span><b>' + formatNumber(result.exchange.yuan) + '</b></div>'
       : '<div class="machine-no-exchange"><span>贡献兑换</span><b>该档次不可通过贡献兑换碎片</b></div>';
     el.calculatorResult.innerHTML = '<section class="panel machine-result"><div class="machine-result-head"><div><h2>' + escapeHtml(beastById(state.calcBeastId).name) + '升至' + result.target.level + '级</h2></div><b>计算结果</b></div>' +
-      resultNavigation() + '<p class="machine-exact-target">当前 ' + result.current.level + '级 → 目标 ' + result.target.level + '级</p><div class="machine-summary-priority machine-single-priority"><div><span>预计达到</span><b>' + result.totals.projectedLevel + '级</b></div><div><span>新增完整机关兽需求</span><b>' + newPhysical + '只</b></div><div><span>神图缺口</span><b data-single-priority-blueprints>' + (reference ? formatNumber(reference.blueprints.missing) : '请修正参考设置') + '</b></div><div><span>参考元宝（不参与单兽排序）</span><b class="machine-money" data-single-priority-yuan>' + (reference && reference.complete ? formatNumber(reference.totalYuan) : '费用未完整计价') + '</b></div></div>' +
+      resultNavigation() + '<p class="machine-exact-target">当前 ' + result.current.level + '级 → 目标 ' + result.target.level + '级</p><div class="machine-summary-priority machine-single-priority"><div><span>预计达到</span><b>' + result.totals.projectedLevel + '级</b></div><div><span>'+(result.inventoryConversion?'新增0阶本体需求':'新增完整机关兽需求')+'</span><b>' + (result.inventoryConversion?result.totals.newInvestedCount:newPhysical) + '只</b></div><div><span>神图缺口</span><b data-single-priority-blueprints>' + (reference ? formatNumber(reference.blueprints.missing) : '请修正参考设置') + '</b></div><div><span>参考元宝（不参与单兽排序）</span><b class="machine-money" data-single-priority-yuan>' + (reference && reference.complete ? formatNumber(reference.totalYuan) : '费用未完整计价') + '</b></div></div>' +
       disclosure(detailKey + ':metrics', '研发度、投入与全部资源指标', '<div class="machine-result-metrics"><div><span>当前等级</span><b>' + result.current.level + '级</b></div><div><span>当前研发度</span><b>' + formatNumber(result.current.research) + '</b></div>' +
       '<div><span>目标研发度</span><b>' + formatNumber(result.target.research) + '</b></div><div><span>仍缺研发度</span><b>' + formatNumber(result.target.deficit) + '</b></div>' +
-      '<div><span>投入总只数</span><b>' + result.totals.investedCount + '</b></div><div><span>投入研发度</span><b>' + formatNumber(result.totals.research) + '</b></div>' +
+      '<div><span>'+(result.inventoryConversion?'0阶本体折算投入':'投入总只数')+'</span><b>' + result.totals.investedCount + '</b></div><div><span>投入研发度</span><b>' + formatNumber(result.totals.research) + '</b></div>' +
       '<div><span>溢出研发度</span><b>' + formatNumber(result.totals.overflow) + '</b></div><div><span>预计达到</span><b>' + result.totals.projectedLevel + '级</b></div></div>' +
       '<div class="machine-result-metrics machine-resource-metrics"><div><span>觉醒神图</span><b>' + formatNumber(result.totals.awakeningBlueprints) + '</b></div><div><span>机关破片</span><b>' + formatNumber(result.totals.organPieces) + '</b></div>' +
       '<div><span>本体缺口</span><b>' + result.shortage.bodyEquivalent + '本体</b></div><div><span>机关兽碎片缺口</span><b>' + formatNumber(result.shortage.fragments) + '</b></div>' + exchange + '</div>') +
       '<div class="machine-result-columns"><article><h3>使用已有库存</h3>' + itemList(result.selected.ownedItems, "不使用已有完整机关兽", "owned") + '</article>' +
-      '<article><h3>新增投入</h3>' + itemList(result.selected.newItems, "无需新增机关兽", true) + '</article></div>' +
+      '<article><h3>新增投入</h3>' + itemList(result.selected.newItems, "无需新增机关兽", true) + '</article></div>' + conversionSummary(result.inventoryConversion) +
       '<p class="machine-final-effect">最终最高生效效果：' + (finalEffect ? finalEffect.level + '级档位 · ' + escapeHtml(finalEffect.text) : '尚未解锁效果') + '</p>' +
       disclosure(detailKey + ':cost', '参考成本明细', costSlot("single", requirements)) +
       '<details class="machine-unused machine-disclosure" data-detail-key="' + detailKey + ':unused"><summary>查看未使用库存（' + result.unused.reduce(function (total, item) { return total + item.count; }, 0) + '只）</summary>' + itemList(result.unused.map(function (item) { return Object.assign({ source: "owned", sevenRankEquivalent: item.rank > 7 ? Math.pow(2, item.rank - 7) : 1 }, item); }), "无未使用库存") + '</details></section>';
@@ -797,8 +804,8 @@
     var ownedItems = detail.items.filter(function (item) { return item.source === "owned"; });
     var newItems = detail.items.filter(function (item) { return item.source === "new"; });
     return '<article class="machine-school-plan-beast"><header><strong>' + escapeHtml(detail.beastName) + '</strong><b>' + detail.startLevel + '级 → ' + detail.endLevel + '级</b></header>' +
-      '<div class="machine-card-primary machine-plan-primary" tabindex="0" role="region" aria-label="效果节点与已有新增投入，可横向滚动"><span>新增效果节点 <b>' + formatNumber(detail.unlockedEffects) + '</b></span><span class="machine-owned-investment">已有投入 <b>' + ownedItems.reduce(function (sum, item) { return sum + item.count; }, 0) + '只</b></span><span class="machine-investment-demand">新增投入 <b>' + newItems.reduce(function (sum, item) { return sum + item.count; }, 0) + '只</b></span></div>' +
-      '<article class="machine-school-plan-material"><h3>使用已有库存</h3>' + itemList(ownedItems, "不使用已有完整机关兽", "owned") + '</article><article class="machine-school-plan-material"><h3>新增投入</h3>' + itemList(newItems, "无需新增机关兽", true) + '</article>' +
+      '<div class="machine-card-primary machine-plan-primary" tabindex="0" role="region" aria-label="效果节点与已有新增投入，可横向滚动"><span>新增效果节点 <b>' + formatNumber(detail.unlockedEffects) + '</b></span><span class="machine-owned-investment">已有投入 <b>' + (detail.inventoryConversion?detail.ownedInvestedCount:ownedItems.reduce(function (sum, item) { return sum + item.count; }, 0)) + '只</b></span><span class="machine-investment-demand">新增投入 <b>' + (detail.inventoryConversion?detail.newInvestedCount:newItems.reduce(function (sum, item) { return sum + item.count; }, 0)) + '只</b></span></div>' +
+      '<article class="machine-school-plan-material"><h3>使用已有库存</h3>' + itemList(ownedItems, "不使用已有完整机关兽", "owned") + '</article><article class="machine-school-plan-material"><h3>新增投入</h3>' + itemList(newItems, "无需新增机关兽", true) + '</article>' + conversionSummary(detail.inventoryConversion) +
       '<div class="machine-school-plan-beast-metrics" tabindex="0" role="region" aria-label="研发度增长与溢出，可横向滚动"><span>研发度 ' + formatNumber(detail.startResearch) + ' → ' + formatNumber(detail.endResearch) + '</span><span>增加 ' + formatNumber(detail.addedResearch) + '</span><span>溢出 ' + formatNumber(detail.overflowResearch) + '</span></div>' +
       '<div class="machine-school-plan-resources"><span>折算投入 <b>' + detail.investedCount + '只</b></span><span>新增效果节点 <b>' + formatNumber(detail.unlockedEffects) + '</b></span><span>最终生效档位 <b>' + (detail.finalEffect ? detail.finalEffect.level + '级' : '尚未解锁') + '</b></span><span>机关兽碎片缺口 <b>' + formatNumber(detail.resources.fragments) + '</b></span><span>神图总消耗 <b>' + formatNumber(detail.resources.awakeningBlueprints) + '</b></span><span>机关破片 <b>' + formatNumber(detail.resources.organPieces) + '</b></span><span>改造本体折算投入 <b>' + formatNumber(detail.modifiedInvestedCount) + '</b>（已有 ' + formatNumber(detail.ownedModifiedInvestedCount) + '／新增 ' + formatNumber(detail.newModifiedInvestedCount) + '）</span></div></article>';
   }
@@ -846,8 +853,9 @@
 
   function schoolMaterialSummary(plan) {
     var counts = { owned: 0, new: 0 };
-    plan.beasts.forEach(function (detail) { detail.items.forEach(function (item) { counts[item.source] += item.count; }); });
-    return '已有 ' + counts.owned + '只／新增 ' + counts.new + '只 · 神图 ' + formatNumber(plan.totals.awakeningBlueprints);
+    var converted=false;
+    plan.beasts.forEach(function (detail) { if(detail.inventoryConversion){converted=true;counts.owned+=detail.ownedInvestedCount;counts.new+=detail.newInvestedCount;}else detail.items.forEach(function (item) { counts[item.source] += item.count; }); });
+    return '已有 ' + counts.owned + '只／新增 ' + counts.new + '只'+(converted?'0阶本体':'')+' · 神图 ' + formatNumber(plan.totals.awakeningBlueprints);
   }
 
   function schoolPriority(plan, result) {
@@ -868,7 +876,7 @@
     return '<section class="panel machine-result machine-school-plan" id="' + anchor + '"><div class="machine-result-head"><div><h2>' + escapeHtml(schoolPlanTitle(plan.kind)) + '</h2></div><b>' + result.target.stage + '阶 · 累计' + result.target.totalLevel + '级</b></div>' +
       '<nav class="machine-result-navigation"><a href="#machine-school-comparison" data-machine-jump>返回方案对照</a><a href="#machine-beast-calculator-controls" data-machine-jump>调整设置</a></nav>' + schoolPriority(plan, result) +
       disclosure(detailKey + ':metrics', '研发度、折算投入与全部资源指标', '<div class="machine-school-plan-summary"><div><span>当前累计等级</span><b>' + result.current.totalLevel + '</b></div><div><span>目标累计等级</span><b>' + result.target.totalLevel + '</b></div><div><span>推荐最终等级</span><b>' + totals.projectedTotalLevel + '</b></div><div><span>新增研发等级</span><b>' + (totals.projectedTotalLevel - result.current.totalLevel) + '</b></div>' +
-      '<div><span>折算投入总只数</span><b>' + totals.investedCount + '</b></div><div><span>已有完整机关兽消耗</span><b>' + physical.owned + '只</b><span>折算 ' + totals.ownedInvestedCount + '只</span></div><div><span>新增完整机关兽需求</span><b>' + physical.new + '只</b><span>折算 ' + totals.newInvestedCount + '只</span></div>' +
+      '<div><span>折算投入总只数</span><b>' + totals.investedCount + '</b></div><div><span>'+(plan.beasts.some(function(b){return b.inventoryConversion;})?'库存0阶本体投入':'已有完整机关兽消耗')+'</span><b>' + (plan.beasts.some(function(b){return b.inventoryConversion;})?totals.ownedInvestedCount:physical.owned) + '只</b><span>折算 ' + totals.ownedInvestedCount + '只</span></div><div><span>'+(plan.beasts.some(function(b){return b.inventoryConversion;})?'新增0阶本体需求':'新增完整机关兽需求')+'</span><b>' + (plan.beasts.some(function(b){return b.inventoryConversion;})?totals.newInvestedCount:physical.new) + '只</b><span>折算 ' + totals.newInvestedCount + '只</span></div>' +
       '<div><span>新增效果节点</span><b>' + formatNumber(totals.unlockedEffects) + '</b></div><div><span>研发度溢出</span><b>' + formatNumber(totals.overflowResearch) + '</b></div><div><span>觉醒神图总消耗</span><b>' + formatNumber(totals.awakeningBlueprints) + '</b></div>' +
       '<div><span>机关破片</span><b>' + formatNumber(totals.organPieces) + '</b></div><div><span>机关兽碎片缺口</span><b>' + formatNumber(totals.fragments) + '</b></div><div><span>已计价参考元宝' + (plan.cost && !plan.cost.complete ? '（已知小计）' : '') + '</span><b>' + formatNumber(plan.cost ? plan.cost.knownYuan : totals.pricedYuan) + '</b></div>' +
       '<div><span>改造本体折算投入</span><b>' + formatNumber(totals.modifiedInvestedCount) + '</b><span>已有 ' + formatNumber(totals.ownedModifiedInvestedCount) + '／新增 ' + formatNumber(totals.newModifiedInvestedCount) + '</span></div></div>') +
@@ -1320,6 +1328,8 @@
         useOwnedInventory: state.singleInventoryPolicy.useOwnedInventory,
         ownedLimits: state.singleInventoryPolicy.limits,
         newRankMode: state.singleNewRankMode,
+        convertOwnedInventory:true,
+        prioritizeOwnedInventory: true,
         preferOwnedOnTie: true
       } });
     } else if (action === "reload-school-calculator") {
@@ -1357,6 +1367,7 @@
         allowNewHighRanks: draft.allowNewHighRanks,
         allowNewModifications: draft.allowNewModifications,
         newRankMode: draft.newRankMode,
+        convertOwnedInventory:true,
         bluePurpleInventoryOnly: state.referenceCostDraft.bluePurpleInventoryOnly !== false,
         referenceCostSettings: CORE.normalizeReferenceCostSettings(DATA, state.referenceCostDraft)
       } });

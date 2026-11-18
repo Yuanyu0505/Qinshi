@@ -43,6 +43,7 @@
   // that a modified material can reach. Omit modifications only in a first
   // pass whose ZERO-modification exact school feasibility is explicitly proven.
   function materialTypes(data, beast, progress, config, gap) {
+    if(config.convertOwnedInventory)return CORE.conversionMaterials(data,beast,progress,config).types;
     var types = [], limits = config.ownedLimits || {};
     if (config.useOwnedInventory !== false) {
       data.modifications.forEach(function (mod) {
@@ -89,6 +90,7 @@
     var terminalAllowed = capLevel === beast.maxLevel;
     var gap = Math.max(0, CORE.thresholdForLevel(terminalAllowed ? capLevel : capLevel + 1, data.researchThresholds) - progress.research);
     if (!gap) return [];
+    if(config.convertOwnedInventory)return CORE.conversionCandidates(data,beast,progress,config,gap,terminalAllowed).filter(function(r){return r.endLevel<=capLevel;});
     var types = materialTypes(data, beast, progress, config, gap);
     // An optimal irredundant solution uses at most ceil(gap/r) copies of
     // any one rank. Sufficient same-rank owned stock can replace ALL new copies
@@ -227,7 +229,7 @@
     var cache = config.materialCache, typesKey = JSON.stringify([beast.quality, beast.maxLevel, beast.maxRank,
       progress.research, progress.inventory, config.ownedLimits || {}, config.useOwnedInventory !== false,
       config.bluePurpleInventoryOnly !== false, config.newRankMode || "zeroToSeven", !!config.allowNewHighRanks,
-      config.plainOnly, config.allowNewModifications, progress.showMods, config.maxAddedLevel]);
+      config.plainOnly, config.allowNewModifications, progress.showMods, config.maxAddedLevel,!!config.convertOwnedInventory]);
     var raw = cache && cache.get(typesKey);
     if (!raw) { raw = rawCandidates(data, beast, progress, config); if (cache) cache.set(typesKey, raw); }
     var byLevel = new Map(), costs = new Map();
@@ -250,6 +252,7 @@
         ownedPhysicalCount: r.ownedPhysical, newPhysicalCount: r.newPhysical,
         modifiedInvestedCount: r.modified, ownedModifiedInvestedCount: r.ownedModified, newModifiedInvestedCount: r.newModified,
         unlockedEffects: effectsBetween(beast, current, r.endLevel), stableKey: r.stable, items: r.items,
+        inventoryConversion:r.inventoryConversion,
         resources: { awakeningBlueprints: r.blueprints, organPieces: r.pieces,
           fragments: Math.max(0, r.newCount * beast.fragmentsPerBody - progress.fragments),
           contribution: cost.beasts.length ? cost.beasts[0].contribution : 0,
@@ -453,6 +456,12 @@
           // new types removed from the representative search by owned-stock ties.
           equivalentSources[beastId] = { fragments: current.fragments, types: materialTypes(data, beast, current, beastConfig,
             Math.max(0, CORE.thresholdForLevel(beast.maxLevel, data.researchThresholds) - current.research)) };
+          if(config.convertOwnedInventory){
+            var source=equivalentSources[beastId],domain=CORE.conversionMaterials(data,beast,current,beastConfig);
+            source.originalFragments=current.fragments;source.fragments+=domain.pool.baseCount*beast.fragmentsPerBody;
+            source.conversionPool=domain.pool;source.convertible=true;
+            source.baseLimit=beast.quality!=='orange'&&beastConfig.bluePurpleInventoryOnly!==false?domain.pool.baseCount:null;
+          }
         });
       }
       function exactReachable() {

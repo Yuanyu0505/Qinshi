@@ -39,9 +39,9 @@ test('every transcribed row retains columns and reachable sources; filtering nev
   assert.equal(ui.filterRows(table,'<script>','').length,0);
   assert.equal(JSON.stringify(table),before);
 });
-test('both speed rankings use the three user-confirmed disciple names',()=>{
+test('both speed rankings use the user-confirmed disciple names',()=>{
   const tables=require('../data/other-reference-tables-c.js').tables;
-  const names={'10102':'神贯侯钟离昧','10066':'神蚩魔卫庄','10096':'神鲨齿卫庄'};
+  const names={'10102':'神贯侯钟离昧','10066':'神蚩魔卫庄','10096':'神鲨齿卫庄','10085':'神赤霄刘季'};
   for(const id of ['speed-paid-ranking','speed-free-ranking']){
     const table=tables.find(t=>t.id===id);
     assert.equal(table.rows.length,47);

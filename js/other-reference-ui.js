@@ -36,9 +36,10 @@
   }
   // Presentation metadata only: the underlying tables and filter fields stay intact.
   function cleanSourceLabel(value){return String(value==null?'':value).replace(/[（(](?:原图|补图)\s*\d+[^）)]*[）)]/g,'').trim();}
-  function titleFor(table){var title=table.id==='elements-cost'?'气蕴需求数量对照':table.id==='elements-stones'?'五极石五行数量对照':table.id==='cards-substats-ratio'?'副属性比例':table.title;return cleanSourceLabel(title);}
+  function titleFor(table){var title=table.id==='elements-cost'?'气蕴需求数量对照':table.id==='elements-stones'?'五极石五行数量对照':table.id==='cards-substats-ratio'?'副属性比例':table.title;return cleanSourceLabel(title).replace(/原图/g,'');}
   function isMapping(table){return Boolean(table&&table.section==='elements'&&/mappings$/.test(table.id));}
   function cellHtml(table,column,value){
+    if(table.section==='speed'&&(column==='PVP速度'||column==='原图名次'))return '<span class="'+(column==='PVP速度'?'ref-speed-pvp':'ref-speed-rank')+'">'+esc(value)+'</span>';
     if(table.id==='elements-progression'&&String(value).includes('→'))return String(value).split('→').map(function(token){return '<span class="ref-quality-step">'+esc(token.trim())+'</span>';}).join(' → ');
     if(!isMapping(table)||column!=='气蕴组合')return esc(cleanSourceLabel(value));
     return String(value).split('、').map(function(part){var match=part.match(/^(.*)（([蓝紫橙红])）$/);return match?'<span class="ref-member ref-quality-'+({'蓝':'blue','紫':'purple','橙':'orange','红':'red'}[match[2]])+'">'+esc(match[1])+'</span>':esc(part);}).join('、');
@@ -130,6 +131,14 @@
       var level=body.querySelector('[data-ref-level-search]');if(level){var levels=Array.from(new Set(table.rows.flatMap(function(row){return row.slice(0,2);}).filter(function(v){return /^\d+级$/.test(v);})));level.innerHTML='<option value="">全部等级</option>'+levels.map(function(v){return '<option value="'+esc(v)+'">'+esc(v)+'</option>';}).join('');level.value=levels.includes(s.query)?s.query:'';}
     }
     function renderTable(table,rows){
+      // Fixed contributions remain in the source data and the components table.
+      if(table.id==='speed-free-ranking'){
+        var fixedColumns=['黑龙卷轴','焚天印','诸子卡','神行','兵法'];
+        var visible=table.columns.map(function(c,i){return fixedColumns.includes(c)?-1:i;}).filter(function(i){return i>=0;});
+        var sourceTable=table;
+        table=Object.assign({},table,{columns:visible.map(function(i){return sourceTable.columns[i];})});
+        rows=rows.map(function(row){return visible.map(function(i){return row[i];});});
+      }
       var s=state();
       if(!rows.length)return '<p class="ref-empty" role="status">未找到匹配资料。试试其他关键词，或清除筛选。</p>';
       if(table.id==='origins-all'&&s.view==='auto'){
@@ -145,7 +154,7 @@
       }
       if(/^speed-(paid|free)-ranking$/.test(table.id)){
         var name=table.columns.indexOf('神将名称'),panel=table.columns.indexOf('面板速度'),pvp=table.columns.indexOf('PVP速度'),order=[name,0,panel,pvp].concat(table.columns.map(function(c,i){return i;}).filter(function(i){return [name,0,panel,pvp].indexOf(i)<0;}));
-        if(s.view==='auto'&&host.getBoundingClientRect().width<760)return '<div class="ref-speed-cards"><div class="ref-speed-head"><span>原图名次／名称</span><span>面板</span><span>PVP</span></div>'+rows.map(function(row){return '<details class="ref-speed-row"><summary><span><small>原图第'+esc(row[0])+'名</small><strong>'+esc(row[name])+'</strong></span><b>'+esc(row[panel])+'</b><b>'+esc(row[pvp])+'</b></summary><div class="ref-detail-body"><dl>'+table.columns.map(function(c,i){return '<div><dt>'+esc(c)+'</dt><dd>'+esc(row[i])+'</dd></div>';}).join('')+'</dl></div></details>';}).join('')+'</div>';
+        if(s.view==='auto'&&host.getBoundingClientRect().width<760)return '<div class="ref-speed-cards"><div class="ref-speed-head"><span>原图名次／名称</span><span>面板</span><span>PVP</span></div>'+rows.map(function(row){return '<details class="ref-speed-row"><summary><span><small class="ref-speed-rank">原图第'+esc(row[0])+'名</small><strong>'+esc(row[name])+'</strong></span><b>'+esc(row[panel])+'</b><b class="ref-speed-pvp">'+esc(row[pvp])+'</b></summary><div class="ref-detail-body"><dl>'+table.columns.map(function(c,i){return '<div><dt>'+esc(c)+'</dt><dd>'+cellHtml(table,c,row[i])+'</dd></div>';}).join('')+'</dl></div></details>';}).join('')+'</div>';
         table=Object.assign({},table,{columns:order.map(function(i){return table.columns[i];})});rows=rows.map(function(row){return order.map(function(i){return row[i];});});
       }
       if(s.view==='cards')return '<div class="ref-card-grid">'+rows.map(function(row){return '<article class="ref-row-card"><h3>'+esc(row[0])+'</h3><dl>'+table.columns.slice(1).map(function(c,i){return '<div><dt>'+esc(columnLabel(table,c))+'</dt><dd>'+cellHtml(table,c,row[i+1])+'</dd></div>';}).join('')+'</dl></article>';}).join('')+'</div>';

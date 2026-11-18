@@ -109,6 +109,13 @@
         "03_六堂资料/06-神农.png"
       ]
     }
+    ,{"id":"pilots","name":"机师","partition":"pilots","sourcePaths":[]}
+    ,{"id":"battle-box-pill-pouch","name":"战匣丹囊","partition":"battle-box-pill-pouch","sourcePaths":[]}
+    ,{"id":"quiz","name":"答题","partition":"quiz","sourcePaths":[]}
+    ,{"id":"zhulu","name":"逐鹿","partition":"zhulu","sourcePaths":[]}
+    ,{"id":"loulan","name":"楼兰棋阵","partition":"loulan","sourcePaths":[]}
+    ,{"id":"formations","name":"合阵","partition":"formations","sourcePaths":[]}
+    ,{"id":"settings","name":"设置","partition":"settings","sourcePaths":[]}
   ],
   "images": [
     {

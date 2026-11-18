@@ -56,7 +56,7 @@
     }
     function returnState() {
       var active = doc.querySelector(".tab.active[data-partition]");
-      return { partition: active ? active.dataset.partition : "atlas" };
+      return { partition: active ? active.dataset.referencePartition || active.dataset.partition : "atlas" };
     }
     function switchTo(id) { accounts.switchAccount(id, returnState()); }
     function ensureEditing(id) {
@@ -209,6 +209,9 @@
     if (restored && restored.partition) {
       var tab = doc.querySelector('.tab[data-partition="' + restored.partition.replace(/"/g, "") + '"]');
       if (tab) root.setTimeout(function () { tab.click(); }, 0);
+      else if (["pilots", "battle-box-pill-pouch", "quiz", "zhulu", "loulan", "formations", "settings"].includes(restored.partition)) {
+        root.setTimeout(function () { doc.dispatchEvent(new root.CustomEvent("qinshi:reference-navigate", { detail: { name: restored.partition } })); }, 0);
+      }
     }
     render();
   }

@@ -1,7 +1,14 @@
-/* Independent read-only reference UI. No account, inventory or persistent state. */
+/* Reference directory and read-only tables. Only directory ordering is persisted here. */
 (function(root,factory){'use strict';var api=factory();if(typeof module==='object'&&module.exports)module.exports=api;if(root)root.OTHER_REFERENCE_UI=api;})(typeof self!=='undefined'?self:this,function(){
   'use strict';
   var sectionOpeners=new WeakMap();
+  var ORDER_KEY='qinshi_reference_section_order_v1';
+  function normalizeSectionOrder(sections,saved){
+    var ids=sections.map(function(s){return s.id;}),order=[];
+    (Array.isArray(saved)?saved:[]).concat(ids).forEach(function(id){if(ids.includes(id)&&!order.includes(id))order.push(id);});
+    return order;
+  }
+  function filterSections(sections,query){var q=String(query||'').trim().toLocaleLowerCase();return sections.filter(function(s){return s.name.toLocaleLowerCase().includes(q);});}
   function openSection(root,id){var host=root&&root.document&&root.document.getElementById('partition-other-reference'),open=host&&sectionOpeners.get(host);return open?open(id):false;}
   function esc(value){return String(value==null?'':value).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
   function filterRows(table,query,quality){
@@ -90,6 +97,9 @@
     if(!host||host.dataset.refReady)return;
     host.dataset.refReady='true';
     var data=root.OTHER_REFERENCE_DATA,tables=tablesFor(root),states={},sectionId='',homeScroll=0,restoreButton=null,zoom=1,fitWidth=0,pointers=new Map(),pinch=0;
+    var directoryQuery='',sorting=false,orderError='',savedOrder=null;
+    try{savedOrder=JSON.parse(root.localStorage.getItem(ORDER_KEY));}catch(error){/* A directory preference never blocks access to settings. */}
+    var sectionOrder=normalizeSectionOrder(data.sections,savedOrder);
     function state(){if(!states[sectionId])states[sectionId]={query:'',table:sectionId==='cards'?'cards-substats-10':sectionId==='guardians'?'guardians-red-materials':'',quality:'',attribute:'',view:sectionId==='cards'?'table':'auto',sort:sectionId==='speed'?'pvp':'source',band:'',scroll:0,perTable:{}};return states[sectionId];}
     function sourceButtons(paths){return '<div class="ref-sources">'+paths.map(function(p,i){return '<button type="button" class="seg" data-ref-image="'+esc(p)+'">'+(['guardians','spirits'].includes(sectionId)?'查看图片':'查看原图')+(paths.length>1?' '+(i+1):'')+'</button>';}).join('')+'</div>';}
     var viewer=root.document.createElement('dialog');viewer.className='ref-viewer';viewer.setAttribute('aria-label','图片查看器');
@@ -144,7 +154,22 @@
     }
     function home(){
       parkSixHalls();
-      body.innerHTML='<section class="panel"><h2 tabindex="-1">其他资料</h2><nav class="ref-index" aria-label="其他资料目录">'+data.sections.map(function(s,i){return '<button type="button" data-ref-section="'+s.id+'"><span>'+String(i+1).padStart(2,'0')+'</span><strong>'+esc(s.name)+'</strong><small>'+esc(s.description)+'</small></button>';}).join('')+'</nav></section>';
+      body.innerHTML='<section class="panel"><h2 tabindex="-1">其他资料</h2><div class="ref-directory-controls"><label>搜索分区<input type="search" data-ref-directory-search placeholder="输入分区名称" value="'+esc(directoryQuery)+'"'+(sorting?' disabled':'')+'></label><button type="button" class="seg" data-ref-sort-toggle aria-pressed="'+sorting+'">'+(sorting?'完成排序':'自定义排序')+'</button><button type="button" class="seg" data-ref-order-reset'+(sorting?'':' hidden')+'>恢复默认</button></div><p class="ref-order-error" data-ref-order-status role="status" hidden></p><nav class="ref-index" aria-label="其他资料目录"></nav><p data-ref-directory-empty hidden>没有符合条件的分区</p></section>';
+      directoryResults();
+    }
+    function directoryResults(){
+      var sections=sectionOrder.map(function(id){return data.sections.find(function(s){return s.id===id;});});
+      var matches=filterSections(sections,directoryQuery);
+      body.querySelector('.ref-index').innerHTML=matches.map(function(s){
+        var index=sectionOrder.indexOf(s.id);
+        return '<div class="ref-index-item"><button type="button" data-ref-section="'+s.id+'"><span>'+String(index+1).padStart(2,'0')+'</span><strong>'+esc(s.name)+'</strong>'+(s.description?'<small>'+esc(s.description)+'</small>':'')+'</button>'+(sorting?'<div class="ref-order-actions"><button type="button" class="seg" data-ref-move="'+s.id+'" data-direction="-1" aria-label="上移'+esc(s.name)+'"'+(index===0?' disabled':'')+'>上移</button><button type="button" class="seg" data-ref-move="'+s.id+'" data-direction="1" aria-label="下移'+esc(s.name)+'"'+(index===sectionOrder.length-1?' disabled':'')+'>下移</button></div>':'')+'</div>';
+      }).join('');
+      body.querySelector('[data-ref-directory-empty]').hidden=matches.length!==0;
+      var status=body.querySelector('[data-ref-order-status]');status.textContent=orderError;status.hidden=!orderError;
+    }
+    function saveOrder(){
+      try{root.localStorage.setItem(ORDER_KEY,JSON.stringify(sectionOrder));orderError='';}
+      catch(error){orderError='排序暂未保存，刷新后可能恢复原顺序。';}
     }
     function sectionTables(){var list=tables.filter(function(t){return t.section===sectionId&&t.id!=='cards-album';});if(sectionId==='levels')list.sort(function(a,b){return (a.id==='levels-features'?-1:0)-(b.id==='levels-features'?-1:0);});return list;}
     function currentTable(){var s=state(),list=sectionTables();return list.find(function(t){return t.id===s.table;})||list[0];}
@@ -257,14 +282,23 @@
     body.addEventListener('keydown',function(e){if(e.key==='Escape'&&e.target.closest('.ref-column-menu')){e.preventDefault();closeColumnMenu(true);}});
     body.addEventListener('click',function(e){var b=e.target.closest('button');if(!b)return;
       if(b.dataset.refSection)openSection(root,b.dataset.refSection);
+      else if(b.hasAttribute('data-ref-sort-toggle')){sorting=!sorting;if(sorting)directoryQuery='';home();body.querySelector('[data-ref-sort-toggle]').focus({preventScroll:true});}
+      else if(b.hasAttribute('data-ref-order-reset')){sectionOrder=normalizeSectionOrder(data.sections,null);saveOrder();directoryResults();}
+      else if(b.hasAttribute('data-ref-move')){
+        var index=sectionOrder.indexOf(b.dataset.refMove),next=index+Number(b.dataset.direction);
+        if(index<0||next<0||next>=sectionOrder.length)return;
+        var id=sectionOrder[index];sectionOrder[index]=sectionOrder[next];sectionOrder[next]=id;saveOrder();directoryResults();
+        var buttons=body.querySelectorAll('[data-ref-move]'),focus=Array.from(buttons).find(function(button){return button.dataset.refMove===id&&button.dataset.direction===b.dataset.direction&&!button.disabled;});
+        if(!focus)focus=Array.from(buttons).find(function(button){return button.dataset.refMove===id&&!button.disabled;});if(focus)focus.focus({preventScroll:true});
+      }
       else if(b.hasAttribute('data-ref-home')){state().scroll=root.scrollY;sectionId='';home();root.scrollTo({top:homeScroll,behavior:'instant'});body.querySelector('h2').focus({preventScroll:true});}
       else if(b.dataset.refImage)openImage(b.dataset.refImage,b);
       else if(b.dataset.refTableOption)switchTable(b.dataset.refTableOption);
       else if(b.hasAttribute('data-ref-six-halls-retry'))showSixHalls();
       else if(b.hasAttribute('data-ref-clear')){var s=state();s.query='';s.quality='';s.attribute='';s.band='';body.querySelector('[data-ref-band]').value='';body.querySelector('[data-ref-search]').value='';var quality=body.querySelector('[data-ref-quality]'),attribute=body.querySelector('[data-ref-attribute]');if(quality)quality.value='';if(attribute)attribute.value='';var level=body.querySelector('[data-ref-level-search]');if(level)level.value='';results();}
     });
-    body.addEventListener('input',function(e){if(e.target.hasAttribute('data-ref-search')){state().query=e.target.value;var level=body.querySelector('[data-ref-level-search]');if(level)level.value=e.target.value;if(!e.isComposing)results();}});
-    body.addEventListener('compositionend',function(e){if(e.target.hasAttribute('data-ref-search')){state().query=e.target.value;results();}});
+    body.addEventListener('input',function(e){if(e.target.hasAttribute('data-ref-directory-search')){directoryQuery=e.target.value;if(!e.isComposing)directoryResults();}else if(e.target.hasAttribute('data-ref-search')){state().query=e.target.value;var level=body.querySelector('[data-ref-level-search]');if(level)level.value=e.target.value;if(!e.isComposing)results();}});
+    body.addEventListener('compositionend',function(e){if(e.target.hasAttribute('data-ref-directory-search')){directoryQuery=e.target.value;directoryResults();}else if(e.target.hasAttribute('data-ref-search')){state().query=e.target.value;results();}});
     body.addEventListener('change',function(e){if(e.target.hasAttribute('data-ref-search')||!e.target.matches('select'))return;var s=state();if(e.target.hasAttribute('data-ref-band'))s.band=e.target.value;if(e.target.hasAttribute('data-ref-quality'))s.quality=e.target.value;if(e.target.hasAttribute('data-ref-attribute'))s.attribute=e.target.value;if(e.target.hasAttribute('data-ref-view'))s.view=e.target.value;if(e.target.hasAttribute('data-ref-sort'))s.sort=e.target.value;if(e.target.hasAttribute('data-ref-level-search')){s.query=e.target.value;body.querySelector('[data-ref-search]').value=s.query;}results();});
     root.document.addEventListener('qinshi:reference-image',function(e){if(sectionId==='six-halls'&&!host.hidden&&e.detail)openImage(e.detail.path,e.detail.trigger);});
     root.document.addEventListener('qinshi:partitionchange',function(e){
@@ -275,7 +309,10 @@
       }
     });
     sectionOpeners.set(host,function(id){
+      if(id===''){sectionId='';home();return true;}
       if(!data.sections.some(function(section){return section.id===id;}))return false;
+      var target=data.sections.find(function(section){return section.id===id;});
+      if(target.partition){root.document.dispatchEvent(new root.CustomEvent('qinshi:reference-navigate',{detail:{name:target.partition}}));return true;}
       if(!sectionId)homeScroll=root.scrollY;
       sectionId=id;controls();root.scrollTo({top:state().scroll||0,behavior:'instant'});
       var title=body.querySelector('h2');if(title)title.focus({preventScroll:true});return true;
@@ -284,5 +321,5 @@
     var narrow=host.getBoundingClientRect().width<760,resizePending=false;
     if(root.ResizeObserver)new root.ResizeObserver(function(){var next=host.getBoundingClientRect().width<760;if(next===narrow||host.hidden)return;narrow=next;if(!sectionId||resizePending)return;resizePending=true;root.requestAnimationFrame(function(){resizePending=false;if(sectionId&&!host.hidden)results();});}).observe(host);
   }
-  return {init:init,openSection:openSection,filterRows:filterRows,tablesFor:tablesFor,matchesLevelBand:matchesLevelBand,guideText:guideText,hasRecommendedView:hasRecommendedView};
+  return {init:init,openSection:openSection,normalizeSectionOrder:normalizeSectionOrder,filterSections:filterSections,filterRows:filterRows,tablesFor:tablesFor,matchesLevelBand:matchesLevelBand,guideText:guideText,hasRecommendedView:hasRecommendedView};
 });

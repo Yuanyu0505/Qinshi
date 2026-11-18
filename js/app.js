@@ -1123,6 +1123,7 @@
     const mobileMoreClose = document.getElementById("mobile-more-close");
     const appShell = document.querySelector(".app-shell");
     const secondaryPartitions = ["forbidden", "secret-realm", "inscription", "machine-beasts", "pilots", "tactics", "battle-box-pill-pouch", "wooden-man-alley", "formations", "six-halls", "loulan", "zhulu", "quiz", "other-reference", "settings"];
+    const referencePartitions = ["pilots", "battle-box-pill-pouch", "quiz", "zhulu", "loulan", "formations", "settings"];
     const partitionScrollPositions = Object.create(null);
     let activePartition = "atlas";
     let mobileMoreRestoreTarget = null;
@@ -1154,6 +1155,20 @@
       settings: document.getElementById("partition-settings"),
       "other-reference": document.getElementById("partition-other-reference")
     };
+
+    function ensureReferenceHeading(name) {
+      const partition = parts[name];
+      if (!partition || partition.querySelector(".reference-module-heading")) return;
+      const heading = document.createElement("header");
+      heading.className = "reference-module-heading";
+      const back = document.createElement("button");
+      back.type = "button";
+      back.className = "seg";
+      back.dataset.referenceReturn = "true";
+      back.textContent = "返回其他资料";
+      heading.append(back);
+      partition.prepend(heading);
+    }
 
     function mobileMoreFocusable() {
       if (!mobileMoreLayer) return [];
@@ -1259,17 +1274,20 @@
         if (name !== targetPartition) clearDropJumpSession();
       }
       closeBookDetailPopover();
+      if (referencePartitions.includes(name)) ensureReferenceHeading(name);
       setPartitionTitle(name);
       if (name === "equipment" && !navigationOptions.preserveEquipment) resetEquipmentView();
       partitionButtons.forEach((button) => {
-        button.classList.toggle("active", button.dataset.partition === name);
+        button.classList.toggle("active", button.dataset.partition === (referencePartitions.includes(name) ? "other-reference" : name));
+        if (button.dataset.partition === "other-reference" && referencePartitions.includes(name)) button.dataset.referencePartition = name;
+        else delete button.dataset.referencePartition;
       });
       Object.keys(parts).forEach((key) => {
         if (parts[key]) parts[key].hidden = key !== name;
       });
       if (mobileMoreToggle) {
         mobileMoreToggle.classList.toggle("active", secondaryPartitions.includes(name));
-        const title = secondaryPartitions.includes(name) ? (PARTITION_TITLES[name] || "更多") : "更多";
+        const title = referencePartitions.includes(name) ? "其他资料" : secondaryPartitions.includes(name) ? (PARTITION_TITLES[name] || "更多") : "更多";
         mobileMoreToggle.textContent = title;
         mobileMoreToggle.setAttribute("aria-label", secondaryPartitions.includes(name) ? title + "，打开更多分区" : "打开更多分区");
       }
@@ -1293,6 +1311,24 @@
 
     partitionButtons.forEach((button) => {
       button.addEventListener("click", () => switchPartition(button.dataset.partition, { source: "user" }));
+    });
+    document.addEventListener("qinshi:reference-navigate", function (event) {
+      if (!event.detail || !referencePartitions.includes(event.detail.name)) return;
+      const name = event.detail.name;
+      Promise.resolve(switchPartition(name, { source: "user" })).then(function (result) {
+        if (result === false || activePartition !== name) return;
+        const back = parts[name].querySelector("[data-reference-return]");
+        if (back) back.focus({ preventScroll: true });
+      });
+    });
+    document.addEventListener("click", function (event) {
+      if (!event.target.closest("[data-reference-return]")) return;
+      if (window.OTHER_REFERENCE_UI) window.OTHER_REFERENCE_UI.openSection(window, "");
+      Promise.resolve(switchPartition("other-reference", { source: "user" })).then(function (result) {
+        if (result === false || activePartition !== "other-reference") return;
+        const title = parts["other-reference"].querySelector("h2");
+        if (title) title.focus({ preventScroll: true });
+      });
     });
     if (mobileMoreToggle) {
       mobileMoreToggle.addEventListener("click", () => {

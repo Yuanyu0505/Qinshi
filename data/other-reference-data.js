@@ -95,9 +95,82 @@
       "sourcePaths": [
         "01_原始资料_17张/17.jpeg"
       ]
+    },
+    {
+      "id": "six-halls",
+      "name": "六堂",
+      "description": "堂口加成、阵营神将与升级资料",
+      "sourcePaths": [
+        "03_六堂资料/01-魁隗.png",
+        "03_六堂资料/02-蚩尤.png",
+        "03_六堂资料/03-烈山.png",
+        "03_六堂资料/04-四岳.png",
+        "03_六堂资料/05-共工.png",
+        "03_六堂资料/06-神农.png"
+      ]
     }
   ],
   "images": [
+    {
+      "path": "03_六堂资料/01-魁隗.png",
+      "sha256": "342526beda5958b5aa6e6d184ec96dfe3be7fcc0fee09bd873253cef27e4f1f0",
+      "pixels": [
+        399,
+        485
+      ],
+      "role": "用户2026-11-18提供的六堂加成及阵营资料",
+      "original_archive_path": "六堂资料/01-魁隗.png"
+    },
+    {
+      "path": "03_六堂资料/02-蚩尤.png",
+      "sha256": "cd310124ad35d5a7128ff2c4ad5bae83a3fecfda345a270422ceb02aa444dabf",
+      "pixels": [
+        400,
+        535
+      ],
+      "role": "用户2026-11-18提供的六堂加成及阵营资料",
+      "original_archive_path": "六堂资料/02-蚩尤.png"
+    },
+    {
+      "path": "03_六堂资料/03-烈山.png",
+      "sha256": "39b4a79404c13cdefbd98788792004356c8930cfb2823e1a57200df4eb87ad80",
+      "pixels": [
+        392,
+        585
+      ],
+      "role": "用户2026-11-18提供的六堂加成及阵营资料",
+      "original_archive_path": "六堂资料/03-烈山.png"
+    },
+    {
+      "path": "03_六堂资料/04-四岳.png",
+      "sha256": "f09344f663b48bad4728651e871c203c815d0023a8bbaa025b2728452fd0c6ca",
+      "pixels": [
+        389,
+        544
+      ],
+      "role": "用户2026-11-18提供的六堂加成及阵营资料",
+      "original_archive_path": "六堂资料/04-四岳.png"
+    },
+    {
+      "path": "03_六堂资料/05-共工.png",
+      "sha256": "5b12511791f2bade6572ea397f2c70bbb1ed4b1a68ae5bd3ef9f0428841fe201",
+      "pixels": [
+        390,
+        529
+      ],
+      "role": "用户2026-11-18提供的六堂加成及阵营资料",
+      "original_archive_path": "六堂资料/05-共工.png"
+    },
+    {
+      "path": "03_六堂资料/06-神农.png",
+      "sha256": "f8616fd9ea37bf1abdf0ad710d3436cbddf211c55bf3e8415a9554d10ecf4900",
+      "pixels": [
+        390,
+        568
+      ],
+      "role": "用户2026-11-18提供的六堂加成及阵营资料",
+      "original_archive_path": "六堂资料/06-神农.png"
+    },
     {
       "path": "01_原始资料_17张/01.png",
       "sha256": "766881bcdee0676a043ce662804f3436f95c3d3ee5bffa1cc9854563e86325d5",

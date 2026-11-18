@@ -1330,7 +1330,9 @@ test('13 六堂进度经加密分块同步完整覆盖接收设备，并可在�
       'the downloaded pre-overwrite backup must retain the receiving device six-halls data');
     await navigationPromise;
     assert.deepEqual(await target.page.evaluate(key => JSON.parse(window.QinshiAccounts.getItem(key)), key), sourceProgress);
-    await target.page.locator('.tab[data-partition="six-halls"]').click();
+    await target.page.locator('.tab[data-partition="other-reference"]').click();
+    await target.page.locator('[data-ref-section="six-halls"]').click();
+    await target.page.locator('[data-six-halls-mode="progress"]').click();
     await target.page.locator('[data-six-halls-progress="herbs"]').waitFor({ state: 'visible' });
     assert.equal(await target.page.locator('[data-six-halls-progress="herbs"]').inputValue(), '4321');
     for (const [index, id] of ids.entries()) {

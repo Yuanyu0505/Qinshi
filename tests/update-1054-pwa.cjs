@@ -183,11 +183,14 @@ function assertNewForbiddenData(data, oldData) {
 }
 
 async function assertNewSixHalls(page, savedProgress) {
-  await enterPartition(page, 'six-halls');
+  await enterPartition(page, 'other-reference');
+  const entry = page.locator('[data-ref-section="six-halls"]');
+  if (await entry.isVisible()) await entry.click();
+  await page.locator('#partition-six-halls').waitFor({ state: 'visible' });
   assert.equal(await page.locator('#partition-six-halls .six-halls-heading').count(), 0);
   assert.equal(await page.locator('#partition-six-halls .six-halls-eyebrow').count(), 0);
   assert.equal(await page.locator('#partition-six-halls h2').count(), 0);
-  assert.equal(await page.locator('[data-six-halls-mode]').count(), 3);
+  assert.equal(await page.locator('[data-six-halls-mode]').count(), 4);
   await sixHallsMode(page, 'progress');
   assert.equal(await page.locator('[data-six-halls-progress="herbs"]').inputValue(), '321');
   await sixHallsMode(page, 'planner');

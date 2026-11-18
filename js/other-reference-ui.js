@@ -1,6 +1,8 @@
 /* Independent read-only reference UI. No account, inventory or persistent state. */
 (function(root,factory){'use strict';var api=factory();if(typeof module==='object'&&module.exports)module.exports=api;if(root)root.OTHER_REFERENCE_UI=api;})(typeof self!=='undefined'?self:this,function(){
   'use strict';
+  var sectionOpeners=new WeakMap();
+  function openSection(root,id){var host=root&&root.document&&root.document.getElementById('partition-other-reference'),open=host&&sectionOpeners.get(host);return open?open(id):false;}
   function esc(value){return String(value==null?'':value).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
   function filterRows(table,query,quality){
     var q=String(query||'').trim().toLocaleLowerCase(),index=table.columns.indexOf('品质');
@@ -39,6 +41,7 @@
   function titleFor(table){var title=table.id==='elements-cost'?'气蕴需求数量对照':table.id==='elements-stones'?'五极石五行数量对照':table.id==='cards-substats-ratio'?'副属性比例':table.title;return cleanSourceLabel(title).replace(/原图/g,'');}
   function isMapping(table){return Boolean(table&&table.section==='elements'&&/mappings$/.test(table.id));}
   function cellHtml(table,column,value){
+    if(table.id==='spirits-fates'&&column==='单橙色器灵总属性'){var number=String(value).match(/^\d+(?:\.\d+)?/);return number?'<span class="ref-spirit-total-number">'+esc(number[0])+'</span>'+esc(String(value).slice(number[0].length)):esc(value);}
     if(table.id==='spirits-elements'&&column==='器灵名称'){
       var quality=table.spiritQualities&&table.spiritQualities[value],color={'蓝':'blue','紫':'purple','橙':'orange'}[quality];
       return color?'<strong class="ref-spirit-name ref-quality-'+color+'" title="'+esc(quality)+'色品质">'+esc(value)+'</strong>':esc(value);
@@ -92,6 +95,7 @@
     var viewer=root.document.createElement('dialog');viewer.className='ref-viewer';viewer.setAttribute('aria-label','图片查看器');
     viewer.innerHTML='<header><div class="ref-viewer-tools"><button type="button" class="seg" data-ref-zoom="out" aria-label="缩小图片">−</button><output aria-live="polite">100%</output><button type="button" class="seg" data-ref-zoom="in" aria-label="放大图片">＋</button><button type="button" class="seg" data-ref-zoom="reset">适应宽度</button><button type="button" class="seg" data-ref-close>关闭</button></div></header><p class="ref-image-status" role="status"></p><button type="button" class="seg" data-ref-retry hidden>重新加载图片</button><div class="ref-image-stage" tabindex="0" aria-label="图片滚动区域"><img alt="资料图片" draggable="false"></div>';
     var body=root.document.createElement('div');host.append(body,viewer);
+    var sixHallsRequest=0,sixHallsReady=false;
     var img=viewer.querySelector('img'),stage=viewer.querySelector('.ref-image-stage'),status=viewer.querySelector('.ref-image-status');
     function changeZoom(next){zoom=Math.max(0.5,Math.min(4,next));if(fitWidth)img.style.width=(fitWidth*zoom)+'px';viewer.querySelector('output').textContent=Math.round(zoom*100)+'%';}
     img.addEventListener('load',function(){fitWidth=Math.min(img.naturalWidth,stage.clientWidth-2);status.textContent='原始尺寸 '+img.naturalWidth+' × '+img.naturalHeight;viewer.querySelector('[data-ref-retry]').hidden=true;changeZoom(1);});
@@ -110,12 +114,43 @@
       var url=encodeURI('assets/other-reference/sources/'+path);
       viewer.showModal();img.style.width='100%';img.src=url;stage.scrollTo(0,0);
     }
+    function notifySixHalls(active){root.document.dispatchEvent(new root.CustomEvent('qinshi:reference-sectionchange',{detail:{section:active?'six-halls':''}}));}
+    function parkSixHalls(){
+      sixHallsRequest++;
+      var partition=root.document.getElementById('partition-six-halls');
+      if(partition){partition.hidden=true;partition.dataset.referenceEmbedded='true';if(partition.parentNode!==host)host.appendChild(partition);}
+      notifySixHalls(false);
+    }
+    function showSixHalls(){
+      parkSixHalls();closeViewer();
+      sixHallsReady=false;
+      var request=++sixHallsRequest,partition=root.document.getElementById('partition-six-halls');
+      body.innerHTML='<section class="panel ref-section" data-ref-kind="six-halls"><header class="ref-heading"><h2 tabindex="-1">六堂</h2><button type="button" class="seg" data-ref-home>返回目录</button></header><p data-ref-six-halls-status role="status">正在加载六堂…</p><button type="button" class="seg" data-ref-six-halls-retry hidden>重新加载</button><div class="ref-six-halls-slot"></div></section>';
+      var message=body.querySelector('[data-ref-six-halls-status]'),retry=body.querySelector('[data-ref-six-halls-retry]');
+      if(partition)body.querySelector('.ref-six-halls-slot').appendChild(partition);
+      Promise.resolve().then(function(){
+        if(!partition)throw new Error('Six halls host unavailable');
+        if(root.QinshiPartitionLoader)return root.QinshiPartitionLoader.ensure('six-halls');
+        if(!root.SIX_HALLS_UI)throw new Error('Six halls loader unavailable');
+        root.SIX_HALLS_UI.init(root);
+      }).then(function(){
+        if(request!==sixHallsRequest||sectionId!=='six-halls')return;
+        sixHallsReady=true;message.hidden=true;
+        if(!host.hidden){partition.hidden=false;notifySixHalls(true);}
+      }).catch(function(){
+        if(request!==sixHallsRequest||sectionId!=='six-halls')return;
+        message.textContent='六堂加载失败，请重试。';retry.hidden=false;
+      });
+    }
     function home(){
+      parkSixHalls();
       body.innerHTML='<section class="panel"><h2 tabindex="-1">其他资料</h2><nav class="ref-index" aria-label="其他资料目录">'+data.sections.map(function(s,i){return '<button type="button" data-ref-section="'+s.id+'"><span>'+String(i+1).padStart(2,'0')+'</span><strong>'+esc(s.name)+'</strong><small>'+esc(s.description)+'</small></button>';}).join('')+'</nav></section>';
     }
     function sectionTables(){var list=tables.filter(function(t){return t.section===sectionId&&t.id!=='cards-album';});if(sectionId==='levels')list.sort(function(a,b){return (a.id==='levels-features'?-1:0)-(b.id==='levels-features'?-1:0);});return list;}
     function currentTable(){var s=state(),list=sectionTables();return list.find(function(t){return t.id===s.table;})||list[0];}
     function controls(){
+      if(sectionId==='six-halls'){showSixHalls();return;}
+      parkSixHalls();
       var s=state(),section=data.sections.find(function(x){return x.id===sectionId;}),list=sectionTables(),table=currentTable();
       if(table)s.table=table.id;
       var cards=sectionId==='cards';
@@ -190,6 +225,7 @@
       return '<div class="ref-table-scroll" tabindex="0" role="region" aria-label="'+esc(titleFor(table))+'对照表"><table data-ref-table-id="'+esc(table.id)+'" class="ref-table'+(table.section==='cards'?' ref-card-stats':'')+(isMapping(table)?' ref-element-mappings':'')+(table.section==='origins'?' ref-origin-table':'')+(table.section==='treasure'?' ref-treasure-table':'')+'"><caption class="ref-visually-hidden">'+esc(titleFor(table))+'</caption>'+colgroup+'<thead><tr>'+table.columns.map(function(c){return '<th scope="col">'+esc(columnLabel(table,c))+'</th>';}).join('')+'</tr></thead><tbody>'+rows.map(function(row){return '<tr>'+row.map(function(v,i){var quality=table.columns[i]==='品质'&&/^[蓝紫橙红]$/.test(v);return i===0&&table.id!=='spirits-combinations'?'<th scope="row">'+esc(v)+'</th>':'<td'+(String(v).length>20?' class="ref-long-text"':'')+'>'+(quality?'<span class="ref-quality ref-quality-'+({'蓝':'blue','紫':'purple','橙':'orange','红':'red'}[v])+'">'+esc(v)+'</span>':cellHtml(table,table.columns[i],v))+'</td>';}).join('')+'</tr>';}).join('')+'</tbody></table></div>';
     }
     function results(){
+      if(sectionId==='six-halls')return;
       var table=displayTable(currentTable()),s=state(),html='';
       updateViewOptions(table);
       if(table){
@@ -220,19 +256,33 @@
     body.addEventListener('focusout',function(e){var menu=body.querySelector('.ref-column-menu');if(menu&&menu.contains(e.target)&&e.relatedTarget&&!menu.contains(e.relatedTarget))closeColumnMenu(false);});
     body.addEventListener('keydown',function(e){if(e.key==='Escape'&&e.target.closest('.ref-column-menu')){e.preventDefault();closeColumnMenu(true);}});
     body.addEventListener('click',function(e){var b=e.target.closest('button');if(!b)return;
-      if(b.dataset.refSection){homeScroll=root.scrollY;sectionId=b.dataset.refSection;controls();root.scrollTo({top:state().scroll||0,behavior:'instant'});body.querySelector('h2').focus({preventScroll:true});}
+      if(b.dataset.refSection)openSection(root,b.dataset.refSection);
       else if(b.hasAttribute('data-ref-home')){state().scroll=root.scrollY;sectionId='';home();root.scrollTo({top:homeScroll,behavior:'instant'});body.querySelector('h2').focus({preventScroll:true});}
       else if(b.dataset.refImage)openImage(b.dataset.refImage,b);
       else if(b.dataset.refTableOption)switchTable(b.dataset.refTableOption);
+      else if(b.hasAttribute('data-ref-six-halls-retry'))showSixHalls();
       else if(b.hasAttribute('data-ref-clear')){var s=state();s.query='';s.quality='';s.attribute='';s.band='';body.querySelector('[data-ref-band]').value='';body.querySelector('[data-ref-search]').value='';var quality=body.querySelector('[data-ref-quality]'),attribute=body.querySelector('[data-ref-attribute]');if(quality)quality.value='';if(attribute)attribute.value='';var level=body.querySelector('[data-ref-level-search]');if(level)level.value='';results();}
     });
     body.addEventListener('input',function(e){if(e.target.hasAttribute('data-ref-search')){state().query=e.target.value;var level=body.querySelector('[data-ref-level-search]');if(level)level.value=e.target.value;if(!e.isComposing)results();}});
     body.addEventListener('compositionend',function(e){if(e.target.hasAttribute('data-ref-search')){state().query=e.target.value;results();}});
     body.addEventListener('change',function(e){if(e.target.hasAttribute('data-ref-search')||!e.target.matches('select'))return;var s=state();if(e.target.hasAttribute('data-ref-band'))s.band=e.target.value;if(e.target.hasAttribute('data-ref-quality'))s.quality=e.target.value;if(e.target.hasAttribute('data-ref-attribute'))s.attribute=e.target.value;if(e.target.hasAttribute('data-ref-view'))s.view=e.target.value;if(e.target.hasAttribute('data-ref-sort'))s.sort=e.target.value;if(e.target.hasAttribute('data-ref-level-search')){s.query=e.target.value;body.querySelector('[data-ref-search]').value=s.query;}results();});
-    root.document.addEventListener('qinshi:partitionchange',function(e){if(e.detail.name!=='other-reference')closeViewer();});
+    root.document.addEventListener('qinshi:reference-image',function(e){if(sectionId==='six-halls'&&!host.hidden&&e.detail)openImage(e.detail.path,e.detail.trigger);});
+    root.document.addEventListener('qinshi:partitionchange',function(e){
+      if(e.detail.name!=='other-reference'){closeViewer();return;}
+      if(sectionId==='six-halls'){
+        var partition=root.document.getElementById('partition-six-halls');
+        if(sixHallsReady&&partition&&body.contains(partition)){partition.hidden=false;notifySixHalls(true);}else showSixHalls();
+      }
+    });
+    sectionOpeners.set(host,function(id){
+      if(!data.sections.some(function(section){return section.id===id;}))return false;
+      if(!sectionId)homeScroll=root.scrollY;
+      sectionId=id;controls();root.scrollTo({top:state().scroll||0,behavior:'instant'});
+      var title=body.querySelector('h2');if(title)title.focus({preventScroll:true});return true;
+    });
     home();
     var narrow=host.getBoundingClientRect().width<760,resizePending=false;
     if(root.ResizeObserver)new root.ResizeObserver(function(){var next=host.getBoundingClientRect().width<760;if(next===narrow||host.hidden)return;narrow=next;if(!sectionId||resizePending)return;resizePending=true;root.requestAnimationFrame(function(){resizePending=false;if(sectionId&&!host.hidden)results();});}).observe(host);
   }
-  return {init:init,filterRows:filterRows,tablesFor:tablesFor,matchesLevelBand:matchesLevelBand,guideText:guideText,hasRecommendedView:hasRecommendedView};
+  return {init:init,openSection:openSection,filterRows:filterRows,tablesFor:tablesFor,matchesLevelBand:matchesLevelBand,guideText:guideText,hasRecommendedView:hasRecommendedView};
 });

@@ -4,9 +4,9 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const crypto = require('node:crypto');
-test('reference library exposes exactly nine ordered sections and confirmed values', () => {
+test('reference library exposes ten ordered sections and confirmed values', () => {
   const data = require('../data/other-reference-data.js');
-  assert.deepEqual(data.sections.map(s => s.name), ['诸子卡','五行天枢录','橙弟子来源','灵宝','极限速度','守护神','功能开放等级','器灵','弟子相关']);
+  assert.deepEqual(data.sections.map(s => s.name), ['诸子卡','五行天枢录','橙弟子来源','灵宝','极限速度','守护神','功能开放等级','器灵','弟子相关','六堂']);
   assert.equal(data.elements.length, 28);
   for (const row of data.elements) assert.equal(['金','木','水','火','土'].reduce((n,k)=>n+row[k],0),row['总计']);
   assert.equal(data.elements.filter(r=>r.kind==='气蕴').length,25);
@@ -15,7 +15,7 @@ test('reference library exposes exactly nine ordered sections and confirmed valu
 });
 test('every supplied image is preserved byte for byte and mapped to a section or explicit archive', () => {
   const data = require('../data/other-reference-data.js');
-  assert.equal(data.images.length,31);
+  assert.equal(data.images.length,37);
   for (const item of data.images) {
     const file=path.join(__dirname,'../assets/other-reference/sources',item.path);
     assert.equal(crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex'),item.sha256,item.path);

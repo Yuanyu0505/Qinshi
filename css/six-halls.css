@@ -5,6 +5,28 @@
   --six-halls-gold: var(--gold, #d4af37);
 }
 #partition-six-halls [hidden] { display: none !important; }
+#partition-six-halls [data-hall-theme="kuiwei"] { --six-halls-accent:#e2bd42; }
+#partition-six-halls [data-hall-theme="chiyou"] { --six-halls-accent:#c49af2; }
+#partition-six-halls [data-hall-theme="lieshan"] { --six-halls-accent:#f0ad59; }
+#partition-six-halls [data-hall-theme="siyue"] { --six-halls-accent:#f299c4; }
+#partition-six-halls [data-hall-theme="gonggong"] { --six-halls-accent:#8abaff; }
+#partition-six-halls [data-hall-theme="shennong"] { --six-halls-accent:#8bddaa; }
+#partition-six-halls .six-halls-hall-tabs { display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px; }
+#partition-six-halls .six-halls-hall-tabs button.seg { padding:8px 4px;white-space:nowrap;font-size:14px; }
+#partition-six-halls .six-halls-hall-tabs button[aria-pressed="true"] { color:var(--six-halls-accent);border-color:var(--six-halls-accent);background:var(--bg2);font-weight:700; }
+@media (max-width:480px) {
+  #partition-six-halls .six-halls-hall-tabs { grid-template-columns:repeat(3,minmax(0,1fr)); }
+}
+#partition-six-halls .six-halls-profile-heading { display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px; }
+#partition-six-halls .six-halls-profile-heading h3 { color:var(--six-halls-accent);margin:0; }
+#partition-six-halls .six-halls-bonuses { border-collapse:collapse;width:100%;table-layout:fixed;line-height:1.8;margin-bottom:18px; }
+#partition-six-halls .six-halls-bonuses th,
+#partition-six-halls .six-halls-bonuses td { padding:10px 8px;border-bottom:1px solid var(--line);vertical-align:middle; }
+#partition-six-halls .six-halls-bonuses th { width:66px;color:var(--six-halls-accent);text-align:center;white-space:nowrap; }
+#partition-six-halls .six-halls-bonuses td { text-align:left;white-space:normal;overflow-wrap:anywhere; }
+#partition-six-halls .six-halls-members { list-style:none;display:flex;flex-wrap:wrap;gap:8px 14px;padding:0;margin:0;line-height:1.7; }
+#partition-six-halls .six-halls-members li { max-width:100%; }
+#partition-six-halls .six-halls-sr-only { position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap; }
 #partition-six-halls * { min-width: 0; }
 #partition-six-halls h3,
 #partition-six-halls h4,

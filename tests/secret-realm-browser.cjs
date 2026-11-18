@@ -284,6 +284,6 @@ test('current navigation still works when an older page has no optional secret r
   try{
     const html=fs.readFileSync(path.resolve(__dirname,'../index.html'),'utf8').replace('    <section id="partition-secret-realm" hidden></section>','');
     await page.route(url+'/',route=>route.fulfill({status:200,contentType:'text/html',body:html}));await openApp(page,url);
-    await page.locator('.tab[data-partition=six-halls]').click();await page.locator('#partition-six-halls').waitFor({state:'visible',timeout:5000});assert.equal(await page.title(),'六堂');
+    await page.locator('.tab[data-partition=other-reference]').click();await page.locator('[data-ref-section="six-halls"]').click();await page.locator('#partition-six-halls').waitFor({state:'visible',timeout:5000});assert.equal(await page.title(),'其他资料');
   }finally{await context.close();}
 });

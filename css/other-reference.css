@@ -111,6 +111,9 @@
 #partition-other-reference [data-ref-kind="spirits"] .ref-spirit-name.ref-quality-blue { color:#67c4ff; }
 #partition-other-reference [data-ref-kind="spirits"] .ref-spirit-name.ref-quality-purple { color:#d091ff; }
 #partition-other-reference [data-ref-kind="spirits"] .ref-spirit-name.ref-quality-orange { color:#ffab42; }
+#partition-other-reference [data-ref-kind="spirits"] .ref-spirit-total-number { color:#ff786f;font-weight:700; }
+#partition-other-reference [data-ref-kind="six-halls"] > .ref-heading { margin-bottom:18px; }
+#partition-other-reference .ref-six-halls-slot { min-width:0; }
 #partition-other-reference .ref-spirit-combination-grid { display:grid;grid-template-columns:repeat(auto-fit,minmax(min(140px,100%),1fr));gap:12px; }
 #partition-other-reference .ref-spirit-combination { min-width:0;border:1px solid var(--line);border-radius:6px;padding:12px; }
 #partition-other-reference .ref-spirit-combination h3 { margin:0 0 8px;text-align:center; }

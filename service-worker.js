@@ -1,7 +1,7 @@
 "use strict";
 
 const CACHE_PREFIX = "qinshi-site-";
-const CACHE_NAME = CACHE_PREFIX + "1.1.34";
+const CACHE_NAME = CACHE_PREFIX + "1.1.35";
 const GALLERY_CACHE_NAME = "qinshi-gallery-v1";
 const PRECACHE_URLS = [
   "./css/responsive-ux.css",
@@ -48,6 +48,7 @@ const PRECACHE_URLS = [
   "./data/tactics.js",
   "./data/formations.js",
   "./data/six-halls.js",
+  "./data/six-halls-reference.js",
   "./data/machine-beasts.js",
   "./data/battle-box-pill-pouch.js",
   "./data/zhulu.js",

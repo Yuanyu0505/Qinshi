@@ -16,7 +16,7 @@
   "use strict";
 
   var STORE_KEY = "qinshi_six_halls_progress_v1";
-  var modes = ["progress", "planner", "reference"];
+  var modes = ["halls", "progress", "planner", "reference"];
   var contexts = [];
 
   function escapeHtml(value) {
@@ -258,11 +258,14 @@
           return '<button type="button" class="seg" data-six-halls-quick="' + level + '" data-hall-id="' + hall.id + '">' + level + '级</button>';
         }).join("") + '</div></article>';
     }).join("");
-    context.partition.innerHTML = '<nav class="six-halls-modes" aria-label="六堂子页">' + [["progress", "个人进度"], ["planner", "升级规划"], ["reference", "升级资料"]].map(function (entry) {
+    context.partition.innerHTML = '<nav class="six-halls-modes" aria-label="六堂子页">' + [["halls", "堂口资料"], ["progress", "个人进度"], ["planner", "升级规划"], ["reference", "升级资料"]].map(function (entry) {
         return '<button type="button" class="seg" data-six-halls-mode="' + entry[0] + '" aria-controls="six-halls-' + entry[0] + '">' + entry[1] + '</button>';
       }).join("") + '</nav>' +
       '<p id="six-halls-readonly" class="six-halls-notice" role="status" hidden>当前账号为只读状态，个人进度不能保存；仍可调整临时规划。</p>' +
       '<p id="six-halls-error" class="six-halls-error" role="alert" hidden></p>' +
+      '<section id="six-halls-halls" class="six-halls-page" aria-label="堂口资料" hidden><nav class="six-halls-hall-tabs" aria-label="选择堂口">' + data.halls.map(function (hall) {
+        return '<button type="button" class="seg" data-six-halls-hall="' + hall.id + '" data-hall-theme="' + hall.id + '" aria-pressed="false">' + escapeHtml(hall.name) + '</button>';
+      }).join("") + '</nav><div id="six-halls-hall-details"></div></section>' +
       '<section id="six-halls-progress" class="six-halls-page" aria-label="个人进度"><div class="panel six-halls-shared"><div class="six-halls-section-heading"><h3>玩家与共用库存</h3><span id="six-halls-account" class="six-halls-muted"></span></div>' +
       '<div class="six-halls-shared-fields">' + inputHtml("playerLevel", "玩家等级", progress.playerLevel, null, Number.MAX_SAFE_INTEGER, "可留空；留空时只计算材料，不判断等级限制。") +
       inputHtml("herbs", "七星珠草库存（六堂共用）", progress.herbs, null, Number.MAX_SAFE_INTEGER) + '</div><p id="six-halls-cap" class="six-halls-notice"></p></div>' +
@@ -337,6 +340,23 @@
       '<div class="six-halls-level-status"><h4>等级解锁状态</h4><p class="six-halls-muted">' + escapeHtml(capText(controller, data, core)) + '</p>' +
       (result.hasLocked ? '<p class="six-halls-warning">规划包含尚未解锁的升级步骤；材料仍按完整目标计算，不表示现在可全部升级。</p>' : "") + '</div></section><div class="six-halls-grid">' + rows + '</div>';
   }
+  function renderHallReference(context) {
+    if (context.renderedHallId === context.hallId) return;
+    var reference = context.root.SIX_HALLS_REFERENCE_DATA;
+    var hall = reference && reference.halls.find(function (entry) { return entry.id === context.hallId; });
+    var details = context.root.document.getElementById("six-halls-hall-details");
+    if (!hall) { details.textContent = "堂口资料暂不可用。"; return; }
+    context.partition.querySelectorAll("[data-six-halls-hall]").forEach(function (button) {
+      var selected = button.dataset.sixHallsHall === hall.id;
+      button.classList.toggle("active", selected);
+      button.setAttribute("aria-pressed", String(selected));
+    });
+    details.innerHTML = '<article class="panel six-halls-profile" data-hall-theme="' + hall.id + '"><header class="six-halls-profile-heading"><h3>' + escapeHtml(hall.name) + '</h3><button type="button" class="seg" data-six-halls-source="' + escapeHtml(hall.sourcePath) + '">查看图片</button></header>' +
+      '<table class="six-halls-bonuses"><caption class="six-halls-sr-only">' + escapeHtml(hall.name) + '进度加成</caption><tbody>' + hall.bonuses.map(function (bonus) {
+        return '<tr><th scope="row">进度' + bonus.level + '</th><td>' + escapeHtml(bonus.text) + '</td></tr>';
+      }).join("") + '</tbody></table><h4>阵营神将</h4><ul class="six-halls-members">' + hall.disciples.map(function (name) { return '<li>' + escapeHtml(name) + '</li>'; }).join("") + '</ul></article>';
+    context.renderedHallId = hall.id;
+  }
   function renderReference(context) {
     var core = context.root.SIX_HALLS;
     var min = core.parseInteger(context.referenceBounds.min, 1, 50, false);
@@ -409,6 +429,7 @@
       button.classList.toggle("active", state.plan.targets[id] === level);
     });
     if (state.mode === "planner") renderResult(context);
+    if (state.mode === "halls") renderHallReference(context);
     if (state.mode === "reference") {
       context.partition.querySelectorAll("[data-six-halls-reference-bound]").forEach(function (input) {
         if (context.root.document.activeElement !== input) input.value = context.referenceBounds[input.dataset.sixHallsReferenceBound];
@@ -427,6 +448,8 @@
     if (context.controller) return;
     var root = context.root;
     context.controller = createController({ data: root.SIX_HALLS_DATA, core: root.SIX_HALLS, store: root.QinshiAccounts });
+    context.hallId = root.SIX_HALLS_DATA.halls[0].id;
+    if (context.partition.dataset.referenceEmbedded === "true") context.controller.setMode("halls");
     context.referenceBounds = { min: "1", max: "50" };
     context.queue = root.UI_PERFORMANCE && root.UI_PERFORMANCE.createRefreshQueue
       ? root.UI_PERFORMANCE.createRefreshQueue(function () { renderUpdates(context); }, 80)
@@ -443,6 +466,11 @@
       var button = event.target.closest("button");
       if (!button || !context.partition.contains(button) || button.disabled) return;
       if (button.hasAttribute("data-six-halls-mode")) context.controller.setMode(button.dataset.sixHallsMode);
+      else if (button.hasAttribute("data-six-halls-hall")) context.hallId = button.dataset.sixHallsHall;
+      else if (button.hasAttribute("data-six-halls-source")) {
+        root.document.dispatchEvent(new root.CustomEvent("qinshi:reference-image", { detail: { path: button.dataset.sixHallsSource, trigger: button } }));
+        return;
+      }
       else if (button.hasAttribute("data-six-halls-quick")) context.controller.setTarget(button.dataset.hallId, button.dataset.sixHallsQuick);
       else if (button.dataset.sixHallsAction === "reference-reset") {
         context.referenceBounds = { min: "1", max: "50" };
@@ -478,13 +506,17 @@
     var context = { root: root, partition: partition, controller: null, visible: false, queue: null };
     contexts.push(context);
     function activate(event) {
-      var active = event ? event.detail && event.detail.name === "six-halls" : !partition.hidden;
+      var detail = event && event.detail;
+      var active = !partition.hidden;
+      if (event && event.type === "qinshi:reference-sectionchange") active = detail && detail.section === "six-halls";
+      else if (event) active = detail && (detail.name === "six-halls" || detail.name === "other-reference" && partition.dataset.referenceEmbedded === "true");
       context.visible = Boolean(active && !partition.hidden);
       if (!context.visible) { if (context.queue) context.queue.cancel(); return; }
       mount(context);
       context.queue.flush();
     }
     root.document.addEventListener("qinshi:partitionchange", activate);
+    root.document.addEventListener("qinshi:reference-sectionchange", activate);
     activate();
     return context.controller;
   }

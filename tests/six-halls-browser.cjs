@@ -31,17 +31,20 @@ async function newPage(width = 390) {
 async function openSixHalls(page) {
   if (await page.locator('#mobile-more-toggle').isVisible()) {
     await page.locator('#mobile-more-toggle').click();
-    await page.locator('#mobile-more-layer [data-partition="six-halls"]').click();
+    await page.locator('#mobile-more-layer [data-partition="other-reference"]').click();
   } else {
-    await page.locator('.tab[data-partition="six-halls"]').click();
+    await page.locator('.tab[data-partition="other-reference"]').click();
   }
+  const entry = page.locator('[data-ref-section="six-halls"]');
+  if (await entry.isVisible()) await entry.click();
   await page.locator(PARTITION).waitFor({ state: 'visible' });
   await page.locator('[data-six-halls-mode="progress"]').waitFor({ state: 'visible' });
+  await mode(page, 'progress');
 }
 
 async function mode(page, value) {
   await page.locator('[data-six-halls-mode="' + value + '"]').click();
-  const content = value === 'planner' ? '#six-halls-result' : value === 'reference' ? '#six-halls-reference' : '[data-six-halls-progress="herbs"]';
+  const content = value === 'halls' ? '#six-halls-hall-details' : value === 'planner' ? '#six-halls-result' : value === 'reference' ? '#six-halls-reference' : '[data-six-halls-progress="herbs"]';
   await page.locator(content).waitFor({ state: 'visible' });
 }
 
@@ -78,7 +81,7 @@ async function touchTargets(page) {
 }
 
 for (const width of [390, 900, 1440]) {
-  test(width + ': real progress saves and all three six-halls views avoid page overflow', async () => {
+  test(width + ': real progress saves and all four six-halls views avoid page overflow', async () => {
     const page = await newPage(width);
     try {
       assert.equal(await page.locator(PARTITION + ' [data-six-halls-progress]').count(), 0,
@@ -86,8 +89,8 @@ for (const width of [390, 900, 1440]) {
       await openSixHalls(page);
       assert.equal(await page.locator(PARTITION + ' .six-halls-heading, ' + PARTITION + ' .six-halls-eyebrow').count(), 0,
         'six-halls should not render the removed in-page title strip');
-      assert.equal(await page.locator(PARTITION + ' [data-six-halls-mode]').count(), 3,
-        'all three six-halls views must remain available');
+      assert.equal(await page.locator(PARTITION + ' [data-six-halls-mode]').count(), 4,
+        'hall reference and all three original views must remain available');
       assert.equal(await page.locator('[data-six-halls-progress="level"]').count(), 6);
       await edit(page, 'playerLevel', 89);
       await edit(page, 'herbs', 1000);

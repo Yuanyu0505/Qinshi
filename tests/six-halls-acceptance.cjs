@@ -42,10 +42,13 @@ async function pageFor(context) {
 async function enter(page) {
   if (await page.locator('#mobile-more-toggle').isVisible()) {
     await page.locator('#mobile-more-toggle').click();
-    await page.locator('#mobile-more-layer [data-partition="six-halls"]').click();
-  } else await page.locator('.tab[data-partition="six-halls"]').click();
+    await page.locator('#mobile-more-layer [data-partition="other-reference"]').click();
+  } else await page.locator('.tab[data-partition="other-reference"]').click();
+  const entry = page.locator('[data-ref-section="six-halls"]');
+  if (await entry.isVisible()) await entry.click();
   await page.locator(PARTITION).waitFor({ state: 'visible' });
   await page.locator('[data-six-halls-mode="progress"]').waitFor({ state: 'visible' });
+  await mode(page, 'progress');
 }
 
 async function mode(page, value) {

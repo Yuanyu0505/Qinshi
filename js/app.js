@@ -1207,6 +1207,16 @@
 
     switchPartition = function (name, options) {
       const navigationOptions = options || {};
+      if (name === "six-halls") {
+        const switched = switchPartition("other-reference", navigationOptions);
+        const requestedIntent = navigationIntent;
+        return Promise.resolve(switched).then(function (result) {
+          if (result === false || requestedIntent !== navigationIntent || activePartition !== "other-reference") return false;
+          if (window.OTHER_REFERENCE_UI) window.OTHER_REFERENCE_UI.openSection(window, "six-halls");
+          if (window.location.hash === "#six-halls") window.history.replaceState({ partition: "other-reference" }, "", "#other-reference");
+          return true;
+        });
+      }
       if (!parts[name]) return;
       const source = navigationOptions.source || "user";
       const intent = navigationOptions._requestIntent === undefined ? ++navigationIntent : navigationOptions._requestIntent;

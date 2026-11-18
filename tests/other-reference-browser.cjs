@@ -16,11 +16,11 @@ async function open(width=1440,height=900,extra={}){
  await p.locator('#partition-other-reference [data-ref-section]').first().waitFor();
  return {context,p,errors};
 }
-test('nine sections, Chinese filter focus, independent state and source viewer are read-only',async()=>{
+test('ten sections, Chinese filter focus, independent state and source viewer are read-only',async()=>{
  const {context,p,errors}=await open();
  try{
  const before=await p.evaluate(()=>JSON.stringify({...localStorage}));
- assert.equal(await p.locator('.ref-index [data-ref-section]').count(),9);
+ assert.equal(await p.locator('.ref-index [data-ref-section]').count(),10);
  for(const id of ['cards','elements','origins','treasure','speed','guardians','levels','spirits','disciples']){
   await p.locator('.ref-index [data-ref-section="'+id+'"]').click();
   assert.ok(await p.locator('#partition-other-reference h2').innerText());

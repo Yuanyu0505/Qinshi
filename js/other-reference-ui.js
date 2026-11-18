@@ -11,7 +11,7 @@
     var match=String(value).match(/^(\d+)(?:\s*[~～–—-]\s*(\d+))?/);
     if(!match)return false;
     var start=Number(match[1]),end=match[2]===undefined?start:Number(match[2]);
-    return start<=Math.min(100,Number(band)+9)&&end>=Number(band);
+    return start<=(Number(band)===90?100:Math.min(100,Number(band)+9))&&end>=Number(band);
   }
   function tablesFor(root){
     var d=root.OTHER_REFERENCE_DATA,source=d.elements[0].source;
@@ -39,6 +39,7 @@
   function titleFor(table){var title=table.id==='elements-cost'?'气蕴需求数量对照':table.id==='elements-stones'?'五极石五行数量对照':table.id==='cards-substats-ratio'?'副属性比例':table.title;return cleanSourceLabel(title).replace(/原图/g,'');}
   function isMapping(table){return Boolean(table&&table.section==='elements'&&/mappings$/.test(table.id));}
   function cellHtml(table,column,value){
+    if(table.id==='levels-leagues'&&column==='联赛'){var note=(table.leagueNotes||[]).find(function(item){return item[0]===value;});return esc(value+(note?'（'+note[1]+'）':''));}
     if(table.section==='cards'&&column==='正高')return '<span class="ref-positive-high">'+esc(value)+'</span>';
     if(table.section==='speed'&&(column==='PVP速度'||column==='原图名次'))return '<span class="'+(column==='PVP速度'?'ref-speed-pvp':'ref-speed-rank')+'">'+esc(value)+'</span>';
     if(table.id==='elements-progression'&&String(value).includes('→'))return String(value).split('→').map(function(token){return '<span class="ref-quality-step">'+esc(token.trim())+'</span>';}).join(' → ');
@@ -52,7 +53,7 @@
     return Object.assign({},table,{columns:indices.map(function(i){return table.columns[i];}),rows:table.rows.map(function(row){return indices.map(function(i){return row[i];});})});
   }
   function hasRecommendedView(table,width){
-    return Boolean(table&&(table.id==='origins-all'||table.id==='levels-leagues'||width<760&&(['levels','disciples'].includes(table.section)||/^speed-(paid|free)-ranking$/.test(table.id)||table.section==='guardians'&&/aid-|base-skills/.test(table.id))));
+    return Boolean(table&&table.id!=='levels-leagues'&&(table.id==='origins-all'||width<760&&(['levels','disciples'].includes(table.section)||/^speed-(paid|free)-ranking$/.test(table.id)||table.section==='guardians'&&/aid-|base-skills/.test(table.id))));
   }
   function guideText(guide,album){
     if(guide.id==='guide-4'){
@@ -114,7 +115,7 @@
       var s=state(),section=data.sections.find(function(x){return x.id===sectionId;}),list=sectionTables(),table=currentTable();
       if(table)s.table=table.id;
       var cards=sectionId==='cards';
-      body.innerHTML='<section class="panel ref-section"'+(cards?' data-ref-kind="cards"':sectionId==='speed'?' data-ref-kind="speed"':'')+'><header class="ref-heading"><h2 tabindex="-1">'+esc(section.name)+'</h2><button type="button" class="seg" data-ref-home>返回目录</button></header><div class="ref-controls"><label>'+(cards?'查找属性':'查找资料')+'<input type="search" data-ref-search placeholder="'+(cards?'输入属性名称或属性数值':'名称、等级、属性或来源关键词')+'" value="'+esc(s.query)+'"></label>'+columnMenu(list,s.table)+(sectionId==='elements'?'<label data-ref-attribute-label hidden>属性<select data-ref-attribute><option value="">全部属性</option></select></label>':'<label data-ref-quality-label hidden>品质<select data-ref-quality><option value="">全部品质</option></select></label>')+'<label'+(sectionId==='levels'?'':' hidden')+'>等级区间<select data-ref-band><option value="">全部等级</option>'+Array.from({length:11},function(_,i){return '<option value="'+(i*10)+'">'+(i*10)+'–'+Math.min(100,i*10+9)+'级</option>';}).join('')+'</select></label><label>展示方式<select data-ref-view></select></label><label data-ref-sort-label'+(sectionId==='speed'?'':' hidden')+'>浏览排序<select data-ref-sort><option value="panel">面板速度降序</option><option value="pvp">PVP速度降序</option></select></label><button class="seg" type="button" data-ref-clear>清除筛选</button></div><div data-ref-results aria-live="polite"></div></section>';
+      body.innerHTML='<section class="panel ref-section"'+(cards?' data-ref-kind="cards"':sectionId==='speed'?' data-ref-kind="speed"':'')+'><header class="ref-heading"><h2 tabindex="-1">'+esc(section.name)+'</h2><button type="button" class="seg" data-ref-home>返回目录</button></header><div class="ref-controls"><label>'+(cards?'查找属性':'查找资料')+'<input type="search" data-ref-search placeholder="'+(cards?'输入属性名称或属性数值':'名称、等级、属性或来源关键词')+'" value="'+esc(s.query)+'"></label>'+columnMenu(list,s.table)+(sectionId==='elements'?'<label data-ref-attribute-label hidden>属性<select data-ref-attribute><option value="">全部属性</option></select></label>':'<label data-ref-quality-label hidden>品质<select data-ref-quality><option value="">全部品质</option></select></label>')+'<label'+(sectionId==='levels'?'':' hidden')+'>等级区间<select data-ref-band><option value="">全部等级</option>'+Array.from({length:10},function(_,i){return '<option value="'+(i*10)+'">'+(i*10)+'–'+(i===9?100:i*10+9)+'级</option>';}).join('')+'</select></label><label>展示方式<select data-ref-view></select></label><label data-ref-sort-label'+(sectionId==='speed'?'':' hidden')+'>浏览排序<select data-ref-sort><option value="panel">面板速度降序</option><option value="pvp">PVP速度降序</option></select></label><button class="seg" type="button" data-ref-clear>清除筛选</button></div><div data-ref-results aria-live="polite"></div></section>';
       body.querySelector('.ref-section').dataset.refKind=sectionId;
       body.querySelector('[data-ref-sort]').value=s.sort;body.querySelector('[data-ref-band]').value=s.band;
       if(sectionId==='disciples')body.querySelector('[data-ref-clear]').insertAdjacentHTML('beforebegin','<label>快捷查找等级<select data-ref-level-search><option value="">全部等级</option></select></label>');
@@ -122,6 +123,7 @@
     }
     function updateViewOptions(table){
       var select=body.querySelector('[data-ref-view]'),s=state(),recommended=hasRecommendedView(table,host.getBoundingClientRect().width),selected=s.view==='auto'&&!recommended?'table':s.view;
+      if(table&&table.id==='levels-leagues'&&s.view==='auto'){s.view='table';selected='table';}
       var choices=(recommended?[['auto','推荐视图']]:[]).concat([['table','原始对照表'],['cards','逐项卡片']]);
       var html=choices.map(function(choice){return '<option value="'+choice[0]+'"'+(choice[0]===selected?' selected':'')+'>'+choice[1]+'</option>';}).join('');
       if(select.innerHTML!==html)select.innerHTML=html;
@@ -143,11 +145,6 @@
       }
       var s=state();
       if(!rows.length)return '<p class="ref-empty" role="status">未找到匹配资料。试试其他关键词，或清除筛选。</p>';
-      if(table.id==='levels-leagues'&&s.view==='auto'){
-        var leagues=new Map();
-        rows.forEach(function(row){if(!leagues.has(row[1]))leagues.set(row[1],new Map());var servers=leagues.get(row[1]);if(!servers.has(row[2]))servers.set(row[2],[]);servers.get(row[2]).push(row[0]);});
-        return '<div class="ref-leagues">'+Array.from(leagues.entries()).map(function(league){return '<section class="ref-league-group" data-ref-league-group="'+esc(league[0])+'"><h3>'+esc(league[0])+'</h3><div>'+Array.from(league[1].entries()).map(function(server){return '<div class="ref-league-row">'+(server[0]?'<strong class="ref-league-server">'+esc(server[0])+'</strong>':'')+'<div class="ref-league-bands">'+server[1].map(function(band){return '<span class="ref-league-band">'+esc(band)+'</span>';}).join('')+'</div></div>';}).join('')+'</div></section>';}).join('')+'</div>';
-      }
       if(table.id==='origins-all'&&s.view==='auto'){
         var groups=new Map();rows.forEach(function(row){if(!groups.has(row[0]))groups.set(row[0],[]);groups.get(row[0]).push(row);});
         return '<div class="ref-origins">'+Array.from(groups.entries()).map(function(entry){return '<details data-ref-origin><summary><strong>'+esc(entry[0])+'</strong><span>'+entry[1].length+'项来源</span></summary><ol>'+entry[1].map(function(row){return '<li data-ref-origin-record>'+esc(row[1])+'</li>';}).join('')+'</ol></details>';}).join('')+'</div>';
@@ -166,7 +163,7 @@
       }
       if(s.view==='cards')return '<div class="ref-card-grid" style="--ref-card-fields:'+Math.max(1,table.columns.length-1)+';--ref-card-rows:'+Math.max(2,table.columns.length)+'">'+rows.map(function(row){return '<article class="ref-row-card"><h3>'+esc(row[0])+'</h3><dl>'+table.columns.slice(1).map(function(c,i){return '<div><dt>'+esc(columnLabel(table,c))+'</dt><dd>'+cellHtml(table,c,row[i+1])+'</dd></div>';}).join('')+'</dl></article>';}).join('')+'</div>';
       var widths=table.section==='guardians'?(/materials$/.test(table.id)?[22,26,26,26]:table.id==='guardians-base-skills'?[12,9,10,12,57]:table.id==='guardians-aid-skills'?[10,14,16,60]:table.id==='guardians-aid-special'?[10,15,75]:[14,12,74]):table.section==='origins'?[24,76]:table.section==='elements'?(/^elements-(cost|stones)$/.test(table.id)?[24,10,11,11,11,11,11,11]:isMapping(table)?[20,12,68]:table.id==='elements-qiyun-gains'?[12,12,19,19,19,19]:table.id==='elements-stone-gains'?[20,20,30,30]:table.id==='elements-progression'?[26,74]:[]):[];
-      if(table.section==='levels')widths=table.id==='levels-features'?[13,37,50]:table.id==='levels-positions'?[25,75]:[28,34,38];
+      if(table.section==='levels')widths=table.id==='levels-features'?[13,37,50]:[24,52,24];
       var colgroup=widths.length?'<colgroup>'+widths.map(function(width){return '<col style="width:'+width+'%">';}).join('')+'</colgroup>':'';
       return '<div class="ref-table-scroll" tabindex="0" role="region" aria-label="'+esc(titleFor(table))+'对照表"><table data-ref-table-id="'+esc(table.id)+'" class="ref-table'+(table.section==='cards'?' ref-card-stats':'')+(isMapping(table)?' ref-element-mappings':'')+(table.section==='origins'?' ref-origin-table':'')+(table.section==='treasure'?' ref-treasure-table':'')+'"><caption class="ref-visually-hidden">'+esc(titleFor(table))+'</caption>'+colgroup+'<thead><tr>'+table.columns.map(function(c){return '<th scope="col">'+esc(columnLabel(table,c))+'</th>';}).join('')+'</tr></thead><tbody>'+rows.map(function(row){return '<tr>'+row.map(function(v,i){var quality=table.columns[i]==='品质'&&/^[蓝紫橙红]$/.test(v);return i===0?'<th scope="row">'+esc(v)+'</th>':'<td'+(String(v).length>20?' class="ref-long-text"':'')+'>'+(quality?'<span class="ref-quality ref-quality-'+({'蓝':'blue','紫':'purple','橙':'orange','红':'red'}[v])+'">'+esc(v)+'</span>':cellHtml(table,table.columns[i],v))+'</td>';}).join('')+'</tr>';}).join('')+'</tbody></table></div>';
     }
@@ -181,7 +178,6 @@
           var parts=table.parts.map(function(part){return {table:part,rows:filterRows(part,s.query,'')};}),matched=parts.reduce(function(n,p){return n+p.rows.length;},0),total=table.parts.reduce(function(n,p){return n+p.rows.length;},0);
           html='<div class="ref-result-toolbar"><span>匹配 '+matched+'／'+total+'条</span>'+sourceButtons(table.sourcePaths||[])+'</div>'+(matched?'<div class="ref-element-gains">'+parts.filter(function(p){return p.rows.length;}).map(function(p){return '<section><h3>'+esc(titleFor(p.table))+'</h3>'+renderTable(p.table,p.rows)+'</section>';}).join('')+'</div>':renderTable(table,[]));
         }else html='<div class="ref-result-toolbar"><span>'+count+'</span>'+sourceButtons(table.sourcePaths||[])+'</div>'+(table.verification==='partial'?'<p class="ref-warning" role="note">部分转录 · 存在待核对内容</p>':'')+renderTable(table,rows);
-        if(table.id==='levels-leagues')html+='<details class="ref-league-notes"><summary>区间：用户确认修订 · 护符：原图说明</summary><dl>'+(table.leagueNotes||[]).map(function(note){return '<div><dt>'+esc(note[0])+'</dt><dd>'+esc(note[1])+'</dd></div>';}).join('')+'</dl></details>';
       }else html='<p class="ref-empty">暂无资料。</p>';
       if(sectionId==='cards'){
         html+='<section class="ref-guides"><h3>红卡攻略</h3><details class="ref-guide-library"><summary>查看攻略章节</summary>'+data.guides.map(function(g){return '<details data-ref-guide="'+esc(g.id)+'"><summary>'+esc(g.title)+'</summary><div class="ref-guide-text">'+esc(guideText(g,data.cardAlbum))+'</div>'+sourceButtons(g.sourcePaths||[])+'</details>';}).join('')+'</details></section>';

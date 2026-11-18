@@ -6,9 +6,10 @@ const tables=require('../data/other-reference-tables-a.js').tables;
 const ui=require('../js/other-reference-ui.js');
 const table=id=>tables.find(t=>t.id===id);
 
-test('feature search removes only the five authorized old entries or annotations',()=>{
+test('feature search applies the current user-confirmed removals and annotations',()=>{
   const old=baseline.find(t=>t.id==='levels-features');
-  const expected=old.rows.filter(r=>!['关卡/奇遇','青铜联赛终点','白银联赛终点'].includes(r[1])).map(r=>['星宿','兵法'].includes(r[1])?[r[0],r[1],'—']:r);
+  const notes={'星宿':'—','兵法':'—','机关觉醒':'通关第十四章可开启英雄关卡','图鉴':'满图鉴需要79级。','器灵强化':'—'};
+  const expected=old.rows.filter(r=>!['关卡/奇遇','青铜联赛终点','白银联赛终点'].includes(r[1])).map(r=>Object.hasOwn(notes,r[1])?[r[0],r[1],notes[r[1]]]:r);
   assert.deepEqual(table('levels-features').rows,expected);
   assert.equal(expected.length,37);
   assert.equal(ui.filterRows(table('levels-features'),'星宿','')[0][0],'40级');
@@ -16,9 +17,9 @@ test('feature search removes only the five authorized old entries or annotations
   for(const q of ['外圈','内圈','其徐如林','不动如山','其疾如风','侵掠如火','青铜联赛终点','白银联赛终点','关卡/奇遇'])assert.equal(ui.filterRows(table('levels-features'),q,'').length,0,q);
 });
 
-test('position unlocks including both initial slots retain every original field',()=>{
-  assert.deepEqual(table('levels-positions'),baseline.find(t=>t.id==='levels-positions'));
-  assert.deepEqual(table('levels-positions').rows[0],['1级','1号/2号位']);
+test('position unlock module is no longer part of the active level reference',()=>{
+  assert.equal(table('levels-positions'),undefined);
+  assert.deepEqual(tables.filter(t=>t.section==='levels').map(t=>t.id),['levels-features','levels-leagues']);
 });
 
 test('league data exposes exactly the fourteen user-confirmed literal bands',()=>{
@@ -48,4 +49,8 @@ test('league level-band filtering retains overlap and the former endpoint levels
   assert.ok(leagues.rows.some(r=>ui.matchesLevelBand(r[0],'50')&&r[0].includes('59')));
   assert.ok(leagues.rows.some(r=>ui.matchesLevelBand(r[0],'60')&&r[0].includes('69')));
   for(const level of [83,87])assert.ok(leagues.rows.filter(r=>{const n=r[0].match(/\d+/g).map(Number);return n[0]<=level&&n[1]>=level;}).length>1);
+  assert.equal(ui.matchesLevelBand('100级','90'),true);
+  assert.equal(ui.matchesLevelBand('89级','90'),false);
+  assert.equal(ui.hasRecommendedView(leagues,320),false);
+  assert.equal(ui.hasRecommendedView(leagues,1920),false);
 });

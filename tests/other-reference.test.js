@@ -49,6 +49,19 @@ test('both speed rankings use the user-confirmed disciple names',()=>{
   }
 });
 
+test('speed tables retain one source image per version and no stale partial status',()=>{
+  const tables=require('../data/other-reference-tables-c.js').tables;
+  for(const version of ['paid','free']){
+    const source='01_原始资料_17张/'+(version==='paid'?'12.png':'13.png');
+    for(const kind of ['ranking','components']){
+      const table=tables.find(t=>t.id==='speed-'+version+'-'+kind);
+      assert.deepEqual(table.sourcePaths,[source]);
+      assert.equal(table.verification,'visually-transcribed');
+      assert.ok(table.rows.every(row=>row.every(value=>!String(value).includes('待核对'))));
+    }
+  }
+});
+
 test('level bands include overlapping league ranges and distinguish unreadable names from absent source values',()=>{
   const ui=require('../js/other-reference-ui.js');
   assert.equal(ui.matchesLevelBand('70–100级','80'),true);

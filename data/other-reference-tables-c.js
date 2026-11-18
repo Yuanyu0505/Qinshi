@@ -101,8 +101,8 @@
 45|10092|神逆天而行|592|4|25|0|0|1174.74|12|0|0|1301.74
 46|10067|神逍遥子|599|4|20|0|0|1176.74|0|0|7|1298.74
 47|10093|神龙骧章邯|585|4|20|0|12|1174.74|0|0|7|1296.74`),
-    sourcePaths: [original + '12.png', extra + '补图10_氪佬版极限速度原图.jpeg'], verification: 'partial',
-    note: '47行数值已人工逐行按原图与补图读取，全部保留两位小数。原图名次表示图中行序（原图未印独立名次列），同速不自行并列重排。其他名称仍建议用户逐字验收。'
+    sourcePaths: [original + '12.png'], verification: 'visually-transcribed',
+    note: '47行数值已人工逐行按原图与补图读取，全部保留两位小数。原图名次表示图中行序（原图未印独立名次列），同速不自行并列重排。'
   });
   tables.push({
     id: 'speed-free-ranking', section: 'speed', title: '极限速度 · 平民版原图排行',
@@ -154,7 +154,7 @@
 45|10104|神千泷高月|587|4|1|1|124.74|12|1139.74|60|40|0|0|7|1246.74
 46|10092|神逆天而行|592|4|1|1|124.74|0|1132.74|60|40|12|0|0|1244.74
 47|10093|神龙骧章邯|585|4|1|1|124.74|12|1137.74|60|40|0|0|7|1244.74`),
-    sourcePaths: [original + '13.png', extra + '补图11_平民版极限速度原图.jpeg'], verification: 'partial',
+    sourcePaths: [original + '13.png'], verification: 'visually-transcribed',
     note: '47行数值按原图及补图逐行人工读取，保留全部小数。原图名次为行序，非计算排名；与氪佬版独立。'
   });
   tables.push({
@@ -178,7 +178,7 @@
 器灵PVP|速度+60
 戎装|速度+4（神·霸道田虎、神·韩非）
 称号|速度+3 PVP速度+5`),
-    sourcePaths: [original + '12.png', extra + '补图10_氪佬版极限速度原图.jpeg'], verification: 'visually-transcribed',
+    sourcePaths: [original + '12.png'], verification: 'visually-transcribed',
     note: '静态原图示例，不作为可执行公式；图中标题为“适配极限氪佬”。'
   });
   tables.push({
@@ -199,7 +199,7 @@
 诸子卡|速度+124.74
 兵法PVP|速度+40
 器灵PVP|速度+60`),
-    sourcePaths: [original + '13.png', extra + '补图11_平民版极限速度原图.jpeg'], verification: 'visually-transcribed',
+    sourcePaths: [original + '13.png'], verification: 'visually-transcribed',
     note: '静态原图示例，不将本方案参数套用至氪佬版。图中说明为“平民尽力冲刺”。'
   });
   tables.push({

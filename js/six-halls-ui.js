@@ -242,16 +242,16 @@
   function buildMarkup(context) {
     var data = context.root.SIX_HALLS_DATA;
     var progress = context.controller.state.progress;
-    var progressCards = data.halls.map(function (hall, index) {
+    var progressCards = data.halls.map(function (hall) {
       var saved = progress.halls[hall.id];
-      return '<article class="six-halls-card"><div class="six-halls-card-heading"><span class="six-halls-order" aria-hidden="true">' + (index + 1) + '</span><h3>' + escapeHtml(hall.name) + '</h3></div>' +
+      return '<article class="six-halls-card"><div class="six-halls-card-heading"><h3>' + escapeHtml(hall.name) + '</h3></div>' +
         '<div class="six-halls-fields">' + inputHtml("level", "当前等级", saved.level, hall.id, data.maxLevel) +
-        inputHtml("tokens", hall.name + "信物库存", saved.tokens, hall.id, Number.MAX_SAFE_INTEGER) + '</div>' +
+        inputHtml("tokens", "本堂信物库存", saved.tokens, hall.id, Number.MAX_SAFE_INTEGER) + '</div>' +
         '<p class="six-halls-progress-status" data-six-halls-progress-status="' + hall.id + '"></p></article>';
     }).join("");
     var planCards = data.halls.map(function (hall) {
-      return '<article class="six-halls-card" data-six-halls-plan-card="' + hall.id + '"><label class="six-halls-select-label"><input type="checkbox" data-six-halls-select="' + hall.id + '"><strong>' + escapeHtml(hall.name) + '</strong><span>加入规划</span></label>' +
-        '<p class="six-halls-muted" data-six-halls-current="' + hall.id + '"></p><div class="six-halls-field"><label for="six-halls-target-' + hall.id + '">目标等级</label>' +
+      return '<article class="six-halls-card" data-six-halls-plan-card="' + hall.id + '"><label class="six-halls-select-label"><input type="checkbox" data-six-halls-select="' + hall.id + '"><strong>' + escapeHtml(hall.name) + '</strong><span data-six-halls-current="' + hall.id + '"></span></label>' +
+        '<div class="six-halls-field"><label for="six-halls-target-' + hall.id + '">目标等级</label>' +
         '<input id="six-halls-target-' + hall.id + '" type="number" min="0" max="' + data.maxLevel + '" step="1" inputmode="numeric" data-six-halls-target="' + hall.id + '" value="50" aria-describedby="six-halls-target-error-' + hall.id + '">' +
         '<p id="six-halls-target-error-' + hall.id + '" class="six-halls-inline-error" data-six-halls-target-error="' + hall.id + '" hidden></p></div>' +
         '<div class="six-halls-quick" aria-label="' + escapeHtml(hall.name) + '目标等级快捷设置">' + [10, 20, 30, 40, 50].map(function (level) {
@@ -267,12 +267,12 @@
         return '<button type="button" class="seg" data-six-halls-hall="' + hall.id + '" data-hall-theme="' + hall.id + '" aria-pressed="false">' + escapeHtml(hall.name) + '</button>';
       }).join("") + '</nav><div id="six-halls-hall-details"></div></section>' +
       '<section id="six-halls-progress" class="six-halls-page" aria-label="个人进度"><div class="panel six-halls-shared"><div class="six-halls-section-heading"><h3>玩家与共用库存</h3><span id="six-halls-account" class="six-halls-muted"></span></div>' +
-      '<div class="six-halls-shared-fields">' + inputHtml("playerLevel", "玩家等级", progress.playerLevel, null, Number.MAX_SAFE_INTEGER, "可留空；留空时只计算材料，不判断等级限制。") +
+      '<div class="six-halls-shared-fields">' + inputHtml("playerLevel", "玩家等级（可留空）", progress.playerLevel, null, Number.MAX_SAFE_INTEGER) +
       inputHtml("herbs", "七星珠草库存（六堂共用）", progress.herbs, null, Number.MAX_SAFE_INTEGER) + '</div><p id="six-halls-cap" class="six-halls-notice"></p></div>' +
       '<p class="six-halls-muted">修改等级不增减库存。</p><div class="six-halls-grid">' + progressCards + '</div></section>' +
       '<section id="six-halls-planner" class="six-halls-page" aria-label="升级规划" hidden><div class="six-halls-section-heading"><div><h3>选择本次升级目标</h3></div>' +
       '<button type="button" class="seg" data-six-halls-action="calculate">计算材料</button></div><div class="six-halls-grid">' + planCards + '</div><div id="six-halls-result" class="six-halls-result" aria-live="polite" aria-atomic="true"></div></section>' +
-      '<section id="six-halls-reference" class="six-halls-page" aria-label="升级资料" hidden><div class="panel"><h3>通用升级资料</h3><p class="six-halls-muted">六堂使用同一份升级消耗表，每堂0→50级共需七星珠草904、该堂信物435。累计从0级开始计算；“—”表示该步骤未单列玩家等级门槛。</p>' +
+      '<section id="six-halls-reference" class="six-halls-page" aria-label="升级资料" hidden><div class="panel"><p class="six-halls-muted">每堂0→50级：七星珠草904、本堂信物435。累计从0级计算；“—”表示该步骤未单列等级门槛。</p>' +
       '<div class="six-halls-reference-filter"><div class="six-halls-field"><label for="six-halls-reference-min">目标等级起点</label><input id="six-halls-reference-min" type="number" min="1" max="50" step="1" inputmode="numeric" data-six-halls-reference-bound="min" value="1"></div>' +
       '<span aria-hidden="true">至</span><div class="six-halls-field"><label for="six-halls-reference-max">目标等级终点</label><input id="six-halls-reference-max" type="number" min="1" max="50" step="1" inputmode="numeric" data-six-halls-reference-bound="max" value="50"></div><button type="button" class="seg" data-six-halls-action="reference-reset">全部等级</button></div>' +
       '<p id="six-halls-reference-status" class="six-halls-muted" role="status"></p><div id="six-halls-reference-content"></div></div></section>';
@@ -301,7 +301,12 @@
   function metric(label, value, className, attribute) {
     return '<div' + (className ? ' class="' + className + '"' : "") + '><dt>' + label + '</dt><dd' + (attribute ? " " + attribute : "") + '>' + numberText(value) + '</dd></div>';
   }
+  function rememberResultDetails(context) {
+    if(!context.openResultDetails)context.openResultDetails={};
+    context.elements.result.querySelectorAll('[data-six-halls-locked]').forEach(function(detail){context.openResultDetails[detail.dataset.sixHallsLocked]=detail.open;});
+  }
   function renderResult(context) {
+    rememberResultDetails(context);
     var controller = context.controller;
     var result = controller.calculate();
     var data = context.root.SIX_HALLS_DATA;
@@ -316,27 +321,24 @@
       context.elements.result.innerHTML = '<div class="panel six-halls-empty"><h3>尚未选择堂口</h3><p>勾选需要升级的堂口后，查看共用七星珠草和各堂信物缺口。</p></div>';
       return;
     }
-    var materialsMissing = result.herbs.missing > 0 || result.rows.some(function (row) { return row.tokenMissing > 0; });
     var rows = result.rows.map(function (row) {
       var cost = core.calculateCost(row.current, row.target, data);
       var lockedSteps = row.locked ? cost.steps.filter(function (step) { return step.to > Math.max(row.current, row.currentCap); }) : [];
       var gate = row.current === row.target ? "目标已达成，不含新增升级步骤。" : !result.playerLevelKnown ? "玩家等级未填写，无法判断升级限制。" : row.locked
         ? "目标尚未解锁：当前可升上限" + row.currentCap + "级，目标所需玩家等级" + row.requiredPlayerLevel + "级。"
         : "等级限制：本次目标已解锁。";
-      var stepsMarkup = lockedSteps.length ? '<details class="six-halls-locked-steps"><summary>查看未解锁步骤（' + lockedSteps.length + '步）</summary><ol>' + lockedSteps.map(function (step) {
+      var stepsMarkup = lockedSteps.length ? '<details class="six-halls-locked-steps" data-six-halls-locked="' + row.id + '"'+(context.openResultDetails[row.id]?' open':'')+'><summary>查看未解锁步骤（' + lockedSteps.length + '步）</summary><ol>' + lockedSteps.map(function (step) {
         return '<li>' + step.from + '→' + step.to + '级：七星珠草' + step.herbs + '、信物' + step.tokens + (step.playerLevel == null ? "" : '；玩家等级需' + step.playerLevel + '级') + '</li>';
       }).join("") + '</ol></details>' : "";
       return '<article class="six-halls-card six-halls-result-card" data-six-halls-result-row="' + row.id + '"><div class="six-halls-section-heading"><h3>' + escapeHtml(row.name) + '</h3><span>' + row.current + ' → ' + row.target + '级</span></div>' +
         (row.current === row.target ? '<p class="six-halls-enough">目标已达成，无新增消耗。</p>' : "") +
         '<p class="six-halls-herb-need">七星珠草需求 <strong>' + numberText(row.herbs) + '</strong><small>原始需求，未在本堂抵扣共享库存</small></p>' +
         '<h4>本堂信物（独立库存）</h4><dl class="six-halls-metrics">' + metric("需求", row.tokens) + metric("库存", row.tokenStock) + metric("缺口", row.tokenMissing, row.tokenMissing > 0 ? "six-halls-shortage" : "six-halls-enough") + metric("剩余", row.tokenRemaining) + '</dl>' +
-        '<p class="' + (row.tokenMissing > 0 ? "six-halls-shortage" : "six-halls-enough") + '">' + (row.tokenMissing > 0 ? "本堂信物不足，缺" + numberText(row.tokenMissing) : "本堂信物充足，缺口0") + '</p>' +
         '<div class="six-halls-level-status"><h4>等级解锁状态</h4><p class="' + (row.locked ? "six-halls-warning" : "six-halls-muted") + '">' + escapeHtml(gate) + '</p>' +
         (row.progressConflict ? '<p class="six-halls-warning">已保存的当前等级高于玩家等级可升上限；仅提示，不会自动降低当前等级。</p>' : "") + stepsMarkup + '</div></article>';
     }).join("");
     context.elements.result.innerHTML = '<section class="panel six-halls-total"><div class="six-halls-section-heading"><h3>七星珠草合计</h3><span>已选' + result.selectedCount + '堂</span></div><p class="six-halls-muted">六堂共用库存，仅在此处抵扣一次；各堂信物不能互抵。</p>' +
-      '<dl class="six-halls-metrics">' + metric("总需求", result.herbs.need, "", 'data-six-halls-herbs="need"') + metric("共享库存", result.herbs.stock, "", 'data-six-halls-herbs="stock"') + metric("总缺口", result.herbs.missing, result.herbs.missing > 0 ? "six-halls-shortage" : "six-halls-enough", 'data-six-halls-herbs="missing"') + metric("剩余库存", result.herbs.remaining, "", 'data-six-halls-herbs="remaining"') + '</dl>' +
-      '<p class="' + (materialsMissing ? "six-halls-shortage" : "six-halls-enough") + '">材料状态：' + (materialsMissing ? "仍有材料缺口，请分别查看七星珠草及各堂信物。" : "本次目标材料充足，全部缺口为0。") + '</p>' +
+      '<dl class="six-halls-metrics">' + metric("总需求", result.herbs.need, "", 'data-six-halls-herbs="need"') + metric("共享库存", result.herbs.stock, "", 'data-six-halls-herbs="stock"') + metric("总缺口", result.herbs.missing, 'six-halls-key-shortage '+(result.herbs.missing > 0 ? "six-halls-shortage" : "six-halls-enough"), 'data-six-halls-herbs="missing"') + metric("剩余库存", result.herbs.remaining, "", 'data-six-halls-herbs="remaining"') + '</dl>' +
       '<div class="six-halls-level-status"><h4>等级解锁状态</h4><p class="six-halls-muted">' + escapeHtml(capText(controller, data, core)) + '</p>' +
       (result.hasLocked ? '<p class="six-halls-warning">规划包含尚未解锁的升级步骤；材料仍按完整目标计算，不表示现在可全部升级。</p>' : "") + '</div></section><div class="six-halls-grid">' + rows + '</div>';
   }
@@ -352,7 +354,7 @@
       button.setAttribute("aria-pressed", String(selected));
     });
     details.innerHTML = '<article class="panel six-halls-profile" data-hall-theme="' + hall.id + '"><header class="six-halls-profile-heading"><h3>' + escapeHtml(hall.name) + '</h3><button type="button" class="seg" data-six-halls-source="' + escapeHtml(hall.sourcePath) + '">查看图片</button></header>' +
-      '<table class="six-halls-bonuses"><caption class="six-halls-sr-only">' + escapeHtml(hall.name) + '进度加成</caption><tbody>' + hall.bonuses.map(function (bonus) {
+      '<table class="six-halls-bonuses"><caption class="six-halls-sr-only">' + escapeHtml(hall.name) + '进度加成</caption><colgroup><col class="six-halls-phase-column"><col></colgroup><tbody>' + hall.bonuses.map(function (bonus) {
         return '<tr><th scope="row">进度' + bonus.level + '</th><td>' + escapeHtml(bonus.text) + '</td></tr>';
       }).join("") + '</tbody></table><h4>阵营神将</h4><ul class="six-halls-members">' + hall.disciples.map(function (name) { return '<li>' + escapeHtml(name) + '</li>'; }).join("") + '</ul></article>';
     context.renderedHallId = hall.id;
@@ -392,7 +394,7 @@
     });
     modes.forEach(function (mode) { context.root.document.getElementById("six-halls-" + mode).hidden = mode !== state.mode; });
     showText(context.elements.error, state.error);
-    context.elements.readonly.hidden = !readonly;
+    context.elements.readonly.hidden = !readonly || state.mode==='halls' || state.mode==='reference';
     context.elements.cap.textContent = state.loadError ? "个人进度未能读取；请到设置恢复备份后刷新页面。" : capText(controller, data, core);
     var account = null;
     try { account = context.root.QinshiAccounts.currentAccount ? context.root.QinshiAccounts.currentAccount() : null; }
@@ -409,7 +411,8 @@
     context.partition.querySelectorAll("[data-six-halls-progress-status]").forEach(function (element) {
       var level = state.progress.halls[element.dataset.sixHallsProgressStatus].level;
       var conflict = currentCap !== null && level > currentCap;
-      element.textContent = state.loadError ? "个人进度未能读取，暂不显示替代等级。" : conflict ? "当前等级高于玩家等级可升上限，仅提示，不会自动调整。" : level === data.maxLevel ? "已满级，后续规划不会重复计入已完成消耗。" : "当前" + level + " / " + data.maxLevel + "级，信物仅用于本堂。";
+      element.textContent = state.loadError ? "个人进度未能读取，暂不显示替代等级。" : conflict ? "当前等级高于玩家等级可升上限，仅提示，不会自动调整。" : level === data.maxLevel ? "已满级" : "";
+      element.hidden=!element.textContent;
       element.classList.toggle("six-halls-warning", conflict);
     });
     data.halls.forEach(function (hall) {
@@ -418,7 +421,7 @@
       var checkbox = context.partition.querySelector('[data-six-halls-select="' + hall.id + '"]');
       checkbox.checked = selected;
       context.partition.querySelector('[data-six-halls-plan-card="' + hall.id + '"]').classList.toggle("is-selected", selected);
-      context.partition.querySelector('[data-six-halls-current="' + hall.id + '"]').textContent = state.loadError ? "个人进度未能读取，规划计算已暂停。" : "当前" + saved.level + "级 · 本堂信物库存" + numberText(saved.tokens);
+      context.partition.querySelector('[data-six-halls-current="' + hall.id + '"]').textContent = state.loadError ? "进度未读取" : "当前" + saved.level + "级";
       updateInput(context, context.partition.querySelector('[data-six-halls-target="' + hall.id + '"]'), state.plan.targets[hall.id], state.targetErrors[hall.id]);
       showText(context.partition.querySelector('[data-six-halls-target-error="' + hall.id + '"]'), state.targetErrors[hall.id]);
     });
@@ -436,6 +439,7 @@
       });
       renderReference(context);
     }
+    context.lastMode=state.mode;
   }
 
   function fallbackQueue(root, render) {
@@ -458,7 +462,11 @@
     context.partition.dataset.sixHallsInitialized = "true";
     context.controller.subscribe(function (state, type) {
       if (type === "load") {
-        context.referenceBounds = { min: "1", max: "50" };
+        context.openResultDetails={};context.elements.result.innerHTML='';
+        // Only public page position survives. Controller.load has already
+        // reset every private value and planning draft under its original rules.
+        if(context.lastMode==='halls'||context.lastMode==='reference')context.controller.setMode(context.lastMode);
+        if(context.lastMode!=='reference')context.referenceBounds = { min: "1", max: "50" };
       }
       if (context.visible) context.queue.schedule();
     });
@@ -487,7 +495,7 @@
       else if (input.hasAttribute("data-six-halls-target")) context.controller.setTarget(input.dataset.sixHallsTarget, value);
       else if (input.hasAttribute("data-six-halls-reference-bound")) context.referenceBounds[input.dataset.sixHallsReferenceBound] = value;
       else return;
-      if (context.controller.state.mode === "planner") context.elements.result.innerHTML = '<p class="six-halls-muted">输入已变化，正在更新规划…</p>';
+      if (context.controller.state.mode === "planner") {rememberResultDetails(context);context.elements.result.innerHTML = '<p class="six-halls-muted">正在更新规划…</p>';}
       context.queue.schedule();
     });
     context.partition.addEventListener("change", function (event) {

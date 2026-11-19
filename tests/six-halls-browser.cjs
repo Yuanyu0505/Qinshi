@@ -36,6 +36,10 @@ async function openSixHalls(page) {
     await page.locator('.tab[data-partition="other-reference"]').click();
   }
   const entry = page.locator('[data-ref-section="six-halls"]');
+  await page.waitForFunction(()=>{
+    const entry=document.querySelector('[data-ref-section="six-halls"]'),partition=document.getElementById('partition-six-halls');
+    return entry&&entry.getClientRects().length||partition&&!partition.hidden&&partition.getClientRects().length;
+  });
   if (await entry.isVisible()) await entry.click();
   await page.locator(PARTITION).waitFor({ state: 'visible' });
   await page.locator('[data-six-halls-mode="progress"]').waitFor({ state: 'visible' });

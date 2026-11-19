@@ -23,7 +23,7 @@ for(const fail of [false,true])test('embedded six halls resumes background '+(fa
     await page.locator('.tab[data-partition="other-reference"]').click();
     await page.locator('[data-ref-section="six-halls"]').click();
     await requested;
-    await page.locator('.tab[data-partition="settings"]').click();
+    await page.locator('.tab[data-partition="forging"]').click();
     release();
     await page.waitForFunction(failed=>{
       const status=document.querySelector('[data-ref-six-halls-status]');

@@ -45,6 +45,10 @@ async function enter(page) {
     await page.locator('#mobile-more-layer [data-partition="other-reference"]').click();
   } else await page.locator('.tab[data-partition="other-reference"]').click();
   const entry = page.locator('[data-ref-section="six-halls"]');
+  await page.waitForFunction(()=>{
+    const entry=document.querySelector('[data-ref-section="six-halls"]'),partition=document.getElementById('partition-six-halls');
+    return entry&&entry.getClientRects().length||partition&&!partition.hidden&&partition.getClientRects().length;
+  });
   if (await entry.isVisible()) await entry.click();
   await page.locator(PARTITION).waitFor({ state: 'visible' });
   await page.locator('[data-six-halls-mode="progress"]').waitFor({ state: 'visible' });
@@ -185,7 +189,7 @@ test('unknown player levels, locked steps, milestone boundaries and completed ta
     assert.match(await row.innerText(), /玩家等级未填写.*无法判断/);
     const missingColor = await page.locator('[data-six-halls-herbs="missing"]').evaluate(node => getComputedStyle(node).color);
     assert.equal(missingColor, 'rgb(255, 155, 145)');
-    assert.match(await row.innerText(), /本堂信物不足.*435/);
+    assert.equal(await row.locator('.six-halls-metrics > div').filter({hasText:'缺口'}).locator('dd').innerText(),'435');
     await mode(page, 'progress');
     await edit(page, 'herbs', 1000);
     await edit(page, 'tokens', 500, 'kuiwei');
@@ -193,8 +197,7 @@ test('unknown player levels, locked steps, milestone boundaries and completed ta
     await mode(page, 'planner');
     assert.equal(await metric(page, 'missing'), 0);
     assert.equal(await page.locator('[data-six-halls-herbs="missing"]').evaluate(node => getComputedStyle(node).color), 'rgb(166, 212, 160)');
-    assert.match(await page.locator('#six-halls-result').innerText(), /材料充足.*缺口为0/);
-    assert.match(await row.innerText(), /本堂信物充足.*缺口0/);
+    assert.equal(await row.locator('.six-halls-metrics > div').filter({hasText:'缺口'}).locator('dd').innerText(),'0');
     assert.match(await row.innerText(), /目标尚未解锁.*89级/);
     await row.locator('summary').click();
     assert.equal(await row.locator('.six-halls-locked-steps li').count(), 41);
@@ -328,8 +331,8 @@ for (const [width, columns] of [[390, 1], [900, 2], [1440, 3]]) {
       const page = await pageFor(context);
       const navigation = width === 390 ? '#mobile-more-layer [data-partition]' : '.tab[data-partition]';
       const names = await page.locator(navigation).evaluateAll(nodes => nodes.map(node => node.dataset.partition));
-      const position = names.indexOf('six-halls');
-      assert.deepEqual(names.slice(position - 1, position + 2), ['formations', 'six-halls', 'loulan']);
+      assert.equal(names.includes('six-halls'),false,'six halls stays inside references, not the main navigation');
+      assert.equal(names.includes('other-reference'),true);
       await enter(page);
       for (const value of ['progress', 'planner']) {
         await mode(page, value);
@@ -342,7 +345,7 @@ for (const [width, columns] of [[390, 1], [900, 2], [1440, 3]]) {
         heading: getComputedStyle(node.tHead).display,
         row: getComputedStyle(node.tBodies[0].rows[0]).display
       }));
-      if (width === 390) assert.deepEqual(styles, { table: 'block', heading: 'none', row: 'block' });
+      if (width === 390) assert.deepEqual(styles, { table: 'block', heading: 'none', row: 'grid' });
       else assert.equal(styles.table, 'table');
       const first = page.locator('#six-halls-reference tbody tr').first();
       assert.equal(await first.locator('[data-label="玩家等级门槛"]').innerText(), '—');

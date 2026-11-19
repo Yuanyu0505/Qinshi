@@ -1,5 +1,7 @@
 #partition-six-halls {
   min-width: 0;
+  container-type: inline-size;
+  container-name: six-halls;
   --six-halls-red: #ff9b91;
   --six-halls-green: #a6d4a0;
   --six-halls-gold: var(--gold, #d4af37);
@@ -14,18 +16,18 @@
 #partition-six-halls .six-halls-hall-tabs { display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px; }
 #partition-six-halls .six-halls-hall-tabs button.seg { padding:8px 4px;white-space:nowrap;font-size:14px; }
 #partition-six-halls .six-halls-hall-tabs button[aria-pressed="true"] { color:var(--six-halls-accent);border-color:var(--six-halls-accent);background:var(--bg2);font-weight:700; }
-@media (max-width:480px) {
-  #partition-six-halls .six-halls-hall-tabs { grid-template-columns:repeat(3,minmax(0,1fr)); }
-}
 #partition-six-halls .six-halls-profile-heading { display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px; }
 #partition-six-halls .six-halls-profile-heading h3 { color:var(--six-halls-accent);margin:0; }
-#partition-six-halls .six-halls-bonuses { border-collapse:collapse;width:100%;table-layout:fixed;line-height:1.8;margin-bottom:18px; }
+#partition-six-halls .six-halls-profile,
+#partition-six-halls .six-halls-hall-tabs { width:100%;max-width:960px;margin-inline:auto; }
+#partition-six-halls .six-halls-bonuses { border-collapse:collapse;width:100%;table-layout:fixed;line-height:1.8;margin-bottom:18px;font-size:15px; }
+#partition-six-halls .six-halls-phase-column { width:70px; }
 #partition-six-halls .six-halls-bonuses th,
 #partition-six-halls .six-halls-bonuses td { padding:10px 8px;border-bottom:1px solid var(--line);vertical-align:middle; }
-#partition-six-halls .six-halls-bonuses th { width:66px;color:var(--six-halls-accent);text-align:center;white-space:nowrap; }
-#partition-six-halls .six-halls-bonuses td { text-align:left;white-space:normal;overflow-wrap:anywhere; }
+#partition-six-halls .six-halls-bonuses th { width:auto;color:var(--six-halls-accent);text-align:left;white-space:nowrap;font-size:13px; }
+#partition-six-halls .six-halls-bonuses td { text-align:left;white-space:normal;overflow-wrap:break-word;word-break:normal; }
 #partition-six-halls .six-halls-members { list-style:none;display:flex;flex-wrap:wrap;gap:8px 14px;padding:0;margin:0;line-height:1.7; }
-#partition-six-halls .six-halls-members li { max-width:100%; }
+#partition-six-halls .six-halls-members li { max-width:100%;white-space:nowrap;font-size:14px; }
 #partition-six-halls .six-halls-sr-only { position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap; }
 #partition-six-halls * { min-width: 0; }
 #partition-six-halls h3,
@@ -38,7 +40,7 @@
 #partition-six-halls li,
 #partition-six-halls small,
 #partition-six-halls strong,
-#partition-six-halls dd { overflow-wrap: anywhere; }
+#partition-six-halls dd { overflow-wrap: break-word; }
 #partition-six-halls #six-halls-account { max-width: 100%; overflow-wrap: anywhere; }
 #partition-six-halls .panel { margin: 0; }
 #partition-six-halls .six-halls-section-heading {
@@ -51,7 +53,7 @@
 #partition-six-halls .six-halls-section-heading h3,
 #partition-six-halls .six-halls-section-heading p { margin-bottom: 0; }
 #partition-six-halls .six-halls-section-heading > div > p { margin-top: 8px; }
-#partition-six-halls .six-halls-modes { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 18px; }
+#partition-six-halls .six-halls-modes { display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin-bottom:18px; }
 #partition-six-halls button {
   min-width: 44px;
   min-height: 44px;
@@ -60,11 +62,14 @@
   overflow-wrap: anywhere;
   touch-action: manipulation;
 }
+#partition-six-halls .six-halls-modes button.seg,
+#partition-six-halls .six-halls-page button.seg { min-width:44px;min-height:44px; }
 #partition-six-halls button:focus-visible,
 #partition-six-halls input:focus-visible,
 #partition-six-halls summary:focus-visible { outline: 2px solid var(--six-halls-gold); outline-offset: 3px; }
 #partition-six-halls button:disabled { cursor: not-allowed; opacity: .42; }
-#partition-six-halls .six-halls-modes button { flex: 1 1 120px; }
+#partition-six-halls .six-halls-modes button { padding:10px 8px;font-size:14px;white-space:nowrap; }
+#partition-six-halls .six-halls-modes button[aria-current="page"] { color:var(--six-halls-gold);border-color:var(--six-halls-gold);background:rgba(212,175,55,.1);font-weight:700; }
 #partition-six-halls .six-halls-page { display: grid; gap: 16px; }
 #partition-six-halls .six-halls-muted { color: var(--muted, #aaa08b); font-size: 13px; line-height: 1.7; }
 #partition-six-halls .six-halls-page > .six-halls-muted { margin-bottom: 0; }
@@ -83,30 +88,20 @@
 #partition-six-halls .six-halls-error ul:last-child { margin-bottom: 0; }
 #partition-six-halls .six-halls-error ul { padding-left: 22px; }
 #partition-six-halls .six-halls-inline-error { margin: 0; color: var(--six-halls-red); font-size: 12px; line-height: 1.6; }
-#partition-six-halls .six-halls-shared { display: grid; gap: 18px; }
+#partition-six-halls .six-halls-shared { display: grid; gap: 12px; }
 #partition-six-halls .six-halls-shared .six-halls-notice { margin-bottom: 0; }
 #partition-six-halls .six-halls-shared-fields,
-#partition-six-halls .six-halls-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
+#partition-six-halls .six-halls-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
 #partition-six-halls .six-halls-card {
-  padding: 18px;
+  padding: 14px;
   border: 1px solid var(--line, #3a3125);
   border-radius: 10px;
-  background: linear-gradient(135deg, rgba(212, 175, 55, .035), transparent 65%), var(--bg2, #191611);
+  background: var(--bg2, #191611);
 }
 #partition-six-halls .six-halls-card.is-selected { border-color: var(--gold-dim, #9a7f2e); box-shadow: inset 0 0 0 1px rgba(212, 175, 55, .12); }
-#partition-six-halls .six-halls-card-heading { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
+#partition-six-halls .six-halls-card-heading { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
 #partition-six-halls .six-halls-card-heading h3 { margin: 0; }
-#partition-six-halls .six-halls-order {
-  display: grid;
-  place-items: center;
-  flex: 0 0 28px;
-  height: 28px;
-  border: 1px solid var(--gold-dim, #9a7f2e);
-  color: var(--six-halls-gold);
-  font-size: 12px;
-  border-radius: 50%;
-}
-#partition-six-halls .six-halls-fields { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; }
+#partition-six-halls .six-halls-fields { display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,125px),1fr));gap:12px; }
 #partition-six-halls .six-halls-field { display: grid; align-content: start; gap: 7px; }
 #partition-six-halls .six-halls-field label { font-size: 14px; color: var(--text, #e8e0cf); }
 #partition-six-halls input[type="number"] {
@@ -136,10 +131,13 @@
 #partition-six-halls .six-halls-result { display: grid; gap: 16px; scroll-margin-top: 18px; }
 #partition-six-halls .six-halls-total { display: grid; gap: 14px; }
 #partition-six-halls .six-halls-total > p { margin: 0; }
-#partition-six-halls .six-halls-metrics { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin: 14px 0; }
+#partition-six-halls .six-halls-metrics { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 10px 0; }
 #partition-six-halls .six-halls-metrics > div { padding: 10px; border: 1px solid var(--line, #3a3125); border-radius: 6px; background: rgba(0, 0, 0, .12); }
 #partition-six-halls .six-halls-metrics dt { margin-bottom: 4px; font-size: 12px; color: var(--muted, #aaa08b); }
 #partition-six-halls .six-halls-metrics dd { margin: 0; font-size: 20px; font-weight: 600; font-variant-numeric: tabular-nums; }
+#partition-six-halls .six-halls-metrics > .six-halls-key-shortage { border-color:currentColor; }
+#partition-other-reference [data-ref-kind="six-halls"] > .ref-heading button.seg { min-height:44px; }
+#partition-six-halls .six-halls-key-shortage dd { font-size:26px; }
 #partition-six-halls .six-halls-shortage { color: var(--six-halls-red); }
 #partition-six-halls .six-halls-enough { color: var(--six-halls-green); }
 #partition-six-halls .six-halls-warning { color: #e4bd72; }
@@ -166,30 +164,37 @@
 #partition-six-halls .six-halls-reference-table td { padding: 11px 7px; text-align: center; white-space: normal; overflow-wrap: anywhere; border-bottom: 1px solid var(--line, #3a3125); }
 #partition-six-halls .six-halls-reference-table thead th { font-size: 12px; color: var(--six-halls-gold); }
 #partition-six-halls .six-halls-reference-table tbody th { color: var(--text, #e8e0cf); font-weight: 600; }
-@media (min-width: 700px) {
+@container six-halls (min-width: 560px) {
   #partition-six-halls .six-halls-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   #partition-six-halls .six-halls-shared-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   #partition-six-halls .six-halls-total .six-halls-metrics { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }
-@media (min-width: 1120px) {
+@container six-halls (min-width: 980px) {
   #partition-six-halls .six-halls-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
-@media (max-width: 699px) {
-  #partition-six-halls .six-halls-card { padding: 15px; }
-  #partition-six-halls .six-halls-section-heading > button { width: 100%; }
-  #partition-six-halls .six-halls-modes { gap: 5px; }
-  #partition-six-halls .six-halls-modes button { flex: 1 1 0; padding: 8px 5px; font-size: 14px; }
-  #partition-six-halls .six-halls-reference-filter button { width: 100%; flex: 1 1 100%; }
+@container six-halls (max-width: 480px) {
+  #partition-six-halls .six-halls-modes { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  #partition-six-halls .six-halls-hall-tabs { grid-template-columns:repeat(3,minmax(0,1fr)); }
+  #partition-six-halls .six-halls-card { padding:12px; }
+  #partition-six-halls .six-halls-profile { padding:10px; }
+  #partition-six-halls .six-halls-phase-column { width:62px; }
+  #partition-six-halls .six-halls-bonuses th,
+  #partition-six-halls .six-halls-bonuses td { padding:10px 5px; }
+  #partition-six-halls .six-halls-reference-filter { gap:8px; }
+  #partition-six-halls .six-halls-reference-filter .six-halls-field { flex-basis:80px; }
+  #partition-six-halls .six-halls-reference-filter button { flex-basis:100%; }
+}
+@container six-halls (max-width: 620px) {
   #partition-six-halls .six-halls-reference-table,
   #partition-six-halls .six-halls-reference-table tbody,
   #partition-six-halls .six-halls-reference-table caption { display: block; }
   #partition-six-halls .six-halls-reference-table thead { display: none; }
-  #partition-six-halls .six-halls-reference-table tbody { display: grid; gap: 12px; }
-  #partition-six-halls .six-halls-reference-table tr { display: block; padding: 6px 12px; border: 1px solid var(--line, #3a3125); border-radius: 8px; background: var(--bg2, #191611); }
+  #partition-six-halls .six-halls-reference-table tbody { display: grid; gap:8px; }
+  #partition-six-halls .six-halls-reference-table tr { display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 12px;padding:8px 12px;border:1px solid var(--line, #3a3125);border-radius:6px;background:var(--bg2, #191611); }
   #partition-six-halls .six-halls-reference-table td,
-  #partition-six-halls .six-halls-reference-table tbody th { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 12px; padding: 9px 0; text-align: right; font-size: 13px; }
-  #partition-six-halls .six-halls-reference-table td::before,
-  #partition-six-halls .six-halls-reference-table tbody th::before { content: attr(data-label); text-align: left; color: var(--muted, #aaa08b); font-weight: 400; }
-  #partition-six-halls .six-halls-reference-table tbody th { color: var(--six-halls-gold); }
-  #partition-six-halls .six-halls-reference-table tr > :last-child { border-bottom: 0; }
+  #partition-six-halls .six-halls-reference-table tbody th { display:grid;gap:3px;padding:6px 0;text-align:left;font-size:14px;font-variant-numeric:tabular-nums; }
+  #partition-six-halls .six-halls-reference-table td { grid-template-columns:minmax(0,1fr) max-content;gap:6px;align-items:center; }
+  #partition-six-halls .six-halls-reference-table td::before { content:attr(data-label);color:var(--muted, #aaa08b);font-size:12px;font-weight:400; }
+  #partition-six-halls .six-halls-reference-table tbody th { grid-column:1/-1;color:var(--six-halls-gold); }
+  #partition-six-halls .six-halls-reference-table tr > :last-child { grid-column:1/-1;display:flex;justify-content:space-between;gap:8px;border-bottom:0;font-size:13px; }
 }

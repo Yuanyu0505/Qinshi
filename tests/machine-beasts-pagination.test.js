@@ -14,11 +14,13 @@ function fixture(){
   context.MACHINE_BEAST_SCHOOL_PLANNER={equivalentPlansPage(data,p,offset,limit){calls.push([offset,limit]);const start=Number(offset),end=Math.min(start+limit,35);return {plans:Array.from({length:end-start},(_,i)=>({stableKey:String(start+i),beasts:[],totals:{awakeningBlueprints:0}})),nextOffset:String(end),hasMore:end<35};}};
   vm.createContext(context);
   const source=fs.readFileSync(path.join(__dirname,'../js/machine-beasts-ui.js'),'utf8');
-  vm.runInContext(source.replace('window.MACHINE_BEAST_UI = {','window.paginationTest={state,presentation,el,equivalentMaterials,showMoreEquivalentMaterials,cancelCalculation};window.MACHINE_BEAST_UI = {'),context);
+  vm.runInContext(source.replace('window.MACHINE_BEAST_UI = {','window.paginationTest={state,presentation,el,rendered,setMode,equivalentMaterials,showMoreEquivalentMaterials,cancelCalculation};window.MACHINE_BEAST_UI = {'),context);
   const ui=context.paginationTest;ui.state.schoolDraft={schoolId:'hegemonic',targetStage:5};ui.state.schoolResult={plans:[plan]};
   ui.el.calculatorResult={querySelector:()=>section,querySelectorAll:()=>[],hidden:false,removeAttribute(){}};
   ui.el.calculator={querySelectorAll:()=>[]};
-  return {ui,plan,calls,appended,button,count,flush(){while(tasks.length)tasks.shift()();},account(value){account=value;}};
+  ui.el.modes={querySelectorAll:()=>[]};ui.el.progress={};ui.el.reference={};
+  Object.assign(ui.rendered,{calculator:true,progress:true,reference:true});ui.state.mode='calculator';
+  return {ui,plan,calls,appended,button,count,step(){tasks.shift()();},flush(){while(tasks.length)tasks.shift()();},account(value){account=value;}};
 }
 // A replay from offset zero, a whole-section replacement, or a missing stale guard breaks these tests.
 test('first ten are cached; later batches decode only the next ten and append',()=>{
@@ -38,4 +40,18 @@ test('queued pages cannot write after account, result, or cancellation changes',
 test('a new result with identical values does not reuse the previous graph',()=>{
   const f=fixture();f.ui.equivalentMaterials(f.plan,0);const newer={...f.plan};f.ui.state.schoolResult={plans:[newer]};
   f.ui.equivalentMaterials(newer,0);assert.deepEqual(f.calls,[['0',10],['0',10]]);
+});
+test('real setMode round trip retains loaded pages and resumes at the next offset',()=>{
+  const f=fixture();f.ui.equivalentMaterials(f.plan,0);f.ui.showMoreEquivalentMaterials(0);f.flush();
+  f.ui.setMode('progress');f.ui.setMode('reference');f.ui.setMode('calculator');
+  f.ui.showMoreEquivalentMaterials(0);f.flush();
+  assert.equal(f.appended.length,2);assert.match(f.count.textContent,/30／35/);
+  assert.deepEqual(f.calls,[['0',10],...Array.from({length:20},(_,i)=>[String(i+10),1])]);
+});
+test('mode switch cancels a partial batch without allowing its queued task to revive',()=>{
+  const f=fixture();f.ui.equivalentMaterials(f.plan,0);f.ui.showMoreEquivalentMaterials(0);f.step();
+  f.ui.setMode('progress');f.ui.setMode('calculator');
+  f.ui.showMoreEquivalentMaterials(0);f.flush();
+  assert.equal(f.appended.length,1);assert.match(f.count.textContent,/20／35/);
+  assert.deepEqual(f.calls,[['0',10],['10',1],...Array.from({length:10},(_,i)=>[String(i+10),1])]);
 });

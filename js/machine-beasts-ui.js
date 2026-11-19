@@ -67,7 +67,17 @@
 
   function cancelCalculation(invalidate) {
     calculationSequence += 1;
-    equivalentPages = {};
+    if (invalidate) equivalentPages = {};
+    else Object.keys(equivalentPages).forEach(function (key) {
+      var page = equivalentPages[key];
+      page.sequence = calculationSequence;
+      page.busy = false;
+      var button = page.container && page.container.querySelector('[data-machine-action="more-equivalents"]');
+      if (button) {
+        button.removeAttribute('aria-busy');
+        button.setAttribute('aria-disabled', String(!page.hasMore));
+      }
+    });
     Object.keys(calculationRunners).forEach(function (key) { calculationRunners[key].cancel(); });
     if (calculating && el.calculatorResult) el.calculatorResult.hidden = true;
     setCalculating(false);
@@ -997,11 +1007,12 @@
     if (!page || page.busy || !page.hasMore) return;
     var button = old.querySelector('[data-machine-action="more-equivalents"]');
     var items = old.querySelector('[data-equivalent-items]');
+    var sequence = calculationSequence;
     page.container = old;
     function current() {
       var account = ACCOUNT_STORAGE.currentAccount && ACCOUNT_STORAGE.currentAccount();
       return equivalentPages[key] === page &&
-        page.plan === plan && page.result === state.schoolResult && page.sequence === calculationSequence &&
+        page.plan === plan && page.result === state.schoolResult && sequence === calculationSequence && page.sequence === sequence &&
         (account && account.id) === page.accountId && old.isConnected &&
         el.calculatorResult.querySelector('[data-equivalent-index="' + index + '"]') === old;
     }
@@ -1012,7 +1023,11 @@
     var nextOffset = page.nextOffset, hasMore = page.hasMore, alternatives = [];
     // One exact alternative per task: yield between graph decodes and allow cancellation.
     function decodeNext() {
-      if (!current()) { page.busy = false; button.removeAttribute('aria-disabled'); button.removeAttribute('aria-busy'); return; }
+      if (!current()) {
+        // A newer task may already own this same DOM after a navigation round trip.
+        if (page.sequence === sequence) { page.busy = false; button.removeAttribute('aria-disabled'); button.removeAttribute('aria-busy'); }
+        return;
+      }
       try {
         var next = PLANNER.equivalentPlansPage(DATA, plan, nextOffset, 1);
         nextOffset = next.nextOffset; hasMore = next.hasMore;

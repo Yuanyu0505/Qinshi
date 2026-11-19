@@ -110,7 +110,7 @@
         "03_六堂资料/06-神农.png"
       ]
     }
-    ,{"id":"pilots","name":"机师","description":"助阵效果、突破与时装资料","partition":"pilots","sourcePaths":[]}
+    ,{"id":"pilots","name":"机师","description":"机师效果、神将25阶效果与机师时装资料","partition":"pilots","sourcePaths":[]}
     ,{"id":"battle-box-pill-pouch","name":"战匣丹囊","description":"培养进度、材料需求与目标计算","partition":"battle-box-pill-pouch","sourcePaths":[]}
     ,{"id":"quiz","name":"答题","description":"题库关键词检索与答案查询","partition":"quiz","sourcePaths":[]}
     ,{"id":"zhulu","name":"逐鹿","description":"进度奖励与赛季典籍查询","partition":"zhulu","sourcePaths":[]}

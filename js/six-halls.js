@@ -87,6 +87,14 @@
     return required;
   }
 
+  function targetLimitError(current, target, playerLevel, data) {
+    var cap = playerCap(playerLevel, data);
+    if (cap !== null && target > current && target > cap) {
+      return "当前等级最大可升级至" + cap + "级六堂，无法升级至您指定的目标等级。";
+    }
+    return "";
+  }
+
   function calculatePlan(rawProgress, draft, data) {
     var progress = normalizeProgress(rawProgress, data);
     var cap = playerCap(progress.playerLevel, data);
@@ -108,6 +116,11 @@
         errors.push({ hallId: hall.id, message: hall.name + "目标必须为" + current.level + "至" + data.maxLevel + "级整数。" });
         return;
       }
+      var limitError = targetLimitError(current.level, target.value, progress.playerLevel, data);
+      if (limitError) {
+        errors.push({ hallId: hall.id, message: hall.name + "：" + limitError });
+        return;
+      }
       var cost = calculateCost(current.level, target.value, data);
       totalHerbs += cost.herbs;
       rows.push({
@@ -120,10 +133,7 @@
         tokenStock: current.tokens,
         tokenMissing: Math.max(0, cost.tokens - current.tokens),
         tokenRemaining: Math.max(0, current.tokens - cost.tokens),
-        currentCap: cap,
-        locked: cap !== null && target.value > Math.max(current.level, cap),
-        requiredPlayerLevel: requiredPlayerLevel(target.value, data),
-        progressConflict: cap !== null && current.level > cap
+        requiredPlayerLevel: requiredPlayerLevel(target.value, data)
       });
     });
     return {
@@ -138,8 +148,7 @@
       },
       playerCap: cap,
       playerLevelKnown: cap !== null,
-      selectedCount: selected.length,
-      hasLocked: !errors.length && rows.some(function (row) { return row.locked; })
+      selectedCount: selected.length
     };
   }
 
@@ -149,6 +158,7 @@
     normalizeProgress: normalizeProgress,
     defaultPlan: defaultPlan,
     playerCap: playerCap,
+    targetLimitError: targetLimitError,
     calculateCost: calculateCost,
     referenceRows: referenceRows,
     calculatePlan: calculatePlan

@@ -72,7 +72,7 @@ test('reference rows preserve all fifty upgrades and literal milestone totals', 
   assert.deepEqual([rows[29].cumulativeHerbs, rows[29].cumulativeTokens], [421, 155]);
   assert.deepEqual([rows[49].cumulativeHerbs, rows[49].cumulativeTokens], [904, 435]);
   assert.deepEqual(rows.filter(row => row.playerLevel !== null)
-    .map(row => [row.to, row.playerLevel]), [[10, 50], [20, 59], [30, 69], [40, 79], [50, 89]]);
+    .map(row => [row.to, row.playerLevel]), Array.from({length:41},(_,index)=>{const level=index+10;return [level,level<20?level+40:level+39];}));
 });
 
 test('integer parsing distinguishes an unknown player level from invalid input', () => {
@@ -117,26 +117,26 @@ test('new plans start unselected with separate editable targets for all halls', 
   assert.deepEqual(CORE.defaultPlan(DATA), plan([]));
 });
 
-test('player caps switch only at all five required player-level boundaries', () => {
-  const cases = [[0, 9], [49, 9], [50, 19], [58, 19], [59, 29], [68, 29], [69, 39], [78, 39], [79, 49], [88, 49], [89, 50], [100, 50]];
+test('player caps follow consecutive gates including the shared 19 and 20 threshold', () => {
+  const cases = [[0, 9], [49, 9], [50, 10], [58, 18], [59, 20], [68, 29], [69, 30], [78, 39], [79, 40], [88, 49], [89, 50], [100, 50]];
   for (const [level, expected] of cases) assert.equal(CORE.playerCap(level, DATA), expected, 'player level ' + level);
   assert.equal(CORE.playerCap(null, DATA), null);
 });
 
 test('planning unlocks milestone targets exactly at the corresponding player-level boundary', () => {
   const cases = [
-    [49, 10, true, 9], [50, 10, false, 19],
-    [58, 20, true, 19], [59, 20, false, 29],
-    [68, 30, true, 29], [69, 30, false, 39],
-    [78, 40, true, 39], [79, 40, false, 49],
+    [49, 10, true, 9], [50, 10, false, 10],
+    [58, 20, true, 18], [59, 20, false, 20],
+    [68, 30, true, 29], [69, 30, false, 30],
+    [78, 40, true, 39], [79, 40, false, 40],
     [88, 50, true, 49], [89, 50, false, 50]
   ];
   for (const [playerLevel, target, locked, cap] of cases) {
     const result = CORE.calculatePlan(progress({ playerLevel }), plan(['kuiwei'], { kuiwei: target }), DATA);
-    assert.equal(result.valid, true);
+    assert.equal(result.valid, !locked);
     assert.equal(result.playerCap, cap);
-    assert.equal(result.rows[0].locked, locked, 'player ' + playerLevel + ' / target ' + target);
-    assert.equal(result.hasLocked, locked);
+    if(locked){assert.deepEqual(result.rows,[]);assert.equal(result.herbs,null);}
+    else assert.equal(result.rows[0].target,target);
   }
 });
 
@@ -166,7 +166,6 @@ test('finished targets cost nothing and do not consume existing inventories', ()
   assert.equal(result.valid, true);
   assert.deepEqual(result.herbs, { need: 0, stock: 17, missing: 0, remaining: 17 });
   assert.deepEqual([result.rows[0].herbs, result.rows[0].tokens, result.rows[0].tokenMissing, result.rows[0].tokenRemaining], [0, 0, 0, 12]);
-  assert.equal(result.rows[0].locked, false);
 });
 
 test('unknown player level still calculates materials without guessing unlocks', () => {
@@ -174,40 +173,32 @@ test('unknown player level still calculates materials without guessing unlocks',
   assert.equal(result.valid, true);
   assert.equal(result.playerLevelKnown, false);
   assert.equal(result.playerCap, null);
-  assert.equal(result.hasLocked, false);
-  assert.equal(result.rows[0].locked, false);
   assert.equal(result.rows[0].requiredPlayerLevel, 89);
   assert.equal(result.herbs.need, 904);
 });
 
-test('materials and player-level locks are independent even with sufficient stock', () => {
+test('sufficient materials cannot bypass a known player-level limit', () => {
   const current = progress({ playerLevel: 49, herbs: 1000 });
   current.halls.kuiwei.tokens = 500;
   const result = CORE.calculatePlan(current, plan(['kuiwei']), DATA);
-  assert.equal(result.valid, true);
-  assert.equal(result.herbs.missing, 0);
-  assert.equal(result.rows[0].tokenMissing, 0);
-  assert.equal(result.rows[0].locked, true);
-  assert.equal(result.rows[0].requiredPlayerLevel, 89);
-  assert.equal(result.hasLocked, true);
+  assert.equal(result.valid, false);
+  assert.equal(result.herbs, null);
+  assert.deepEqual(result.rows, []);
 });
 
 test('required player-level threshold follows target rather than raw current level', () => {
-  for (const [target, required, locked] of [[9, null, false], [10, 50, true], [19, 50, true], [20, 59, true], [30, 69, true], [40, 79, true], [50, 89, true]]) {
-    const result = CORE.calculatePlan(progress({ playerLevel: 49 }), plan(['kuiwei'], { kuiwei: target }), DATA);
+  for (const [target, required] of [[9, null], [10, 50], [19, 59], [20, 59], [30, 69], [40, 79], [50, 89]]) {
+    const result = CORE.calculatePlan(progress({ playerLevel: 89 }), plan(['kuiwei'], { kuiwei: target }), DATA);
     assert.equal(result.rows[0].requiredPlayerLevel, required, 'target ' + target);
-    assert.equal(result.rows[0].locked, locked, 'target ' + target);
   }
 });
 
-test('saved level above player cap warns without lowering it or counting completed steps', () => {
+test('saved level above player cap remains unchanged and completed targets cost nothing', () => {
   const current = progress({ playerLevel: 49 });
   current.halls.kuiwei.level = 30;
   const result = CORE.calculatePlan(current, plan(['kuiwei'], { kuiwei: 30 }), DATA);
   assert.equal(result.valid, true);
   assert.equal(result.rows[0].current, 30);
-  assert.equal(result.rows[0].progressConflict, true);
-  assert.equal(result.rows[0].locked, false);
   assert.equal(result.herbs.need, 0);
   assert.equal(current.halls.kuiwei.level, 30);
 });

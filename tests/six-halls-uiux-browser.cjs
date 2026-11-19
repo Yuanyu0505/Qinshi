@@ -6,7 +6,7 @@ const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
 const {createServer}=require('../serve.js');
 const {openApp}=require('./browser-test-helpers.cjs');
 const phase=process.env.SIX_HALLS_CAPTURE_PHASE==='before'?'before':'after';
-const output=path.join(__dirname,'../outputs/six-halls-uiux-20261119',phase);
+const output=path.join(__dirname,'../outputs/six-halls-1139',phase);
 let browser,server,url;
 before(async()=>{fs.mkdirSync(output,{recursive:true});server=createServer();await new Promise(r=>server.listen(0,'127.0.0.1',r));url='http://127.0.0.1:'+server.address().port;browser=await chromium.launch({channel:'msedge',headless:true});});
 after(async()=>{if(browser)await browser.close();if(server)await new Promise(r=>server.close(r));});
@@ -34,14 +34,11 @@ for(const [width,height]of [[320,568],[390,844],[820,1180],[1366,768],[1920,1080
     assert.equal(await page.locator('.six-halls-bonuses tbody tr').count(),5);
     await assertPageMetrics(page);
     await page.locator('#partition-other-reference').screenshot({path:path.join(output,width+'-halls.png')});
-    if(width===390){
-      const source=page.locator('[data-six-halls-source]');await source.click();
-      await page.waitForFunction(()=>{const image=document.querySelector('.ref-viewer img');return image&&image.complete&&image.naturalWidth>0;});
-      await page.locator('.ref-viewer').screenshot({path:path.join(output,width+'-image.png')});
-      await page.keyboard.press('Escape');assert.equal(await source.evaluate(n=>n===document.activeElement),true);
-    }
+    assert.equal(await page.locator('[data-six-halls-source]').count(),0);
+    const boxes=await page.locator('.six-halls-modes,.six-halls-hall-tabs,.six-halls-profile').evaluateAll(nodes=>nodes.map(n=>{const b=n.getBoundingClientRect();return {left:b.left,width:b.width};}));
+    for(const box of boxes){assert.ok(Math.abs(box.left-boxes[0].left)<1,JSON.stringify(boxes));assert.ok(Math.abs(box.width-boxes[0].width)<1,JSON.stringify(boxes));}
     await mode(page,'progress');
-    await page.locator('[data-six-halls-progress="playerLevel"]').fill('59');await page.locator('[data-six-halls-progress="herbs"]').fill('100');
+    await page.locator('[data-six-halls-progress="playerLevel"]').fill('89');await page.locator('[data-six-halls-progress="herbs"]').fill('100');
     await page.locator('[data-six-halls-progress="level"][data-hall-id="kuiwei"]').fill('10');
     await page.locator('[data-six-halls-progress="tokens"][data-hall-id="kuiwei"]').fill('30');
     await page.locator('[data-six-halls-mode="progress"]').click();
@@ -66,16 +63,27 @@ test('public page survives controller reload but private plan resets',async()=>{
     assert.equal(state.mode,'reference');assert.deepEqual(state.selected,[]);
   }finally{await context.close();}
 });
-test('locked step expansion survives result-only refresh',async()=>{
+test('over-cap target blocks old results and recovers after the player meets the gate',async()=>{
   const {context,page}=await enter();try{
-    await mode(page,'progress');await page.locator('[data-six-halls-progress="playerLevel"]').fill('50');
+    await mode(page,'progress');await page.locator('[data-six-halls-progress="playerLevel"]').fill('79');
     await mode(page,'planner');await page.locator('[data-six-halls-select="kuiwei"]').check();
     await page.locator('[data-six-halls-action="calculate"]').click();
-    const details=page.locator('.six-halls-locked-steps');await details.locator('summary').click();
-    await page.locator('[data-six-halls-target="kuiwei"]').fill('40');
-    await page.waitForFunction(()=>window.SIX_HALLS_UI.init(window).state.plan.targets.kuiwei===40);
+    assert.match(await page.locator('#six-halls-result').innerText(),/最大可升级至40级六堂/);
+    assert.equal(await page.locator('[data-six-halls-herbs]').count(),0);
+    await page.locator('[data-six-halls-target="kuiwei"]').fill('41');
     await page.locator('[data-six-halls-action="calculate"]').click();
-    assert.equal(await details.evaluate(n=>n.open),true);
+    assert.equal(await page.locator('[data-six-halls-target="kuiwei"]').getAttribute('aria-invalid'),'true');
+    await mode(page,'progress');await page.locator('[data-six-halls-progress="playerLevel"]').fill('80');
+    await mode(page,'planner');await page.locator('[data-six-halls-action="calculate"]').click();
+    assert.equal(await page.locator('[data-six-halls-result-row="kuiwei"]').count(),1);
+    assert.equal(await page.locator('.six-halls-level-status,.six-halls-locked-steps').count(),0);
+    await mode(page,'reference');await page.locator('#six-halls-reference-min').fill('40');
+    await page.locator('#six-halls-reference-max').fill('50');
+    await page.waitForFunction(()=>document.querySelectorAll('#six-halls-reference-content tbody tr').length===10);
+    assert.match(await page.locator('#six-halls-reference-content tbody tr').first().innerText(),/40 → 41级/);
+    assert.equal(await page.locator('#six-halls-reference-content tbody tr').first().locator('[data-label="玩家等级门槛"]').innerText(),'80级');
+    await page.locator('#six-halls-reference-max').fill('40');
+    await page.waitForFunction(()=>document.querySelectorAll('#six-halls-reference-content tbody tr').length===0);
   }finally{await context.close();}
 });
 test('container narrowing, landscape and CSS zoom keep six-halls controls readable',async()=>{
@@ -102,24 +110,34 @@ test('directory search and spirit total-number styling remain independent',async
     assert.match(await page.locator('.ref-spirit-total-number').first().innerText(),/^\d+(\.\d+)?$/);
   }finally{await context.close();}
 });
-test('all six hall texts, member order and source images remain exact with image retry and focus return',async()=>{
+test('all hall texts and members remain exact; member search navigates and preserves input focus',async()=>{
   const {context,page}=await enter(390,844);try{
-    let failed=false;
-    await context.route(urlObject=>decodeURIComponent(urlObject.pathname).endsWith('/04-四岳.png'),route=>{
-      if(!failed){failed=true;return route.abort();}return route.continue();
-    });
     const halls=await page.evaluate(()=>window.SIX_HALLS_REFERENCE_DATA.halls);
     assert.deepEqual(halls.map(h=>h.name),['魁隗','蚩尤','烈山','四岳','共工','神农']);
     for(const hall of halls){
       await page.locator('[data-six-halls-hall="'+hall.id+'"]').click();
       assert.deepEqual(await page.locator('.six-halls-bonuses tbody td').allTextContents(),hall.bonuses.map(b=>b.text));
       assert.deepEqual(await page.locator('.six-halls-members li').allTextContents(),hall.disciples);
-      const source=page.locator('[data-six-halls-source]');assert.equal(await source.getAttribute('data-six-halls-source'),hall.sourcePath);await source.click();
-      if(hall.id==='siyue'){await page.locator('.ref-viewer [data-ref-retry]').waitFor();await page.locator('.ref-viewer [data-ref-retry]').click();}
-      await page.waitForFunction(()=>{const image=document.querySelector('.ref-viewer img');return image.complete&&image.naturalWidth>0;});
-      assert.ok(decodeURIComponent(await page.locator('.ref-viewer img').getAttribute('src')).endsWith(hall.sourcePath));
-      await page.locator('[data-ref-zoom="in"]').click();await page.keyboard.press('Escape');assert.equal(await source.evaluate(n=>n===document.activeElement),true);
+      const search=page.locator('#six-halls-member-search');await search.fill(hall.disciples[0]);
+      assert.equal(await page.locator('.six-halls-profile h3').innerText(),hall.name);
+      assert.equal(await search.evaluate(n=>n===document.activeElement),true);
+      assert.equal(await page.locator('.six-halls-members .is-match').count(),1);
+      await search.fill('');
     }
+    const search=page.locator('#six-halls-member-search');await search.fill('神');
+    assert.equal(await page.locator('#six-halls-search-results button').count(),99);
+    await page.locator('#six-halls-search-results button').filter({hasText:'神赤练 · 魁隗'}).click();
+    assert.equal(await page.locator('.six-halls-profile h3').innerText(),'魁隗');
+    await search.fill('不存在的神将');assert.match(await page.locator('#six-halls-search-results').innerText(),/未找到/);
+    await search.fill('');assert.equal(await page.locator('#six-halls-search-results button').count(),0);
+    await search.evaluate(input=>{
+      input.dispatchEvent(new CompositionEvent('compositionstart',{bubbles:true}));input.value='神星魂';
+      input.dispatchEvent(new InputEvent('input',{bubbles:true,isComposing:true}));
+    });
+    assert.equal(await page.locator('.six-halls-profile h3').innerText(),'魁隗');
+    await search.dispatchEvent('compositionend');
+    assert.equal(await page.locator('.six-halls-profile h3').innerText(),'蚩尤');
+    assert.equal(await search.inputValue(),'神星魂');
   }finally{await context.close();}
 });
 test('legacy six-halls URL and browser back preserve the parked form identity',async()=>{

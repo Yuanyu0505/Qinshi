@@ -177,7 +177,7 @@ test('all six halls save separate fields and every quick target is scoped to its
   } finally { await context.close(); }
 });
 
-test('unknown player levels, locked steps, milestone boundaries and completed targets render distinct states', async () => {
+test('unknown player levels calculate while known gates reject excess targets and retain saved progress', async () => {
   const context = await contextFor();
   try {
     const page = await pageFor(context);
@@ -186,7 +186,7 @@ test('unknown player levels, locked steps, milestone boundaries and completed ta
     await select(page);
     const row = page.locator('[data-six-halls-result-row="kuiwei"]');
     assert.equal(await metric(page, 'need'), 904);
-    assert.match(await row.innerText(), /玩家等级未填写.*无法判断/);
+    assert.equal(await row.count(),1);
     const missingColor = await page.locator('[data-six-halls-herbs="missing"]').evaluate(node => getComputedStyle(node).color);
     assert.equal(missingColor, 'rgb(255, 155, 145)');
     assert.equal(await row.locator('.six-halls-metrics > div').filter({hasText:'缺口'}).locator('dd').innerText(),'435');
@@ -195,28 +195,24 @@ test('unknown player levels, locked steps, milestone boundaries and completed ta
     await edit(page, 'tokens', 500, 'kuiwei');
     await edit(page, 'playerLevel', 49);
     await mode(page, 'planner');
-    assert.equal(await metric(page, 'missing'), 0);
-    assert.equal(await page.locator('[data-six-halls-herbs="missing"]').evaluate(node => getComputedStyle(node).color), 'rgb(166, 212, 160)');
-    assert.equal(await row.locator('.six-halls-metrics > div').filter({hasText:'缺口'}).locator('dd').innerText(),'0');
-    assert.match(await row.innerText(), /目标尚未解锁.*89级/);
-    await row.locator('summary').click();
-    assert.equal(await row.locator('.six-halls-locked-steps li').count(), 41);
-    assert.match(await row.locator('.six-halls-locked-steps li').first().innerText(), /9→10级.*玩家等级需50级/);
-    assert.match(await row.locator('.six-halls-locked-steps li').last().innerText(), /49→50级.*玩家等级需89级/);
-    for (const [player, target, locked] of [[49, 10, true], [50, 10, false], [58, 20, true], [59, 20, false], [68, 30, true], [69, 30, false], [78, 40, true], [79, 40, false], [88, 50, true], [89, 50, false]]) {
+    assert.equal(await page.locator('[data-six-halls-herbs="need"]').count(),0);
+    assert.match(await page.locator('#six-halls-result').innerText(),/最大可升级至9级六堂/);
+    for (const [player, target, blocked] of [[49, 10, true], [50, 10, false], [58, 19, true], [59, 19, false], [59,20,false], [59,21,true], [60,21,false], [78, 40, true], [79, 40, false], [79,41,true], [80,41,false], [88, 50, true], [89, 50, false]]) {
       await mode(page, 'progress');
       await edit(page, 'playerLevel', player);
       await mode(page, 'planner');
-      await page.locator('[data-six-halls-quick="' + target + '"][data-hall-id="kuiwei"]').click();
-      assert.match(await row.innerText(), locked ? /目标尚未解锁/ : /本次目标已解锁/, 'player ' + player + ', target ' + target);
-      assert.equal(await row.locator('.six-halls-locked-steps li').count(), locked ? 1 : 0);
+      await page.locator('[data-six-halls-target="kuiwei"]').fill(String(target));
+      await calculate(page);
+      if(blocked){assert.match(await page.locator('#six-halls-result').innerText(),/无法升级至您指定的目标等级/);assert.equal(await row.count(),0);}
+      else {assert.equal(await row.count(),1);assert.equal(await metric(page,'missing'),0);}
     }
     await mode(page, 'progress');
     await edit(page, 'playerLevel', 49);
     await edit(page, 'level', 50, 'kuiwei');
     await mode(page, 'planner');
+    await page.locator('[data-six-halls-target="kuiwei"]').fill('50');await calculate(page);
     assert.match(await row.innerText(), /目标已达成.*无新增消耗/);
-    assert.match(await row.innerText(), /高于玩家等级可升上限.*不会自动降低/);
+    assert.equal(await page.locator('.six-halls-level-status,.six-halls-locked-steps').count(),0);
     assert.equal(await metric(page, 'need'), 0);
     assert.equal(await metric(page, 'remaining'), 1000);
     assert.equal((await getAccountJson(page, KEY)).halls.kuiwei.level, 50);

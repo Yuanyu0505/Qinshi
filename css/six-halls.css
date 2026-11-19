@@ -19,7 +19,11 @@
 #partition-six-halls .six-halls-profile-heading { display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px; }
 #partition-six-halls .six-halls-profile-heading h3 { color:var(--six-halls-accent);margin:0; }
 #partition-six-halls .six-halls-profile,
-#partition-six-halls .six-halls-hall-tabs { width:100%;max-width:960px;margin-inline:auto; }
+#partition-six-halls .six-halls-hall-tabs { width:100%;margin-inline:0; }
+#partition-six-halls .six-halls-member-search { margin-bottom:12px; }
+#partition-six-halls .six-halls-member-search input { width:100%;min-height:44px;font-size:16px; }
+#partition-six-halls .six-halls-search-results { display:flex;flex-wrap:wrap;gap:8px;margin-top:8px; }
+#partition-six-halls .six-halls-members .is-match { color:var(--six-halls-accent);font-weight:700; }
 #partition-six-halls .six-halls-bonuses { border-collapse:collapse;width:100%;table-layout:fixed;line-height:1.8;margin-bottom:18px;font-size:15px; }
 #partition-six-halls .six-halls-phase-column { width:70px; }
 #partition-six-halls .six-halls-bonuses th,
@@ -144,14 +148,7 @@
 #partition-six-halls .six-halls-herb-need { margin: 18px 0; }
 #partition-six-halls .six-halls-herb-need strong { margin-left: 8px; font-size: 20px; color: var(--six-halls-gold); }
 #partition-six-halls .six-halls-herb-need small { display: block; margin-top: 4px; font-size: 11px; color: var(--muted, #aaa08b); }
-#partition-six-halls .six-halls-level-status { padding-top: 14px; border-top: 1px solid var(--line, #3a3125); }
-#partition-six-halls .six-halls-level-status p { margin-bottom: 8px; font-size: 13px; line-height: 1.7; }
-#partition-six-halls .six-halls-result-card > p:last-child,
-#partition-six-halls .six-halls-level-status > p:last-child { margin-bottom: 0; }
-#partition-six-halls .six-halls-locked-steps summary { display: flex; align-items: center; min-height: 44px; cursor: pointer; color: var(--six-halls-gold); font-size: 13px; }
-#partition-six-halls .six-halls-locked-steps summary::before { content: "＋"; margin-right: 7px; }
-#partition-six-halls .six-halls-locked-steps[open] summary::before { content: "−"; }
-#partition-six-halls .six-halls-locked-steps ol { padding-left: 22px; margin: 4px 0 0; color: var(--muted, #aaa08b); font-size: 12px; line-height: 1.9; }
+#partition-six-halls .six-halls-result-card > p:last-child { margin-bottom: 0; }
 #partition-six-halls .six-halls-empty { padding: 26px 18px; text-align: center; color: var(--muted, #aaa08b); }
 #partition-six-halls .six-halls-empty p { margin-bottom: 0; }
 #partition-six-halls .six-halls-reference-filter { display: flex; align-items: end; flex-wrap: wrap; gap: 10px; margin: 18px 0 12px; }

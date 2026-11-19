@@ -17,7 +17,7 @@ const APPROVED = [
   [32, 15], [24, 16], [28, 16], [32, 16], [18, 26]
 ];
 const IDS = ['kuiwei', 'chiyou', 'lieshan', 'siyue', 'gonggong', 'shennong'];
-const GATES = new Map([[10, 50], [20, 59], [30, 69], [40, 79], [50, 89]]);
+const GATES = new Map(Array.from({length:41},(_,i)=>[i+10,i<10?i+50:i+49]));
 
 function cost(from, to) {
   return APPROVED.slice(from, to).reduce((total, pair) =>
@@ -34,11 +34,8 @@ function progress(playerLevel, herbs = 0) {
 function cap(player) {
   if (player === null) return null;
   if (player < 50) return 9;
-  if (player < 59) return 19;
-  if (player < 69) return 29;
-  if (player < 79) return 39;
-  if (player < 89) return 49;
-  return 50;
+  if (player < 59) return player-40;
+  return Math.min(50,player-39);
 }
 
 test('all fifty upgrade rows and all cumulative rows match the approved literal reference', () => {
@@ -104,18 +101,19 @@ test('all 64 hall subsets with empty, exact, excess and maximum inventories keep
   }
 });
 
-test('every player level 0 to 100 and all current-level boundaries retain independent unlock semantics', () => {
+test('every player level 0 to 100 enforces consecutive gates without altering saved progress', () => {
   for (const player of [null, ...Array.from({ length: 101 }, (_, index) => index)]) {
     for (const level of [0, 9, 10, 19, 20, 29, 30, 39, 40, 49, 50]) {
       for (const target of [...new Set([level, 10, 20, 30, 40, 50])].filter(value => value >= level)) {
         const current = progress(player, 9999);
         current.halls.kuiwei = { level, tokens: 9999 };
         const result = CORE.calculatePlan(current, { selected: ['kuiwei'], targets: { kuiwei: target } }, DATA);
-        const row = result.rows[0];
-        assert.equal(result.valid, true);
+        const overLimit=player!==null&&target>level&&target>cap(player);
+        assert.equal(result.valid, !overLimit);
         assert.equal(result.playerCap, cap(player));
-        assert.equal(row.locked, player !== null && target > Math.max(level, cap(player)));
-        assert.equal(row.progressConflict, player !== null && level > cap(player));
+        assert.equal(current.halls.kuiwei.level, level);
+        if(overLimit){assert.deepEqual(result.rows,[]);assert.equal(result.herbs,null);continue;}
+        const row = result.rows[0];
         const required = [...GATES].filter(([hallLevel]) => hallLevel <= target).at(-1);
         assert.equal(row.requiredPlayerLevel, required ? required[1] : null);
         assert.equal(result.herbs.missing, 0);

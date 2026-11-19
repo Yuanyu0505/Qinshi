@@ -205,12 +205,12 @@ test('planning survives subview and partition switches, but refresh clears its i
   } finally { await page.close(); }
 });
 
-test('reference filtering uses target levels and retains cumulative-from-zero material totals', async () => {
+test('reference filtering uses upgrade intervals and retains cumulative-from-zero material totals', async () => {
   const page = await newPage();
   try {
     await openSixHalls(page);
     await mode(page, 'reference');
-    await page.locator('[data-six-halls-reference-bound="min"]').fill('30');
+    await page.locator('[data-six-halls-reference-bound="min"]').fill('29');
     await page.locator('[data-six-halls-reference-bound="max"]').fill('30');
     await page.waitForFunction(() => document.querySelectorAll('#six-halls-reference tbody tr').length === 1);
     const row = page.locator('#six-halls-reference tbody tr');

@@ -1,4 +1,4 @@
-/* 六堂通用升级资料，按用户提供的50级材料表及2026-10-22确认规则录入。 */
+/* 六堂通用材料表不变；逐级玩家门槛按用户2026-11-19确认规则修订。 */
 (function (root, factory) {
   "use strict";
   var data = factory();
@@ -18,13 +18,10 @@
     [24, 14], [28, 14], [32, 14], [24, 15], [28, 15],
     [32, 15], [24, 16], [28, 16], [32, 16], [18, 26]
   ];
-  var milestones = [
-    { hallLevel: 10, playerLevel: 50 },
-    { hallLevel: 20, playerLevel: 59 },
-    { hallLevel: 30, playerLevel: 69 },
-    { hallLevel: 40, playerLevel: 79 },
-    { hallLevel: 50, playerLevel: 89 }
-  ];
+  var milestones = Array.from({ length: 41 }, function (_, index) {
+    var level = index + 10;
+    return { hallLevel: level, playerLevel: level < 20 ? level + 40 : level + 39 };
+  });
   return {
     meta: { source: "六堂升级所需材料一览（更新至六堂50级）", confirmedAt: "2026-10-22" },
     maxLevel: 50,

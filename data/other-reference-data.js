@@ -114,8 +114,6 @@
     ,{"id":"battle-box-pill-pouch","name":"战匣丹囊","description":"培养进度、材料需求与目标计算","partition":"battle-box-pill-pouch","sourcePaths":[]}
     ,{"id":"quiz","name":"答题","description":"题库关键词检索与答案查询","partition":"quiz","sourcePaths":[]}
     ,{"id":"zhulu","name":"逐鹿","description":"进度奖励与赛季典籍查询","partition":"zhulu","sourcePaths":[]}
-    ,{"id":"loulan","name":"楼兰棋阵","description":"楼兰探索与棋阵图解","partition":"loulan","sourcePaths":[]}
-    ,{"id":"formations","name":"合阵","description":"位置换算、个人进度与阵容推荐","partition":"formations","sourcePaths":[]}
     ,{"id":"settings","name":"设置","description":"账号、同步、备份与应用更新","partition":"settings","sourcePaths":[]}
   ],
   "images": [

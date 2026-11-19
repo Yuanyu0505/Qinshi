@@ -78,6 +78,29 @@ test('Worker and direct API agree on bounded single and school inputs',async()=>
   }finally{await context.close();}
 });
 
+for(const kind of ['single','school'])test('explicit '+kind+' cancel stops real Worker without changing inventory',async()=>{
+  const {page,context}=await enter(false);try{
+    if(kind==='school')await page.locator('[data-machine-calculator-mode="school"]').click();
+    await context.route('**/js/calculation-worker.js*',async route=>{
+      const response=await route.fetch(),source=await response.text();
+      await route.fulfill({response,body:'var nativePost=self.postMessage.bind(self);self.postMessage=function(message){if(message.result||message.error)self.heldResult=message;else nativePost(message);};\n'+source});
+    });
+    const saved=await getAccountItem(page,'qinshi_machine_beasts_progress_v1');
+    const calculate=page.locator('[data-machine-action="'+(kind==='single'?'calculate':'calculate-school')+'"]');
+    const cancel=page.locator('[data-machine-action="cancel-calculation"]');
+    assert.equal(await cancel.isVisible(),false);
+    await calculate.click();await page.waitForFunction(()=>window.workerStarted>0);
+    assert.equal(await page.locator('#machine-beast-calculator-result').isVisible(),false);
+    await cancel.waitFor();await cancel.click();
+    await page.waitForFunction(()=>window.workerStopped>0);
+    assert.equal(await calculate.isEnabled(),true);assert.equal(await cancel.isVisible(),false);
+    assert.equal(await calculate.evaluate(node=>node===document.activeElement),true);
+    assert.equal(await page.evaluate(()=>window.MACHINE_BEAST_UI.captureView().calcResult),null);
+    assert.equal(await page.evaluate(()=>window.MACHINE_BEAST_UI.captureView().schoolResult),null);
+    assert.equal(await getAccountItem(page,'qinshi_machine_beasts_progress_v1'),saved);
+  }finally{await context.close();}
+});
+
 for(const beastId of ['red-serpent','mechanical-bear'])test('UI clear-to-default permits owned-only zero-purchase school planning '+beastId,async()=>{
   const {page,context}=await enter(false);try{
     await page.locator('[data-machine-calculator-mode="school"]').click();

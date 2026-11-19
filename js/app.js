@@ -1123,7 +1123,7 @@
     const mobileMoreClose = document.getElementById("mobile-more-close");
     const appShell = document.querySelector(".app-shell");
     const secondaryPartitions = ["forbidden", "secret-realm", "inscription", "machine-beasts", "pilots", "tactics", "battle-box-pill-pouch", "wooden-man-alley", "formations", "six-halls", "loulan", "zhulu", "quiz", "other-reference", "settings"];
-    const referencePartitions = ["pilots", "battle-box-pill-pouch", "quiz", "zhulu", "loulan", "formations", "settings"];
+    const referencePartitions = ["pilots", "battle-box-pill-pouch", "quiz", "zhulu", "settings"];
     const partitionScrollPositions = Object.create(null);
     let activePartition = "atlas";
     let mobileMoreRestoreTarget = null;

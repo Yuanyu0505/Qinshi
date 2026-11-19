@@ -1041,23 +1041,28 @@ test("全端导航使用当前完整分区顺序", async () => {
     const page = await get(port, "/");
     const nav = page.body.match(/<nav class="tabs"[\s\S]*?<\/nav>/);
     assert.ok(nav);
-    const order = ["atlas", "forging", "drops", "equipment", "forbidden", "secret-realm", "inscription", "machine-beasts", "tactics", "wooden-man-alley", "other-reference"];
+    const order = ["atlas", "forging", "drops", "equipment", "forbidden", "secret-realm", "inscription", "machine-beasts", "tactics", "wooden-man-alley", "loulan", "formations", "other-reference"];
     assert.deepStrictEqual([...nav[0].matchAll(/data-partition="([^"]+)"/g)].map(match => match[1]), order);
     const more = page.body.match(/<div class="mobile-more-grid">[\s\S]*?<\/div>/);
     assert.ok(more);
     assert.deepStrictEqual([...more[0].matchAll(/data-partition="([^"]+)"/g)].map(match => match[1]), order.slice(4));
-    for (const [id, name] of [['pilots', '机师'], ['battle-box-pill-pouch', '战匣丹囊'], ['quiz', '答题'], ['zhulu', '逐鹿'], ['loulan', '楼兰棋阵'], ['formations', '合阵'], ['settings', '设置']]) {
+    for (const [id, name] of [['pilots', '机师'], ['battle-box-pill-pouch', '战匣丹囊'], ['quiz', '答题'], ['zhulu', '逐鹿'], ['settings', '设置']]) {
       assertReferenceEntry(page.body, id, name);
     }
   });
 });
 
-test("合阵保留其他资料目录入口且退出桌面和移动独立导航", async () => {
+test("楼兰与合阵独立出现在桌面和移动导航且不再归属资料目录", async () => {
   await withServer(async (port) => {
     const page = await get(port, "/");
-    assertReferenceEntry(page.body, 'formations', '合阵');
+    for(const id of ['loulan','formations']){
+      assert.strictEqual(require('./data/other-reference-data.js').sections.some(section=>section.id===id),false);
+      const desktop=page.body.match(/<nav class="tabs"[\s\S]*?<\/nav>/)[0];
+      const mobile=page.body.match(/<div class="mobile-more-grid">[\s\S]*?<\/div>/)[0];
+      for(const fragment of [desktop,mobile])assert.match(fragment,new RegExp('data-partition="'+id+'"'));
+    }
     const app = fs.readFileSync(path.join(__dirname, 'js/app.js'), 'utf8');
-    assert.match(app, /referencePartitions = \[[^\]]*"formations"/);
+    assert.doesNotMatch(app.match(/referencePartitions = \[[^\]]*\]/)[0], /"(?:formations|loulan)"/);
   });
 });
 
@@ -1180,7 +1185,7 @@ test("典籍默认展示最高阶累计，并通过页面级气泡查看逐阶�
 test("首页包含楼兰棋阵分区与两个玩法的图片引用", async () => {
   await withServer(async (port) => {
     const r = await get(port, "/");
-    assertReferenceEntry(r.body, 'loulan', '楼兰棋阵');
+    assert.match(r.body, /data-partition="loulan"/);
     const partition = r.body.match(/<section id="partition-loulan"[\s\S]*?<\/section>/);
     assert.ok(partition);
     const images = [...partition[0].matchAll(/<img\b[^>]*data-src="([^"]+)"[^>]*>/g)];

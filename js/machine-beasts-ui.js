@@ -53,9 +53,13 @@
     el.calculator.querySelectorAll('[data-machine-action="calculate"], [data-machine-action="calculate-school"]').forEach(function (button) {
       button.disabled = busy;
     });
+    el.calculator.querySelectorAll('[data-machine-action="cancel-calculation"]').forEach(function (button) {
+      button.hidden = !busy;
+      button.disabled = !busy;
+    });
     el.calculator.querySelectorAll('[data-machine-calculating-status]').forEach(function (status) {
       status.hidden = !busy;
-      status.textContent = busy ? '正在后台计算；更改计算输入会取消本次任务。' : '';
+      status.textContent = busy ? '正在后台计算…' : '';
     });
   }
 
@@ -86,8 +90,8 @@
       calculationRunners[kind] = window.QinshiCalculationRunner.create({ kind: kind, fallback: fallback });
     }
     setCalculating(true);
-    el.calculatorResult.hidden = false;
-    el.calculatorResult.innerHTML = '<p role="status">正在后台计算，可继续操作；修改规划输入将取消本次计算。</p>';
+    el.calculatorResult.hidden = true;
+    el.calculatorResult.innerHTML = '';
     var task = calculationRunners[kind] ? calculationRunners[kind].run(payload) : Promise.reject(new Error('当前环境无法启动后台计算，已停止本次机关兽计算，请更新浏览器后重试。'));
     task.then(function (result) {
       var current = ACCOUNT_STORAGE.currentAccount && ACCOUNT_STORAGE.currentAccount();
@@ -651,7 +655,7 @@
       '<section class="panel machine-calculator-panel"><h2>材料与库存范围</h2><label class="machine-fragment-field"><span>当前机关兽碎片</span><input type="number" min="0" step="1" inputmode="numeric" value="' + state.calcDraft.fragments + '" data-calc-field="fragments"></label>' +
       '<details class="machine-temporary-inventory" data-detail-key="inventory:single:' + beast.id + '"><summary>临时调整当前库存</summary>' + inventoryEditor(beast, state.calcDraft, "calculator") + '</details>' +
       calculatorInventorySelector(beast, state.calcDraft, state.singleInventoryPolicy, "single", true) + newRankModeSelector("single", state.singleNewRankMode) + '</section><div data-machine-cost-slot></div>' +
-      '<div class="machine-calculator-actions machine-calc-actionbar"><button type="button" class="seg" data-machine-action="reload-calculator">从个人进度重新读取</button><button type="button" class="seg active" data-machine-action="calculate">计算最优方案</button><a href="#machine-beast-calculator-result" data-machine-jump data-machine-result-link hidden>查看计算结果</a><span role="status" data-machine-calculating-status hidden></span></div>';
+      '<div class="machine-calculator-actions machine-calc-actionbar"><button type="button" class="seg" data-machine-action="reload-calculator">从个人进度重新读取</button><button type="button" class="seg active" data-machine-action="calculate">计算最优方案</button><button type="button" class="seg" data-machine-action="cancel-calculation" hidden disabled>取消计算</button><a href="#machine-beast-calculator-result" data-machine-jump data-machine-result-link hidden>查看计算结果</a><span role="status" data-machine-calculating-status hidden></span></div>';
   }
 
   function schoolStageOptions(school, selected) {
@@ -731,7 +735,7 @@
       '<label><input type="checkbox" data-school-option="allowNewModifications"' + (draft.allowNewModifications ? ' checked' : '') + '>允许新增改造机关兽</label></div>' +
       newRankModeSelector("school", draft.newRankMode) +
       disclosure('school:rules', '查看库存限制、比较规则与完整说明', '<p class="muted-tip">蓝紫限制开启后，只允许使用已保存的完整蓝紫库存及指定阶数使用上限，不会通过碎片补出新本体；关闭使用已有库存时，蓝紫不能新增投入。蓝紫本体获取成本未计入，神图等其他消耗正常计价。</p><p class="muted-tip">两套方案都必须精确达到目标累计等级，不得超额培养；已达到或超过目标则不再投入。投入最小方案：已计价元宝最少 → 新增效果节点最多 → 等级内研发度溢出最少 → 神图总消耗最少。最多效果档位方案：新增效果节点最多 → 已计价元宝最少 → 溢出最少 → 神图总消耗最少。允许改造参与时，两套目标均先比较改造本体折算投入数量（已有与新增均计入），再按上述顺序比较；实质指标完全相同时保留全部同等最优组合，稳定键仅决定主展示顺序，其他组合在培养材料中查看。新增节点按实际effects统计；高档替换低档，最终仅生效最高已解锁档位。</p>') +
-      '<div data-machine-cost-slot></div></section><div class="machine-calculator-actions machine-calc-actionbar"><button type="button" class="seg" data-machine-action="reload-school-calculator">从个人进度重新读取</button><button type="button" class="seg active" data-machine-action="calculate-school">计算两套最优方案</button><a href="#machine-school-participants" data-machine-jump>参与兽与临时库存</a><a href="#machine-beast-calculator-result" data-machine-jump data-machine-result-link hidden>查看结果</a><span role="status" data-machine-calculating-status hidden></span></div>' +
+      '<div data-machine-cost-slot></div></section><div class="machine-calculator-actions machine-calc-actionbar"><button type="button" class="seg" data-machine-action="reload-school-calculator">从个人进度重新读取</button><button type="button" class="seg active" data-machine-action="calculate-school">计算两套最优方案</button><button type="button" class="seg" data-machine-action="cancel-calculation" hidden disabled>取消计算</button><a href="#machine-school-participants" data-machine-jump>参与兽与临时库存</a><a href="#machine-beast-calculator-result" data-machine-jump data-machine-result-link hidden>查看结果</a><span role="status" data-machine-calculating-status hidden></span></div>' +
       '<section class="panel" id="machine-school-participants"><h2>参与兽与临时库存 <small>已选 <span data-school-participant-count>' + school.beastIds.filter(function (id) { return draft.participating[id]; }).length + '</span>／' + school.beastIds.length + '</small></h2><p class="muted-tip">未参与者的现有等级仍计入累计。</p><div class="machine-school-beast-controls">' + orderedBeastIds.map(function (beastId) {
         var beast = beastById(beastId);
         return renderSchoolBeastControl(beast, draft, Boolean(calculatorQuery) && isSearchMatch(beast, "calculator"));
@@ -1347,6 +1351,14 @@
     if (!button) return;
     var action = button.dataset.machineAction;
     var beast = beastById(state.calcBeastId);
+    if(action === 'cancel-calculation'){
+      if(!calculating)return;
+      var canceledKind=calculatingKind;
+      cancelCalculation(true);
+      var calculateButton=el.calculator.querySelector('[data-machine-action="'+(canceledKind==='beast-school'?'calculate-school':'calculate')+'"]');
+      if(calculateButton)calculateButton.focus({preventScroll:true});
+      return;
+    }
     if (action === 'more-equivalents') {
       showMoreEquivalentMaterials(CORE.integer(button.dataset.planIndex));
     } else if (action === "save-reference-cost") {

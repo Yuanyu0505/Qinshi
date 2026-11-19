@@ -62,7 +62,7 @@ test('over-cap targets reject calculation without changing saved progress or sto
   }
 });
 
-test('controller updates target errors after player-level edits without clamping the draft',()=>{
+test('saved player-level changes update all temporary targets and preserve selected halls',()=>{
   const saved=core.normalizeProgress({playerLevel:80},data);
   let stored=JSON.stringify(saved);
   const store={getItem:()=>stored,setItem:(key,value)=>{stored=value;return true;}};
@@ -70,10 +70,33 @@ test('controller updates target errors after player-level edits without clamping
   controller.toggleHall('kuiwei',true);controller.setTarget('kuiwei',41);
   assert.equal(controller.calculate().valid,true);
   controller.setProgress('playerLevel',79);
-  assert.match(controller.state.targetErrors.kuiwei,/最大可升级至40级六堂/);
-  assert.equal(controller.state.plan.targets.kuiwei,41);
-  assert.equal(controller.calculate().valid,false);
+  assert.equal(controller.state.targetErrors.kuiwei,undefined);
+  assert.deepEqual(controller.state.plan.selected,['kuiwei']);
+  assert.ok(Object.values(controller.state.plan.targets).every(level=>level===40));
+  assert.equal(controller.calculate().valid,true);
   controller.setProgress('playerLevel',80);
+  assert.ok(Object.values(controller.state.plan.targets).every(level=>level===41));
   assert.equal(controller.state.targetErrors.kuiwei,undefined);
   assert.equal(controller.calculate().valid,true);
+  controller.setProgress('playerLevel','');
+  assert.ok(Object.values(controller.state.plan.targets).every(level=>level===50));
+  assert.equal(JSON.parse(stored).playerLevel,null);
+  assert.equal('targets' in JSON.parse(stored),false);
+});
+
+test('failed, read-only, invalid and unchanged level edits do not replace target drafts',()=>{
+  let stored=JSON.stringify(core.normalizeProgress({playerLevel:80},data)),failure=null,readOnly=false;
+  const store={getItem:()=>stored,isReadOnly:()=>readOnly,setItem:(key,value)=>{
+    if(failure==='throw')throw Error('Storage unavailable');if(failure==='false')return false;stored=value;return true;
+  }};
+  const c=ui.createController({data,core,store});c.setTarget('kuiwei',30);
+  for(const value of ['bad',-1]){assert.equal(c.setProgress('playerLevel',value),false);assert.equal(c.state.plan.targets.kuiwei,30);}
+  const before=stored;
+  for(const mode of ['readonly','false','throw']){
+    readOnly=mode==='readonly';failure=mode;
+    assert.equal(c.setProgress('playerLevel',79),false);assert.equal(c.state.plan.targets.kuiwei,30);assert.equal(stored,before);
+  }
+  readOnly=false;failure=null;
+  assert.equal(c.setProgress('playerLevel',80),true);assert.equal(c.state.plan.targets.kuiwei,30);
+  assert.equal(c.setProgress('herbs',12),true);assert.equal(c.state.plan.targets.kuiwei,30);
 });

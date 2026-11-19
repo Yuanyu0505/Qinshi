@@ -195,6 +195,8 @@ test('unknown player levels calculate while known gates reject excess targets an
     await edit(page, 'tokens', 500, 'kuiwei');
     await edit(page, 'playerLevel', 49);
     await mode(page, 'planner');
+    assert.equal(await page.locator('[data-six-halls-target="kuiwei"]').inputValue(),'9');
+    await page.locator('[data-six-halls-target="kuiwei"]').fill('50');await calculate(page);
     assert.equal(await page.locator('[data-six-halls-herbs="need"]').count(),0);
     assert.match(await page.locator('#six-halls-result').innerText(),/最大可升级至9级六堂/);
     for (const [player, target, blocked] of [[49, 10, true], [50, 10, false], [58, 19, true], [59, 19, false], [59,20,false], [59,21,true], [60,21,false], [78, 40, true], [79, 40, false], [79,41,true], [80,41,false], [88, 50, true], [89, 50, false]]) {

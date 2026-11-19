@@ -160,12 +160,14 @@
         refreshError(); notify("error"); return false;
       }
       var unchanged = sharedField ? candidate[field] === parsed.value : candidate.halls[hallId][field] === parsed.value;
+      var playerLevelChanged = field === "playerLevel" && state.progress.playerLevel !== parsed.value;
       if (sharedField) candidate[field] = parsed.value;
       else candidate.halls[hallId][field] = parsed.value;
       try {
         if (!store || typeof store.setItem !== "function") throw new Error("Account storage unavailable");
         if (!unchanged && store.setItem(core.STORE_KEY || STORE_KEY, JSON.stringify(candidate)) === false) throw new Error("Progress save rejected");
         state.progress = candidate;
+        if (playerLevelChanged) state.plan.targets = core.defaultPlan(data, candidate).targets;
         delete state.fieldErrors[key];
         state.accessError = "";
         updateTargetErrors();

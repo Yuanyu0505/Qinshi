@@ -18,3 +18,9 @@ test('directory search matches only names, trims spaces and preserves catalog',(
   assert.equal(ui.filterSections(data.sections,'').length,17);
   assert.equal(JSON.stringify(data.sections),before);
 });
+
+test('migrated directory entries expose concise descriptions without extending name search',()=>{
+  const expected={pilots:'助阵效果、突破与时装资料','battle-box-pill-pouch':'培养进度、材料需求与目标计算',quiz:'题库关键词检索与答案查询',zhulu:'进度奖励与赛季典籍查询',loulan:'楼兰探索与棋阵图解',formations:'位置换算、个人进度与阵容推荐',settings:'账号、同步、备份与应用更新'};
+  for(const [id,description] of Object.entries(expected))assert.equal(data.sections.find(s=>s.id===id).description,description);
+  assert.equal(ui.filterSections(data.sections,'助阵效果').length,0);
+});

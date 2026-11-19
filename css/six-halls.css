@@ -162,6 +162,7 @@
 #partition-six-halls .six-halls-reference-table thead th { font-size: 12px; color: var(--six-halls-gold); }
 #partition-six-halls .six-halls-reference-table tbody th { color: var(--text, #e8e0cf); font-weight: 600; }
 #partition-six-halls .six-halls-reference-table .six-halls-range-total { color: var(--six-halls-red); font-weight: 600; }
+#partition-six-halls .six-halls-reference-table .six-halls-range-total > span { display:inline-block;color:#ff6b60;font-size:18px;font-weight:800;line-height:1.35;padding:3px 8px;border:2px solid #ff6b60;border-radius:5px;background:#351411; }
 @container six-halls (min-width: 560px) {
   #partition-six-halls .six-halls-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   #partition-six-halls .six-halls-shared-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); }

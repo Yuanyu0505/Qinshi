@@ -67,6 +67,8 @@ test('over-cap target blocks old results and recovers after the player meets the
   const {context,page}=await enter();try{
     await mode(page,'progress');await page.locator('[data-six-halls-progress="playerLevel"]').fill('79');
     await mode(page,'planner');await page.locator('[data-six-halls-select="kuiwei"]').check();
+    assert.equal(await page.locator('[data-six-halls-target="kuiwei"]').inputValue(),'40');
+    await page.locator('[data-six-halls-target="kuiwei"]').fill('41');
     await page.locator('[data-six-halls-action="calculate"]').click();
     assert.match(await page.locator('#six-halls-result').innerText(),/最大可升级至40级六堂/);
     assert.equal(await page.locator('[data-six-halls-herbs]').count(),0);
@@ -75,6 +77,7 @@ test('over-cap target blocks old results and recovers after the player meets the
     assert.equal(await page.locator('[data-six-halls-target="kuiwei"]').getAttribute('aria-invalid'),'true');
     await mode(page,'progress');await page.locator('[data-six-halls-progress="playerLevel"]').fill('80');
     await mode(page,'planner');await page.locator('[data-six-halls-action="calculate"]').click();
+    assert.equal(await page.locator('[data-six-halls-target="kuiwei"]').inputValue(),'41');
     assert.equal(await page.locator('[data-six-halls-result-row="kuiwei"]').count(),1);
     assert.equal(await page.locator('.six-halls-level-status,.six-halls-locked-steps').count(),0);
     await mode(page,'reference');await page.locator('#six-halls-reference-min').fill('40');
@@ -100,8 +103,11 @@ test('range totals, terminal emphasis and explicit phase units follow the select
     assert.equal(await rows.last().locator('[data-label="累计七星珠草"]').innerText(),'270');
     assert.equal(await rows.last().locator('[data-label="累计信物"]').innerText(),'161');
     for(const label of ['累计七星珠草','累计信物']){
-      assert.equal(await rows.last().locator('[data-label="'+label+'"]').evaluate(n=>getComputedStyle(n).color),'rgb(255, 155, 145)');
-      assert.notEqual(await rows.first().locator('[data-label="'+label+'"]').evaluate(n=>getComputedStyle(n).color),'rgb(255, 155, 145)');
+      const badge=rows.last().locator('[data-label="'+label+'"] > span');
+      assert.equal(await badge.evaluate(n=>getComputedStyle(n).color),'rgb(255, 107, 96)');
+      assert.equal(await badge.evaluate(n=>getComputedStyle(n).fontWeight),'800');
+      assert.equal(await badge.evaluate(n=>getComputedStyle(n).borderTopWidth),'2px');
+      assert.notEqual(await rows.first().locator('[data-label="'+label+'"] > span').evaluate(n=>getComputedStyle(n).color),'rgb(255, 107, 96)');
     }
     await page.locator('#partition-other-reference').screenshot({path:path.join(output,'range-40-50-desktop.png')});
     await page.setViewportSize({width:390,height:844});

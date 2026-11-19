@@ -161,7 +161,7 @@
     }
     function home(){
       parkSixHalls();
-      body.innerHTML='<section class="panel"><h2 tabindex="-1">其他资料</h2><div class="ref-directory-controls"><label>搜索分区<input type="search" data-ref-directory-search placeholder="输入分区名称" value="'+esc(directoryQuery)+'"'+(sorting?' disabled':'')+'></label><button type="button" class="seg" data-ref-sort-toggle aria-pressed="'+sorting+'">'+(sorting?'完成排序':'自定义排序')+'</button><button type="button" class="seg" data-ref-order-reset'+(sorting?'':' hidden')+'>恢复默认</button></div><p class="ref-order-error" data-ref-order-status role="status" hidden></p><nav class="ref-index" aria-label="其他资料目录"></nav><p data-ref-directory-empty hidden>没有符合条件的分区</p></section>';
+      body.innerHTML='<section class="panel"><h2 tabindex="-1">其他资料</h2><div class="ref-directory-controls"><label><input type="search" aria-label="搜索分区" data-ref-directory-search placeholder="输入分区名称" value="'+esc(directoryQuery)+'"'+(sorting?' disabled':'')+'></label><button type="button" class="seg" data-ref-sort-toggle aria-pressed="'+sorting+'">'+(sorting?'完成排序':'自定义排序')+'</button><button type="button" class="seg" data-ref-order-reset'+(sorting?'':' hidden')+'>恢复默认</button></div><p class="ref-order-error" data-ref-order-status role="status" hidden></p><nav class="ref-index" aria-label="其他资料目录"></nav><p data-ref-directory-empty hidden>没有符合条件的分区</p></section>';
       directoryResults();
     }
     function directoryResults(){

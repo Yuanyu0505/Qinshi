@@ -13,7 +13,7 @@ for (const file of ['data/machine-beasts.js', 'js/machine-beasts.js', 'js/number
 }
 const source = fs.readFileSync(path.join(root, 'js/machine-beasts-ui.js'), 'utf8');
 vm.runInContext(source.replace('window.MACHINE_BEAST_UI = {',
-  'window.testUI = { calcTargetOptions, calculatorInventorySelector, conversionSummary, researchReference, formatNumber }; window.MACHINE_BEAST_UI = {'), context);
+  'window.testUI = { calcTargetOptions, calcTargetPicker, calculatorInventorySelector, conversionSummary, researchReference, formatNumber }; window.MACHINE_BEAST_UI = {'), context);
 const ui = context.window.testUI;
 
 test('UI number formatting preserves BigInt precision and uses four-digit groups', () => {
@@ -23,6 +23,14 @@ test('UI number formatting preserves BigInt precision and uses four-digit groups
 
 test('target options retain values and selection without research labels', () => {
   assert.equal(ui.calcTargetOptions({ maxLevel: 3 }, 2, 1), '<option value="1">1级</option><option value="2" selected>2级</option><option value="3">3级</option>');
+});
+
+test('target picker limits visible rows without removing later levels', () => {
+  const html = ui.calcTargetPicker({ maxLevel: 25 }, 25, 0);
+  assert.match(html, /size="10"/);
+  assert.match(html, /value="25" selected>25级/);
+  assert.equal((html.match(/<option /g) || []).length, 25);
+  assert.match(ui.calcTargetPicker({ maxLevel: 3 }, 2, 1), /size="3"/);
 });
 
 test('inventory row keeps usage cap and disabled state together', () => {
@@ -46,7 +54,11 @@ test('loose cores remain visible without converted bodies', () => {
   assert.doesNotMatch(html, /改造神核未计价/);
 });
 
-test('research reference includes incremental and cumulative modification materials', () => {
+test('research reference estimates boxes from each stage without changing core requirements', () => {
   const html = ui.researchReference();
-  for (const text of ['改造神核材料', '40', '55', '75', '105', '145', '725', '非保底']) assert.ok(html.includes(text), text);
+  const table = html.match(/<table>[\s\S]*?<\/table>/)[0];
+  assert.deepEqual(Array.from(table.matchAll(/<tr><th scope="row">([^<]+)<\/th><td>(\d+)<\/td><td>(\d+)<\/td><td[^>]*>(\d+)<\/td><\/tr>/g), match => match.slice(1)), [
+    ['升神', '40', '40', '200'], ['天改', '15', '55', '75'], ['仙改', '20', '75', '100'], ['圣改', '30', '105', '150'], ['神改', '40', '145', '200']
+  ]);
+  for (const text of ['改造阶段', '本阶段所需神核', '所需神核箱子预估（按10出2计算）']) assert.ok(table.includes(text), text);
 });

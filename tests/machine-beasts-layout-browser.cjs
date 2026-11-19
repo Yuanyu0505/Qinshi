@@ -32,7 +32,7 @@ test('calculator controls precede result in actual DOM and viewport reading orde
 }));
 test('alignment: current level matches input text size and target follows without an empty column', async () => scenario(async page => {
   const layout = await page.evaluate(() => {
-    const current = document.querySelector('[data-calc-current-level]'), research = document.querySelector('[data-calc-field="research"]'), target = document.querySelector('[data-calc-target]');
+    const current = document.querySelector('[data-calc-current-level]'), research = document.querySelector('[data-calc-field="research"]'), target = document.querySelector('[data-calc-target-picker] > summary');
     return { currentSize:getComputedStyle(current).fontSize, inputSize:getComputedStyle(research).fontSize, gap:target.getBoundingClientRect().left-current.getBoundingClientRect().right };
   });
   assert.equal(layout.currentSize, layout.inputSize);

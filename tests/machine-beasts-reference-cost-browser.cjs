@@ -51,6 +51,7 @@ async function waitForCalculation(page, resultKey) {
 
 async function calculateSingle(page) {
   await page.locator('[data-calc-beast]').selectOption('war-demon');
+  await page.locator('[data-calc-target-picker] > summary').click();
   await page.locator('[data-calc-target]').selectOption('1');
   await page.locator('[data-machine-action="calculate"]').click();
   await waitForCalculation(page, 'calcResult');
@@ -290,6 +291,7 @@ test('invalid stock or price replaces old totals and missing manual prices are n
   assert.equal(await page.locator('[data-reference-cost-total]').count(), 0);
   await page.locator('[data-reference-cost-field="awakeningBlueprintPrice"]').fill('70');
   await page.locator('[data-calc-beast]').selectOption('mechanical-wing');
+  await page.locator('[data-calc-target-picker] > summary').click();
   await page.locator('[data-calc-target]').selectOption('1');
   await page.locator('[data-machine-action="calculate"]').click();
   await waitForCalculation(page, 'calcResult');
@@ -390,22 +392,20 @@ for (const width of [360, 1100]) {
     await page.locator('[data-machine-beast-mode="reference"]').click();
     const guide = page.locator('[data-machine-blueprint-guide]');
     assert.equal(await guide.locator('h2').textContent(), '机关兽研发材料参考（用图纸版）');
-    assert.match(await guide.textContent(), /单兽研发等级.*非.*流派阶数/);
-    assert.match(await guide.textContent(), /资料未提供.*不视为0/);
     assert.deepEqual(await guide.locator('thead th').allTextContents(), ['材料', '10级（蓝色）', '15级（紫色）', '20级（一代橙色）', '25级（二代橙色）']);
     assert.equal(await guide.locator('tbody tr').count(), 13);
     assert.deepEqual(await guide.locator('[data-blueprint-guide-plan] > *').allTextContents(), ['投入方案', '270只2阶＋4只0阶', '16只6阶', '9只7阶＋1只6阶＋2只0阶', '13只7阶＋1只6阶＋2只0阶']);
     assert.deepEqual(await guide.locator('[data-blueprint-guide-resource]').evaluateAll(rows => rows.map(row => Array.from(row.children, cell => cell.textContent))), [
       ['青铜螺栓设计图', '540', '224', '212', '300'],
-      ['精钢底座设计图', '—（资料未提供）', '288', '234', '330'],
-      ['精钢管设计图', '—（资料未提供）', '240', '231', '327'],
-      ['玄铁外壳设计图', '—（资料未提供）', '240', '240', '340'],
-      ['玄铁关节设计图', '—（资料未提供）', '160', '235', '335'],
-      ['玄铁箱设计图', '—（资料未提供）', '80', '50', '70'],
+      ['精钢底座设计图', '—', '288', '234', '330'],
+      ['精钢管设计图', '—', '240', '231', '327'],
+      ['玄铁外壳设计图', '—', '240', '240', '340'],
+      ['玄铁关节设计图', '—', '160', '235', '335'],
+      ['玄铁箱设计图', '—', '80', '50', '70'],
       ['铅块', '5400', '4592', '4625', '6553'],
       ['青铜', '7290', '3648', '3225', '4557'],
-      ['精钢', '—（资料未提供）', '1648', '1507', '2131'],
-      ['玄铁', '—（资料未提供）', '992', '908', '1284'],
+      ['精钢', '—', '1648', '1507', '2131'],
+      ['玄铁', '—', '992', '908', '1284'],
       ['觉醒神图', '636', '1123', '1673', '2275'],
       ['机关破片', '3178', '5611', '8362', '11372']
     ]);

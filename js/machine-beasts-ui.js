@@ -637,6 +637,22 @@
     return html;
   }
 
+  function calcTargetPicker(beast, selected, currentLevel) {
+    var first = Math.max(1, currentLevel);
+    // size=1 would switch back to an operating-system popup rather than a list.
+    var rows = Math.max(2, Math.min(10, beast.maxLevel - first + 1));
+    return '<div class="machine-target-field"><span id="machine-calc-target-label">目标研发等级</span><details class="machine-target-picker" data-calc-target-picker>' +
+      '<summary aria-labelledby="machine-calc-target-label machine-calc-target-value"><span id="machine-calc-target-value" data-calc-target-value>' + selected + '级</span></summary>' +
+      '<select data-calc-target size="' + rows + '" aria-labelledby="machine-calc-target-label">' + calcTargetOptions(beast, selected, currentLevel) + '</select></details></div>';
+  }
+
+  function closeTargetPicker(focusSummary) {
+    var picker = el.calculatorControls.querySelector('[data-calc-target-picker][open]');
+    if (!picker) return;
+    picker.open = false;
+    if (focusSummary) picker.querySelector('summary').focus({ preventScroll: true });
+  }
+
   function renderSingleCalculatorControls() {
     if (!state.calcDraft) resetCalculator();
     var beast = beastById(state.calcBeastId);
@@ -650,7 +666,7 @@
       }).join("") + '</select></label>' +
       '<label><span>当前累计研发度</span><input type="number" min="0" step="1" inputmode="numeric" value="' + state.calcDraft.research + '" data-calc-field="research"></label>' +
       '<label class="machine-current-level-field"><span>当前研发等级</span><strong data-calc-current-level>' + currentLevel + '级</strong></label>' +
-      '<label><span>目标研发等级</span><select data-calc-target>' + calcTargetOptions(beast, state.calcTargetLevel, currentLevel) + '</select></label>' +
+      calcTargetPicker(beast, state.calcTargetLevel, currentLevel) +
       '</div><p class="machine-beast-source">获取来源：' + escapeHtml(sourceText(beast)) + '</p></section>' +
       '<section class="panel machine-calculator-panel"><h2>材料与库存范围</h2><label class="machine-fragment-field"><span>当前机关兽碎片</span><input type="number" min="0" step="1" inputmode="numeric" value="' + state.calcDraft.fragments + '" data-calc-field="fragments"></label>' +
       '<details class="machine-temporary-inventory" data-detail-key="inventory:single:' + beast.id + '"><summary>临时调整当前库存</summary>' + inventoryEditor(beast, state.calcDraft, "calculator") + '</details>' +
@@ -1000,9 +1016,9 @@
 
   function researchReference() {
     var coreRules = DATA.modificationCoreRules;
-    var coreMaterials = coreRules ? '<section class="machine-modification-core-reference"><h3>改造神核材料</h3><div class="machine-core-table-scroll"><table><thead><tr><th scope="col">改造</th><th scope="col">本阶段新增神核</th><th scope="col">累计神核</th></tr></thead><tbody>' + DATA.modifications.filter(function (mod) { return mod.id !== 'none'; }).map(function (mod) {
-      return '<tr><th scope="row">' + escapeHtml(mod.name) + '</th><td>' + formatNumber(coreRules.incremental[mod.id]) + '</td><td>' + formatNumber(coreRules.cumulative[mod.id]) + '</td></tr>';
-    }).join('') + '</tbody></table></div><p>约10箱获得2神核；神改累计 ' + formatNumber(coreRules.cumulative.fullDivine) + '神核，经验估算约' + formatNumber(coreRules.cumulative.fullDivine * coreRules.estimatedBoxesPerCore) + '箱，非保底。</p></section>' : '';
+    var coreMaterials = coreRules ? '<section class="machine-modification-core-reference"><h3>改造神核材料</h3><div class="machine-core-table-scroll"><table><thead><tr><th scope="col">改造阶段</th><th scope="col">本阶段所需神核</th><th scope="col">累计神核</th><th scope="col">所需神核箱子预估（按10出2计算）</th></tr></thead><tbody>' + DATA.modifications.filter(function (mod) { return mod.id !== 'none'; }).map(function (mod) {
+      return '<tr><th scope="row">' + escapeHtml(mod.name) + '</th><td>' + formatNumber(coreRules.incremental[mod.id]) + '</td><td>' + formatNumber(coreRules.cumulative[mod.id]) + '</td><td aria-label="约' + coreRules.incremental[mod.id] * coreRules.estimatedBoxesPerCore + '箱，经验估计，非保底">' + formatNumber(coreRules.incremental[mod.id] * coreRules.estimatedBoxesPerCore) + '</td></tr>';
+    }).join('') + '</tbody></table></div></section>' : '';
     function qualityCards(quality, title, includeModifications) {
       var cards = Object.keys(DATA.researchValues[quality]).sort(function (a, b) { return Number(a) - Number(b); }).map(function (rank) {
         var values = includeModifications ? DATA.modifications.map(function (mod) {
@@ -1017,7 +1033,7 @@
       }).join('') + '</tbody></table></div>';
       return '<section class="machine-reference-group"><h3>' + title + '</h3>' + matrix + '<div class="machine-reference-grid machine-research-card-grid machine-reference-mobile-only">' + cards + '</div></section>';
     }
-    return '<section class="panel" id="machine-reference-values"><h2>不同阶数与改造研发度</h2>' + coreMaterials + '<section class="machine-research-quick"><h3>研发度按阶速查</h3><div class="machine-research-quick-controls"><label>品质<select data-research-quality>' + [['orange','橙色机关兽'],['purple','紫色机关兽'],['blue','蓝色机关兽']].map(function (entry) { return '<option value="' + entry[0] + '"' + ((presentation.researchQuality || 'orange') === entry[0] ? ' selected' : '') + '>' + entry[1] + '</option>'; }).join('') + '</select></label><label>突破阶数<select data-research-rank></select></label></div><div data-research-quick-result aria-live="polite"></div><p class="muted-tip">—：资料未提供。</p></section>' + qualityCards("orange", "橙色机关兽", true) + qualityCards("purple", "紫色机关兽", false) + qualityCards("blue", "蓝色机关兽", false) + '</section>';
+    return '<section class="panel" id="machine-reference-values"><h2>不同阶数与改造研发度</h2>' + coreMaterials + '<section class="machine-research-quick"><h3>研发度按阶速查</h3><div class="machine-research-quick-controls"><label>品质<select data-research-quality>' + [['orange','橙色机关兽'],['purple','紫色机关兽'],['blue','蓝色机关兽']].map(function (entry) { return '<option value="' + entry[0] + '"' + ((presentation.researchQuality || 'orange') === entry[0] ? ' selected' : '') + '>' + entry[1] + '</option>'; }).join('') + '</select></label><label>突破阶数<select data-research-rank></select></label></div><div data-research-quick-result aria-live="polite"></div></section>' + qualityCards("orange", "橙色机关兽", true) + qualityCards("purple", "紫色机关兽", false) + qualityCards("blue", "蓝色机关兽", false) + '</section>';
   }
 
   function updateResearchQuickLookup() {
@@ -1076,14 +1092,13 @@
     if (!guide) return '';
     var levelNotes = { 10: '（蓝色）', 15: '（紫色）', 20: '（一代橙色）', 25: '（二代橙色）' };
     return '<section class="panel machine-blueprint-guide" id="machine-reference-blueprints" data-machine-blueprint-guide><h2>机关兽研发材料参考（用图纸版）</h2>' +
-      '<p class="muted-tip">表头为单兽研发等级，非流派阶数；—表示资料未提供，不视为0。</p>' +
       '<div class="machine-blueprint-guide-scroll" tabindex="0" role="region" aria-label="机关兽研发材料参考表，可横向滚动"><table class="machine-blueprint-guide-table"><thead><tr><th scope="col">材料</th>' + guide.levels.map(function (level) {
         return '<th scope="col">' + escapeHtml(level) + '级' + escapeHtml(levelNotes[level] || '') + '</th>';
       }).join('') + '</tr></thead><tbody><tr data-blueprint-guide-plan><th scope="row">投入方案</th>' + guide.plans.map(function (plan) {
         return '<td>' + escapeHtml(plan) + '</td>';
       }).join('') + '</tr>' + guide.resources.map(function (resource) {
         return '<tr data-blueprint-guide-resource><th scope="row">' + escapeHtml(resource.name) + '</th>' + resource.values.map(function (value) {
-          return '<td' + (value === null ? ' class="machine-blueprint-guide-missing"' : '') + '>' + (value === null ? '—（资料未提供）' : escapeHtml(value)) + '</td>';
+          return '<td' + (value === null ? ' class="machine-blueprint-guide-missing" aria-label="资料未提供"' : '') + '>' + (value === null ? '—' : escapeHtml(value)) + '</td>';
         }).join('') + '</tr>';
       }).join('') + '</tbody></table></div></section>';
   }
@@ -1092,14 +1107,12 @@
     var guide = DATA.breakthroughGuide;
     if (!guide) return '';
     return '<section class="panel machine-blueprint-guide" id="machine-reference-breakthrough" data-machine-breakthrough-guide><h2>机关兽突破材料参考（0—10阶）</h2>' +
-      '<p class="muted-tip">来源：' + escapeHtml(guide.source.publisher) + '《' + escapeHtml(guide.source.name) + '》。下表为单兽突破阶数，非研发等级或流派阶数。</p>' +
-      '<h3>逐阶段所需成品材料</h3><div class="machine-blueprint-guide-scroll" tabindex="0" role="region" aria-label="机关兽突破成品材料表，可横向滚动"><table class="machine-blueprint-guide-table"><thead><tr><th scope="col">突破阶段</th><th scope="col">成品材料</th></tr></thead><tbody>' +
+      '<h3>逐阶段所需成品材料</h3><div class="machine-blueprint-guide-scroll" tabindex="0" role="region" aria-label="机关兽突破成品材料表，可横向滚动"><table class="machine-blueprint-guide-table machine-breakthrough-stage-table"><thead><tr><th scope="col">突破阶段</th><th scope="col">成品材料</th></tr></thead><tbody>' +
       guide.stages.map(function (stage) {
         return '<tr data-breakthrough-stage><th scope="row">' + escapeHtml(stage.from) + '→' + escapeHtml(stage.to) + '阶</th><td>' + stage.materials.map(function (material) {
           return escapeHtml(material.name) + ' × ' + escapeHtml(material.quantity);
         }).join('、') + '</td></tr>';
       }).join('') + '</tbody></table></div><h3>从0阶升至7／8／9／10阶累计材料</h3>' +
-      '<p class="muted-tip">累计表按原图独立列示；上表“玄铁工具箱”与累计表“玄铁箱设计图”保留各自原图名称，不据此新增配方或折算规则。</p>' +
       '<div class="machine-blueprint-guide-scroll" tabindex="0" role="region" aria-label="机关兽突破累计材料表，可横向滚动"><table class="machine-blueprint-guide-table"><thead><tr><th scope="col">材料</th>' +
       guide.ranks.map(function (rank) { return '<th scope="col">' + escapeHtml(rank) + '阶</th>'; }).join('') + '</tr></thead><tbody>' +
       guide.resources.map(function (resource) {
@@ -1110,7 +1123,7 @@
   function renderReference() {
     var focused = rememberPresentation(el.referenceContent);
     var groups = [['机关兽与流派', [['effects','归属与效果'],['schools','流派效果']]], ['材料与突破', [['materials','材料来源'],['blueprints','研发材料'],['breakthrough','突破材料']]], ['等级与研发数值', [['thresholds','等级门槛'],['values','阶数与改造']]]];
-    el.referenceContent.innerHTML = '<nav class="machine-reference-index" id="machine-reference-index" aria-label="机关兽资料目录">' + groups.map(function (group) { return '<div class="machine-reference-index-group"><b>' + group[0] + '</b><div>' + group[1].map(function (entry) { return '<a href="#machine-reference-' + entry[0] + '" data-machine-jump>' + entry[1] + '</a>'; }).join('') + '</div></div>'; }).join('') + '</nav>' + beastReference() + materialReference() + blueprintGuideReference() + breakthroughGuideReference() + schoolReference() + thresholdReference() + researchReference();
+    el.referenceContent.innerHTML = '<nav class="machine-reference-index" id="machine-reference-index" aria-label="机关兽资料目录">' + groups.map(function (group) { return '<div class="machine-reference-index-group"><b>' + group[0] + '</b><div>' + group[1].map(function (entry) { return '<a href="#machine-reference-' + entry[0] + '" data-machine-jump>' + entry[1] + '</a>'; }).join('') + '</div></div>'; }).join('') + '</nav>' + beastReference() + schoolReference() + materialReference() + blueprintGuideReference() + breakthroughGuideReference() + thresholdReference() + researchReference();
     updateResearchQuickLookup();
     el.referenceContent.querySelectorAll(':scope > section.panel').forEach(addReferenceReturn);
     rendered.reference = true;
@@ -1502,6 +1515,7 @@
       renderCalculatorControls();
     } else if (target.matches("[data-calc-target]")) {
       state.calcTargetLevel = CORE.integer(target.value);
+      el.calculatorControls.querySelector('[data-calc-target-value]').textContent = target.value + '级';
     } else if (target.matches("[data-calc-flag]")) {
       state.calcDraft[target.dataset.calcFlag] = target.checked;
       renderCalculatorControls();
@@ -1621,6 +1635,38 @@
     el.calculator.addEventListener("click", handleCalculatorClick);
     el.calculator.addEventListener("input", handleCalculatorInput);
     el.calculator.addEventListener("change", handleCalculatorChange);
+    el.calculator.addEventListener("toggle", function (event) {
+      var picker = event.target;
+      if (!picker.matches('[data-calc-target-picker]') || !picker.open) return;
+      var select = picker.querySelector('[data-calc-target]');
+      var bounds = picker.getBoundingClientRect();
+      var listHeight = select.offsetHeight;
+      picker.classList.toggle('is-above', window.innerHeight - bounds.bottom < listHeight && bounds.top > listHeight);
+      select.focus({ preventScroll: true });
+      select.scrollTop = Math.max(0, select.selectedIndex - Math.floor(select.size / 2)) * select.scrollHeight / select.options.length;
+    }, true);
+    el.calculator.addEventListener("click", function (event) {
+      var select = event.target.closest('[data-calc-target]');
+      if (!select || event.button !== 0) return;
+      // A click on the scrollbar must keep the list open for further scrolling.
+      if (event.clientX >= select.getBoundingClientRect().left + select.clientWidth) return;
+      closeTargetPicker(true);
+    });
+    el.calculator.addEventListener("keydown", function (event) {
+      if (!event.target.closest('[data-calc-target-picker][open]')) return;
+      if (event.key === 'Escape' || (event.key === 'Enter' && event.target.matches('[data-calc-target]'))) {
+        event.preventDefault();
+        event.stopPropagation();
+        closeTargetPicker(true);
+      }
+    });
+    el.calculator.addEventListener("focusout", function (event) {
+      var picker = event.target.closest('[data-calc-target-picker]');
+      if (picker && event.relatedTarget && !picker.contains(event.relatedTarget)) closeTargetPicker(false);
+    });
+    document.addEventListener("click", function (event) {
+      if (!event.target.closest('[data-calc-target-picker]')) closeTargetPicker(false);
+    });
     el.calculator.addEventListener("focusout", function (event) {
       if (event.target.matches('[data-reference-cost-field], [data-reference-beast-price]') && state.referenceCostDirty) updateReferenceCost(event.target, true);
     });

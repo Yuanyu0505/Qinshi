@@ -64,7 +64,7 @@ function brute(data,p,options,school){
   for(const [mod,ranks]of Object.entries(inventory))for(const [rankText,count]of Object.entries(ranks)){
     const rank=Number(rankText),cap=options.useOwnedInventory===false?0:Math.min(count,options.ownedLimits?.[mod]?.[rankText]??count),weight=rank>7?2**(rank-7):1;
     pool+=cap*weight;
-    if(options.newRankMode==='zero'||rank<=max)types.push({research:data.researchValues[b.quality][rank][mod],cap,weight,modified:mod!=='none'});
+    types.push({research:data.researchValues[b.quality][rank][mod],cap,weight,modified:mod!=='none'});
   }
   for(const rank of [0,7,8].filter(r=>r<=max))types.push({research:data.researchValues[b.quality][rank].none,weight:rank>7?2**(rank-7):1,modified:false,cap:Math.ceil(9/data.researchValues[b.quality][rank].none)});
   let best=null,rows=[];

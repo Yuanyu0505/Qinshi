@@ -5,6 +5,40 @@ const data=require('../data/six-halls.js');
 const core=require('../js/six-halls.js');
 const ui=require('../js/six-halls-ui.js');
 
+test('loaded accounts default targets to their saved player cap without reducing existing progress',()=>{
+  for(const [playerLevel,want]of [[null,50],[0,9],[50,10],[59,20],[79,40],[89,50]]) {
+    const raw=JSON.stringify({playerLevel,halls:{kuiwei:{level:45}}});
+    const controller=ui.createController({data,core,store:{getItem:()=>raw}});
+    assert.equal(controller.state.plan.targets.chiyou,want,'player '+playerLevel);
+    assert.equal(controller.state.plan.targets.kuiwei,Math.max(45,want));
+    assert.equal(controller.state.progress.halls.kuiwei.level,45);
+    controller.toggleHall('kuiwei',true);assert.equal(controller.calculate().valid,true);
+  }
+});
+
+test('load and account changes reset cap defaults while same-account lease refresh keeps drafts private',()=>{
+  let account='first',listener,writes=0;
+  const saved={first:JSON.stringify({playerLevel:79}),second:JSON.stringify({playerLevel:59})};
+  const store={getItem:()=>saved[account],currentAccount:()=>({id:account}),setItem:()=>{writes++;return true;},subscribeAccess:fn=>{listener=fn;}};
+  const c=ui.createController({data,core,store});
+  c.toggleHall('kuiwei',true);c.setTarget('kuiwei',30);
+  saved.first=JSON.stringify({playerLevel:80});listener({accountId:'first'});
+  assert.equal(c.state.plan.targets.kuiwei,30);assert.equal(c.state.progress.playerLevel,80);
+  c.load();assert.equal(c.state.plan.targets.kuiwei,41);assert.deepEqual(c.state.plan.selected,[]);
+  account='second';c.calculate();assert.equal(c.state.plan.targets.kuiwei,20);
+  assert.equal(writes,0);
+});
+
+test('reference cumulative consumption starts at the selected range and preserves step costs and gates',()=>{
+  const rows=core.referenceRows(data,40,50);
+  assert.equal(rows.length,10);
+  assert.deepEqual([rows[0].from,rows[0].herbs,rows[0].tokens,rows[0].cumulativeHerbs,rows[0].cumulativeTokens,rows[0].playerLevel],[40,24,14,24,14,80]);
+  assert.deepEqual([rows[9].cumulativeHerbs,rows[9].cumulativeTokens],[270,161]);
+  const full=core.referenceRows(data);assert.deepEqual([full[49].cumulativeHerbs,full[49].cumulativeTokens],[904,435]);
+  assert.deepEqual(core.referenceRows(data,40,40),[]);
+  for(const range of [['',50],[50,40],[-1,50],[0,51]])assert.throws(()=>core.referenceRows(data,...range),RangeError);
+});
+
 test('confirmed consecutive gates include the special shared threshold at 19 and 20',()=>{
   const rows=core.referenceRows(data);
   for(let target=1;target<=50;target++) {

@@ -24,6 +24,7 @@
     referenceCost: null,
     referenceCostDraft: null,
     referenceCostDirty: false,
+    referenceCostInvalidInputs: {},
     referenceCostRequirements: {},
     progressSchoolId: "hegemonic",
     referenceBeastSchoolId: "hegemonic",
@@ -87,7 +88,7 @@
     setCalculating(true);
     el.calculatorResult.hidden = false;
     el.calculatorResult.innerHTML = '<p role="status">正在后台计算，可继续操作；修改规划输入将取消本次计算。</p>';
-    var task = calculationRunners[kind] ? calculationRunners[kind].run(payload) : new Promise(function (resolve) { setTimeout(function () { resolve(fallback(payload)); }, 0); });
+    var task = calculationRunners[kind] ? calculationRunners[kind].run(payload) : Promise.reject(new Error('当前环境无法启动后台计算，已停止本次机关兽计算，请更新浏览器后重试。'));
     task.then(function (result) {
       var current = ACCOUNT_STORAGE.currentAccount && ACCOUNT_STORAGE.currentAccount();
       if (sequence !== calculationSequence || (current && current.id) !== accountId) return;
@@ -98,7 +99,7 @@
       if (sequence !== calculationSequence || error.name === "AbortError") return;
       setCalculating(false);
       el.calculatorResult.hidden = true;
-      showError("计算失败，请调整输入后重试。", error);
+      showError(error.message || "计算失败，请调整输入后重试。", error);
     });
   }
 
@@ -224,6 +225,10 @@
     });
     state.referenceCost = CORE.normalizeReferenceCostSettings(DATA, raw.referenceCost);
     state.referenceCostDraft = clone(state.referenceCost);
+    state.referenceCostInvalidInputs = {};
+    // UI compatibility only: historical nulls keep their stored/API meaning.
+    // Loading an account must never migrate its saved settings.
+    restoreBlankReferenceDefaults();
     state.referenceCostDirty = false;
   }
 
@@ -263,6 +268,7 @@
   }
 
   function referenceCostInputError() {
+    if (Object.keys(state.referenceCostInvalidInputs).length) return "参考单价必须为非负有限数，请修正无效输入。";
     var draft = state.referenceCostDraft;
     var stock = Number(draft.awakeningBlueprintStock);
     if (String(draft.awakeningBlueprintStock).trim() === "" || !Number.isFinite(stock) || stock < 0 || !Number.isInteger(stock)) return "已有觉醒神图必须为非负整数。";
@@ -347,15 +353,42 @@
     }
   }
 
-  function updateReferenceCost(target) {
+  function restoreBlankReferenceDefaults(target) {
+    var defaults = CORE.normalizeReferenceCostSettings(DATA, {});
     var draft = state.referenceCostDraft;
-    if (target.matches('[data-reference-beast-price]')) draft.beastPrices[target.dataset.referenceBeastPrice] = target.value === '' ? null : target.value;
+    function restore(key, value, input) {
+      if (value !== null && value !== undefined && String(value).trim() !== '') return;
+      if (state.referenceCostInvalidInputs[key]) return;
+      var fallback = key === 'awakeningBlueprintPrice' ? defaults.awakeningBlueprintPrice : defaults.beastPrices[key];
+      if (key === 'awakeningBlueprintPrice') draft.awakeningBlueprintPrice = fallback;
+      else draft.beastPrices[key] = fallback;
+      if (input) input.value = fallback == null ? '' : fallback;
+    }
+    if (!target || target.matches('[data-reference-cost-field="awakeningBlueprintPrice"]')) {
+      restore('awakeningBlueprintPrice', draft.awakeningBlueprintPrice, el.calculatorControls && el.calculatorControls.querySelector('[data-reference-cost-field="awakeningBlueprintPrice"]'));
+    }
+    DATA.beasts.forEach(function (beast) {
+      if (beast.contributionPerFragment != null) return;
+      if (!target || target.dataset.referenceBeastPrice === beast.id) restore(beast.id, draft.beastPrices[beast.id], el.calculatorControls && el.calculatorControls.querySelector('[data-reference-beast-price="' + beast.id + '"]'));
+    });
+  }
+
+  function updateReferenceCost(target, commit, all) {
+    var draft = state.referenceCostDraft;
+    var inputKey = target.dataset.referenceBeastPrice || target.dataset.referenceCostField;
+    if (inputKey) {
+      if (target.validity && target.validity.badInput) state.referenceCostInvalidInputs[inputKey] = true;
+      else delete state.referenceCostInvalidInputs[inputKey];
+    }
+    if (target.matches('[data-reference-beast-price]')) draft.beastPrices[target.dataset.referenceBeastPrice] = target.value;
     else if (target.matches('[data-reference-cost-field]')) draft[target.dataset.referenceCostField] = target.type === 'checkbox' ? target.checked : target.value;
     else if (target.matches('[data-reference-blueprint-preset]')) {
       if (target.value === 'custom') return;
       draft.awakeningBlueprintPrice = target.value;
+      delete state.referenceCostInvalidInputs.awakeningBlueprintPrice;
       el.calculatorControls.querySelector('[data-reference-cost-field="awakeningBlueprintPrice"]').value = target.value;
     } else return;
+    if (commit) restoreBlankReferenceDefaults(all ? null : target);
     // Price and shared stock now affect school search, not merely presentation.
     // Keep single-beast plans valid: their optimization objective is unchanged.
     if (calculating && calculatingKind === 'beast-school') cancelCalculation(false);
@@ -365,13 +398,16 @@
       state.referenceCostRequirements = {};
     }
     updateResultLinks();
-    if (target.matches('[data-reference-cost-field="awakeningBlueprintPrice"]')) {
+    if (all || target.matches('[data-reference-cost-field="awakeningBlueprintPrice"]')) {
       var preset = el.calculatorControls.querySelector('[data-reference-blueprint-preset]');
-      var option = Array.from(preset.options).find(function (item) { return item.value !== 'custom' && target.value !== '' && Number(item.value) === Number(target.value); });
+      var option = Array.from(preset.options).find(function (item) { return item.value !== 'custom' && draft.awakeningBlueprintPrice !== '' && draft.awakeningBlueprintPrice !== null && Number(item.value) === Number(draft.awakeningBlueprintPrice); });
       preset.value = option ? option.value : 'custom';
     }
     state.referenceCostDirty = true;
-    if (!referenceCostInputError() && (!ACCOUNT_STORAGE.isReadOnly || !ACCOUNT_STORAGE.isReadOnly())) {
+    var blankDraft = draft.awakeningBlueprintPrice === '' || DATA.beasts.some(function (beast) { return draft.beastPrices[beast.id] === ''; });
+    // Empty text is an editing draft, not a request to persist a missing price.
+    // Explicit commit may retain null only for beasts with no defined default.
+    if (!blankDraft && !referenceCostInputError() && (!ACCOUNT_STORAGE.isReadOnly || !ACCOUNT_STORAGE.isReadOnly())) {
       var normalized = CORE.normalizeReferenceCostSettings(DATA, draft);
       if (saveProgress(state.beasts, normalized)) {
         state.referenceCost = normalized;
@@ -1314,7 +1350,7 @@
     if (action === 'more-equivalents') {
       showMoreEquivalentMaterials(CORE.integer(button.dataset.planIndex));
     } else if (action === "save-reference-cost") {
-      updateReferenceCost(el.calculatorControls.querySelector('[data-reference-cost-field="awakeningBlueprintStock"]'));
+      updateReferenceCost(el.calculatorControls.querySelector('[data-reference-cost-field="awakeningBlueprintStock"]'), true, true);
     } else if (action === "reload-calculator") {
       cancelCalculation(true);
       resetCalculator(beast.id);
@@ -1425,7 +1461,7 @@
     var target = event.target;
     if (target.matches('[data-machine-search="calculator"]')) return;
     if (target.matches('[data-reference-cost-field], [data-reference-beast-price], [data-reference-blueprint-preset]')) {
-      updateReferenceCost(target);
+      updateReferenceCost(target, true);
       return;
     }
     cancelCalculation(true);
@@ -1554,6 +1590,9 @@
     el.calculator.addEventListener("click", handleCalculatorClick);
     el.calculator.addEventListener("input", handleCalculatorInput);
     el.calculator.addEventListener("change", handleCalculatorChange);
+    el.calculator.addEventListener("focusout", function (event) {
+      if (event.target.matches('[data-reference-cost-field], [data-reference-beast-price]') && state.referenceCostDirty) updateReferenceCost(event.target, true);
+    });
     el.reference.addEventListener("click", handleReferenceClick);
     el.reference.addEventListener("input", handleReferenceInput);
     el.reference.addEventListener("change", function (event) {

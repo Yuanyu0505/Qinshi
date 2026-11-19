@@ -32,6 +32,12 @@
     }
     function fallback(job) {
       if (pending !== job) return;
+      // These exact solvers can run for seconds. A timer does not make their
+      // synchronous fallback interruptible; fail safely instead of freezing UI.
+      if (options.kind === "beast-single" || options.kind === "beast-school") {
+        settle(job, new Error("当前环境无法启动后台计算，已停止本次机关兽计算，请更新浏览器后重试。"));
+        return;
+      }
       job.timer = root.setTimeout(function () {
         job.timer = null;
         if (pending !== job) return;

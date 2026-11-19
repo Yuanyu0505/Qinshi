@@ -115,6 +115,7 @@
       } catch (error) {
         protectReadFailure();
       }
+      state.plan = core.defaultPlan(data, state.progress);
       refreshError();
       notify("load");
       return state.progress;
@@ -272,7 +273,7 @@
       '<p class="six-halls-muted">修改等级不增减库存。</p><div class="six-halls-grid">' + progressCards + '</div></section>' +
       '<section id="six-halls-planner" class="six-halls-page" aria-label="升级规划" hidden><div class="six-halls-section-heading"><div><h3>选择本次升级目标</h3></div>' +
       '<button type="button" class="seg" data-six-halls-action="calculate">计算材料</button></div><div class="six-halls-grid">' + planCards + '</div><div id="six-halls-result" class="six-halls-result" aria-live="polite" aria-atomic="true"></div></section>' +
-      '<section id="six-halls-reference" class="six-halls-page" aria-label="升级资料" hidden><div class="panel"><p class="six-halls-muted">每堂0→50级：七星珠草904、本堂信物435。累计从0级计算；0—9级门槛暂无资料。</p>' +
+      '<section id="six-halls-reference" class="six-halls-page" aria-label="升级资料" hidden><div class="panel"><p class="six-halls-muted">0—9级门槛暂无资料。</p>' +
       '<div class="six-halls-reference-filter"><div class="six-halls-field"><label for="six-halls-reference-min">升级起点</label><input id="six-halls-reference-min" type="number" min="0" max="50" step="1" inputmode="numeric" data-six-halls-reference-bound="min" value="0"></div>' +
       '<span aria-hidden="true">至</span><div class="six-halls-field"><label for="six-halls-reference-max">升级终点</label><input id="six-halls-reference-max" type="number" min="0" max="50" step="1" inputmode="numeric" data-six-halls-reference-bound="max" value="50"></div><button type="button" class="seg" data-six-halls-action="reference-reset">全部等级</button></div>' +
       '<p id="six-halls-reference-status" class="six-halls-muted" role="status"></p><div id="six-halls-reference-content"></div></div></section>';
@@ -337,8 +338,8 @@
       button.setAttribute("aria-pressed", String(selected));
     });
     details.innerHTML = '<article class="panel six-halls-profile" data-hall-theme="' + hall.id + '"><header class="six-halls-profile-heading"><h3>' + escapeHtml(hall.name) + '</h3></header>' +
-      '<table class="six-halls-bonuses"><caption class="six-halls-sr-only">' + escapeHtml(hall.name) + '进度加成</caption><colgroup><col class="six-halls-phase-column"><col></colgroup><tbody>' + hall.bonuses.map(function (bonus) {
-        return '<tr><th scope="row">进度' + bonus.level + '</th><td>' + escapeHtml(bonus.text) + '</td></tr>';
+      '<table class="six-halls-bonuses"><caption class="six-halls-sr-only">' + escapeHtml(hall.name) + '等级加成</caption><colgroup><col class="six-halls-phase-column"><col></colgroup><tbody>' + hall.bonuses.map(function (bonus) {
+        return '<tr><th scope="row">' + bonus.level + '级</th><td>' + escapeHtml(bonus.text) + '</td></tr>';
       }).join("") + '</tbody></table><h4>阵营神将</h4><ul class="six-halls-members">' + hall.disciples.map(function (name) { return '<li' + (query && name.indexOf(query) !== -1 ? ' class="is-match"' : '') + '>' + escapeHtml(name) + '</li>'; }).join("") + '</ul></article>';
     context.renderedHallId = hall.id;
     context.renderedMemberQuery = query;
@@ -375,10 +376,11 @@
       context.elements.reference.innerHTML = "";
       return;
     }
-    var rows = core.referenceRows(context.root.SIX_HALLS_DATA).filter(function (row) { return row.from >= min.value && row.to <= max.value; });
-    context.elements.referenceStatus.textContent = "当前展示" + min.value + "→" + max.value + "级，共" + rows.length + "步；累计消耗始终从0级计。";
-    context.elements.reference.innerHTML = '<table class="six-halls-reference-table"><caption>六堂通用升级消耗与玩家等级门槛</caption><thead><tr><th scope="col">起点 → 终点</th><th scope="col">单次七星珠草</th><th scope="col">单次信物</th><th scope="col">累计七星珠草</th><th scope="col">累计信物</th><th scope="col">玩家等级门槛</th></tr></thead><tbody>' + rows.map(function (row) {
-      return '<tr><th scope="row" data-label="升级步骤">' + row.from + ' → ' + row.to + '级</th><td data-label="单次七星珠草">' + row.herbs + '</td><td data-label="单次信物">' + row.tokens + '</td><td data-label="累计七星珠草">' + row.cumulativeHerbs + '</td><td data-label="累计信物">' + row.cumulativeTokens + '</td><td data-label="玩家等级门槛">' + (row.playerLevel == null ? "—" : row.playerLevel + "级") + '</td></tr>';
+    var rows = core.referenceRows(context.root.SIX_HALLS_DATA, min.value, max.value);
+    context.elements.referenceStatus.textContent = "当前展示" + min.value + "→" + max.value + "级，共" + rows.length + "步。";
+    context.elements.reference.innerHTML = '<table class="six-halls-reference-table"><caption>六堂通用升级消耗与玩家等级门槛</caption><thead><tr><th scope="col">起点 → 终点</th><th scope="col">单次七星珠草</th><th scope="col">单次信物</th><th scope="col">累计七星珠草</th><th scope="col">累计信物</th><th scope="col">玩家等级门槛</th></tr></thead><tbody>' + rows.map(function (row, index) {
+      var totalClass = index === rows.length - 1 ? ' class="six-halls-range-total"' : '';
+      return '<tr><th scope="row" data-label="升级步骤">' + row.from + ' → ' + row.to + '级</th><td data-label="单次七星珠草">' + row.herbs + '</td><td data-label="单次信物">' + row.tokens + '</td><td data-label="累计七星珠草"' + totalClass + '><span>' + row.cumulativeHerbs + '</span></td><td data-label="累计信物"' + totalClass + '><span>' + row.cumulativeTokens + '</span></td><td data-label="玩家等级门槛">' + (row.playerLevel == null ? "—" : row.playerLevel + "级") + '</td></tr>';
     }).join("") + '</tbody></table>';
   }
   function renderUpdates(context) {

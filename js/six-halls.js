@@ -35,9 +35,13 @@
     return progress;
   }
 
-  function defaultPlan(data) {
+  function defaultPlan(data, progress) {
     var targets = {};
-    data.halls.forEach(function (hall) { targets[hall.id] = data.maxLevel; });
+    var cap = progress ? playerCap(progress.playerLevel, data) : null;
+    data.halls.forEach(function (hall) {
+      var current = progress && progress.halls[hall.id] ? progress.halls[hall.id].level : 0;
+      targets[hall.id] = Math.max(current, cap === null ? data.maxLevel : cap);
+    });
     return { selected: [], targets: targets };
   }
 
@@ -69,10 +73,11 @@
     }, { herbs: 0, tokens: 0, steps: [] });
   }
 
-  function referenceRows(data) {
+  function referenceRows(data, from, to) {
+    var cost = calculateCost(from === undefined ? 0 : from, to === undefined ? data.maxLevel : to, data);
     var herbs = 0;
     var tokens = 0;
-    return data.steps.map(function (step) {
+    return cost.steps.map(function (step) {
       herbs += step.herbs;
       tokens += step.tokens;
       return Object.assign({}, step, { cumulativeHerbs: herbs, cumulativeTokens: tokens });

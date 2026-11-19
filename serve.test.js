@@ -19,11 +19,31 @@ function versionedScriptPattern(asset) {
   return new RegExp(escapeRegex(`<script defer src="${asset}?v=${APP_VERSION}"></script>`));
 }
 
-async function loadedPartition(name, apiName) {
+function assertReferenceEntry(html, id, name, partition = id) {
+  const sections = require('./data/other-reference-data.js').sections;
+  const entries = sections.filter(section => section.id === id);
+  assert.strictEqual(entries.length, 1, `${id} 应恰好有一个资料目录入口`);
+  assert.strictEqual(entries[0].name, name);
+  assert.strictEqual(entries[0].partition, partition === null ? undefined : partition);
+  const desktop = html.match(/<nav class="tabs"[\s\S]*?<\/nav>/);
+  const mobile = html.match(/<div class="mobile-more-grid">[\s\S]*?<\/div>/);
+  assert.ok(desktop);
+  assert.ok(mobile);
+  [desktop[0], mobile[0]].forEach(fragment => {
+    assert.match(fragment, /data-partition="other-reference"/);
+    assert.doesNotMatch(fragment, new RegExp(`data-partition="${escapeRegex(id)}"`));
+  });
+  return entries[0];
+}
+
+async function loadedPartition(name, apiName, rootArgument = false) {
   const requests = [];
   let initialized = 0;
   const root = { location: { protocol: "file:" }, addEventListener() {} };
-  root[apiName] = { init() { initialized++; } };
+  root[apiName] = { init(argument) {
+    assert.strictEqual(argument, rootArgument ? root : undefined, 'initializer receives the configured host');
+    initialized++;
+  } };
   const document = {
     createElement() { return { remove() {} }; },
     head: { appendChild(script) { requests.push(script.src); queueMicrotask(() => script.onload()); } }
@@ -38,19 +58,13 @@ async function loadedPartition(name, apiName) {
   return requests;
 }
 
-test("六堂在桌面和手机更多导航中紧随合阵、先于楼兰棋阵", () => {
+test("六堂通过其他资料目录进入且不再占用独立导航", () => {
   const html = fs.readFileSync(path.join(__dirname, "index.html"), "utf8");
   const app = fs.readFileSync(path.join(__dirname, "js", "app.js"), "utf8");
-  const desktop = html.match(/<nav class="tabs"[\s\S]*?<\/nav>/);
-  const mobile = html.match(/<div class="mobile-more-grid">[\s\S]*?<\/div>/);
-  assert.ok(desktop);
-  assert.ok(mobile);
-  [desktop[0], mobile[0]].forEach(fragment => {
-    const order = [...fragment.matchAll(/data-partition="([^"]+)"/g)].map(match => match[1]);
-    const index = order.indexOf("six-halls");
-    assert.ok(index > 0);
-    assert.deepStrictEqual(order.slice(index - 1, index + 2), ["formations", "six-halls", "loulan"]);
-  });
+  const entry = assertReferenceEntry(html, 'six-halls', '六堂', null);
+  assert.strictEqual(entry.sourcePaths.length, 6, '六堂目录保留六堂原始资料');
+  const referenceUI = fs.readFileSync(path.join(__dirname, 'js/other-reference-ui.js'), 'utf8');
+  assert.match(referenceUI, /QinshiPartitionLoader\.ensure\('six-halls'\)/);
   assert.match(app, /"six-halls": "六堂"/);
   assert.match(app, /secondaryPartitions = \[[^\]]*"formations", "six-halls", "loulan"/);
   assert.match(app, /"six-halls": document\.getElementById\("partition-six-halls"\)/);
@@ -75,7 +89,7 @@ test("六堂预留空分区并按账号、资料、核心、界面顺序接入�
     assert.ok(index >= 0 && index < scripts.indexOf("js/app.js"), `${asset} 必须先于分区激活加载`);
   });
   assert.doesNotMatch(app, /SIX_HALLS_UI\.init\(/);
-  assert.deepStrictEqual(await loadedPartition('six-halls', 'SIX_HALLS_UI'), ['js/six-halls.js', 'js/six-halls-ui.js'].map(asset => asset + '?v=' + APP_VERSION));
+  assert.deepStrictEqual(await loadedPartition('six-halls', 'SIX_HALLS_UI', true), ['data/six-halls-reference.js', 'js/six-halls.js', 'js/six-halls-ui.js'].map(asset => asset + '?v=' + APP_VERSION));
 });
 
 test(`PWA ${APP_VERSION} 精确发布六堂资料、核心、界面和独立样式`, () => {
@@ -103,7 +117,12 @@ test(`PWA ${APP_VERSION} 精确发布六堂资料、核心、界面和独立样�
 test("wooden man alley partition is wired in navigation and script order", async () => {
   const html = fs.readFileSync(path.join(__dirname, "index.html"), "utf8");
   const app = fs.readFileSync(path.join(__dirname, "js", "app.js"), "utf8");
-  assert.match(html, /data-partition="battle-box-pill-pouch">战匣丹囊<\/button>[\s\S]*?data-partition="wooden-man-alley">木人巷<\/button>[\s\S]*?data-partition="formations">合阵<\/button>/);
+  for (const fragment of [html.match(/<nav class="tabs"[\s\S]*?<\/nav>/)[0], html.match(/<div class="mobile-more-grid">[\s\S]*?<\/div>/)[0]]) {
+    const order = [...fragment.matchAll(/data-partition="([^"]+)"/g)].map(match => match[1]);
+    const index = order.indexOf('wooden-man-alley');
+    assert.ok(index > 0);
+    assert.deepStrictEqual(order.slice(index - 1, index + 2), ['tactics', 'wooden-man-alley', 'other-reference']);
+  }
   assert.match(html, /id="partition-wooden-man-alley"/);
   assert.match(html, /data-wooden-mode="progress">个人进度/);
   assert.match(html, /data-wooden-mode="calculator">目标计算/);
@@ -112,7 +131,7 @@ test("wooden man alley partition is wired in navigation and script order", async
   const loaderIndex = html.indexOf('js/partition-loader.js');
   const appIndex = html.indexOf('js/app.js');
   assert.ok(accountIndex < loaderIndex && loaderIndex < appIndex);
-  assert.deepStrictEqual(await loadedPartition('wooden-man-alley', 'WOODEN_MAN_ALLEY_UI'), ['data/wooden-man-alley.js', 'js/wooden-man-alley.js', 'js/wooden-man-alley-planner.js', 'js/wooden-man-alley-ui.js'].map(asset => asset + '?v=' + APP_VERSION));
+  assert.deepStrictEqual(await loadedPartition('wooden-man-alley', 'WOODEN_MAN_ALLEY_UI', true), ['data/wooden-man-alley.js', 'js/wooden-man-alley.js', 'js/wooden-man-alley-planner.js', 'js/wooden-man-alley-ui.js'].map(asset => asset + '?v=' + APP_VERSION));
   assert.match(app, /"wooden-man-alley": "木人巷"/);
   assert.match(app, /secondaryPartitions = \[[^\]]*"wooden-man-alley"/);
   assert.match(app, /"wooden-man-alley": document\.getElementById\("partition-wooden-man-alley"\)/);
@@ -365,7 +384,7 @@ test("首页提供逐鹿分区及数据、核心和界面脚本", async () => {
     const page = await get(port, "/");
     assert.strictEqual(page.status, 200);
     assert.match(page.body, /id="partition-zhulu"/);
-    assert.match(page.body, /data-partition="zhulu">逐鹿</);
+    assertReferenceEntry(page.body, 'zhulu', '逐鹿');
     assert.match(page.body, /data-item-navigation-return="zhulu"/);
     assert.match(page.body, versionedScriptPattern("data/zhulu.js"));
     assert.match(page.body, versionedScriptPattern("js/zhulu.js"));
@@ -473,7 +492,10 @@ test("云同步设置页包含完整手动流程且脚本依赖顺序正确", ()
   assert.match(html, /上传本机快照/);
   assert.match(html, /从其他设备同步/);
   assert.match(html, /手动选择一台来源设备，用它的全部工具数据覆盖当前设备；不会自动合并。/);
-  assert.match(html, /工具版本由 PWA 更新；本面板只同步工具内保存的数据。同步开始前会先检查并更新工具版本。/);
+  assert.match(html, /id="cloud-sync-tool-version"/);
+  const sync = fs.readFileSync(path.join(__dirname, 'js/cloud-sync.js'), 'utf8');
+  assert.match(sync, /await dependency\('pwa', 'QinshiPWA'\)\.ensureCurrentForSync\(limits\)/);
+  assert.match(sync, /if \(!result \|\| result\.ready !== true\)/);
   assert.ok(scriptIndex("cloud-sync-core") < scriptIndex("cloud-sync"));
   assert.ok(scriptIndex("cloud-sync-config") < scriptIndex("cloud-sync-api"));
   assert.ok(scriptIndex("settings") < scriptIndex("cloud-sync"));
@@ -837,7 +859,7 @@ test("云同步烟雾导出校验器拒绝缺失参数、非法清单和畸形�
 });
 
 test("云同步提交的 Wrangler 配置不含额外云产品、定时触发或付费设置", () => {
-  const listed = spawnSync("git", ["ls-files", "-z", "--", "cloud-sync/worker/wrangler*"], {
+  const listed = spawnSync("git", ["-c", `safe.directory=${__dirname.replace(/\\/g, '/')}`, "ls-files", "-z", "--", "cloud-sync/worker/wrangler*"], {
     cwd: __dirname,
     encoding: "utf8"
   });
@@ -1019,27 +1041,23 @@ test("全端导航使用当前完整分区顺序", async () => {
     const page = await get(port, "/");
     const nav = page.body.match(/<nav class="tabs"[\s\S]*?<\/nav>/);
     assert.ok(nav);
-    const order = ["atlas", "forging", "drops", "equipment", "forbidden", "inscription", "machine-beasts", "tactics", "battle-box-pill-pouch", "wooden-man-alley", "formations", "six-halls", "loulan", "zhulu", "quiz", "settings"];
-    let cursor = -1;
-    order.forEach(partition => {
-      const next = nav[0].indexOf('data-partition="' + partition + '"');
-      assert.ok(next > cursor, partition);
-      cursor = next;
-    });
+    const order = ["atlas", "forging", "drops", "equipment", "forbidden", "secret-realm", "inscription", "machine-beasts", "tactics", "wooden-man-alley", "other-reference"];
+    assert.deepStrictEqual([...nav[0].matchAll(/data-partition="([^"]+)"/g)].map(match => match[1]), order);
+    const more = page.body.match(/<div class="mobile-more-grid">[\s\S]*?<\/div>/);
+    assert.ok(more);
+    assert.deepStrictEqual([...more[0].matchAll(/data-partition="([^"]+)"/g)].map(match => match[1]), order.slice(4));
+    for (const [id, name] of [['pilots', '机师'], ['battle-box-pill-pouch', '战匣丹囊'], ['quiz', '答题'], ['zhulu', '逐鹿'], ['loulan', '楼兰棋阵'], ['formations', '合阵'], ['settings', '设置']]) {
+      assertReferenceEntry(page.body, id, name);
+    }
   });
 });
 
-test("合阵在桌面导航和移动更多菜单中均位于兵法之后答题之前", async () => {
+test("合阵保留其他资料目录入口且退出桌面和移动独立导航", async () => {
   await withServer(async (port) => {
     const page = await get(port, "/");
-    const nav = page.body.match(/<nav class="tabs"[\s\S]*?<\/nav>/);
-    const more = page.body.match(/<div class="mobile-more-grid">[\s\S]*?<\/div>/);
-    assert.ok(nav);
-    assert.ok(more);
-    [nav[0], more[0]].forEach(fragment => {
-      assert.ok(fragment.indexOf('data-partition="tactics"') < fragment.indexOf('data-partition="formations"'));
-      assert.ok(fragment.indexOf('data-partition="formations"') < fragment.indexOf('data-partition="quiz"'));
-    });
+    assertReferenceEntry(page.body, 'formations', '合阵');
+    const app = fs.readFileSync(path.join(__dirname, 'js/app.js'), 'utf8');
+    assert.match(app, /referencePartitions = \[[^\]]*"formations"/);
   });
 });
 
@@ -1162,9 +1180,33 @@ test("典籍默认展示最高阶累计，并通过页面级气泡查看逐阶�
 test("首页包含楼兰棋阵分区与两个玩法的图片引用", async () => {
   await withServer(async (port) => {
     const r = await get(port, "/");
-    assert.match(r.body, /楼兰棋阵/);
-    assert.match(r.body, /images\/楼兰\/楼兰 \(1\)\.png/);
-    assert.match(r.body, /images\/棋阵\/棋阵 \(1\)\.png/);
+    assertReferenceEntry(r.body, 'loulan', '楼兰棋阵');
+    const partition = r.body.match(/<section id="partition-loulan"[\s\S]*?<\/section>/);
+    assert.ok(partition);
+    const images = [...partition[0].matchAll(/<img\b[^>]*data-src="([^"]+)"[^>]*>/g)];
+    assert.strictEqual(images.length, 16, '楼兰五张、棋阵十一张图片懒加载');
+    for (const [folder, count] of [['楼兰', 5], ['棋阵', 11]]) {
+      assert.deepStrictEqual(images.map(match => match[1]).filter(src => src.startsWith(`images/${folder}/`)),
+        Array.from({ length: count }, (_, index) => index === 10 ? 'images/棋阵/棋阵(11).png' : `images/${folder}/${folder} (${index + 1}).png`));
+    }
+    for (const [, source] of images) {
+      const image = await get(port, '/' + encodeURI(source));
+      assert.strictEqual(image.status, 200, source);
+      assert.match(image.headers['content-type'], /image\/png/, source);
+    }
+    const loader = fs.readFileSync(path.join(__dirname, 'js/partition-loader.js'), 'utf8');
+    const lazyImages = images.map(([, source]) => ({ dataset: { src: source }, removeAttribute(name) {
+      assert.strictEqual(name, 'data-src');
+      delete this.dataset.src;
+    } }));
+    const root = { location: { protocol: 'file:' }, addEventListener() {} };
+    vm.runInNewContext(loader, { window: root, document: { querySelectorAll(selector) {
+      assert.strictEqual(selector, '#partition-loulan img[data-src]');
+      return lazyImages;
+    } }, Promise });
+    await root.QinshiPartitionLoader.ensure('loulan');
+    assert.deepStrictEqual(lazyImages.map(image => image.src), images.map(match => match[1]));
+    assert.ok(lazyImages.every(image => !Object.hasOwn(image.dataset, 'src')));
   });
 });
 
@@ -1325,14 +1367,14 @@ test("关卡掉落首页包含固定橙装普通关卡表", async () => {
     const expected = [
       ["白羽绸衣", "56-7、51-7"],
       ["天问", "56-5、51-5"],
-      ["醉梦", "55-7、50-7"],
+      ["醉梦罗裳", "55-7、50-7"],
       ["巨阙", "55-5、50-5"],
       ["纵横战袍", "54-7、49-7"],
       ["秋骊", "54-5、49-5"],
       ["苍云甲", "53-7、48-7"],
       ["墨眉", "53-5、48-5"],
       ["月华战袍", "52-7"],
-      ["管事", "52-5"]
+      ["管事服", "52-5"]
     ];
     const section = r.body.match(/<section\b[^>]*\bid="drop-default-orange"[^>]*>([\s\S]*?)<\/section>/);
     assert.ok(section, "应找到默认橙装表容器");
@@ -1354,10 +1396,27 @@ test("关卡掉落搜索会隐藏默认表并保留完整查询", async () => {
     assert.strictEqual(r.status, 200);
     assert.match(r.body, /dropDefaultOrange:\s*document\.getElementById\("drop-default-orange"\)/);
     assert.match(r.body, /dropDefaultOrange\.hidden\s*=\s*Boolean\(q\)/);
-    assert.match(r.body, /DROPS\.groupDrops\(DROP_DATA, q\)/);
+    assert.match(r.body, /DROPS\.groupRelatedDrops\(DROP_DATA, q\)/);
     assert.match(r.body, /dropSectionHtml\("普通关卡"/);
     assert.match(r.body, /dropSectionHtml\("英雄关卡"/);
     assert.match(r.body, /dropSectionHtml\("声望奖励"/);
+    const context = { window: {} };
+    vm.runInNewContext(fs.readFileSync(path.join(__dirname, 'data/drops.js'), 'utf8'), context);
+    const data = context.window.DROP_DATA;
+    const before = JSON.stringify(data);
+    const drops = require('./js/drops.js');
+    for (const [query, name, stages] of [['醉梦', '醉梦罗裳', ['55-7', '50-7']], ['管事', '管事服', ['52-5']]]) {
+      const groups = drops.groupRelatedDrops(data, query);
+      assert.deepStrictEqual(groups.map(group => group.item), [name]);
+      assert.deepStrictEqual(drops.groupRelatedDrops(data, name), groups, '全名与来源简称应查到同一组');
+      const group = groups[0];
+      assert.deepStrictEqual(Array.from(group.normal, row => `${row.chapter}-${row.stage}`), stages);
+      for (const region of ['normal', 'hero', 'reward']) {
+        assert.deepStrictEqual(JSON.parse(JSON.stringify(group[region])), JSON.parse(JSON.stringify(data[region].filter(row => [query, name].includes(row.item)))), `${name} ${region} 应保留全部原始掉落`);
+      }
+    }
+    assert.deepStrictEqual(drops.groupRelatedDrops(data, ''), []);
+    assert.strictEqual(JSON.stringify(data), before, '搜索不得改写原始资料');
   });
 });
 
@@ -1735,11 +1794,15 @@ test("战匣丹囊个人进度提供弟子搜索、自由新增和固定槽位",
   assert.match(html, /id="battle-pouch-progress-list"/);
   assert.match(ui, /qinshi_battle_box_pill_pouch_v1/);
   assert.match(ui, /以此名称新增/);
-  assert.match(ui, /武器/);
-  assert.match(ui, /防具/);
-  assert.match(ui, /饰品/);
-  assert.match(ui, /典籍/);
-  assert.match(ui, /八个内丹槽位/);
+  const data = require('./data/battle-box-pill-pouch.js');
+  const core = require('./js/battle-box-pill-pouch.js');
+  assert.deepStrictEqual(data.equipmentSlots.map(slot => [slot.id, slot.name]), [['weapon', '武器'], ['armor', '防具'], ['accessory', '饰品'], ['book', '典籍']]);
+  const disciple = core.normalizeDisciple({ id: 'test', name: '测试弟子' }, data);
+  assert.deepStrictEqual(disciple.battle.slots.map(slot => slot.slotId), ['weapon', 'armor', 'accessory', 'book']);
+  assert.strictEqual(disciple.pouch.slots.length, 8);
+  assert.match(ui, /DATA\.equipmentSlots\.map\(function \(definition, index\)/);
+  assert.match(ui, /draft\.pouch\.slots\.map\(pouchSlotEditor\)/);
+  assert.match(ui, /内丹槽位/);
 });
 
 test("战匣丹囊目标计算提供多弟子排序、共享库存和购买补足", () => {
@@ -1769,15 +1832,11 @@ test("战匣丹囊资料区分单级与关键节点累计口径", () => {
   assert.match(ui, /参照弟子/);
 });
 
-test("战匣丹囊在桌面和移动导航中位于兵法与合阵之间", () => {
+test("战匣丹囊通过其他资料目录进入且保留分区接线", () => {
   const html = fs.readFileSync(path.join(__dirname, "index.html"), "utf8");
   const app = fs.readFileSync(path.join(__dirname, "js", "app.js"), "utf8");
-  const desktop = html.slice(html.indexOf('<nav class="tabs"'), html.indexOf('</nav>'));
-  const mobile = html.slice(html.indexOf('class="mobile-more-grid"'), html.indexOf('</div>', html.indexOf('class="mobile-more-grid"')));
-  [desktop, mobile].forEach(fragment => {
-    assert.ok(fragment.indexOf('data-partition="tactics"') < fragment.indexOf('data-partition="battle-box-pill-pouch"'));
-    assert.ok(fragment.indexOf('data-partition="battle-box-pill-pouch"') < fragment.indexOf('data-partition="formations"'));
-  });
+  assertReferenceEntry(html, 'battle-box-pill-pouch', '战匣丹囊');
+  assert.match(app, /referencePartitions = \[[^\]]*"battle-box-pill-pouch"/);
   assert.match(app, /"battle-box-pill-pouch": "战匣丹囊"/);
   assert.match(app, /"battle-box-pill-pouch": document\.getElementById\("partition-battle-box-pill-pouch"\)/);
 });

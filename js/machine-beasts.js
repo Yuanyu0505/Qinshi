@@ -534,8 +534,8 @@
     var types = [];
     origins.forEach(function (o) {
       // Plain forms inside the processing domain are identical to pool output.
-      // Only zero-only explicitly permits original forms above that domain.
-      if (config.newRankMode !== 'zero' && o.rank > maximumRank) return;
+      // Original forms above that domain remain usable unchanged in every mode.
+      // Their per-origin cap and shared base-body budget still apply below.
       if (o.rank <= maximumRank && (o.modificationId === 'none' || !config.plainOnly && beast.quality==='orange' && config.allowNewModifications)) return;
       if (config.plainOnly && o.modificationId !== 'none') return;
       types.push(Object.assign({ source:'owned', available:o.count },o));

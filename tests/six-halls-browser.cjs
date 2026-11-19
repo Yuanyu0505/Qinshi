@@ -205,7 +205,7 @@ test('planning survives subview and partition switches, but refresh clears its i
   } finally { await page.close(); }
 });
 
-test('reference filtering uses upgrade intervals and retains cumulative-from-zero material totals', async () => {
+test('reference filtering uses upgrade intervals and accumulates materials from the selected start', async () => {
   const page = await newPage();
   try {
     await openSixHalls(page);
@@ -215,8 +215,8 @@ test('reference filtering uses upgrade intervals and retains cumulative-from-zer
     await page.waitForFunction(() => document.querySelectorAll('#six-halls-reference tbody tr').length === 1);
     const row = page.locator('#six-halls-reference tbody tr');
     assert.match(await row.locator('th').innerText(), /29\s*→\s*30/);
-    assert.equal(await row.locator('[data-label="累计七星珠草"]').innerText(), '421');
-    assert.equal(await row.locator('[data-label="累计信物"]').innerText(), '155');
+    assert.equal(await row.locator('[data-label="累计七星珠草"]').innerText(), '12');
+    assert.equal(await row.locator('[data-label="累计信物"]').innerText(), '15');
     assert.equal(await row.locator('[data-label="玩家等级门槛"]').innerText(), '69级');
     await noOverflow(page, '390 / filtered reference');
     await page.locator('[data-six-halls-reference-bound="min"]').fill('31');

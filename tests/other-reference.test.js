@@ -15,7 +15,7 @@ test('reference library exposes seventeen sections and confirmed values', () => 
 });
 test('every supplied image is preserved byte for byte and mapped to a section or explicit archive', () => {
   const data = require('../data/other-reference-data.js');
-  assert.equal(data.images.length,37);
+  assert.equal(data.images.length,38);
   for (const item of data.images) {
     const file=path.join(__dirname,'../assets/other-reference/sources',item.path);
     assert.equal(crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex'),item.sha256,item.path);

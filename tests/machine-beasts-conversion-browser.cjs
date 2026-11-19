@@ -7,7 +7,7 @@ const {openApp,getAccountItem}=require('./browser-test-helpers.cjs');
 let browser,server,origin;
 before(async()=>{server=createServer();await new Promise(r=>server.listen(0,'127.0.0.1',r));origin='http://127.0.0.1:'+server.address().port;browser=await chromium.launch({channel:'msedge',headless:true});});
 after(async()=>{if(browser)await browser.close();if(server)await new Promise(r=>server.close(r));});
-for(const [width,fallback] of [[390,false],[1280,true]])test('convertible stock reaches the real UI without saving inventory '+width+'/'+fallback,async()=>{
+for(const [width,fallback] of [[390,false],[1280,false]])test('convertible stock reaches the real UI without saving inventory '+width+'/'+fallback,async()=>{
   const context=await browser.newContext({viewport:{width,height:1000},serviceWorkers:'block'});
   await context.route('**/*',route=>new URL(route.request().url()).origin===origin?route.continue():route.abort());
   if(fallback)await context.addInitScript(()=>{window.Worker=function(){throw new Error('test fallback');};});

@@ -6,7 +6,7 @@ const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
 const {createServer}=require('../serve.js');
 const {openApp}=require('./browser-test-helpers.cjs');
 const phase=process.env.SIX_HALLS_CAPTURE_PHASE==='before'?'before':'after';
-const output=path.join(__dirname,'../outputs/six-halls-1139',phase);
+const output=path.join(__dirname,'../outputs/six-halls-1140',phase);
 let browser,server,url;
 before(async()=>{fs.mkdirSync(output,{recursive:true});server=createServer();await new Promise(r=>server.listen(0,'127.0.0.1',r));url='http://127.0.0.1:'+server.address().port;browser=await chromium.launch({channel:'msedge',headless:true});});
 after(async()=>{if(browser)await browser.close();if(server)await new Promise(r=>server.close(r));});
@@ -84,6 +84,56 @@ test('over-cap target blocks old results and recovers after the player meets the
     assert.equal(await page.locator('#six-halls-reference-content tbody tr').first().locator('[data-label="玩家等级门槛"]').innerText(),'80级');
     await page.locator('#six-halls-reference-max').fill('40');
     await page.waitForFunction(()=>document.querySelectorAll('#six-halls-reference-content tbody tr').length===0);
+  }finally{await context.close();}
+});
+
+test('range totals, terminal emphasis and explicit phase units follow the selected range',async()=>{
+  const {context,page}=await enter(1366,768);try{
+    for(const hall of ['kuiwei','chiyou','lieshan','siyue','gonggong','shennong']){
+      await page.locator('[data-six-halls-hall="'+hall+'"]').click();
+      assert.deepEqual(await page.locator('.six-halls-bonuses tbody th').allTextContents(),['10级','20级','30级','40级','50级']);
+    }
+    await mode(page,'reference');await page.locator('#six-halls-reference-min').fill('40');
+    const rows=page.locator('#six-halls-reference-content tbody tr');await page.waitForFunction(()=>document.querySelectorAll('#six-halls-reference-content tbody tr').length===10);
+    assert.equal(await rows.first().locator('[data-label="累计七星珠草"]').innerText(),'24');
+    assert.equal(await rows.first().locator('[data-label="累计信物"]').innerText(),'14');
+    assert.equal(await rows.last().locator('[data-label="累计七星珠草"]').innerText(),'270');
+    assert.equal(await rows.last().locator('[data-label="累计信物"]').innerText(),'161');
+    for(const label of ['累计七星珠草','累计信物']){
+      assert.equal(await rows.last().locator('[data-label="'+label+'"]').evaluate(n=>getComputedStyle(n).color),'rgb(255, 155, 145)');
+      assert.notEqual(await rows.first().locator('[data-label="'+label+'"]').evaluate(n=>getComputedStyle(n).color),'rgb(255, 155, 145)');
+    }
+    await page.locator('#partition-other-reference').screenshot({path:path.join(output,'range-40-50-desktop.png')});
+    await page.setViewportSize({width:390,height:844});
+    await page.locator('#partition-other-reference').screenshot({path:path.join(output,'range-40-50-mobile.png')});
+    await page.locator('#six-halls-reference-min').fill('');await page.waitForFunction(()=>document.querySelectorAll('#six-halls-reference-content tbody tr').length===0);
+    await page.locator('#six-halls-reference-min').fill('50');await page.locator('#six-halls-reference-max').fill('40');await page.waitForFunction(()=>document.querySelector('#six-halls-reference-min').getAttribute('aria-invalid')==='true');assert.equal(await rows.count(),0);
+    await page.locator('#six-halls-reference-min').fill('40');await page.waitForFunction(()=>document.querySelector('#six-halls-reference-min').getAttribute('aria-invalid')==='false');assert.equal(await rows.count(),0);
+    await page.locator('[data-six-halls-action="reference-reset"]').click();
+    assert.equal(await rows.last().locator('[data-label="累计七星珠草"]').innerText(),'904');
+    assert.equal(await rows.last().locator('[data-label="累计信物"]').innerText(),'435');
+  }finally{await context.close();}
+});
+
+test('a newly opened page derives temporary planning targets from saved player levels',async()=>{
+  const {context,page}=await enter();try{
+    await mode(page,'progress');
+    await page.locator('[data-six-halls-progress="playerLevel"]').fill('79');
+    await page.locator('[data-six-halls-progress="level"][data-hall-id="kuiwei"]').fill('45');
+    await page.locator('[data-six-halls-mode="planner"]').click();
+    await page.locator('[data-six-halls-target="chiyou"]').fill('30');
+    await page.reload();await page.locator('[data-ref-section="six-halls"]').click();
+    await mode(page,'planner');
+    assert.equal(await page.locator('[data-six-halls-target="chiyou"]').inputValue(),'40');
+    assert.equal(await page.locator('[data-six-halls-target="kuiwei"]').inputValue(),'45');
+    await page.locator('[data-six-halls-select="kuiwei"]').check();
+    assert.equal(await page.locator('[data-six-halls-target="kuiwei"]').getAttribute('aria-invalid'),'false');
+    await mode(page,'progress');
+    assert.equal(await page.locator('[data-six-halls-progress="level"][data-hall-id="kuiwei"]').inputValue(),'45');
+    await page.locator('[data-six-halls-progress="playerLevel"]').fill('');
+    await page.locator('[data-six-halls-mode="planner"]').click();
+    await page.reload();await page.locator('[data-ref-section="six-halls"]').click();await mode(page,'planner');
+    for(const id of ['kuiwei','chiyou','lieshan','siyue','gonggong','shennong'])assert.equal(await page.locator('[data-six-halls-target="'+id+'"]').inputValue(),'50');
   }finally{await context.close();}
 });
 test('container narrowing, landscape and CSS zoom keep six-halls controls readable',async()=>{

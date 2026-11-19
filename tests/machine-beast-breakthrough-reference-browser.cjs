@@ -30,7 +30,7 @@ for (const width of [375, 768, 1280]) {
       assert.equal(await panel.count(), 1);
       assert.equal(await panel.locator('[data-breakthrough-stage]').count(), 10);
       assert.equal(await panel.locator('[data-breakthrough-resource]').count(), 10);
-      assert.match(await panel.textContent(), /不参与计算/);
+      assert.match(await panel.textContent(), /下表为单兽突破阶数，非研发等级或流派阶数/);
       assert.match(await panel.textContent(), /玄铁工具箱/);
       assert.deepEqual(await panel.locator('[data-breakthrough-resource]').first().locator('td').allTextContents(), ['22','44','88','176']);
       assert.deepEqual(await panel.locator('[data-breakthrough-resource]').last().locator('td').allTextContents(), ['94','188','376','752']);

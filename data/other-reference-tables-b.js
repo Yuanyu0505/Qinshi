@@ -30,12 +30,12 @@
     // 品质来自原图及用户补充木抵抗图的蓝、紫、橙气蕴色块。
     var qualities = { '无双鬼': '蓝', '苍狼王': '蓝', '阿金': '蓝', '大铁锤': '蓝', '阿纲': '蓝',
         '高月': '紫', '石兰': '紫', '天明': '紫', '少羽': '紫', '蒙恬': '紫' };
-    function mapping(id, title, file, rows) {
+    function mapping(id, title, file, rows, verification) {
         add(id, 'elements', title, ['词条', '属性', '气蕴组合'],
             rows.map(function (r) { return [r[0], r[1], r[2].split('、').map(function (name) {
                 return name + '（' + (qualities[name] || '橙') + '）';
-            }).join('、')]; }), file ? [original + file] : [],
-            '保留来源分组和逐行顺序；组合随阶梯变化，不自动补全。', file ? undefined : 'user-confirmed');
+            }).join('、')]; }), file ? [file.indexOf('/') === -1 ? original + file : file] : [],
+            '保留来源分组和逐行顺序；组合随阶梯变化，不自动补全。', verification || (file ? undefined : 'user-confirmed'));
     }
     mapping('elements-metal-mappings', '金抵抗词条与气蕴组合（原图03）', '03.png', [
         ['百战鬼甲', '全体攻', '无双鬼'],
@@ -64,7 +64,7 @@
         ['暗度陈仓', '全体血', '范增、王翦、胜七、白凤'],
         ['国士无双', '全体血', '范增、王翦、胜七、白凤、张良']
     ]);
-    mapping('elements-wood-mappings', '木抵抗词条与气蕴组合', null, [
+    mapping('elements-wood-mappings', '木抵抗词条与气蕴组合', '02_补充资料/补图08_木抵抗组合.png', [
         ['燕云一卒', '全体攻', '阿金'],
         ['燕卒同泽', '全体攻', '阿金、阿纲'],
         ['鬼关成影', '全体防', '阿金、石兰、蒙恬'],
@@ -90,7 +90,7 @@
         ['横扫千军', '全体血', '项羽、扶苏、墨鸦'],
         ['影斩乱舞', '全体血', '项羽、扶苏、墨鸦、赵高'],
         ['王道墨攻', '全体攻', '项羽、扶苏、墨鸦、赵高、范增']
-    ]);
+    ], 'user-confirmed');
     mapping('elements-water-mappings', '水抵抗词条与气蕴组合（原图04）', '04.png', [
         ['燕雷巨擘', '全体防', '大铁锤'],
         ['雷鬼破阵', '全体血', '大铁锤、无双鬼'],

@@ -1,9 +1,11 @@
 'use strict';
 // Isolated diagnostics only; hooks are injected in a VM, never product source.
 const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm');
-const {spawnSync}=require('node:child_process');
+const {spawnSync,execFileSync}=require('node:child_process');
 const {performance}=require('node:perf_hooks');
 const root=path.resolve(__dirname,'..');
+const revision=process.argv.includes('--revision')?process.argv[process.argv.indexOf('--revision')+1]:null;
+const native=process.argv.includes('--native');
 const cases=[
   {id:'zero-plain',mode:'zero',mods:false,mixed:false},
   {id:'zero-seven-plain',mode:'zeroToSeven',mods:false,mixed:false},
@@ -31,11 +33,11 @@ if(process.argv[2]==='--case'){
     metrics.peakStates=Math.max(metrics.peakStates,metrics.states);metrics.frontierPeak=Math.max(metrics.frontierPeak,size);
     if(metrics.puts%5000===0)log('progress');
   }};
-  let source=fs.readFileSync(path.join(root,'js/machine-beasts.js'),'utf8');
+  let source=revision?execFileSync('git',['-c','safe.directory='+root.replaceAll('\\','/'),'show',revision+':js/machine-beasts.js'],{cwd:root,encoding:'utf8'}):fs.readFileSync(path.join(root,'js/machine-beasts.js'),'utf8');
   const point='rows[0]=[{r:0,n:0,m:0,b:0,p:0,counts:Array(types.length).fill(0)}];';
   const update='bucket.push({r:r,n:n,m:m,b:b,p:p,counts:counts});rows[r]=bucket;';
   if(!source.includes(point)||!source.includes(update))throw Error('Diagnostic hook no longer matches current solver');
-  source=source.replace(point,'probe.domain(types,unit,rows.length);'+point).replace(update,update+'probe.put(r,bucket.length);');
+  if(!native)source=source.replace(point,'probe.domain(types,unit,rows.length);'+point).replace(update,update+'probe.put(r,bucket.length);');
   const context={module:{exports:{}},probe};vm.runInNewContext(source,context);
   log('start');
   const result=context.module.exports.calculateInvestmentPlan(data,beast,{showHighRanks:true,showMods:true,inventory},
@@ -43,7 +45,7 @@ if(process.argv[2]==='--case'){
   metrics.valid=result.valid;metrics.invested=result.totals?.investedCount;metrics.added=result.totals?.newInvestedCount;log('complete');
 }else{
   for(const spec of cases.filter(spec=>process.argv[2]!=='--only'||spec.id===process.argv[3])){
-    const result=spawnSync(process.execPath,[__filename,'--case',spec.id],{cwd:root,timeout:8000,encoding:'utf8',maxBuffer:4*1024*1024});
+    const result=spawnSync(process.execPath,[__filename,'--case',spec.id,...(revision?['--revision',revision]:[]),...(native?['--native']:[])],{cwd:root,timeout:8000,encoding:'utf8',maxBuffer:4*1024*1024});
     const lines=(result.stdout||'').trim().split('\n').filter(Boolean);
     process.stdout.write(JSON.stringify({id:spec.id,status:result.status,signal:result.signal,timedOut:result.error?.code==='ETIMEDOUT',last:lines.at(-1)?JSON.parse(lines.at(-1)):null,error:result.stderr||undefined})+'\n');
   }

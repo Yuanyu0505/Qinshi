@@ -30,8 +30,14 @@ test('Worker creation failure returns a visible safe error and keeps inputs resp
     assert.equal(await getAccountItem(page,'qinshi_machine_beasts_progress_v1'),saved);
   }finally{await context.close();}
 });
-test('real long-running Worker can be canceled by input while UI ticks and never writes inventory',async()=>{
+test('real Worker with controlled result delivery can be canceled by input without writing inventory',async()=>{
   const {page,context}=await enter(false);try{
+    // Hold final delivery, not execution: cancellation must not depend on how
+    // slowly the real solver runs on a particular machine.
+    await context.route('**/js/calculation-worker.js*',async route=>{
+      const response=await route.fetch(),source=await response.text();
+      await route.fulfill({response,body:'var deliverResult=self.postMessage.bind(self);self.postMessage=function(message){if(message.result||message.error)self.__heldResult=message;else deliverResult(message);};\n'+source});
+    });
     await page.locator('[data-calc-beast]').selectOption('mechanical-bear');
     const saved=await getAccountItem(page,'qinshi_machine_beasts_progress_v1');
     await page.evaluate(()=>{
@@ -103,7 +109,7 @@ for(const beastId of ['red-serpent','mechanical-bear'])test('UI clear-to-default
   }finally{await context.close();}
 });
 
-test('instrumented real Worker pressure records frontiers and remains cancellable',async()=>{
+test('instrumented real Worker pressure records frontiers and completes or remains cancellable',async()=>{
   const {page,context}=await enter(false);try{
     // Test-only instrumentation is served to Workers, never written to product JS.
     await context.route('**/js/machine-beasts.js*',async route=>{
@@ -125,13 +131,16 @@ test('instrumented real Worker pressure records frontiers and remains cancellabl
         window.pressureSamples=[];window.pressureRunner=window.QinshiCalculationRunner.create({kind:'beast-single'});
         window.pressureStarted=performance.now();window.pressureState='pending';
         window.pressureRunner.run({beastId:'mechanical-bear',progress:{inventory,showHighRanks:true,showMods:true},options:{targetLevel:20,newRankMode:mode,allowNewModifications:mods,convertOwnedInventory:true}})
-          .then(()=>window.pressureState='complete',e=>window.pressureState=e.name);
+          .then(result=>{window.pressureValid=result.valid;window.pressureState='complete';},e=>window.pressureState=e.name);
       },[mode,mods]);
       await page.waitForFunction(()=>performance.now()-window.pressureStarted>1200);
-      const metrics=await page.evaluate(()=>({last:window.pressureSamples.at(-1)||null,elapsedMs:performance.now()-window.pressureStarted,ticks:window.uiTicks,state:window.pressureState}));
+      const metrics=await page.evaluate(()=>({last:window.pressureSamples.at(-1)||null,elapsedMs:performance.now()-window.pressureStarted,ticks:window.uiTicks,state:window.pressureState,valid:window.pressureValid}));
       console.log('BROWSER_PRESSURE '+JSON.stringify({mode,mods,...metrics}));
-      assert.equal(metrics.state,'pending');assert.ok(metrics.ticks>5);
-      await page.evaluate(()=>window.pressureRunner.cancel());await page.waitForFunction(()=>window.pressureState==='AbortError');
+      assert.ok(metrics.ticks>5);
+      const canceled=await page.evaluate(()=>{if(window.pressureState!=='pending')return false;window.pressureRunner.cancel();return true;});
+      if(canceled)await page.waitForFunction(()=>window.pressureState==='AbortError');
+      else assert.deepEqual(await page.evaluate(()=>({state:window.pressureState,valid:window.pressureValid})),{state:'complete',valid:true});
+      await page.evaluate(()=>window.pressureRunner.dispose());
     }
   }finally{await context.close();}
 });

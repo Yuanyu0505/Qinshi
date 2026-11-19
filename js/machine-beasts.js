@@ -593,27 +593,72 @@
   // Sparse exact-research frontiers: both original inputs and processing use
   // base-body budget n. Per-origin bounded processing prevents double spending;
   // componentwise dominance is safe for every remaining type and shared fee.
-  function conversionCandidates(data, beast, progress, config, gap, terminalAllowed) {
+  function conversionCandidates(data, beast, progress, config, gap, terminalAllowed, singleMinimumCount) {
     var domain=conversionMaterials(data,beast,progress,config),types=domain.types,pool=domain.pool;
     if(!gap||!types.length)return [];
     function gcd(a,b){while(b){var c=a%b;a=b;b=c;}return a;}
     var unit=types.reduce(function(n,t){return gcd(n,t.researchEach);},0),stop=Math.ceil(gap/unit);
     var maximum=Math.max.apply(null,types.map(function(t){return t.researchEach/unit;}));
     var rows=Array(stop+maximum),limited=beast.quality!=='orange'&&config.bluePurpleInventoryOnly!==false;
+    // Single-beast ranking first minimizes max(0,n-stock), then n (or n
+    // first without stock). A feasible homogeneous plan therefore bounds n.
+    // All weights are positive: a larger prefix can never become optimal.
+    // School frontiers must retain count/modified tradeoffs and do NOT opt in.
+    var countBound=Infinity;
+    if(singleMinimumCount&&terminalAllowed)types.forEach(function(type){
+      var quantity=Math.ceil(gap/type.researchEach),count=quantity*type.weight;
+      if((type.available===null||quantity<=type.available)&&(!limited||count<=pool.baseCount))countBound=Math.min(countBound,count);
+    });
+    if(countBound!==Infinity){
+      // Scalar bounded/unbounded knapsack finds the minimum FEASIBLE count,
+      // including mixtures of preserved originals and processed stock. It
+      // chooses no final plan: the exact frontier below still resolves every
+      // overflow/resource/stable tie at that count. A minimum-count witness
+      // is irredundant, so its research is below gap + maximum item research.
+      var reachable=new Float64Array(countBound+1);reachable.fill(-Infinity);reachable[0]=0;
+      types.forEach(function(type){
+        if(type.available===null){
+          for(var n=type.weight;n<=countBound;n++)reachable[n]=Math.max(reachable[n],reachable[n-type.weight]+type.researchEach);
+        }else{
+          var left=Math.min(type.available,Math.floor(countBound/type.weight)),chunk=1;
+          while(left>0){
+            var quantity=Math.min(left,chunk),weight=quantity*type.weight,research=quantity*type.researchEach;
+            for(var n=countBound;n>=weight;n--)reachable[n]=Math.max(reachable[n],reachable[n-weight]+research);
+            left-=quantity;chunk*=2;
+          }
+        }
+      });
+      for(var n=1;n<=countBound;n++)if(reachable[n]>=gap){countBound=n;break;}
+    }
     rows[0]=[{r:0,n:0,m:0,b:0,p:0,counts:Array(types.length).fill(0)}];
     function stable(counts){return counts.map(function(n){return String(n).padStart(16,'0');}).join('');}
+    // Equal-cost tie order is the same as the old zero-padded decimal key.
+    // Compare the pending increment without allocating that key or its vector.
+    function earlierOrEqual(left,right,index,quantity){
+      for(var at=0;at<types.length;at++){
+        var a=left[at],b=right[at]+(at===index?quantity:0);
+        if(a!==b)return a<b;
+      }
+      return true;
+    }
     function put(from,index,quantity){
       var type=types[index],r=from.r+type.researchEach/unit*quantity,n=from.n+type.weight*quantity;
-      if(r>=rows.length||(!terminalAllowed&&r>=stop)||limited&&n>pool.baseCount)return;
+      if(n>countBound||r>=rows.length||(!terminalAllowed&&r>=stop)||limited&&n>pool.baseCount)return;
       var m=from.m+(type.modificationId==='none'?0:type.weight*quantity),b=from.b+type.blueprints*quantity,p=from.p+type.pieces*quantity;
-      var bucket=rows[r]||[],counts=from.counts.slice();counts[index]+=quantity;
+      var bucket=rows[r]||[];
       for(var i=0;i<bucket.length;i++){
         var old=bucket[i];
         if(old.n<=n&&old.m<=m&&old.b<=b&&old.p<=p){
-          if(old.n!==n||old.m!==m||old.b!==b||old.p!==p||stable(old.counts)<=stable(counts))return;
+          if(old.n!==n||old.m!==m||old.b!==b||old.p!==p||earlierOrEqual(old.counts,from.counts,index,quantity))return;
         }
       }
-      bucket=bucket.filter(function(old){return !(n<=old.n&&m<=old.m&&b<=old.b&&p<=old.p);});
+      var counts=from.counts.slice();counts[index]+=quantity;
+      var kept=0;
+      for(var at=0;at<bucket.length;at++){
+        var old=bucket[at];
+        if(!(n<=old.n&&m<=old.m&&b<=old.b&&p<=old.p))bucket[kept++]=old;
+      }
+      bucket.length=kept;
       bucket.push({r:r,n:n,m:m,b:b,p:p,counts:counts});rows[r]=bucket;
     }
     types.forEach(function(type,index){
@@ -627,8 +672,10 @@
       if(!s.r)return;
       var research=s.r*unit,level=levelForResearch(progress.research+research,data.researchThresholds,beast.maxLevel);
       if(level<=start)return;
-      var key=[level,s.n,s.b,s.m,s.p].join('/'),prior=compact.get(key),order=stable(s.counts);
-      if(prior&&(prior.research<research||prior.research===research&&prior.stable<=order))return;
+      var key=[level,s.n,s.b,s.m,s.p].join('/'),prior=compact.get(key);
+      if(prior&&prior.research<research)return;
+      var order=stable(s.counts);
+      if(prior&&prior.research===research&&prior.stable<=order)return;
       var rawItems=[];s.counts.forEach(function(count,index){if(count){var t=types[index];rawItems.push({source:t.source,rank:t.rank,modificationId:t.modificationId,count:count,researchEach:t.researchEach,sevenRankEquivalent:t.weight});}});
       var allocation=allocateConvertedInventory(data,beast,pool,rawItems);
       compact.set(key,Object.assign(allocation,{endLevel:level,research:research,blueprints:s.b,pieces:s.p,modified:s.m,stable:order,rawItems:rawItems}));
@@ -639,7 +686,7 @@
   function conversionInvestmentPlan(data,beast,progress,config,targetLevel) {
     var target=thresholdForLevel(targetLevel,data.researchThresholds),current=levelForResearch(progress.research,data.researchThresholds,beast.maxLevel),gap=Math.max(0,target-progress.research);
     if(!gap)return emptyPlan(data,beast,progress,current,targetLevel,target);
-    var candidates=conversionCandidates(data,beast,progress,Object.assign({},config,{bluePurpleInventoryOnly:false}),gap,true),best=null;
+    var candidates=conversionCandidates(data,beast,progress,Object.assign({},config,{bluePurpleInventoryOnly:false}),gap,true,true),best=null;
     candidates.forEach(function(r){
       if(r.research<gap)return;
       var state={items:r.items,newCount:r.newCount,newInvestedCount:r.newCount,research:r.research,awakeningBlueprints:r.blueprints,organPieces:r.pieces};

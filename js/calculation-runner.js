@@ -35,7 +35,7 @@
       // These exact solvers can run for seconds. A timer does not make their
       // synchronous fallback interruptible; fail safely instead of freezing UI.
       if (options.kind === "beast-single" || options.kind === "beast-school") {
-        settle(job, new Error("当前环境无法启动后台计算，已停止本次机关兽计算，请更新浏览器后重试。"));
+        settle(job, new Error("当前环境无法启动后台计算，已停止本次机关兽计算，可重新计算；若仍失败，请更新浏览器后重试。"));
         return;
       }
       job.timer = root.setTimeout(function () {
@@ -53,7 +53,10 @@
         catch (error) { reject(error); return; }
         var job = { id: ++sequence, input: snapshot, resolve: resolve, reject: reject, timer: null };
         pending = job;
-        if (unavailable || !workerUrl || typeof root.Worker !== "function" || (root.location && root.location.protocol === "file:")) {
+        // Beast failures end this run only: the next explicit run may create one
+        // fresh Worker. Other calculators retain their permanent fallback policy.
+        var retryWorker = options.kind === "beast-single" || options.kind === "beast-school";
+        if ((unavailable && !retryWorker) || !workerUrl || typeof root.Worker !== "function" || (root.location && root.location.protocol === "file:")) {
           fallback(job); return;
         }
         try {

@@ -1,0 +1,84 @@
+'use strict';
+// Isolated fake-account regression. All non-local requests are blocked.
+const {test,before,after}=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs');
+const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
+const {createServer}=require('../serve.js'),{openApp}=require('./browser-test-helpers.cjs');
+const data=require('../data/machine-beasts.js'),planner=require('../js/machine-beast-school-planner.js');
+const baseline=process.env.PAGINATION_BASELINE_REVISION||'';
+const clicks=Number(process.env.PAGINATION_CLICKS||76);
+function fixtureInput(){
+  const progress={},school=data.schools.find(s=>s.id==='hegemonic');
+  school.beastIds.forEach((id,index)=>{
+    const beast=data.beasts.find(b=>b.id===id),inventory={};
+    if(beast.quality==='orange'){
+      inventory.none={0:2+index%3,7:1,8:1,9:index%2,10:index%3===0?1:0};
+      inventory.fullDivine={7:index%2,8:index%3===0?1:0};inventory.initial={0:index%2,9:index%4===0?1:0};
+    }else inventory.none={0:Math.ceil(data.researchThresholds[beast.maxLevel]/data.researchValues[beast.quality][0].none),[beast.maxRank]:2};
+    progress[id]={research:0,fragments:index%3,showHighRanks:true,showMods:true,inventory};
+  });
+  return {progress,options:{targetStage:5,newRankMode:'zeroToSeven',convertOwnedInventory:true,allowNewModifications:false,allowNewHighRanks:false,bluePurpleInventoryOnly:true,referenceCostSettings:{awakeningBlueprintPrice:70,useAwakeningBlueprintStock:true,awakeningBlueprintStock:0}}};
+}
+let browser,server,origin,result,expected;
+before(async()=>{
+  const fixture=fixtureInput();result=planner.calculateSchoolPlans(data,'hegemonic',fixture.progress,fixture.options);
+  assert.equal(result.valid,true);assert.equal(result.plans[1].equivalents.count,'768');
+  expected=[];let page={nextOffset:'0',hasMore:true};
+  while(page.hasMore){page=planner.equivalentPlansPage(data,result.plans[1],page.nextOffset,10);expected.push(...page.plans.map(plan=>plan.stableKey));}
+  server=createServer();await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));origin='http://127.0.0.1:'+server.address().port;
+  browser=await chromium.launch({channel:'msedge',headless:true});fs.mkdirSync('outputs/1147-pagination',{recursive:true});
+});
+after(async()=>{await browser?.close();if(server)await new Promise(resolve=>server.close(resolve));});
+for(const width of (process.env.PAGINATION_WIDTHS||'320,390,820,1366,1920').split(',').map(Number))test('exact 768 pagination preserves DOM and focus at '+width,async()=>{
+  const context=await browser.newContext({viewport:{width,height:1000},serviceWorkers:'block'});
+  await context.route('**/*',route=>new URL(route.request().url()).origin===origin?route.continue():route.abort());
+  const root=require('node:path').resolve(__dirname,'..');
+  const source=baseline?require('node:child_process').execFileSync('git',['-c','safe.directory='+root,'show',baseline+':js/machine-beasts-ui.js'],{cwd:root,encoding:'utf8'}):fs.readFileSync(require.resolve('../js/machine-beasts-ui.js'),'utf8');
+  await context.route('**/js/machine-beasts-ui.js*',route=>route.fulfill({contentType:'application/javascript',body:source.replace('window.MACHINE_BEAST_UI = {','window.paginationTest={state,el,presentation,equivalentMaterials,showMoreEquivalentMaterials,cancelCalculation};window.MACHINE_BEAST_UI = {')}));
+  const page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));
+  page.on('console',message=>{if(message.text().startsWith('PAGINATION_PROGRESS '))console.log(message.text());});
+  try{
+    await openApp(page,origin+'/#machine-beasts');await page.locator('[data-machine-beast-mode="calculator"]').click();
+    await page.evaluate(result=>{
+      const ui=window.paginationTest;ui.state.schoolDraft={schoolId:'hegemonic',targetStage:5};ui.state.schoolResult=result;
+      ui.el.calculatorResult.hidden=false;ui.el.calculatorResult.innerHTML=ui.equivalentMaterials(result.plans[1],1);
+      window.paginationLongTasks=[];new PerformanceObserver(list=>window.paginationLongTasks.push(...list.getEntries().map(e=>({start:e.startTime,duration:e.duration})))).observe({type:'longtask',buffered:false});
+    },result);
+    const section=page.locator('[data-equivalent-index="1"]');
+    await section.evaluate(node=>{
+      node.closest('[data-detail-key]')?.setAttribute('open','');
+      window.paginationFirst=node.querySelector('.machine-equivalent-combination');window.paginationFirst.open=true;
+      window.paginationFirstSummary=window.paginationFirst.querySelector('summary');
+    });
+    await section.locator('h3').first().scrollIntoViewIfNeeded();
+    const stats=await page.evaluate(async({baseline,clicks})=>{
+      const ui=window.paginationTest,plan=ui.state.schoolResult.plans[1],section=ui.el.calculatorResult.querySelector('[data-equivalent-index="1"]');
+      const button=section.querySelector('[data-machine-action="more-equivalents"]');
+      const times=[],scrollChanges=[];button.focus({preventScroll:true});
+      let calls=0,decoded=0;const native=window.MACHINE_BEAST_SCHOOL_PLANNER.equivalentPlansPage;
+      window.MACHINE_BEAST_SCHOOL_PLANNER.equivalentPlansPage=function(...args){calls++;decoded+=args[3];return native.apply(this,args);};
+      const wallStart=performance.now();
+      while(times.length<clicks&&(baseline||button.getAttribute('aria-disabled')!=='true'||button.hasAttribute('aria-busy'))){
+        const before=scrollY,start=performance.now();
+        (baseline?ui.el.calculatorResult.querySelector('[data-machine-action="more-equivalents"]'):button).click();
+        while(button.hasAttribute('aria-busy'))await new Promise(resolve=>setTimeout(resolve,1));
+        times.push(performance.now()-start);scrollChanges.push(scrollY-before);
+        if(times.length%10===0)console.log('PAGINATION_PROGRESS '+JSON.stringify({pages:times.length,wallMs:performance.now()-wallStart}));
+        if(!baseline&&document.activeElement!==button)throw Error('pagination lost keyboard focus');
+        if(!baseline&&(!window.paginationFirst.isConnected||!window.paginationFirst.open||window.paginationFirst.querySelector('summary')!==window.paginationFirstSummary))throw Error('previous disclosure was rebuilt');
+        if(baseline)await new Promise(resolve=>setTimeout(resolve,0));
+      }
+      await new Promise(resolve=>setTimeout(resolve,0));
+      const current=ui.el.calculatorResult.querySelector('[data-equivalent-index="1"]');
+      return {times,wallMs:performance.now()-wallStart,scrollChanges,calls,decoded,count:(current.querySelector('[data-equivalent-count]')||Array.from(current.querySelectorAll('p')).find(n=>n.textContent.startsWith('已列出'))).textContent,
+        keys:Array.from(current.querySelectorAll('.machine-equivalent-combination'),node=>node.dataset.detailKey.split(':alternative:')[1]),
+        nodeIdentity:window.paginationFirst.isConnected,focus:document.activeElement===button,
+        longTasks:window.paginationLongTasks,overflow:document.documentElement.scrollWidth>innerWidth};
+    },{baseline,clicks});
+    assert.deepEqual(stats.keys,expected.slice(0,Math.min(767,10+clicks*10)));if(!baseline){assert.equal(stats.decoded,Math.min(757,clicks*10));assert.equal(stats.calls,Math.min(757,clicks*10));assert.ok(stats.scrollChanges.every(delta=>Math.abs(delta)<1),'scroll position changes without navigation');}
+    assert.equal(stats.times.length,clicks);assert.equal(stats.overflow,false);assert.deepEqual(errors,[]);
+    const name=(baseline?'baseline-':'')+width+(clicks===76?'':'-'+clicks+'pages');
+    await page.screenshot({path:'outputs/1147-pagination/'+name+'.png',fullPage:false});
+    const output={width,baseline:baseline||null,browser:browser.version(),pages:stats.times.length,count:stats.count,decodeCalls:stats.calls,totalWallMs:stats.wallMs,totalMs:stats.times.reduce((a,b)=>a+b,0),maxPageMs:Math.max(...stats.times),longTasks:stats.longTasks,focus:stats.focus,scrollStable:stats.scrollChanges.every(d=>Math.abs(d)<1),nodeIdentity:stats.nodeIdentity,exactOrder:true};
+    console.log('PAGINATION '+JSON.stringify(output));fs.writeFileSync('outputs/1147-pagination/'+name+'.json',JSON.stringify(output,null,2));
+  }finally{await context.close();}
+});

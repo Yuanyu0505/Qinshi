@@ -34,6 +34,8 @@
   };
   // Presentation only: never included in saved beasts/referenceCost records.
   var presentation = { disclosures: {}, progressQuality: "all", stockedOnly: false };
+  // Result-bound decode/DOM cache is deliberately excluded from captureView().
+  var equivalentPages = {};
   var restoringPresentation = false;
   var el = {};
   var rendered = { progress: false, calculator: false, reference: false };
@@ -65,6 +67,7 @@
 
   function cancelCalculation(invalidate) {
     calculationSequence += 1;
+    equivalentPages = {};
     Object.keys(calculationRunners).forEach(function (key) { calculationRunners[key].cancel(); });
     if (calculating && el.calculatorResult) el.calculatorResult.hidden = true;
     setCalculating(false);
@@ -961,17 +964,28 @@
 
   function equivalentMaterials(plan, index) {
     if (!plan.equivalents || BigInt(plan.equivalents.count) <= 1n) return '';
-    var key = equivalentPageKey(plan), pages = presentation.equivalentPages || {}, batches = pages[key] || 1;
-    var alternatives = [], page = { nextOffset: '0', hasMore: true };
-    for (var i = 0; i < batches && page.hasMore; i++) {
-      page = PLANNER.equivalentPlansPage(DATA, plan, page.nextOffset, 10);
-      alternatives = alternatives.concat(page.plans);
+    var key = equivalentPageKey(plan), pages = equivalentPages;
+    var account = ACCOUNT_STORAGE.currentAccount && ACCOUNT_STORAGE.currentAccount(), accountId = account && account.id;
+    var page = pages[key];
+    if (!page || page.plan !== plan || page.result !== state.schoolResult || page.accountId !== accountId || page.sequence !== calculationSequence) {
+      var first = PLANNER.equivalentPlansPage(DATA, plan, '0', 10);
+      page = pages[key] = { plan: plan, result: state.schoolResult, accountId: accountId, sequence: calculationSequence,
+        nextOffset: first.nextOffset, hasMore: first.hasMore, count: first.plans.length, busy: false,
+        html: renderEquivalentAlternatives(first.plans, key, 0), container: null };
     }
-    return '<section class="machine-equivalent-materials" data-equivalent-index="' + index + '"><h3>其他同等最优组合 · 另' + formatNumber(BigInt(plan.equivalents.count)-1n) + '套</h3><p class="muted-tip">各组合互相替代，请勿叠加投入。</p>' + alternatives.map(function (alternative, position) {
-      var title = '其他组合 ' + (position+1) + ' · ' + alternative.beasts.map(function (b) { return b.beastName + ' ' + b.startLevel + '→' + b.endLevel + '级'; }).join('、');
+    return '<section class="machine-equivalent-materials" data-equivalent-index="' + index + '"><h3>其他同等最优组合 · 另' + formatNumber(BigInt(plan.equivalents.count)-1n) + '套</h3><p class="muted-tip">各组合互相替代，请勿叠加投入。</p><div data-equivalent-items>' + page.html + '</div><p class="muted-tip" data-equivalent-count>' + equivalentCountText(page) + '</p><button type="button" class="seg" data-machine-action="more-equivalents" data-plan-index="' + index + '"' + (page.hasMore ? '' : ' hidden') + '>继续显示其他组合（每次10套）</button></section>';
+  }
+
+  function equivalentCountText(page) {
+    return '已列出其他组合 ' + formatNumber(page.count) + '／' + formatNumber(BigInt(page.plan.equivalents.count)-1n);
+  }
+
+  function renderEquivalentAlternatives(alternatives, key, start) {
+    return alternatives.map(function (alternative, position) {
+      var title = '其他组合 ' + (start+position+1) + ' · ' + alternative.beasts.map(function (b) { return b.beastName + ' ' + b.startLevel + '→' + b.endLevel + '级'; }).join('、');
       var effects = '<dl class="machine-equivalent-effects">' + alternative.beasts.map(function (b) { return '<div><dt>' + escapeHtml(b.beastName) + '最终最高生效效果</dt><dd>' + (b.finalEffect ? b.finalEffect.level + '级 · ' + escapeHtml(b.finalEffect.text) : '尚未解锁') + '</dd></div>'; }).join('') + '</dl>';
       return disclosure(key + ':alternative:' + alternative.stableKey, escapeHtml(title), '<p>' + schoolMaterialSummary(alternative) + '</p><div class="machine-school-plan-beasts">' + alternative.beasts.map(renderSchoolBeastPlan).join('') + '</div>' + effects, 'machine-equivalent-combination');
-    }).join('') + '<p class="muted-tip">已列出其他组合 ' + formatNumber(alternatives.length) + '／' + formatNumber(BigInt(plan.equivalents.count)-1n) + '</p>' + (page.hasMore ? '<button type="button" class="seg" data-machine-action="more-equivalents" data-plan-index="' + index + '">继续显示其他组合（每次10套）</button>' : '') + '</section>';
+    }).join('');
   }
 
   function showMoreEquivalentMaterials(index) {
@@ -979,12 +993,47 @@
     if (!plan || !plan.equivalents || calculating) return;
     var old = el.calculatorResult.querySelector('[data-equivalent-index="' + index + '"]');
     if (!old) return;
-    var key = equivalentPageKey(plan), pages = presentation.equivalentPages || (presentation.equivalentPages = {});
-    pages[key] = (pages[key] || 1) + 1;
-    var focused = rememberPresentation(old), template = document.createElement('template');
-    template.innerHTML = equivalentMaterials(plan, index);
-    var replacement = template.content.firstElementChild;
-    old.replaceWith(replacement); restorePresentation(replacement, focused);
+    var key = equivalentPageKey(plan), page = equivalentPages[key];
+    if (!page || page.busy || !page.hasMore) return;
+    var button = old.querySelector('[data-machine-action="more-equivalents"]');
+    var items = old.querySelector('[data-equivalent-items]');
+    page.container = old;
+    function current() {
+      var account = ACCOUNT_STORAGE.currentAccount && ACCOUNT_STORAGE.currentAccount();
+      return equivalentPages[key] === page &&
+        page.plan === plan && page.result === state.schoolResult && page.sequence === calculationSequence &&
+        (account && account.id) === page.accountId && old.isConnected &&
+        el.calculatorResult.querySelector('[data-equivalent-index="' + index + '"]') === old;
+    }
+    if (!current()) return;
+    page.busy = true;
+    button.setAttribute('aria-disabled', 'true');
+    button.setAttribute('aria-busy', 'true');
+    var nextOffset = page.nextOffset, hasMore = page.hasMore, alternatives = [];
+    // One exact alternative per task: yield between graph decodes and allow cancellation.
+    function decodeNext() {
+      if (!current()) { page.busy = false; button.removeAttribute('aria-disabled'); button.removeAttribute('aria-busy'); return; }
+      try {
+        var next = PLANNER.equivalentPlansPage(DATA, plan, nextOffset, 1);
+        nextOffset = next.nextOffset; hasMore = next.hasMore;
+        alternatives = alternatives.concat(next.plans);
+        if (hasMore && alternatives.length < 10) { setTimeout(decodeNext, 0); return; }
+        var html = renderEquivalentAlternatives(alternatives, key, page.count);
+        items.insertAdjacentHTML('beforeend', html);
+        page.html += html; page.count += alternatives.length; page.nextOffset = nextOffset; page.hasMore = hasMore;
+        old.querySelector('[data-equivalent-count]').textContent = equivalentCountText(page);
+        // Keep the final focused button in the DOM rather than removing its focus target.
+        button.hidden = !hasMore && document.activeElement !== button;
+        button.setAttribute('aria-disabled', String(!hasMore));
+        if (!hasMore) button.textContent = '已显示全部其他组合';
+        button.removeAttribute('aria-busy');
+        page.busy = false;
+      } catch (error) {
+        page.busy = false; button.removeAttribute('aria-disabled'); button.removeAttribute('aria-busy');
+        showError(error.message || '同等方案加载失败，请重新计算。', error);
+      }
+    }
+    setTimeout(decodeNext, 0);
   }
 
   function renderSchoolCalculatorResult(result, scroll) {

@@ -2,6 +2,7 @@
   "use strict";
 
   var DATA = window.TACTICS_DATA;
+  var NUMBER_FORMAT = window.QinshiNumberFormat || (typeof require === "function" ? require("./number-format.js") : null);
   var CORE = window.TACTICS;
   var PERFORMANCE = window.UI_PERFORMANCE;
   var ACCOUNT_STORAGE = window.QinshiAccounts;
@@ -45,7 +46,7 @@
   function formatNumber(value) {
     var number = Number(value);
     if (!Number.isFinite(number)) return "0";
-    return new Intl.NumberFormat("zh-CN", { maximumFractionDigits: 2 }).format(number);
+    return NUMBER_FORMAT.format(number, { maximumFractionDigits: 2 });
   }
 
   function formatAttribute(item) {

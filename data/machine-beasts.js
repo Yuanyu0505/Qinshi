@@ -7,11 +7,11 @@
 
   var modifications = [
     { id: "none", name: "0改" },
-    { id: "initial", name: "初改" },
+    { id: "initial", name: "升神" },
     { id: "heaven", name: "天改" },
     { id: "immortal", name: "仙改" },
     { id: "saint", name: "圣改" },
-    { id: "fullDivine", name: "满神改" }
+    { id: "fullDivine", name: "神改" }
   ];
 
   var researchThresholds = {
@@ -252,6 +252,7 @@
   ];
 
   return {
+    modificationCoreRules: { cumulative: { none: 0, initial: 40, heaven: 55, immortal: 75, saint: 105, fullDivine: 145 }, incremental: { none: 0, initial: 40, heaven: 15, immortal: 20, saint: 30, fullDivine: 40 }, estimatedBoxesPerCore: 5, source: "user-confirmed 2026-11-19", boxesAreApproximate: true },
     modifications: modifications,
     researchThresholds: researchThresholds,
     researchValues: researchValues,

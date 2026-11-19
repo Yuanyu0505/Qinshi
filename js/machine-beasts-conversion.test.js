@@ -9,17 +9,18 @@ test('conversion: zero stock can become rank seven without buying or mutating in
   assert.equal(r.valid,true);assert.equal(r.totals.newInvestedCount,0);assert.equal(r.totals.investedCount,5);
   assert.ok(r.selected.ownedItems.some(i=>i.rank>0));assert.ok(r.inventoryConversion.sources.length);assert.equal(JSON.stringify(progress),before);
 });
-test('conversion: zero-only keeps original modified stock or dismantles it with zero modification',()=>{
+test('conversion: zero-new mode may reprocess owned stock and reuse its returned cores',()=>{
   const r=CORE.calculateInvestmentPlan(DATA,beast,{showMods:true,inventory:{fullDivine:{7:1}}},{targetLevel:9,newRankMode:'zero',includeMods:true,convertOwnedInventory:true});
   assert.equal(r.totals.newInvestedCount,0);assert.equal(r.selected.ownedItems[0].modificationId,'fullDivine');
-  assert.equal(r.selected.ownedItems[0].rank,7);assert.equal(r.inventoryConversion.sources.length,0);
+  assert.equal(r.selected.ownedItems[0].rank,0);assert.equal(r.inventoryConversion.sources.length,1);
+  assert.equal(r.modificationCores.returned,145);assert.equal(r.modificationCores.spent,145);
 });
 test('conversion: partially dismantled high stock leaves base-body remainder and respects original limits',()=>{
   const r=CORE.calculateInvestmentPlan(DATA,beast,{inventory:{none:{10:1}}},{targetLevel:1,newRankMode:'zero',convertOwnedInventory:true});
   assert.equal(r.totals.investedCount,1);assert.equal(r.totals.newInvestedCount,0);
   assert.equal(r.inventoryConversion.remainingBaseBodies,7);
   assert.equal(r.inventoryConversion.sources[0].sevenRankEquivalent,8);
-  assert.equal(r.unused.find(i=>i.rank===0).count,7);
+  assert.equal(r.unused.find(i=>i.rank===7).count,7);
   const blocked=CORE.calculateInvestmentPlan(DATA,beast,{inventory:{none:{10:1}}},{targetLevel:1,newRankMode:'zero',convertOwnedInventory:true,ownedLimits:{none:{10:0}}});
   assert.equal(blocked.totals.newInvestedCount,1);
 });
@@ -60,16 +61,23 @@ function compare(a,b){for(let i=0;i<a.length;i++)if(a[i]!==b[i])return a[i]-b[i]
 // It never calls the conversion helper, production research/fee helpers or DP.
 function brute(data,p,options,school){
   const b=data.beasts[0],inventory=p.inventory||{},types=[],max=options.newRankMode==='zero'?0:options.allowNewHighRanks?8:7;
-  let pool=0;
+  let pool=0,corePool=0;const coreCosts={none:0,initial:40};
   for(const [mod,ranks]of Object.entries(inventory))for(const [rankText,count]of Object.entries(ranks)){
-    const rank=Number(rankText),cap=options.useOwnedInventory===false?0:Math.min(count,options.ownedLimits?.[mod]?.[rankText]??count),weight=rank>7?2**(rank-7):1;
+    const rank=Number(rankText),cap=options.useOwnedInventory===false||b.quality!=='orange'&&mod!=='none'?0:Math.min(count,options.ownedLimits?.[mod]?.[rankText]??count),weight=rank>7?2**(rank-7):1;
     pool+=cap*weight;
-    types.push({research:data.researchValues[b.quality][rank][mod],cap,weight,modified:mod!=='none'});
+    corePool+=cap*coreCosts[mod];
+    types.push({research:data.researchValues[b.quality][rank][mod],cap,weight,modified:mod!=='none',cores:coreCosts[mod],ownedWeight:weight});
   }
-  for(const rank of [0,7,8].filter(r=>r<=max))types.push({research:data.researchValues[b.quality][rank].none,weight:rank>7?2**(rank-7):1,modified:false,cap:Math.ceil(9/data.researchValues[b.quality][rank].none)});
+  const ownedMax=options.allowNewHighRanks?8:7;
+  for(const rank of [0,7,8].filter(r=>r<=Math.max(max,pool?ownedMax:0)))for(const mod of data.modifications){
+    if(mod.id!=='none'&&(b.quality!=='orange'||!corePool&&!options.allowNewModifications))continue;
+    const research=data.researchValues[b.quality][rank][mod.id],weight=rank>7?2**(rank-7):1;
+    if(research)types.push({research,weight,modified:mod.id!=='none',cores:coreCosts[mod.id],ownedWeight:rank>max?weight:0,cap:Math.ceil(9/research)});
+  }
   let best=null,rows=[];
-  function visit(index,r,n,m,B,pieces){
-    if(index<types.length){const t=types[index];for(let q=0;q<=t.cap;q++)visit(index+1,r+q*t.research,n+q*t.weight,m+(t.modified?q*t.weight:0),B+q*Math.ceil(t.research/3),pieces+q*Math.ceil(t.research/2));return;}
+  function visit(index,r,n,m,B,pieces,cores=0,owned=0){
+    if(owned>pool||!options.allowNewModifications&&cores>corePool)return;
+    if(index<types.length){const t=types[index];for(let q=0;q<=t.cap;q++)visit(index+1,r+q*t.research,n+q*t.weight,m+(t.modified?q*t.weight:0),B+q*Math.ceil(t.research/3),pieces+q*Math.ceil(t.research/2),cores+q*t.cores,owned+q*t.ownedWeight);return;}
     const final=r>=9?2:r>=5?1:0,added=Math.max(0,n-pool);
     if(school==='rows'){
       if(b.quality!=='orange'&&options.bluePurpleInventoryOnly!==false&&added)return;

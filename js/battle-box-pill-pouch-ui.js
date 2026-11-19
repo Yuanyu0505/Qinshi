@@ -2,6 +2,7 @@
   "use strict";
 
   var DATA = window.BATTLE_BOX_PILL_POUCH_DATA;
+  var NUMBER_FORMAT = window.QinshiNumberFormat || (typeof require === "function" ? require("./number-format.js") : null);
   var CORE = window.BATTLE_BOX_PILL_POUCH_CORE;
   var ATLAS_DATA = window.ATLAS_DATA;
   var EQUIPMENT_DATA = window.SPECIAL_EQUIPMENT_DATA;
@@ -41,7 +42,7 @@
   }
 
   function formatNumber(value) {
-    return Number(value || 0).toLocaleString("zh-CN");
+    return NUMBER_FORMAT.format(value || 0);
   }
 
   function normalizedSearch(value) {

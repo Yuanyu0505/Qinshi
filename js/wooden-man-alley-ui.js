@@ -9,6 +9,7 @@
   "use strict";
 
   var STORE_KEY = "qinshi_wooden_man_alley_progress_v1";
+  var NUMBER_FORMAT = (typeof globalThis !== "undefined" && globalThis.QinshiNumberFormat) || (typeof require === "function" ? require("./number-format.js") : null);
 
   // Reconcile only changed DOM, keeping live inputs, focus and details state intact.
   function updateMarkup(container, markup) {
@@ -406,7 +407,7 @@
   }
 
   function formatNumber(value, digits) {
-    return Number(value || 0).toLocaleString("zh-CN", { maximumFractionDigits: digits === undefined ? 2 : digits });
+    return NUMBER_FORMAT.format(value || 0, { maximumFractionDigits: digits === undefined ? 2 : digits });
   }
 
   function toolLabel(root, toolId) {

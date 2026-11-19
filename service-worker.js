@@ -1,7 +1,7 @@
 "use strict";
 
 const CACHE_PREFIX = "qinshi-site-";
-const CACHE_NAME = CACHE_PREFIX + "1.1.44";
+const CACHE_NAME = CACHE_PREFIX + "1.1.45";
 const GALLERY_CACHE_NAME = "qinshi-gallery-v1";
 const PRECACHE_URLS = [
   "./css/responsive-ux.css",
@@ -86,6 +86,7 @@ const PRECACHE_URLS = [
   "./js/inscription-route-favorites.js",
   "./js/inscription-crafting-ui.js",
   "./js/ui-performance.js",
+  "./js/number-format.js",
   "./js/partition-loader.js",
   "./js/calculation-runner.js",
   "./js/calculation-worker.js",

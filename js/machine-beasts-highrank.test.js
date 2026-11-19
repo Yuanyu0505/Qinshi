@@ -12,15 +12,16 @@ function fixture(rank=8, modification='none') {
   return {beasts:[beast],schools:[{id:'s',name:'S',beastIds:['b'],stages:[{stage:1,requiredTotalLevel:1}]}],modifications,researchThresholds:{0:0,1:10,2:11},researchValues:{orange:values},resourceRules:{blueprintDivisor:10,organPieceDivisor:10},referenceCostRules:{blueprintPrice:7,contributionPerYuan:3}};
 }
 
-test('highrank: real red serpent keeps rank-eight full-divine original when processing widens',()=>{
+test('highrank: original remains legal while returned cores can produce a lower-overflow optimum',()=>{
   const beast=DATA.beasts.find(b=>b.id==='red-serpent');
   for(const mode of ['zero','zeroToSeven']){
     const result=CORE.calculateInvestmentPlan(DATA,beast,{showHighRanks:true,showMods:true,inventory:{fullDivine:{8:1}}},{targetLevel:10,newRankMode:mode,convertOwnedInventory:true,allowNewHighRanks:false});
     console.log('red-serpent',mode,JSON.stringify({valid:result.valid,newBodies:result.totals?.newInvestedCount,invested:result.totals?.investedCount,items:result.selected?.ownedItems,conversion:result.inventoryConversion}));
     assert.equal(result.valid,true);
     assert.deepEqual([result.totals.newInvestedCount,result.totals.investedCount],[0,2],mode);
-    assert.equal(result.selected.ownedItems[0].modificationId,'fullDivine');
-    assert.equal(result.selected.ownedItems[0].rank,8);
+    assert.equal(result.modificationCores.returned,145);assert.equal(result.modificationCores.spent,130);assert.equal(result.modificationCores.remaining,15);
+    const progress=CORE.normalizeBeastProgress(beast,{showHighRanks:true,showMods:true,inventory:{fullDivine:{8:1}}},DATA);
+    assert.ok(CORE.conversionMaterials(DATA,beast,progress,{newRankMode:mode}).types.some(item=>item.source==='owned'&&item.rank===8&&item.modificationId==='fullDivine'));
   }
 });
 

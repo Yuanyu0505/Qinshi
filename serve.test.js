@@ -121,7 +121,7 @@ test("wooden man alley partition is wired in navigation and script order", async
     const order = [...fragment.matchAll(/data-partition="([^"]+)"/g)].map(match => match[1]);
     const index = order.indexOf('wooden-man-alley');
     assert.ok(index > 0);
-    assert.deepStrictEqual(order.slice(index - 1, index + 2), ['tactics', 'wooden-man-alley', 'other-reference']);
+    assert.deepStrictEqual(order.slice(index - 1, index + 4), ['tactics', 'wooden-man-alley', 'loulan', 'formations', 'other-reference']);
   }
   assert.match(html, /id="partition-wooden-man-alley"/);
   assert.match(html, /data-wooden-mode="progress">个人进度/);

@@ -90,7 +90,7 @@
     var terminalAllowed = capLevel === beast.maxLevel;
     var gap = Math.max(0, CORE.thresholdForLevel(terminalAllowed ? capLevel : capLevel + 1, data.researchThresholds) - progress.research);
     if (!gap) return [];
-    if(config.convertOwnedInventory)return CORE.conversionCandidates(data,beast,progress,config,gap,terminalAllowed).filter(function(r){return r.endLevel<=capLevel;});
+    if(config.convertOwnedInventory)return CORE.conversionCandidates(data,beast,progress,config,gap,terminalAllowed,false,true).filter(function(r){return r.endLevel<=capLevel;});
     var types = materialTypes(data, beast, progress, config, gap);
     // An optimal irredundant solution uses at most ceil(gap/r) copies of
     // any one rank. Sufficient same-rank owned stock can replace ALL new copies
@@ -229,7 +229,7 @@
     var cache = config.materialCache, typesKey = JSON.stringify([beast.quality, beast.maxLevel, beast.maxRank,
       progress.research, progress.inventory, config.ownedLimits || {}, config.useOwnedInventory !== false,
       config.bluePurpleInventoryOnly !== false, config.newRankMode || "zeroToSeven", !!config.allowNewHighRanks,
-      config.plainOnly, config.allowNewModifications, progress.showMods, config.maxAddedLevel,!!config.convertOwnedInventory]);
+      config.plainOnly, config.allowNewModifications, config.ownedLooseCores||0, progress.showMods, config.maxAddedLevel,!!config.convertOwnedInventory]);
     var raw = cache && cache.get(typesKey);
     if (!raw) { raw = rawCandidates(data, beast, progress, config); if (cache) cache.set(typesKey, raw); }
     var byLevel = new Map(), costs = new Map();
@@ -252,7 +252,9 @@
         ownedPhysicalCount: r.ownedPhysical, newPhysicalCount: r.newPhysical,
         modifiedInvestedCount: r.modified, ownedModifiedInvestedCount: r.ownedModified, newModifiedInvestedCount: r.newModified,
         unlockedEffects: effectsBetween(beast, current, r.endLevel), stableKey: r.stable, items: r.items,
-        inventoryConversion:r.inventoryConversion,
+        inventoryConversion:r.inventoryConversion?Object.assign({},r.inventoryConversion,{modificationCores:Object.assign({},r.modificationCores,{beastId:beast.id})}):undefined,
+        modificationCores:r.modificationCores?Object.assign({},r.modificationCores,{beastId:beast.id}):undefined,
+        _conversionRaw:r._conversionPool?r:null,
         resources: { awakeningBlueprints: r.blueprints, organPieces: r.pieces,
           fragments: Math.max(0, r.newCount * beast.fragmentsPerBody - progress.fragments),
           contribution: cost.beasts.length ? cost.beasts[0].contribution : 0,
@@ -274,12 +276,26 @@
       }
       paretoInsert(bucket, value); byLevel.set(r.endLevel, bucket);
     });
-    return [emptyCandidate(beast, progress, current)].concat(Array.from(byLevel.values()).flat().map(function (v) { return v.candidate; }));
+    return [emptyCandidate(beast, progress, current)].concat(Array.from(byLevel.values()).flat().map(function (v) {
+      var candidate=v.candidate,r=candidate._conversionRaw;
+      if(r){
+        // Cache entries are immutable numeric signatures of identical domains,
+        // not shared stock. Rebind identity to this beast's independent pool.
+        var allocation=CORE.allocateConvertedInventory(data,beast,Object.assign({},r._conversionPool,{beastId:beast.id}),r.rawItems);
+        candidate.items=allocation.items;candidate.ownedPhysicalCount=allocation.ownedPhysical;candidate.newPhysicalCount=allocation.newPhysical;
+        candidate.ownedModifiedInvestedCount=allocation.ownedModified;candidate.newModifiedInvestedCount=allocation.newModified;
+        candidate.inventoryConversion=allocation.inventoryConversion;candidate.modificationCores=allocation.modificationCores;
+      }
+      delete candidate._conversionRaw;return candidate;
+    }));
   }
 
   function combine(data, sets, baseline, needed, settings, effectMode) {
     var stock = settings.useAwakeningBlueprintStock ? settings.awakeningBlueprintStock : 0;
     var price = settings.awakeningBlueprintPrice, feeCache = new Map();
+    var freeBodies=sets.every(function(cs){return cs.every(function(c){return c.resources.pricedBodyYuan===0;});});
+    var maximumBlueprints=sets.reduce(function(n,cs){return sumSafe(n,Math.max.apply(null,cs.map(function(c){return c.resources.awakeningBlueprints;})));},0);
+    var zeroTotalFee=freeBodies&&(price===0||maximumBlueprints<=stock);
     function fee(b) {
       if (!feeCache.has(b)) feeCache.set(b, Number.isInteger(price) ? sumSafe(0, Math.max(0, b - stock) * price) :
         CORE.calculateSchoolReferenceCost(data, { awakeningBlueprints: b, beasts: [] }, settings).blueprints.yuan);
@@ -319,28 +335,34 @@
       suffixGain[k]=suffixGain[k+1]+Math.max.apply(null,sets[k].map(function(c){return c.endLevel-c.startLevel;}));
       suffixEffects[k]=suffixEffects[k+1]+Math.max.apply(null,sets[k].map(function(c){return c.unlockedEffects;}));
     }
-    var requiredEffects=effectMode ? goal.effects : null,blueprintBudget=Infinity;
-    if(!effectMode&&sets.every(function(cs){return cs.every(function(c){return c.resources.pricedBodyYuan===0;});})){
-      // With free owned bodies, first determine the exact achievable primary
-      // fee and effect count using minimum B per (level,effects). This pass is
-      // ONLY a feasibility bound; overflow/stable optimization still follows.
+    var requiredEffects=effectMode ? goal.effects : null,blueprintBudget=Infinity,bodyOnlyZero=false;
+    var freeSets=sets.map(function(cs){return cs.filter(function(c){return c.resources.pricedBodyYuan===0;});});
+    if(freeSets.every(function(cs){return cs.length>0;})){
+      // A feasible zero-fee incumbent proves every paid prefix inferior.
+      // This pass retains exact minimum modifications and B per gain/effect;
+      // no conjectured fee bound or truncation is used.
       var width=suffixEffects[0]+1, bounds=new Map([[0,{ modified: 0, b: 0 }]]);
-      sets.forEach(function(cs){var nextBounds=new Map();bounds.forEach(function(prior,key){
+      freeSets.forEach(function(cs){var nextBounds=new Map();bounds.forEach(function(prior,key){
         var gain=Math.floor(key/width),effects=key%width;
         cs.forEach(function(c){var added=gain+c.endLevel-c.startLevel;if(added>needed)return;
           var nk=added*width+effects+c.unlockedEffects;
           var value={modified:prior.modified+c.modifiedInvestedCount,b:prior.b+c.resources.awakeningBlueprints},old=nextBounds.get(nk);
           if(!old||cmp([value.modified,value.b],[old.modified,old.b])<0)nextBounds.set(nk,value);});
       });bounds=nextBounds;});
-      var bestFee=Infinity;requiredEffects=-1;
+      var bestFee=Infinity,bestEffects=-1;
       bounds.forEach(function(value,key){if(Math.floor(key/width)!==needed||value.modified!==goal.modified)return;var y=fee(value.b),e=key%width;
-        if(y<bestFee||y===bestFee&&e>requiredEffects){bestFee=y;requiredEffects=e;}});
-      var hi=sets.reduce(function(n,cs){return n+Math.max.apply(null,cs.map(function(c){return c.resources.awakeningBlueprints;}));},0),lo=0;
-      while(lo<hi){var mid=Math.ceil((lo+hi)/2);if(fee(mid)<=bestFee)lo=mid;else hi=mid-1;}blueprintBudget=lo;
+        if(effectMode&&e!==goal.effects)return;
+        if(y<bestFee||y===bestFee&&e>bestEffects){bestFee=y;bestEffects=e;}});
+      if(bestFee!==Infinity&&(bestFee===0||freeBodies)){
+        bodyOnlyZero=true;if(!effectMode)requiredEffects=bestEffects;
+        var hi=freeSets.reduce(function(n,cs){return sumSafe(n,Math.max.apply(null,cs.map(function(c){return c.resources.awakeningBlueprints;})));},0),lo=0;
+        while(lo<hi){var mid=Math.ceil((lo+hi)/2);if(fee(mid)<=bestFee)lo=mid;else hi=mid-1;}blueprintBudget=lo;
+        zeroTotalFee=bestFee===0&&(price===0||hi<=stock);
+      }
     }
     var states = new Map([[0, [{ gain: 0, modified: 0, body: 0, blueprints: 0, effects: 0, overflow: 0, key: "", beasts: [], trace: null }]]]);
     sets.forEach(function (allCandidates,setIndex) {
-      var candidates = allCandidates;
+      var candidates = bodyOnlyZero?freeSets[setIndex]:allCandidates;
       var collected = new Map();
       states.forEach(function (frontier) {
         frontier.forEach(function (s) {
@@ -362,6 +384,17 @@
             if(effectMode&&v.effects+tail.effects<requiredEffects)return;
             var key = v.gain, bucket = collected.get(key);
             if (!bucket) { bucket = { saturated: null, values: new Map() }; collected.set(key, bucket); }
+            // If ALL complete continuations have zero known fees, resources
+            // cannot cross a stock boundary. Same gain/effect prefixes compare
+            // lexicographically by additive overflow, then additive B. Keep all
+            // exact ties in the material trace, never a candidate-count cap.
+            if(zeroTotalFee){
+              var freeKey=v.modified+'/'+v.effects,previous=bucket.values.get(freeKey);
+              var orderFree=previous?cmp([v.overflow,v.blueprints],[previous.overflow,previous.blueprints]):-1;
+              if(orderFree<0)bucket.values.set(freeKey,v);
+              else if(orderFree===0)bucket.values.set(freeKey,mergeEquivalent(previous,v));
+              return;
+            }
             if (Number.isInteger(price) && v.blueprints >= stock) {
               var comparison = bucket.saturated ? cmp(order(v, true), order(bucket.saturated, true)) : -1;
               if (comparison < 0) bucket.saturated = v;
@@ -449,6 +482,7 @@
             plainOnly: plainOnly, maxAddedLevel: needed,
             materialCache: cache, referenceCostSettings: settings,
             bluePurpleInventoryOnly: config.bluePurpleInventoryOnly === undefined ? settings.bluePurpleInventoryOnly : config.bluePurpleInventoryOnly,
+            ownedLooseCores:config.ownedLooseCoresByBeast&&config.ownedLooseCoresByBeast[beastId]!==undefined?config.ownedLooseCoresByBeast[beastId]:0,
             ownedLimits: config.ownedLimitsByBeast && config.ownedLimitsByBeast[beastId]
           });
           sets.push(machineBeastCandidates(data, beast, current, beastConfig));
@@ -459,7 +493,7 @@
           if(config.convertOwnedInventory){
             var source=equivalentSources[beastId],domain=CORE.conversionMaterials(data,beast,current,beastConfig);
             source.originalFragments=current.fragments;source.fragments+=domain.pool.baseCount*beast.fragmentsPerBody;
-            source.conversionPool=domain.pool;source.convertible=true;
+            source.types=domain.types;source.conversionPool=domain.pool;source.convertible=true;
             source.baseLimit=beast.quality!=='orange'&&beastConfig.bluePurpleInventoryOnly!==false?domain.pool.baseCount:null;
           }
         });

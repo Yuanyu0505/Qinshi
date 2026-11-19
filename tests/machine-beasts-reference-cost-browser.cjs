@@ -76,9 +76,9 @@ async function calculateFixedSingle(page) {
   await waitForCalculation(page, 'calcResult');
   const panel = page.locator('[data-reference-cost-panel="single"]');
   // Two zero-rank bodies: 192 blueprints * 70 + ceil(67 * 600 / 2.7).
-  assert.equal(await panel.locator('[data-reference-cost-total]').textContent(), '28,329');
-  assert.match(await panel.textContent(), /神图费用 13,440/);
-  assert.match(await panel.locator('.machine-reference-cost-beasts').textContent(), /缺少碎片 67.*费用 14,889/);
+  assert.equal(await panel.locator('[data-reference-cost-total]').textContent(), '2,8329');
+  assert.match(await panel.textContent(), /神图费用 1,3440/);
+  assert.match(await panel.locator('.machine-reference-cost-beasts').textContent(), /缺少碎片 67.*费用 1,4889/);
   await assertReferenceCostPresentation(page);
 }
 
@@ -107,7 +107,7 @@ async function calculateFixedSchool(page) {
   assert.equal(cheapest.totals.pricedYuan,42160);
   assert.deepEqual(cheapest.beasts.map(item=>[item.beastId,item.endLevel]),[['mechanical-vermilion-bird',20],['mechanical-white-tiger',19]]);
   const panel=page.locator('[data-reference-cost-panel="school-0"]');
-  assert.equal(await panel.locator('[data-reference-cost-total]').textContent(),'42,160');
+  assert.equal(await panel.locator('[data-reference-cost-total]').textContent(),'4,2160');
   await assertReferenceCostPresentation(page);
   return result;
 }
@@ -186,7 +186,7 @@ test('school price changes invalidate the chosen plan and require a new solve', 
   const cost=result.plans.find(p=>p.kind==='cost'||p.kind==='merged').cost;
   assert.equal(cost.blueprints.usedStock,10);
   assert.equal(cost.blueprints.yuan,cost.blueprints.missing*64);
-  assert.equal(await page.locator('[data-reference-cost-panel="school-0"] [data-reference-cost-total]').textContent(),cost.totalYuan.toLocaleString('en-US'));
+  assert.equal(await page.locator('[data-reference-cost-panel="school-0"] [data-reference-cost-total]').textContent(),String(cost.totalYuan).replace(/\B(?=(\d{4})+(?!\d))/g,','));
 }));
 
 for (const width of [360, 390, 768, 1100]) {
@@ -314,7 +314,7 @@ test('each real school alternative deducts shared stock once from its own aggreg
     assert.equal(p.cost.blueprints.usedStock,10);
     assert.equal(p.cost.blueprints.missing,p.totals.awakeningBlueprints-10);
     assert.equal(await panel.locator('[data-reference-blueprint-stock]').textContent(),'10');
-    assert.equal(await panel.locator('[data-reference-cost-total]').textContent(),p.cost.totalYuan.toLocaleString('en-US'));
+    assert.equal(await panel.locator('[data-reference-cost-total]').textContent(),String(p.cost.totalYuan).replace(/\B(?=(\d{4})+(?!\d))/g,','));
   }
   assert.equal((await getAccountJson(page, KEY)).referenceCost.awakeningBlueprintStock,10);
 }));

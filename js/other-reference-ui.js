@@ -2,6 +2,7 @@
 (function(root,factory){'use strict';var api=factory();if(typeof module==='object'&&module.exports)module.exports=api;if(root)root.OTHER_REFERENCE_UI=api;})(typeof self!=='undefined'?self:this,function(){
   'use strict';
   var sectionOpeners=new WeakMap();
+  var NUMBER_FORMAT=(typeof globalThis!=='undefined'&&globalThis.QinshiNumberFormat)||(typeof require==='function'?require('./number-format.js'):null);
   var ORDER_KEY='qinshi_reference_section_order_v1';
   function normalizeSectionOrder(sections,saved){
     var ids=sections.map(function(s){return s.id;}),order=[];
@@ -53,7 +54,8 @@
   function titleFor(table){var title=table.id==='elements-cost'?'气蕴需求数量对照':table.id==='elements-stones'?'五极石五行数量对照':table.id==='cards-substats-ratio'?'副属性比例':table.title;return cleanSourceLabel(title).replace(/原图/g,'');}
   function isMapping(table){return Boolean(table&&table.section==='elements'&&/mappings$/.test(table.id));}
   function cellHtml(table,column,value){
-    if(table.id==='spirits-fates'&&column==='单橙色器灵总属性'){var number=String(value).match(/^\d+(?:\.\d+)?/);return number?'<span class="ref-spirit-total-number">'+esc(number[0])+'</span>'+esc(String(value).slice(number[0].length)):esc(value);}
+    value=NUMBER_FORMAT.formatText(value);
+    if(table.id==='spirits-fates'&&column==='单橙色器灵总属性'){var number=String(value).match(/^\d+(?:,\d{4})*(?:\.\d+)?/);return number?'<span class="ref-spirit-total-number">'+esc(number[0])+'</span>'+esc(String(value).slice(number[0].length)):esc(value);}
     if(table.id==='spirits-elements'&&column==='器灵名称'){
       var quality=table.spiritQualities&&table.spiritQualities[value],color={'蓝':'blue','紫':'purple','橙':'orange'}[quality];
       return color?'<strong class="ref-spirit-name ref-quality-'+color+'" title="'+esc(quality)+'色品质">'+esc(value)+'</strong>':esc(value);
@@ -243,7 +245,7 @@
       }
       if(/^speed-(paid|free)-ranking$/.test(table.id)){
         var name=table.columns.indexOf('神将名称'),panel=table.columns.indexOf('面板速度'),pvp=table.columns.indexOf('PVP速度'),order=[name,0,panel,pvp].concat(table.columns.map(function(c,i){return i;}).filter(function(i){return [name,0,panel,pvp].indexOf(i)<0;}));
-        if(s.view==='auto'&&host.getBoundingClientRect().width<760)return '<div class="ref-speed-cards"><div class="ref-speed-head"><span>原图名次／名称</span><span>面板</span><span>PVP</span></div>'+rows.map(function(row){return '<details class="ref-speed-row"><summary><span><small class="ref-speed-rank">原图第'+esc(row[0])+'名</small><strong>'+esc(row[name])+'</strong></span><b>'+esc(row[panel])+'</b><b class="ref-speed-pvp">'+esc(row[pvp])+'</b></summary><div class="ref-detail-body"><dl>'+table.columns.map(function(c,i){return '<div><dt>'+esc(c)+'</dt><dd>'+cellHtml(table,c,row[i])+'</dd></div>';}).join('')+'</dl></div></details>';}).join('')+'</div>';
+        if(s.view==='auto'&&host.getBoundingClientRect().width<760)return '<div class="ref-speed-cards"><div class="ref-speed-head"><span>原图名次／名称</span><span>面板</span><span>PVP</span></div>'+rows.map(function(row){return '<details class="ref-speed-row"><summary><span><small class="ref-speed-rank">原图第'+esc(row[0])+'名</small><strong>'+esc(row[name])+'</strong></span><b>'+esc(NUMBER_FORMAT.formatText(row[panel]))+'</b><b class="ref-speed-pvp">'+esc(NUMBER_FORMAT.formatText(row[pvp]))+'</b></summary><div class="ref-detail-body"><dl>'+table.columns.map(function(c,i){return '<div><dt>'+esc(c)+'</dt><dd>'+cellHtml(table,c,row[i])+'</dd></div>';}).join('')+'</dl></div></details>';}).join('')+'</div>';
         table=Object.assign({},table,{columns:order.map(function(i){return table.columns[i];})});rows=rows.map(function(row){return order.map(function(i){return row[i];});});
       }
       if(s.view==='cards')return '<div class="ref-card-grid" style="--ref-card-fields:'+Math.max(1,table.columns.length-1)+';--ref-card-rows:'+Math.max(2,table.columns.length)+'">'+rows.map(function(row){return '<article class="ref-row-card"><h3>'+esc(row[0])+'</h3><dl>'+table.columns.slice(1).map(function(c,i){return '<div><dt>'+esc(columnLabel(table,c))+'</dt><dd>'+cellHtml(table,c,row[i+1])+'</dd></div>';}).join('')+'</dl></article>';}).join('')+'</div>';

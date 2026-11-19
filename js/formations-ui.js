@@ -2,6 +2,7 @@
   "use strict";
 
   var DATA = root.FORMATIONS_DATA;
+  var NUMBER_FORMAT = root.QinshiNumberFormat || (typeof require === "function" ? require("./number-format.js") : null);
   var CORE = root.FORMATIONS;
   var ACCOUNT_STORAGE = root.QinshiAccounts;
   var STORE_KEY = "qinshi_formation_progress_v1";
@@ -49,7 +50,7 @@
   }
 
   function formatNumber(value) {
-    return Number(value || 0).toLocaleString("zh-CN");
+    return NUMBER_FORMAT.format(value || 0);
   }
 
   function percentText(value) {

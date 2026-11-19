@@ -1,9 +1,10 @@
 (function(root,factory){'use strict';var api=factory();if(typeof module==='object'&&module.exports)module.exports=api;if(root)root.SECRET_REALM_UI=api;})(typeof self!=='undefined'?self:this,function(){
   'use strict';
   var KEY='qinshi_secret_realms_v1', contexts=[];
+  var NUMBER_FORMAT=(typeof globalThis!=='undefined'&&globalThis.QinshiNumberFormat)||(typeof require==='function'?require('./number-format.js'):null);
   function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
-  function number(v){return Number(v).toLocaleString('zh-CN',{maximumFractionDigits:2});}
-  function money(v){return '¥'+Number(v).toLocaleString('zh-CN',{maximumFractionDigits:2});}
+  function number(v){return NUMBER_FORMAT.format(v,{maximumFractionDigits:2});}
+  function money(v){return '¥'+number(v);}
   function emphasis(v){return '<strong class="realm-price">'+number(v)+'</strong>';}
   function metric(kind,value){return '<span data-realm-metric="'+kind+'"'+(['voucher','cash','balance','period-draws'].includes(kind)?' class="realm-price"':'')+'>'+value+'</span>';}
   function isPack(source){return /^pack\d+$/.test(source.id);}

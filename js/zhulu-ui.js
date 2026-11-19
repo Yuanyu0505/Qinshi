@@ -2,6 +2,7 @@
   "use strict";
 
   var data = window.ZHULU_DATA;
+  var NUMBER_FORMAT = window.QinshiNumberFormat || (typeof require === "function" ? require("./number-format.js") : null);
   var core = window.ZHULU;
   var equipmentItems = window.SPECIAL_EQUIPMENT_DATA && window.SPECIAL_EQUIPMENT_DATA.items || [];
   var refreshQueue = window.UI_PERFORMANCE && window.UI_PERFORMANCE.createRefreshQueue;
@@ -27,7 +28,7 @@
   }
 
   function number(value) {
-    return Number(value || 0).toLocaleString("zh-CN");
+    return NUMBER_FORMAT.format(value || 0);
   }
 
   function clone(value) {

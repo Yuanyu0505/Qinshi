@@ -44,14 +44,15 @@
     }
     var suffixGcd = Array(types.length + 1).fill(0);
     for (var i = types.length - 1; i >= 0; i--) suffixGcd[i] = gcd(types[i].researchEach, suffixGcd[i + 1]);
-    function visit(index, research, blueprints, modified, newCount) {
+    function visit(index, research, blueprints, modified, newCount, cores, ownedOnly) {
       if(source.baseLimit!=null&&newCount>source.baseLimit)return -1;
+      if(source.conversionPool&&(ownedOnly>source.conversionPool.baseCount||!source.conversionPool.allowExternalCores&&cores>source.conversionPool.coreCount+source.conversionPool.looseCores))return -1;
       if (research < 0 || blueprints < 0 || modified < 0 || body(newCount) > targetBody) return -1;
       var waste = blueprints * data.resourceRules.blueprintDivisor - research;
       if (waste < 0) return -1;
       if (index === types.length) return research === 0 && blueprints === 0 && modified === 0 && body(newCount) === targetBody ? 0 : -1;
       if (research % suffixGcd[index]) return -1;
-      var key = [index, research, blueprints, modified, newCount].join('/');
+      var key = [index, research, blueprints, modified, newCount,source.conversionPool&&!source.conversionPool.allowExternalCores?cores:0,ownedOnly].join('/');
       if (memo.has(key)) return memo.get(key);
       var t = types[index], mod = t.modificationId === 'none' ? 0 : t.weight;
       var cap = Math.min(Math.floor(research / t.researchEach), Math.floor(blueprints / t.blueprints), t.available == null ? Infinity : t.available);
@@ -61,7 +62,7 @@
       var edges = [], count = 0n;
       for (var quantity = 0; quantity <= cap; quantity++) {
         var nextNew = newCount + (source.convertible || t.source === 'new' && beast.quality === 'orange' ? quantity * t.weight : 0);
-        var child = visit(index + 1, research - quantity * t.researchEach, blueprints - quantity * t.blueprints, modified - quantity * mod, nextNew);
+        var child = visit(index + 1, research - quantity * t.researchEach, blueprints - quantity * t.blueprints, modified - quantity * mod, nextNew,cores+quantity*(t.cores||0),ownedOnly+quantity*(t.ownedWeight||0));
         if (child < 0) continue;
         edges.push([quantity, child]); count += BigInt(nodes[child].count);
       }
@@ -69,7 +70,7 @@
       if (count) { id = nodes.length; nodes.push({ type: index, count: String(count), edges: edges }); }
       memo.set(key, id); return id;
     }
-    var root = visit(0, targetResearch, targetB, targetM, 0);
+    var root = visit(0, targetResearch, targetB, targetM, 0,0,0);
     if (root < 0) throw Error('无法重建主方案的同等材料路径');
     return { types: types, nodes: nodes, root: root, count: nodes[root].count };
   }
@@ -138,6 +139,7 @@
       detail.ownedPhysicalCount=allocation.ownedPhysical;detail.newPhysicalCount=allocation.newPhysical;
       detail.ownedModifiedInvestedCount=allocation.ownedModified;detail.newModifiedInvestedCount=allocation.newModified;
       detail.inventoryConversion=allocation.inventoryConversion;
+      detail.modificationCores=allocation.modificationCores;
     }
     var fragments = Math.max(0, detail.newInvestedCount * beast.fragmentsPerBody - packed.fragmentsBefore);
     var cost = CORE.calculateSchoolReferenceCost(data, { awakeningBlueprints: 0, beasts: [{ beastId: beast.id, fragments: fragments }] }, settings);

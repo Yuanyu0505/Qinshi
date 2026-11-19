@@ -16,6 +16,7 @@
   "use strict";
 
   var STORE_KEY = "qinshi_six_halls_progress_v1";
+  var NUMBER_FORMAT = (typeof globalThis !== "undefined" && globalThis.QinshiNumberFormat) || (typeof require === "function" ? require("./number-format.js") : null);
   var modes = ["halls", "progress", "planner", "reference"];
   var contexts = [];
 
@@ -24,7 +25,7 @@
       .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
       .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
   }
-  function numberText(value) { return Number(value).toLocaleString("zh-CN"); }
+  function numberText(value) { return NUMBER_FORMAT.format(value); }
   function fieldKey(field, hallId) { return hallId ? hallId + ":" + field : field; }
 
   function createController(options) {

@@ -1,6 +1,6 @@
 'use strict';
 // User-run diagnostics only: synthetic stock, isolated child, no account access.
-const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm');
+const fs=require('node:fs'),path=require('node:path'),Module=require('node:module');
 const {spawnSync}=require('node:child_process');
 const {performance}=require('node:perf_hooks');
 const DATA=require('../data/machine-beasts.js');
@@ -33,7 +33,7 @@ function buildInput(spec,data=DATA){
   });
   return {school,progressByBeast,options:{targetStage:spec.stage,newRankMode:'zeroToSeven',convertOwnedInventory:true,allowNewModifications:spec.mods,allowNewHighRanks:false,bluePurpleInventoryOnly:true,referenceCostSettings:{awakeningBlueprintPrice:spec.price,useAwakeningBlueprintStock:true,awakeningBlueprintStock:spec.stock==='sufficient'?1000000000:0}}};
 }
-function diagnosticRun(spec){
+function diagnosticRun(spec,native=false){
   const started=performance.now();let metrics,currentBuckets,currentCore,boundaryBlueprints=null;
   function reset(){metrics={core:[],layers:[],peakCoreStates:0,peakCombinedStates:0,peakCombinedFrontier:0,peakCollectedStates:0,peakHeapMiB:0};}
   function sample(){metrics.peakHeapMiB=Math.max(metrics.peakHeapMiB,process.memoryUsage().heapUsed/1048576);}
@@ -51,15 +51,17 @@ function diagnosticRun(spec){
   let coreSource=fs.readFileSync(path.join(root,'js/machine-beasts.js'),'utf8');
   const initial='rows[0]=[{r:0,n:0,m:0,b:0,p:0,counts:Array(types.length).fill(0)}];';
   const put='bucket.push({r:r,n:n,m:m,b:b,p:p,counts:counts});rows[r]=bucket;';
-  coreSource=hook(coreSource,initial,'probe.begin(beast.id,types,unit,rows.length);'+initial);
-  coreSource=hook(coreSource,put,put+'probe.put(r,bucket.length);');
-  const context={module:{exports:{}},probe};vm.runInNewContext(coreSource,context);const core=context.module.exports;
-  context.module={exports:{}};context.require=name=>name==='./machine-beasts.js'?core:require(path.join(root,'js',name));
+  if(!native){coreSource=hook(coreSource,initial,'probe.begin(beast.id,types,unit,rows.length);'+initial);coreSource=hook(coreSource,put,put+'probe.put(r,bucket.length);');}
+  globalThis.__qinshiSchoolDiagnosticProbe=probe;
+  function compileInstrumented(source,file){
+    const filename=path.join(root,'js',file),compiled=new Module(filename,module);compiled.filename=filename;compiled.paths=module.paths;
+    compiled._compile('var probe=globalThis.__qinshiSchoolDiagnosticProbe;\n'+source,filename);require.cache[filename]=compiled;return compiled.exports;
+  }
+  const core=native?require('../js/machine-beasts.js'):compileInstrumented(coreSource,'machine-beasts.js');
   let schoolSource=fs.readFileSync(path.join(root,'js/machine-beast-school-planner.js'),'utf8');
-  schoolSource=hook(schoolSource,'      var next = new Map();','      probe.collected(effectMode,setIndex,collected);var next = new Map();');
-  schoolSource=hook(schoolSource,'      states = next;','      states = next;probe.layer(effectMode,setIndex,states);');
-  vm.runInNewContext(schoolSource,context);const planner=context.module.exports,input=buildInput(spec);
-  log('start',{environment:{node:process.version,platform:process.platform,arch:process.arch},spec,participants:input.school.beastIds.length});
+  if(!native){schoolSource=hook(schoolSource,'      var next = new Map();','      probe.collected(effectMode,setIndex,collected);var next = new Map();');schoolSource=hook(schoolSource,'      states = next;','      states = next;probe.layer(effectMode,setIndex,states);');}
+  const planner=native?require('../js/machine-beast-school-planner.js'):compileInstrumented(schoolSource,'machine-beast-school-planner.js'),input=buildInput(spec);
+  log('start',{environment:{node:process.version,platform:process.platform,arch:process.arch},native,spec,participants:input.school.beastIds.length});
   if(spec.domainOnly){
     const settings=core.normalizeReferenceCostSettings(DATA,input.options.referenceCostSettings),domains=[];
     for(const id of input.school.beastIds){
@@ -68,8 +70,8 @@ function diagnosticRun(spec){
       const summary={beastId:id,candidates:candidates.length,modifiedCandidates:candidates.filter(candidate=>candidate.modifiedInvestedCount>0).length};
       domains.push(summary);log('modified-domain-beast',{sample:summary});
     }
-    const observed=metrics.core.some(sample=>sample.observedModifiedTypes);
-    log('complete',{domainOnly:true,schoolPlanComputed:false,observedModifiedTypes:observed,domains,metrics});if(!observed)process.exitCode=1;return;
+    const observed=native?null:metrics.core.some(sample=>sample.observedModifiedTypes);
+    log('complete',{domainOnly:true,schoolPlanComputed:false,observedModifiedTypes:observed,domains,metrics});if(!native&&!observed)process.exitCode=1;return;
   }
   if(spec.stock==='boundary'){
     log('boundary-baseline');
@@ -83,19 +85,19 @@ function diagnosticRun(spec){
   const solveStart=performance.now(),result=planner.calculateSchoolPlans(DATA,spec.schoolId,input.progressByBeast,input.options);
   const target=input.school.stages.find(stage=>stage.stage===spec.stage).requiredTotalLevel;
   const exact=result.valid&&result.plans.length>0&&result.plans.every(plan=>plan.totals.projectedTotalLevel===target);
-  log('complete',{solveMs:performance.now()-solveStart,exact,target,stock:input.options.referenceCostSettings.awakeningBlueprintStock,boundaryBaselineBlueprints:boundaryBlueprints,observedModifiedTypes:metrics.core.some(sample=>sample.observedModifiedTypes),metrics,valid:result.valid,errors:result.errors,plans:result.plans?.map(plan=>({kind:plan.kind,totals:plan.totals,equivalentCount:plan.equivalents?.count,beasts:plan.beasts.map(beast=>({id:beast.beastId,startLevel:beast.startLevel,endLevel:beast.endLevel,items:beast.items}))}))});
+  log('complete',{solveMs:performance.now()-solveStart,exact,target,stock:input.options.referenceCostSettings.awakeningBlueprintStock,boundaryBaselineBlueprints:boundaryBlueprints,observedModifiedTypes:native?null:metrics.core.some(sample=>sample.observedModifiedTypes),metrics,valid:result.valid,errors:result.errors,plans:result.plans?.map(plan=>({kind:plan.kind,totals:plan.totals,equivalentCount:plan.equivalents?.count,beasts:plan.beasts.map(beast=>({id:beast.beastId,startLevel:beast.startLevel,endLevel:beast.endLevel,items:beast.items}))}))});
   if(!exact)process.exitCode=1;
 }
 if(require.main===module){
   const args=process.argv.slice(2),cases=specifications(args.includes('--matrix'),args.includes('--modified-domain'));
   const child=args.indexOf('--case');
-  if(child>=0){const spec=cases.find(item=>item.id===args[child+1]);if(!spec)throw Error('Unknown school case');diagnosticRun(spec);}
+  if(child>=0){const spec=cases.find(item=>item.id===args[child+1]);if(!spec)throw Error('Unknown school case');diagnosticRun(spec,args.includes('--native'));}
   else{
     const only=args.indexOf('--only'),timeoutAt=args.indexOf('--timeout-ms'),timeout=timeoutAt<0?30000:Number(args[timeoutAt+1]);
     if(!Number.isSafeInteger(timeout)||timeout<=0)throw Error('Diagnostic timeout must be a positive safe integer');
     if(only>=0&&!cases.some(spec=>spec.id===args[only+1]))throw Error('Unknown school case');
     for(const spec of cases.filter(spec=>only<0||spec.id===args[only+1])){
-      const child=spawnSync(process.execPath,[__filename,'--case',spec.id,...(args.includes('--matrix')?['--matrix']:[]),...(args.includes('--modified-domain')?['--modified-domain']:[])],{cwd:root,timeout,encoding:'utf8',maxBuffer:16*1024*1024});
+      const child=spawnSync(process.execPath,[__filename,'--case',spec.id,...(args.includes('--matrix')?['--matrix']:[]),...(args.includes('--modified-domain')?['--modified-domain']:[]),...(args.includes('--native')?['--native']:[])],{cwd:root,timeout,encoding:'utf8',maxBuffer:16*1024*1024});
       const lines=(child.stdout||'').trim().split('\n').filter(Boolean);let last=null;
       for(let i=lines.length-1;i>=0;i--){try{last=JSON.parse(lines[i]);break;}catch(error){/* An externally killed child may leave a partial final line. */}}
       console.log(JSON.stringify({id:spec.id,status:child.status,signal:child.signal,timedOut:child.error?.code==='ETIMEDOUT',diagnosticLimitMs:timeout,last,error:child.stderr||child.error?.message}));

@@ -10,8 +10,9 @@ const revision=value('--revision',null),diagnostics=args.includes('--diagnostics
 const cases=specifications();
 if(args.includes('--extended')){
   const base=cases[1];
-  cases.push({...base,id:'hegemonic-boundary',stock:'boundary'}, {...base,id:'hegemonic-zero-new',newRankMode:'zero'}, {...cases[2],id:'nonAttack-blueprints-short',stock:'zero'},
-    {...base,id:'hegemonic-high-and-modifications',allowHigh:true,mods:true}, {...base,id:'hegemonic-limited-participants',stage:1,limited:true});
+  cases.push({...base,id:'hegemonic-boundary',stock:'boundary',offset:-1}, {...base,id:'hegemonic-boundary-exact',stock:'boundary',offset:0}, {...base,id:'hegemonic-boundary-surplus',stock:'boundary',offset:10000}, {...base,id:'hegemonic-zero-new',newRankMode:'zero'}, {...cases[2],id:'nonAttack-blueprints-short',stock:'zero'},
+    {...base,id:'hegemonic-high-and-modifications',allowHigh:true,mods:true}, {...base,id:'hegemonic-limited-participants',stage:1,limited:true},
+    {...base,id:'hegemonic-zero-price-135',stage:3,price:0});
 }
 if(at('--child')>=0){
   const spec=cases.find(s=>s.id===value('--child'));if(!spec)throw Error('Unknown scenario');
@@ -28,14 +29,19 @@ if(at('--child')>=0){
     }
   }
   if(spec.stock==='boundary'){
-    const baseline=api.planner.calculateSchoolPlans(api.data,spec.schoolId,input.progressByBeast,input.options);
-    if(!baseline.valid)throw Error(JSON.stringify(baseline.errors));
-    input.options.referenceCostSettings.awakeningBlueprintStock=Math.max(0,baseline.plans[0].totals.awakeningBlueprints-1);
+    const stock=Number(value('--stock',NaN));
+    if(!Number.isSafeInteger(stock)||stock<0)throw Error('Boundary child requires frozen --stock');
+    input.options.referenceCostSettings.awakeningBlueprintStock=stock;
   }
+  const inputRecord={schoolId:spec.schoolId,progress:input.progressByBeast,options:input.options};
+  const inputSha256=crypto.createHash('sha256').update(JSON.stringify(inputRecord)).digest('hex');
+  const stock=input.options.referenceCostSettings.awakeningBlueprintStock;
+  fs.writeSync(1,'QIN_INPUT '+JSON.stringify({inputSha256,stock})+'\n');
   let sampledHeapMiB=process.memoryUsage().heapUsed/1048576;
   if(diagnostics)input.options.onDiagnostic=event=>{
     sampledHeapMiB=Math.max(sampledHeapMiB,process.memoryUsage().heapUsed/1048576);
     if(event.phase!=='conversion-progress')events.push(event);
+    if(event.phase==='combine-layer')fs.writeSync(1,'QIN_LAYER '+JSON.stringify({...event,heapMiB:process.memoryUsage().heapUsed/1048576})+'\n');
   };
   const started=performance.now(),result=api.planner.calculateSchoolPlans(api.data,spec.schoolId,input.progressByBeast,input.options),solveMs=performance.now()-started;
   const exact=result.valid&&result.plans.length>0&&result.plans.every(p=>p.totals.projectedTotalLevel===result.target.totalLevel);
@@ -43,17 +49,34 @@ if(at('--child')>=0){
   const resultSha256=crypto.createHash('sha256').update(JSON.stringify(result)).digest('hex');
   // V8 GC tracing uses stdout and may interleave with console writes. Keep the
   // single result record on stderr; the parent emits only parsed JSON.
-  fs.writeSync(2,'QIN_BENCH_JSON '+JSON.stringify({id:spec.id,revision:revision||'worktree',diagnostics,solveMs,peakRssMiB:process.resourceUsage().maxRSS/1024,sampledHeapMiB:diagnostics?sampledHeapMiB:null,exact,errors:result.errors,resultSha256,events:diagnostics?events:undefined,prewarmed:spec.stock==='boundary',rssScope:spec.stock==='boundary'?'whole child including boundary stock pre-solve':'whole isolated child',environment:{node:process.version,os:os.type()+' '+os.release(),arch:process.arch}})+'\n');
+  fs.writeSync(2,'QIN_BENCH_JSON '+JSON.stringify({id:spec.id,revision:revision||'worktree',diagnostics,solveMs,peakRssMiB:process.resourceUsage().maxRSS/1024,sampledHeapMiB:diagnostics?sampledHeapMiB:null,exact,errors:result.errors,inputSha256,stock,requiredBlueprints:result.plans?.[0]?.totals.awakeningBlueprints,resultSha256,events:diagnostics?events:undefined,rssScope:'whole isolated child',environment:{node:process.version,os:os.type()+' '+os.release(),arch:process.arch}})+'\n');
   if(!exact)process.exitCode=1;
 }else{
   const repetitions=Number(value('--repeat',1)),timeout=Number(value('--timeout-ms',120000));
+  const heapLimit=value('--heap-mib',null);
+  if(heapLimit!==null&&(!Number.isSafeInteger(Number(heapLimit))||Number(heapLimit)<64))throw Error('Invalid heap limit');
   if(!Number.isSafeInteger(repetitions)||repetitions<1||!Number.isSafeInteger(timeout)||timeout<1)throw Error('Invalid diagnostic repetition or safety timeout');
   const selected=value('--only',null);if(selected&&!cases.some(s=>s.id===selected))throw Error('Unknown scenario');
-  for(let repeat=0;repeat<repetitions;repeat++)for(const spec of cases.filter(s=>!selected||s.id===selected)){
-    const child=spawnSync(process.execPath,[...(gc?['--trace-gc']:[]),__filename,'--child',spec.id,...(revision?['--revision',revision]:[]),...(diagnostics?['--diagnostics']:[]),...(args.includes('--extended')?['--extended']:[])],{cwd:path.resolve(__dirname,'..'),timeout,encoding:'utf8',maxBuffer:32*1024*1024});
+  function run(spec,repeat,frozen,role){
+    const stock=frozen?Math.max(0,frozen.requiredBlueprints+spec.offset):null;
+    const child=spawnSync(process.execPath,[...(heapLimit?['--max-old-space-size='+heapLimit]:[]),...(gc?['--trace-gc']:[]),__filename,'--child',spec.id,...(frozen?['--stock',String(stock)]:[]),...(revision?['--revision',revision]:[]),...(diagnostics?['--diagnostics']:[]),...(args.includes('--extended')?['--extended']:[])],{cwd:path.resolve(__dirname,'..'),timeout,encoding:'utf8',maxBuffer:32*1024*1024});
     const lines=(child.stdout||'').split(/\r?\n/),stderr=(child.stderr||'').split(/\r?\n/),record=stderr.find(line=>line.startsWith('QIN_BENCH_JSON ')),json=record?record.slice('QIN_BENCH_JSON '.length):lines.filter(line=>line.startsWith('{')).at(-1);
     let result=null;if(json)result=JSON.parse(json);
-    console.log(JSON.stringify({repeat:repeat+1,id:spec.id,status:child.status,signal:child.signal,timedOut:child.error?.code==='ETIMEDOUT',diagnosticSafetyTimeoutMs:timeout,gcEvents:gc?{minor:lines.filter(l=>/Scavenge|Minor Mark-Sweep/.test(l)).length,major:lines.filter(l=>/Mark-Compact|Mark-sweep/.test(l)).length}:null,result,error:stderr.filter(line=>!line.startsWith('QIN_BENCH_JSON ')).join('\n').trim()||child.error?.message||(!result?'Missing benchmark result record':undefined)}));
+    const inputLine=lines.find(l=>l.startsWith('QIN_INPUT '));
+    process.stdout.write(JSON.stringify({repeat:repeat+1,id:spec.id,role,stock,frozen,heapLimit,input:inputLine?JSON.parse(inputLine.slice(10)):null,status:child.status,signal:child.signal,timedOut:child.error?.code==='ETIMEDOUT',diagnosticSafetyTimeoutMs:timeout,gcEvents:gc?{minor:lines.filter(l=>/Scavenge|Minor Mark-Sweep/.test(l)).length,major:lines.filter(l=>/Mark-Compact|Mark-sweep/.test(l)).length}:null,result,layers:!result?lines.filter(l=>l.startsWith('QIN_LAYER ')).flatMap(l=>{try{return [JSON.parse(l.slice(10))];}catch{return [];}}):undefined,error:stderr.filter(line=>!line.startsWith('QIN_BENCH_JSON ')).join('\n').trim()||child.error?.message||(!result?'Missing benchmark result record':undefined)})+'\n');
     if(child.status!==0||!result||!result.exact)process.exitCode=1;
+    return result?.exact?{requiredBlueprints:result.requiredBlueprints,inputSha256:result.inputSha256,resultSha256:result.resultSha256}:null;
+  }
+  for(let repeat=0;repeat<repetitions;repeat++){
+    let frozen;
+    for(const spec of cases.filter(s=>!selected||s.id===selected)){
+      if(spec.stock==='boundary'){
+        if(frozen===undefined)frozen=run(cases[1],repeat,null,'freeze-stock');
+        if(frozen)run(spec,repeat,frozen,'boundary');
+      }else{
+        const result=run(spec,repeat,null,'solve');
+        if(spec===cases[1])frozen=result;
+      }
+    }
   }
 }

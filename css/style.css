@@ -6058,6 +6058,10 @@ header.top{display:flex;align-items:center;justify-content:space-between;gap:16p
 #partition-wooden-man-alley .wooden-cell { aspect-ratio: 1; min-width: 0; min-height: 0; display: grid; place-items: center; padding: 0; border: 1px solid rgba(171, 123, 40, .62); border-radius: 8px; background: #19130c; color: #b49b72; font-size: 18px; font-weight: 800; cursor: pointer; }
 #partition-wooden-man-alley .wooden-cell:hover { border-color: #e5b94c; box-shadow: inset 0 0 0 1px rgba(255, 224, 128, .2); }
 #partition-wooden-man-alley .wooden-cell.is-opened { border-color: #38d276; background: #17432b; color: #f1fff6; }
+#partition-wooden-man-alley .wooden-cell > span { display: grid; place-items: center; width: 100%; height: 100%; min-width: 0; min-height: 0; }
+#partition-wooden-man-alley .wooden-cell > span,
+#partition-wooden-man-alley .wooden-advice-cell { position: relative; }
+#partition-wooden-man-alley .wooden-dummy-icon { position: absolute; inset: 0; display: block; width: 100%; height: 100%; object-fit: contain; pointer-events: none; user-select: none; }
 #partition-wooden-man-alley .wooden-board-actions { display: grid; gap: 8px; }
 #partition-wooden-man-alley .wooden-board-actions > strong { color: #f5d36e; font-size: 18px; }
 #partition-wooden-man-alley .wooden-complete-state { display: grid; min-height: 220px; place-items: center; border: 2px solid #42cc79; border-radius: 12px; background: rgba(28, 100, 56, .18); color: #66ee98; font-size: clamp(22px, 5vw, 34px); font-weight: 900; }

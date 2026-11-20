@@ -480,7 +480,7 @@
     for (var index = 0; index < tier.cellCount; index += 1) {
       var position = "第" + (Math.floor(index / tier.boardSize) + 1) + "行第" + (index % tier.boardSize + 1) + "列";
       cells += '<button type="button" class="wooden-cell' + (opened[index] ? " is-opened" : "") + '" data-wooden-cell="' + index + '" aria-label="' + position + '" aria-pressed="' + String(Boolean(opened[index])) + '">' +
-        '<span aria-hidden="true">' + (opened[index] ? "✓" : "·") + '</span></button>';
+        '<span aria-hidden="true">' + (opened[index] ? "✓" : '<img class="wooden-dummy-icon" src="images/wooden-training-dummy.png" alt="" draggable="false">') + '</span></button>';
     }
     return '<div class="wooden-board" style="--wooden-board-size:' + tier.boardSize + '" aria-label="第' + progress.currentFloor + '层木人棋盘">' + cells + '</div>';
   }
@@ -549,7 +549,7 @@
     analysis.recommendation.affectedCells.forEach(function (cell) { affected[cell] = true; });
     var cells = "";
     for (var index = 0; index < analysis.boardSize * analysis.boardSize; index += 1) {
-      cells += '<span class="wooden-advice-cell' + (opened[index] ? " is-opened" : "") + (affected[index] ? " is-recommended" : "") + '">' + (opened[index] ? "✓" : "木") + '</span>';
+      cells += '<span class="wooden-advice-cell' + (opened[index] ? " is-opened" : "") + (affected[index] ? " is-recommended" : "") + '">' + (opened[index] ? "✓" : '<img class="wooden-dummy-icon" src="images/wooden-training-dummy.png" alt="" draggable="false">') + '</span>';
     }
     return '<div class="wooden-advice-board" style="--wooden-board-size:' + analysis.boardSize + '">' + cells + '</div>';
   }

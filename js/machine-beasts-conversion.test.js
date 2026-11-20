@@ -41,6 +41,25 @@ test('conversion: a high-rank output can contain both owned and new base bodies'
   assert.equal(result.items[0].ownedBaseBodies,1);assert.equal(result.items[0].newBaseBodies,1);
   assert.equal(result.inventoryConversion.sources[0].sevenRankEquivalent,1);
 });
+test('conversion: a mixed modified output credits each side its actual base-body contribution',()=>{
+  const progress=CORE.normalizeBeastProgress(beast,{inventory:{none:{0:1}}},DATA);
+  const pool=CORE.conversionMaterials(DATA,beast,progress,{newRankMode:'zeroToSeven',allowNewHighRanks:true,ownedLooseCores:40}).pool;
+  const result=CORE.allocateConvertedInventory(DATA,beast,pool,[{source:'new',rank:8,modificationId:'initial',count:1,researchEach:178704,sevenRankEquivalent:2}]);
+  assert.equal(result.ownedModified,1);
+  assert.equal(result.newModified,1);
+  assert.equal(result.modificationCores.spent,40);
+  assert.equal(result.modificationCores.externalDeficit,0);
+});
+test('conversion: reclaiming the required cores can supply the body without dismantling unrelated stock',()=>{
+  const progress=CORE.normalizeBeastProgress(beast,{inventory:{none:{0:1},initial:{10:1}}},DATA);
+  const pool=CORE.conversionMaterials(DATA,beast,progress,{newRankMode:'zeroToSeven'}).pool;
+  const result=CORE.allocateConvertedInventory(DATA,beast,pool,[{source:'new',rank:7,modificationId:'initial',count:1,researchEach:103452,sevenRankEquivalent:1}]);
+  assert.deepEqual(result.inventoryConversion.sources.map(s=>[s.rank,s.modificationId,s.usedBaseBodies,s.remainingBaseBodies]),[[10,'initial',1,7]]);
+  assert.ok(result.unused.some(i=>i.rank===0&&i.count===1&&!i.converted));
+  assert.equal(result.modificationCores.returned,40);
+  assert.equal(result.modificationCores.spent,40);
+  assert.equal(result.newCount,0);
+});
 test('conversion: explicitly allowed modification does not duplicate original-versus-recreated identical inputs',()=>{
   const data=fixture();data.researchThresholds={0:0,1:4,2:6};
   data.researchValues.orange={0:{none:6,initial:4},7:{none:12,initial:9},8:{none:24,initial:18}};

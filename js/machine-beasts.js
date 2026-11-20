@@ -598,10 +598,27 @@
       if(left)items.push(Object.assign({},i,{source:'new',count:left}));
     });
     var spent=processing.reduce(function(n,i){return n+i.count*modificationCoreNeed(data,i.modificationId);},0),loose=pool.looseCores||0,needed=usedProcessed,coreNeeded=Math.max(0,spent-loose),returned=0;
-    remaining.forEach(function(o){
-      var cores=modificationCoreNeed(data,o.modificationId),count=Math.min(o.count,Math.max(Math.ceil(needed/o.weight),cores?Math.ceil(coreNeeded/cores):0));
+    // Reclaim mandatory cores first: the same dismantled stock also supplies
+    // bodies. Selecting them independently would needlessly reprocess plain stock.
+    var usedBySource=[];
+    var reclaim=remaining.map(function(o,index){
+      var count=o.cores?Math.min(o.count,Math.ceil(coreNeeded/o.cores)):0;
+      coreNeeded-=Math.min(coreNeeded,count*o.cores);
+      usedBySource[index]=Math.min(needed,count*o.weight);
+      needed-=usedBySource[index];
+      return count;
+    });
+    remaining.forEach(function(o,index){
+      var additional=Math.min(o.count-reclaim[index],Math.ceil(needed/o.weight));
+      var used=Math.min(needed,additional*o.weight);
+      reclaim[index]+=additional;
+      usedBySource[index]+=used;
+      needed-=used;
+    });
+    remaining.forEach(function(o,index){
+      var count=reclaim[index];
       if(count){
-        var supplied=count*o.weight,used=Math.min(needed,supplied),refund=count*cores,left=supplied-used;needed-=used;coreNeeded=Math.max(0,coreNeeded-refund);returned+=refund;remainingBase+=left;
+        var supplied=count*o.weight,used=usedBySource[index],refund=count*o.cores,left=supplied-used;returned+=refund;remainingBase+=left;
         sources.push(Object.assign({},o,{count:count,baseBodies:supplied,sevenRankEquivalent:o.weight,returnedCores:refund,usedBaseBodies:used,remainingBaseBodies:left}));o.count-=count;
         if(left){var rank=o.rank>7?7:o.rank;unused.push({rank:rank,modificationId:'none',count:left,researchEach:researchFor(data,beast,rank,'none'),converted:true});}
       }
@@ -618,8 +635,8 @@
     return {items:items,unused:unused,invested:total,newCount:added,owned:total-added,
       ownedPhysical:items.filter(function(i){return i.source==='owned';}).reduce(function(n,i){return n+i.count;},0),
       newPhysical:items.filter(function(i){return i.source!=='owned';}).reduce(function(n,i){return n+i.count;},0),
-      ownedModified:items.filter(function(i){return i.source==='owned'&&i.modificationId!=='none';}).reduce(function(n,i){return n+i.count*baseBodies(i.rank);},0),
-      newModified:items.filter(function(i){return i.source!=='owned'&&i.modificationId!=='none';}).reduce(function(n,i){return n+i.count*baseBodies(i.rank);},0),
+      ownedModified:items.reduce(function(n,i){return n+(i.modificationId==='none'?0:i.source==='owned'?i.count*baseBodies(i.rank):i.ownedBaseBodies||0);},0),
+      newModified:items.reduce(function(n,i){return n+(i.modificationId==='none'||i.source==='owned'?0:i.newBaseBodies===undefined?i.count*baseBodies(i.rank):i.newBaseBodies);},0),
       modificationCores:ledger,inventoryConversion:{sources:sources,usedBaseBodies:usedProcessed,remainingBaseBodies:remainingBase,availableBaseBodies:pool.baseCount,remainingItems:unused,modificationCores:ledger}};
   }
 

@@ -804,43 +804,84 @@
   }
 
   function itemLabel(item) {
-    var equivalent = item.rank > 7 ? '（折合7阶×' + item.sevenRankEquivalent * item.count + '）' : '';
-    return combinedRankLabel(modificationName(item.modificationId), item.rank) + '×' + item.count + equivalent + '，单只' + formatNumber(item.researchEach) + '研发度';
+    return itemRequirementLabel(item) + '，单只' + formatNumber(item.researchEach) + '研发度';
   }
 
   function itemRequirementLabel(item) {
-    var equivalent = item.rank > 7 ? '（折合7阶×' + item.sevenRankEquivalent * item.count + '）' : '';
-    return combinedRankLabel(modificationName(item.modificationId), item.rank) + '×' + item.count + equivalent;
+    var equivalent = item.rank > 7 ? '（折合7阶×' + formatNumber(Math.pow(2, item.rank - 7) * item.count) + '）' : '';
+    return combinedRankLabel(modificationName(item.modificationId), item.rank) + '×' + formatNumber(item.count) + equivalent;
+  }
+
+  function groupInvestmentItems(items) {
+    var groups = new Map();
+    items.forEach(function (item) {
+      var key = [item.rank, item.modificationId, item.researchEach].join('/');
+      if (!groups.has(key)) groups.set(key, Object.assign({}, item, { count: 0, mixedCount: 0, ownedBaseBodies: 0, newBaseBodies: 0 }));
+      var group = groups.get(key);
+      group.count += item.count;
+      if (item.ownedBaseBodies && item.newBaseBodies) {
+        group.mixedCount += item.count;
+        group.ownedBaseBodies += item.ownedBaseBodies;
+        group.newBaseBodies += item.newBaseBodies;
+      }
+    });
+    return Array.from(groups.values());
   }
 
   function itemList(items, empty, emphasizeRequirement) {
-    return items.length ? '<ul>' + items.map(function (item) {
+    return items.length ? '<ul>' + groupInvestmentItems(items).map(function (item) {
       if (!emphasizeRequirement) return '<li>' + escapeHtml(itemLabel(item)) + '</li>';
       var emphasisClass = emphasizeRequirement === "owned" ? "machine-owned-investment" : "machine-investment-demand";
-      var mixed=item.ownedBaseBodies?'（库存'+item.ownedBaseBodies+'＋新增'+item.newBaseBodies+'只0阶本体）':'';
+      var mixed = item.mixedCount ? '（其中' + formatNumber(item.mixedCount) + '只混合投入：库存' + formatNumber(item.ownedBaseBodies) + '＋新增' + formatNumber(item.newBaseBodies) + '个折算本体）' : '';
       return '<li><strong class="' + emphasisClass + '">' + escapeHtml(itemRequirementLabel(item)) + '</strong><span>，单只' + formatNumber(item.researchEach) + '研发度'+mixed+'</span></li>';
     }).join("") + '</ul>' : '<p class="muted-tip">' + escapeHtml(empty) + '</p>';
   }
 
-  function conversionSummary(conversion, cores, key) {
+  function investmentLists(ownedItems, newItems, conversion, school) {
+    var mixed = newItems.some(function (item) { return item.ownedBaseBodies > 0; });
+    var reclaimed = conversion && conversion.sources.some(function (source) { return source.returnedCores > 0; });
+    var empty = mixed ? '库存本体用于混合投入' : reclaimed ? '库存仅用于返还神核' : '未使用库存';
+    var attributes = school ? ' class="machine-school-plan-material"' : '';
+    return '<article' + attributes + '><h3>使用已有库存</h3>' + itemList(ownedItems, empty, 'owned') +
+      '</article><article' + attributes + '><h3>' + (mixed ? '含新增本体的投入' : '新增投入') + '</h3>' + itemList(newItems, '无需新增机关兽', true) + '</article>';
+  }
+
+  function conversionSummary(conversion, cores, key, items) {
     var sources = conversion && conversion.sources || [];
-    if (!sources.length && (!cores || !cores.returned && !cores.spent && !cores.externalDeficit && !cores.looseOwned)) return '';
-    var body = sources.length ? '<ul class="machine-conversion-sources">' + sources.map(function (source) {
-      var modification = source.originModificationId || source.modificationId;
-      var rank = source.originRank == null ? source.rank : source.originRank;
-      var count = source.originCount == null ? source.count : source.originCount;
-      return '<li>' + escapeHtml(combinedRankLabel(modificationName(modification), rank)) + '×' + formatNumber(count) +
-        ' → ' + (rank > 7 ? '7阶0改 ' : rank + '阶0改 ') + formatNumber(source.baseBodies) + '只；返还神核 ' + formatNumber(source.returnedCores) + '</li>';
-    }).join('') + '</ul><p>本体使用 ' + formatNumber(conversion.usedBaseBodies) + '只／剩余 ' + formatNumber(conversion.remainingBaseBodies) + '只；还原时改造归0</p>' : '';
-    if (conversion && conversion.remainingItems && conversion.remainingItems.length) body += '<p>模拟剩余：' + conversion.remainingItems.map(function(item){return escapeHtml(combinedRankLabel(modificationName(item.modificationId),item.rank))+'×'+formatNumber(item.count);}).join('、') + '</p>';
-    if (cores) {
+    var hasCores = cores && (cores.looseOwned || cores.returned || cores.spent || cores.externalDeficit || cores.remaining);
+    if (!sources.length && !hasCores) return '';
+    function forms(list) {
+      return list.map(function (form) {
+        var mod = form.modificationId === 'none' ? '' : '（' + modificationName(form.modificationId) + '）';
+        var mixed = form.mixedCount ? '（' + formatNumber(form.mixedCount) + '只含新增本体）' : '';
+        return '<span>' + escapeHtml(mod) + form.rank + '阶×' + formatNumber(form.count) + mixed + '</span>';
+      }).join('');
+    }
+    function line(label, content) {
+      return '<div><dt>' + label + '</dt><dd>' + content + '</dd></div>';
+    }
+    var body = '';
+    if (sources.length) {
+      var inputs = sources.map(function (source) {
+        return { rank: source.originRank == null ? source.rank : source.originRank, modificationId: source.originModificationId || source.modificationId, count: source.originCount == null ? source.count : source.originCount };
+      });
+      var outputs = groupInvestmentItems((items || []).filter(function (item) { return item.converted && (item.source === 'owned' || item.ownedBaseBodies); }));
+      var remaining = sources.filter(function (source) { return source.remainingBaseBodies > 0; }).map(function (source) {
+        return { rank: Math.min(source.rank, 7), modificationId: 'none', count: source.remainingBaseBodies };
+      });
+      body = '<dl class="machine-conversion-flow">' + line('加工前', forms(groupInvestmentItems(inputs))) +
+        line('加工投入', outputs.length ? forms(outputs) : '无') +
+        (remaining.length ? line('加工剩余', forms(groupInvestmentItems(remaining))) : '') + '</dl>';
+    }
+    if (hasCores) {
       body += '<dl class="machine-core-ledger">' + [
-        ['已有散装神核', cores.looseOwned], ['转换返还', cores.returned], ['改造分配', cores.spent],
-        ['复用神核', cores.reused], ['外部缺口', cores.externalDeficit], ['剩余神核', cores.remaining]
-      ].map(function (row) { return '<div><dt>' + row[0] + '</dt><dd>' + formatNumber(row[1]) + '</dd></div>'; }).join('') + '</dl>';
+        ['已有散装神核', cores.looseOwned], ['返还', cores.returned], ['改造分配', cores.spent],
+        ['复用', cores.reused], ['外部缺口', cores.externalDeficit], ['剩余', cores.remaining]
+      ].filter(function (row) { return row[1] > 0; }).map(function (row) { return line(row[0], formatNumber(row[1])); }).join('') + '</dl>';
       if (cores.externalDeficit > 0) body += '<p>外部缺口经验估算：约' + formatNumber(cores.estimatedBoxes) + '箱（非保底）。</p>';
     }
-    return disclosure((key || 'conversion') + ':cores', '库存转换与改造神核'+(cores&&cores.externalDeficit>0?' · 改造神核未计价':''), body, 'machine-inventory-conversion');
+    var title = sources.length ? (hasCores ? '库存转换与改造神核' : '库存加工明细') : '改造神核';
+    return disclosure((key || 'conversion') + ':cores', title + (cores && cores.externalDeficit > 0 ? ' · 改造神核未计价' : ''), body, 'machine-inventory-conversion');
   }
 
   function renderCalculatorResult(result, scroll) {
@@ -868,11 +909,10 @@
       '<div><span>溢出研发度</span><b>' + formatNumber(result.totals.overflow) + '</b></div><div><span>预计达到</span><b>' + result.totals.projectedLevel + '级</b></div></div>' +
       '<div class="machine-result-metrics machine-resource-metrics"><div><span>觉醒神图</span><b>' + formatNumber(result.totals.awakeningBlueprints) + '</b></div><div><span>机关破片</span><b>' + formatNumber(result.totals.organPieces) + '</b></div>' +
       '<div><span>本体缺口</span><b>' + result.shortage.bodyEquivalent + '本体</b></div><div><span>机关兽碎片缺口</span><b>' + formatNumber(result.shortage.fragments) + '</b></div>' + exchange + '</div>') +
-      '<div class="machine-result-columns"><article><h3>使用已有库存</h3>' + itemList(result.selected.ownedItems, "不使用已有完整机关兽", "owned") + '</article>' +
-      '<article><h3>新增投入</h3>' + itemList(result.selected.newItems, "无需新增机关兽", true) + '</article></div>' + conversionSummary(result.inventoryConversion, result.modificationCores, detailKey) +
+      '<div class="machine-result-columns">' + investmentLists(result.selected.ownedItems, result.selected.newItems, result.inventoryConversion, false) + '</div>' + conversionSummary(result.inventoryConversion, result.modificationCores, detailKey, result.selected.ownedItems.concat(result.selected.newItems)) +
       '<p class="machine-final-effect">最终最高生效效果：' + (finalEffect ? finalEffect.level + '级档位 · ' + escapeHtml(finalEffect.text) : '尚未解锁效果') + '</p>' +
       disclosure(detailKey + ':cost', '参考成本明细', costSlot("single", requirements)) +
-      '<details class="machine-unused machine-disclosure" data-detail-key="' + detailKey + ':unused"><summary>查看未使用库存（' + result.unused.reduce(function (total, item) { return total + item.count; }, 0) + '只）</summary>' + itemList(result.unused.map(function (item) { return Object.assign({ source: "owned", sevenRankEquivalent: item.rank > 7 ? Math.pow(2, item.rank - 7) : 1 }, item); }), "无未使用库存") + '</details></section>';
+      '<details class="machine-unused machine-disclosure" data-detail-key="' + detailKey + ':unused"><summary>预计剩余库存（' + formatNumber(result.unused.reduce(function (total, item) { return total + item.count; }, 0)) + '只）</summary>' + itemList(result.unused, "无剩余库存") + '</details></section>';
     finishResultRender(focused, scroll);
   }
 
@@ -896,8 +936,8 @@
     var ownedItems = detail.items.filter(function (item) { return item.source === "owned"; });
     var newItems = detail.items.filter(function (item) { return item.source === "new"; });
     return '<article class="machine-school-plan-beast"><header><strong>' + escapeHtml(detail.beastName) + '</strong><b>' + detail.startLevel + '级 → ' + detail.endLevel + '级</b></header>' +
-      '<div class="machine-card-primary machine-plan-primary" tabindex="0" role="region" aria-label="效果节点与已有新增投入，可横向滚动"><span>新增效果节点 <b>' + formatNumber(detail.unlockedEffects) + '</b></span><span class="machine-owned-investment">已有投入 <b>' + (detail.inventoryConversion?detail.ownedInvestedCount:ownedItems.reduce(function (sum, item) { return sum + item.count; }, 0)) + '只</b></span><span class="machine-investment-demand">新增投入 <b>' + (detail.inventoryConversion?detail.newInvestedCount:newItems.reduce(function (sum, item) { return sum + item.count; }, 0)) + '只</b></span></div>' +
-      '<article class="machine-school-plan-material"><h3>使用已有库存</h3>' + itemList(ownedItems, "不使用已有完整机关兽", "owned") + '</article><article class="machine-school-plan-material"><h3>新增投入</h3>' + itemList(newItems, "无需新增机关兽", true) + '</article>' + conversionSummary(detail.inventoryConversion, detail.modificationCores, 'school:beast:' + detail.beastId + ':' + detail.endLevel + ':' + detail.items.map(function (item) { return item.source + '/' + item.modificationId + '/' + item.rank + '/' + item.count; }).join(';')) +
+      '<div class="machine-card-primary machine-plan-primary" tabindex="0" role="region" aria-label="效果节点与已有新增投入，可横向滚动"><span>新增效果节点 <b>' + formatNumber(detail.unlockedEffects) + '</b></span><span class="machine-owned-investment">' + (detail.inventoryConversion ? '库存折算' : '已有投入') + ' <b>' + formatNumber(detail.inventoryConversion ? detail.ownedInvestedCount : ownedItems.reduce(function (sum, item) { return sum + item.count; }, 0)) + '只</b></span><span class="machine-investment-demand">' + (detail.inventoryConversion ? '新增折算' : '新增投入') + ' <b>' + formatNumber(detail.inventoryConversion ? detail.newInvestedCount : newItems.reduce(function (sum, item) { return sum + item.count; }, 0)) + '只</b></span></div>' +
+      investmentLists(ownedItems, newItems, detail.inventoryConversion, true) + conversionSummary(detail.inventoryConversion, detail.modificationCores, 'school:beast:' + detail.beastId + ':' + detail.endLevel + ':' + detail.items.map(function (item) { return item.source + '/' + item.modificationId + '/' + item.rank + '/' + item.count; }).join(';'), detail.items) +
       '<div class="machine-school-plan-beast-metrics" tabindex="0" role="region" aria-label="研发度增长与溢出，可横向滚动"><span>研发度 ' + formatNumber(detail.startResearch) + ' → ' + formatNumber(detail.endResearch) + '</span><span>增加 ' + formatNumber(detail.addedResearch) + '</span><span>溢出 ' + formatNumber(detail.overflowResearch) + '</span></div>' +
       '<div class="machine-school-plan-resources"><span>折算投入 <b>' + detail.investedCount + '只</b></span><span>新增效果节点 <b>' + formatNumber(detail.unlockedEffects) + '</b></span><span>最终生效档位 <b>' + (detail.finalEffect ? detail.finalEffect.level + '级' : '尚未解锁') + '</b></span><span>机关兽碎片缺口 <b>' + formatNumber(detail.resources.fragments) + '</b></span><span>神图总消耗 <b>' + formatNumber(detail.resources.awakeningBlueprints) + '</b></span><span>机关破片 <b>' + formatNumber(detail.resources.organPieces) + '</b></span><span>改造本体折算投入 <b>' + formatNumber(detail.modifiedInvestedCount) + '</b>（已有 ' + formatNumber(detail.ownedModifiedInvestedCount) + '／新增 ' + formatNumber(detail.newModifiedInvestedCount) + '）</span></div></article>';
   }
@@ -944,10 +984,10 @@
   function schoolPlanAnchor(plan) { return 'machine-school-plan-' + (plan.kind === 'cost' ? 'cost' : plan.kind === 'effects' ? 'effects' : 'merged'); }
 
   function schoolMaterialSummary(plan) {
-    var counts = { owned: 0, new: 0 };
-    var converted=false;
-    plan.beasts.forEach(function (detail) { if(detail.inventoryConversion){converted=true;counts.owned+=detail.ownedInvestedCount;counts.new+=detail.newInvestedCount;}else detail.items.forEach(function (item) { counts[item.source] += item.count; }); });
-    return '已有 ' + counts.owned + '只／新增 ' + counts.new + '只'+(converted?'0阶本体':'')+' · 神图 ' + formatNumber(plan.totals.awakeningBlueprints);
+    var converted = plan.beasts.some(function (detail) { return detail.inventoryConversion; });
+    var totals = plan.totals;
+    return (converted ? '折算本体：库存 ' : '库存 ') + formatNumber(converted ? totals.ownedInvestedCount : totals.ownedPhysicalCount) +
+      '只／新增 ' + formatNumber(converted ? totals.newInvestedCount : totals.newPhysicalCount) + '只 · 神图 ' + formatNumber(totals.awakeningBlueprints);
   }
 
   function schoolPriority(plan, result) {
@@ -973,7 +1013,7 @@
       '<div><span>机关破片</span><b>' + formatNumber(totals.organPieces) + '</b></div><div><span>机关兽碎片缺口</span><b>' + formatNumber(totals.fragments) + '</b></div><div><span>已计价参考元宝' + (plan.cost && !plan.cost.complete ? '（已知小计）' : '') + '</span><b>' + formatNumber(plan.cost ? plan.cost.knownYuan : totals.pricedYuan) + '</b></div>' +
       '<div><span>改造本体折算投入</span><b>' + formatNumber(totals.modifiedInvestedCount) + '</b><span>已有 ' + formatNumber(totals.ownedModifiedInvestedCount) + '／新增 ' + formatNumber(totals.newModifiedInvestedCount) + '</span></div></div>') +
       disclosure(detailKey + ':cost', '费用明细 · 神图需求 ' + formatNumber(totals.awakeningBlueprints), costSlot("school-" + index, { awakeningBlueprints: totals.awakeningBlueprints, beasts: plan.beasts.map(function (detail) { return { beastId: detail.beastId, fragments: detail.resources.fragments }; }) })) +
-      disclosure(detailKey + ':materials', '培养材料 · 已有完整机关兽 ' + formatNumber(physical.owned) + '只／新增 ' + formatNumber(physical.new) + '只' + (plan.equivalents && BigInt(plan.equivalents.count) > 1n ? ' · 同等最优共' + formatNumber(BigInt(plan.equivalents.count)) + '套' : ''), '<div class="machine-cultivation-layout">' + (plan.beasts.length ? '<div class="machine-school-plan-beasts">' + plan.beasts.map(renderSchoolBeastPlan).join("") + '</div>' : '<p class="machine-school-complete">目标已达成，无需新增投入。</p>') + equivalentMaterials(plan, index) + '</div>') + schoolFinalEffects(plan, index) + '</section>';
+      disclosure(detailKey + ':materials', '培养材料' + (plan.equivalents && BigInt(plan.equivalents.count) > 1n ? ' · 同等最优共' + formatNumber(BigInt(plan.equivalents.count)) + '套' : ''), '<div class="machine-cultivation-layout">' + (plan.beasts.length ? '<div class="machine-school-plan-beasts">' + plan.beasts.map(renderSchoolBeastPlan).join("") + '</div>' : '<p class="machine-school-complete">目标已达成，无需新增投入。</p>') + equivalentMaterials(plan, index) + '</div>') + schoolFinalEffects(plan, index) + '</section>';
   }
 
   function equivalentPageKey(plan) {

@@ -13,7 +13,7 @@ for (const file of ['data/machine-beasts.js', 'js/machine-beasts.js', 'js/number
 }
 const source = fs.readFileSync(path.join(root, 'js/machine-beasts-ui.js'), 'utf8');
 vm.runInContext(source.replace('window.MACHINE_BEAST_UI = {',
-  'window.testUI = { calcTargetOptions, calcTargetPicker, calculatorInventorySelector, conversionSummary, researchReference, formatNumber }; window.MACHINE_BEAST_UI = {'), context);
+  'window.testUI = { calcTargetOptions, calcTargetPicker, calculatorInventorySelector, conversionSummary, investmentLists, itemList, researchReference, formatNumber }; window.MACHINE_BEAST_UI = {'), context);
 const ui = context.window.testUI;
 
 test('UI number formatting preserves BigInt precision and uses four-digit groups', () => {
@@ -52,6 +52,32 @@ test('loose cores remain visible without converted bodies', () => {
   const html = ui.conversionSummary(null, { returned: 0, spent: 40, reused: 40, externalDeficit: 0, remaining: 5, looseOwned: 45, estimatedBoxes: 0, unpriced: false }, 'loose');
   assert.match(html.replace(/<[^>]*>/g, ''), /已有散装神核45/);
   assert.doesNotMatch(html, /改造神核未计价/);
+});
+
+test('Yueliao single plan groups final forms and shows actual conversion endpoints', () => {
+  const d=context.MACHINE_BEAST_DATA, c=context.MACHINE_BEAST_CORE;
+  const beast=d.beasts.find(b=>b.id==='mechanical-yueliao');
+  const result=c.calculateInvestmentPlan(d,beast,{inventory:{none:{2:1,3:1,4:1,5:1,6:1,7:1}}},{targetLevel:25,newRankMode:'zeroToSeven',convertOwnedInventory:true});
+  assert.equal(result.totals.newInvestedCount,10);
+  assert.equal(result.totals.overflow,380);
+  assert.equal(result.totals.awakeningBlueprints,2281);
+  const items=result.selected.ownedItems;
+  const list=ui.itemList(items,'','owned');
+  assert.match(list,/7阶×3/);
+  assert.equal((list.match(/7阶×/g)||[]).length,1);
+  const conversion=ui.conversionSummary(result.inventoryConversion,result.modificationCores,'sample',items);
+  for(const text of ['加工前','加工投入','2阶×1','5阶×1','0阶×2','7阶×2']) assert.ok(conversion.includes(text),text);
+  assert.doesNotMatch(conversion,/返还神核|machine-core-ledger|7阶×3|2阶0改/);
+});
+
+test('new investment combines equal output shapes without hiding mixed body sources', () => {
+  const form={source:'new',rank:8,modificationId:'none',researchEach:150504,sevenRankEquivalent:2};
+  const list=ui.itemList([{...form,count:1,converted:true,ownedBaseBodies:1,newBaseBodies:1},{...form,count:2}],'',true);
+  assert.match(list,/8阶×3/);
+  assert.match(list,/其中1只混合投入：库存1＋新增1/);
+  assert.equal((list.match(/<li>/g)||[]).length,1);
+  assert.match(ui.investmentLists([],[{...form,count:1,ownedBaseBodies:1,newBaseBodies:1}],null,false),/库存本体用于混合投入/);
+  assert.match(ui.investmentLists([],[],{sources:[{returnedCores:40}]},true),/库存仅用于返还神核/);
 });
 
 test('research reference estimates boxes from each stage without changing core requirements', () => {

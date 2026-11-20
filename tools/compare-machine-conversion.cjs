@@ -3,6 +3,7 @@
 const assert=require('node:assert/strict');
 const {load}=require('./machine-baseline-loader.cjs');
 const revision=process.argv[2]||'d667c2b';
+const allowAllocationFix=process.argv.includes('--allow-1149-allocation-fix');
 // Correct only the independently reproduced stock-cap defect in the reference,
 // so that the performance changes are still checked against the old solver.
 const stockRule='zeroTotalFee=bestFee===0&&(price===0||hi<=stock);';
@@ -14,7 +15,26 @@ const before=load(revision),reference=load(revision,(file,source)=>{
 let seed=1147,singles=0,schools=0,frontiers=0,pages=0;
 const oldStockDefects=[];
 const random=n=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return (seed>>>8)%n;};
-function same(a,b,label){assert.equal(JSON.stringify(a),JSON.stringify(b),label);}
+function comparable(value){
+  if(Array.isArray(value))return value.map(comparable);
+  if(!value||typeof value!=='object')return value;
+  const ledger=value.modificationCores, conversion=value.inventoryConversion;
+  if(ledger){
+    assert.equal(ledger.looseOwned+ledger.returned+ledger.externalDeficit,ledger.spent+ledger.remaining);
+    assert.equal(ledger.reused,Math.min(ledger.spent,ledger.looseOwned+ledger.returned));
+  }
+  if(conversion){
+    assert.equal(conversion.sources.reduce((n,s)=>n+s.returnedCores,0),conversion.modificationCores.returned);
+    assert.equal(conversion.sources.reduce((n,s)=>n+s.usedBaseBodies,0),conversion.usedBaseBodies);
+    assert.equal(conversion.sources.reduce((n,s)=>n+s.remainingBaseBodies,0),conversion.remainingBaseBodies);
+    assert.ok(conversion.sources.every(s=>s.usedBaseBodies+s.remainingBaseBodies===s.baseBodies));
+  }
+  // 1.1.49 intentionally changed which original items fund identical final
+  // investments and the owned/new split of mixed modified outputs.
+  const omitted=new Set(['unused','inventoryConversion','modificationCores','ownedModified','newModified','ownedModifiedInvestedCount','newModifiedInvestedCount']);
+  return Object.fromEntries(Object.entries(value).filter(([key])=>!omitted.has(key)).map(([key,entry])=>[key,comparable(entry)]));
+}
+function same(a,b,label){assert.equal(JSON.stringify(allowAllocationFix?comparable(a):a),JSON.stringify(allowAllocationFix?comparable(b):b),label);}
 for(let iteration=0;iteration<180;iteration++){
   const quality=iteration%4===0?'purple':'orange',modifications=['none','initial','heaven','immortal','saint','fullDivine'].map(id=>({id}));
   const beast={id:'a',name:'A',schoolId:'s',quality,tier:quality==='orange'?'橙一':'紫色',maxLevel:3,maxRank:8,fragmentsPerBody:4,contributionPerFragment:3,effects:[{level:1,text:'A'},{level:2,text:'B'}]};
@@ -42,4 +62,4 @@ for(let iteration=0;iteration<180;iteration++){
     }
   }
 }
-console.log(JSON.stringify({baseline:revision,seed:1147,singles,schools,frontiers,pages,oldStockDefects,comparison:'entire JSON including every bounded page against baseline with only the verified stock-cap defect corrected',result:'identical'}));
+console.log(JSON.stringify({baseline:revision,seed:1147,singles,schools,frontiers,pages,oldStockDefects,comparison:allowAllocationFix?'unchanged plans and every bounded page; corrected 1.1.49 allocation fields checked for resource conservation':'entire JSON including every bounded page against baseline with only the verified stock-cap defect corrected',result:'identical'}));

@@ -992,8 +992,9 @@ test("机关兽新增投入突出需求，资料图表使用纵向自适应卡�
   const css = fs.readFileSync(path.join(__dirname, "css", "machine-beasts.css"), "utf8");
 
   assert.match(ui, /emphasisClass[\s\S]*?"machine-owned-investment"[\s\S]*?"machine-investment-demand"/);
-  assert.match(ui, /itemList\(result\.selected\.ownedItems,[\s\S]*?"owned"\)/);
-  assert.match(ui, /itemList\(result\.selected\.newItems,[\s\S]*?true\)/);
+  assert.match(ui, /investmentLists\(result\.selected\.ownedItems, result\.selected\.newItems,/);
+  assert.match(ui, /itemList\(ownedItems, empty, 'owned'\)/);
+  assert.match(ui, /itemList\(newItems, '无需新增机关兽', true\)/);
   assert.match(ui, /machine-threshold-grid/);
   assert.match(ui, /machine-research-card-grid/);
   assert.match(ui, /machine-beast-reference-grid/);

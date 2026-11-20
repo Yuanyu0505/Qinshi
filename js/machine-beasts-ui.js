@@ -900,6 +900,14 @@
       '</article><article' + attributes + '><h3>' + (mixed ? '含新增本体的投入' : '新增投入') + '</h3>' + itemList(newItems, '无需新增机关兽', true) + '</article>';
   }
 
+  function finalInvestment(ownedItems, newItems) {
+    var items = ownedItems.concat(newItems);
+    if (!items.length) return '';
+    return '<div class="machine-final-investment"><b>最终投入组合</b> ' + groupInvestmentItems(items).map(function (item) {
+      return escapeHtml(itemRequirementLabel(item));
+    }).join('、') + '</div>';
+  }
+
   function conversionSummary(conversion, cores, key, items) {
     var sources = conversion && conversion.sources || [];
     var hasCores = cores && (cores.looseOwned || cores.returned || cores.spent || cores.externalDeficit || cores.remaining);
@@ -927,15 +935,24 @@
         line('加工投入', outputs.length ? forms(outputs) : '无') +
         (remaining.length ? line('加工剩余', forms(groupInvestmentItems(remaining))) : '') + '</dl>';
       var paths = sources.map(function (source, index) {
-        return { origin: inputs[index], targets: source.bodyTargets };
-      }).filter(function (path) { return path.targets && path.targets.length; }).sort(function (left, right) {
+        return { origin: inputs[index], source: source, targets: source.bodyTargets };
+      }).filter(function (path) { return path.targets; }).sort(function (left, right) {
         return comparePlanForms(left.origin, right.origin);
       });
       if (paths.length) body += '<dl class="machine-conversion-flow">' +
         paths.map(function (path) {
-          return line(forms([path.origin]), path.targets.slice().sort(comparePlanForms).map(function (target) {
-            return '<span>供' + target.rank + '阶投入 · ' + formatNumber(target.bodies) + '份折算本体</span>';
-          }).join(''));
+          var s = path.source, base = Math.min(path.origin.rank, 7);
+          var steps = '<span>→ ' + base + '阶0改×' + formatNumber(s.baseBodies) +
+            (s.returnedCores ? '（返还' + formatNumber(s.returnedCores) + '神核）' : '') + '</span>';
+          var branches = path.targets.slice().sort(comparePlanForms).map(function (target) {
+            var mod = target.modificationId && target.modificationId !== 'none' ? '（' + modificationName(target.modificationId) + '）' : '';
+            var targetLabel = target.rank > 7 ? '供' + target.rank + '阶重组投入 · ' + formatNumber(target.bodies) + '份折算本体' :
+              '供' + target.rank + '阶投入×' + formatNumber(target.bodies);
+            return escapeHtml(targetLabel + mod);
+          });
+          if(s.remainingBaseBodies)branches.push('剩余' + base + '阶0改×' + formatNumber(s.remainingBaseBodies));
+          if(branches.length)steps += '<span>→ ' + branches.join(' ＋ ') + '</span>';
+          return line(forms([path.origin]), steps);
         }).join('') + '</dl>';
     }
     if (hasCores) {
@@ -976,6 +993,7 @@
       '<div><span>溢出研发度</span><b>' + formatNumber(result.totals.overflow) + '</b></div><div><span>预计达到</span><b>' + result.totals.projectedLevel + '级</b></div></div>' +
       '<div class="machine-result-metrics machine-resource-metrics"><div><span>觉醒神图</span><b>' + formatNumber(result.totals.awakeningBlueprints) + '</b></div><div><span>机关破片</span><b>' + formatNumber(result.totals.organPieces) + '</b></div>' +
       '<div><span>本体缺口</span><b>' + result.shortage.bodyEquivalent + '本体</b></div><div><span>机关兽碎片缺口</span><b>' + formatNumber(result.shortage.fragments) + '</b></div>' + exchange + '</div>') +
+      finalInvestment(result.selected.ownedItems, result.selected.newItems) +
       '<div class="machine-result-columns">' + investmentLists(result.selected.ownedItems, result.selected.newItems, result.inventoryConversion, false) + '</div>' + conversionSummary(result.inventoryConversion, result.modificationCores, detailKey, result.selected.ownedItems.concat(result.selected.newItems)) +
       investmentInventoryLimits(detailKey, beastById(state.calcBeastId), state.calcDraft, state.singleInventoryPolicy, state.singleInventoryPolicy && state.singleInventoryPolicy.useOwnedInventory) +
       '<p class="machine-final-effect">最终最高生效效果：' + (finalEffect ? finalEffect.level + '级档位 · ' + escapeHtml(finalEffect.text) : '尚未解锁效果') + '</p>' +

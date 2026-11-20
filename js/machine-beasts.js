@@ -597,27 +597,44 @@
     });
     var processing=[],mandatoryConverted=0;
     var pending=rawItems.filter(function(i){return i.source!=='owned';}).sort(function(a,b){
-      return pool.rankConstrained ? b.rank-a.rank : (a.source==='owned-processed'?0:1)-(b.source==='owned-processed'?0:1);
+      return b.rank-a.rank||modificationCoreNeed(data,b.modificationId)-modificationCoreNeed(data,a.modificationId);
     });
+    // For a fixed legal final vector, free-mode stock is fungible in
+    // folded bodies. Reserve each rank's maximum share before matching any
+    // lower-rank originals. Every share consumes the same common budget,
+    // so maximizing this prefix cannot reduce a higher share later.
+    var rankShares=new Map();
+    if(!pool.rankConstrained){
+      var budget=remaining.reduce(function(n,o){return n+o.count*o.weight;},0);
+      pending.forEach(function(i){
+        var used=Math.min(budget,i.count*baseBodies(i.rank));
+        rankShares.set(i.rank,(rankShares.get(i.rank)||0)+used);
+        budget-=used;
+      });
+    }
     pending.forEach(function(i){
       var weight=baseBodies(i.rank),same=remaining.find(function(o){return o.rank===i.rank&&o.modificationId===i.modificationId;});
       var required=i.source==='owned-processed'||pool.rankConstrained&&i.rank>0;
       var credit=remaining.reduce(function(n,o){return n+o.count*o.weight;},0),free=required?Infinity:Math.max(0,Math.floor((credit-mandatoryConverted)/weight));
+      if(!pool.rankConstrained)free=Math.floor((rankShares.get(i.rank)||0)/weight);
       var unchanged=same?Math.min(i.count,same.count,free):0;
+      if(!pool.rankConstrained)rankShares.set(i.rank,rankShares.get(i.rank)-unchanged*weight);
       if(unchanged){same.count-=unchanged;items.push(Object.assign({},i,{source:'owned',count:unchanged}));}
       if(i.count>unchanged){processing.push(Object.assign({},i,{count:i.count-unchanged}));if(required)mandatoryConverted+=(i.count-unchanged)*weight;}
     });
-    var credit=remaining.reduce(function(n,o){return n+o.count*o.weight;},0),usedProcessed=0,rankDemands=[];
+    var credit=remaining.reduce(function(n,o){return n+o.count*o.weight;},0),usedProcessed=0;
     processing.forEach(function(i){
-      var weight=baseBodies(i.rank),requested=i.count,owned=Math.min(requested,Math.floor(credit/weight));
+      var weight=baseBodies(i.rank),requested=i.count,share=pool.rankConstrained?credit:rankShares.get(i.rank);
+      var owned=Math.min(requested,Math.floor(share/weight));
       if((i.source==='owned-processed'||pool.rankConstrained&&i.rank>0)&&owned<requested)throw Error('库存本体不足，不能以新增本体加工到此阶数');
       if(pool.rankConstrained&&i.rank>0&&owned){
         if(i.rank>pool.maximumOwnedRank)throw Error('未开启高阶库存重组');
-        rankDemands.push({rank:i.rank,bodies:owned*weight});
       }
       if(owned){items.push(Object.assign({},i,{source:'owned',count:owned,converted:true}));credit-=owned*weight;usedProcessed+=owned*weight;}
       var left=requested-owned;
-      if(left&&credit){var used=credit;items.push(Object.assign({},i,{source:'new',count:1,converted:true,ownedBaseBodies:used,newBaseBodies:weight-used}));usedProcessed+=used;credit=0;left--;}
+      var mixed=left?Math.min(credit,share-owned*weight):0;
+      if(left&&mixed){items.push(Object.assign({},i,{source:'new',count:1,converted:true,ownedBaseBodies:mixed,newBaseBodies:weight-mixed}));usedProcessed+=mixed;credit-=mixed;left--;}
+      if(!pool.rankConstrained)rankShares.set(i.rank,share-owned*weight-mixed);
       if(left)items.push(Object.assign({},i,{source:'new',count:left}));
     });
     var spent=processing.reduce(function(n,i){return n+i.count*modificationCoreNeed(data,i.modificationId);},0),loose=pool.looseCores||0,needed=usedProcessed,coreNeeded=Math.max(0,spent-loose),returned=0;
@@ -625,7 +642,13 @@
     // bodies. Selecting them independently would needlessly reprocess plain stock.
     var usedBySource=remaining.map(function(){return 0;});
     var reclaim=remaining.map(function(){return 0;});
-    var targetsBySource=pool.rankConstrained?remaining.map(function(){return new Map();}):null;
+    var targetsBySource=remaining.map(function(){return [];});
+    var targets=items.filter(function(i){return i.converted;}).map(function(i){
+      return {rank:i.rank,modificationId:i.modificationId,bodies:i.source==='owned'?i.count*baseBodies(i.rank):i.ownedBaseBodies};
+    });
+    // Restricted high targets require a nested supply threshold; free
+    // targets and rank zero can receive any remaining eligible body.
+    var rankDemands=pool.rankConstrained?targets.filter(function(t){return t.rank>0;}):[];
     rankDemands.sort(function(a,b){return b.rank-a.rank;}).forEach(function(demand){
       var left=demand.bodies;
       function assign(o,index,maximum){
@@ -635,7 +658,7 @@
         var count=Math.ceil(usedBySource[index]/o.weight)-reclaim[index];
         reclaim[index]+=count;
         coreNeeded=Math.max(0,coreNeeded-count*o.cores);
-        if(used)targetsBySource[index].set(demand.rank,(targetsBySource[index].get(demand.rank)||0)+used);
+        if(used)targetsBySource[index].push({rank:demand.rank,modificationId:demand.modificationId,bodies:used});
         left-=used;needed-=used;
       }
       // Reuse already split bodies, then favor a source which also supplies
@@ -647,6 +670,8 @@
       remaining.forEach(function(o,index){assign(o,index,Infinity);});
       if(left)throw Error('仅0阶：库存阶数不足，不能使用未核实的返料升阶');
     });
+    var unassignedTargets=targets.filter(function(t){return !pool.rankConstrained||t.rank===0;});
+    var targetIndex=0,targetUsed=0;
     remaining.forEach(function(o,index){
       var count=o.cores?Math.min(o.count-reclaim[index],Math.ceil(coreNeeded/o.cores)):0;
       coreNeeded=Math.max(0,coreNeeded-count*o.cores);
@@ -666,10 +691,16 @@
       if(count){
         var supplied=count*o.weight,used=usedBySource[index],refund=count*o.cores,left=supplied-used;returned+=refund;remainingBase+=left;
         var source=Object.assign({},o,{count:count,baseBodies:supplied,sevenRankEquivalent:o.weight,returnedCores:refund,usedBaseBodies:used,remainingBaseBodies:left});
-        if(targetsBySource){
-          source.bodyTargets=Array.from(targetsBySource[index],function(entry){return {rank:entry[0],bodies:entry[1]};});
-          var lowBodies=used-source.bodyTargets.reduce(function(sum,target){return sum+target.bodies;},0);
-          if(lowBodies)source.bodyTargets.push({rank:0,bodies:lowBodies});
+        source.originId=beast.id+'/'+o.rank+'/'+o.modificationId;
+        source.bodyTargets=targetsBySource[index];
+        var unmatched=used-source.bodyTargets.reduce(function(sum,target){return sum+target.bodies;},0);
+        while(unmatched){
+          var target=unassignedTargets[targetIndex];
+          if(!target)throw Error('库存加工去向不守恒');
+          var assigned=Math.min(unmatched,target.bodies-targetUsed);
+          source.bodyTargets.push({rank:target.rank,modificationId:target.modificationId,bodies:assigned});
+          unmatched-=assigned;targetUsed+=assigned;
+          if(targetUsed===target.bodies){targetIndex++;targetUsed=0;}
         }
         sources.push(source);o.count-=count;
         if(left){var rank=o.rank>7?7:o.rank;unused.push({rank:rank,modificationId:'none',count:left,researchEach:researchFor(data,beast,rank,'none'),converted:true});}

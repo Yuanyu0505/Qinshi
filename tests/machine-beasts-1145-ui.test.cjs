@@ -64,7 +64,7 @@ test('zero mode states the material verification boundary and lists only real ra
   assert.equal(ui.rankMaterialsNote(false),'');
   const flow = ui.conversionSummary({sources:[{rank:9, modificationId:'fullDivine', count:1, baseBodies:4, bodyTargets:[{rank:5,bodies:1},{rank:7,bodies:1}], remainingBaseBodies:2}]},null,'test',
     [{rank:5,count:1,modificationId:'none',source:'owned',converted:true},{rank:7,count:1,modificationId:'none',source:'owned',converted:true}]);
-  assert.match(flow, /神改）9阶×1[\s\S]*?供7阶投入 · 1份折算本体[\s\S]*?供5阶投入 · 1份折算本体/);
+  assert.match(flow, /神改）9阶×1[\s\S]*?7阶0改×4[\s\S]*?供7阶投入×1[\s\S]*?供5阶投入×1[\s\S]*?剩余7阶0改×2/);
   assert.doesNotMatch(flow,/升阶材料返还|NaN|undefined/);
   const caps = ui.investmentInventoryLimits('test',{id:'war-demon'},{inventory:{none:{7:4},initial:{7:1}}},{limits:{none:{7:2}}},true);
   assert.match(caps,/（升神）7阶：库存 1只／最多使用 1只[\s\S]*?（0改）7阶：库存 4只／最多使用 2只/);
@@ -94,11 +94,11 @@ test('Yueliao single plan groups final forms and shows actual conversion endpoin
   assert.equal(result.totals.awakeningBlueprints,2281);
   const items=result.selected.ownedItems;
   const list=ui.itemList(items,'','owned');
-  assert.match(list,/7阶×3/);
+  assert.match(list,/7阶×6/);
   assert.equal((list.match(/7阶×/g)||[]).length,1);
   const conversion=ui.conversionSummary(result.inventoryConversion,result.modificationCores,'sample',items);
-  for(const text of ['加工前','加工投入','2阶×1','5阶×1','0阶×2','7阶×2']) assert.ok(conversion.includes(text),text);
-  assert.doesNotMatch(conversion,/返还神核|machine-core-ledger|7阶×3|2阶0改/);
+  for(const text of ['加工前','加工投入','2阶×1','5阶×1','7阶×5','供7阶投入×1']) assert.ok(conversion.includes(text),text);
+  assert.doesNotMatch(conversion,/返还神核|machine-core-ledger|0阶×2/);
 });
 
 test('new investment combines equal output shapes without hiding mixed body sources', () => {

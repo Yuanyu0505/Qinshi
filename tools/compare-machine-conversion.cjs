@@ -32,8 +32,18 @@ function comparable(value){
   }
   // 1.1.49 intentionally changed which original items fund identical final
   // investments and the owned/new split of mixed modified outputs.
-  const omitted=new Set(['unused','inventoryConversion','modificationCores','ownedModified','newModified','ownedModifiedInvestedCount','newModifiedInvestedCount']);
-  return Object.fromEntries(Object.entries(value).filter(([key])=>!omitted.has(key)).map(([key,entry])=>[key,comparable(entry)]));
+  const omitted=new Set(['unused','inventoryConversion','modificationCores','ownedModified','newModified','ownedModifiedInvestedCount','newModifiedInvestedCount','ownedPhysical','newPhysical','ownedPhysicalCount','newPhysicalCount']);
+  function shapes(items){
+    const counts=new Map();
+    for(const item of items){
+      const key=item.rank+'/'+item.modificationId;
+      counts.set(key,(counts.get(key)||0)+item.count);
+    }
+    return [...counts].sort();
+  }
+  return Object.fromEntries(Object.entries(value).filter(([key,entry])=>!omitted.has(key)&&!(key==='stableKey'&&entry.startsWith('['))).map(([key,entry])=>[
+    key,key==='items'?shapes(entry):key==='selected'?shapes(entry.ownedItems.concat(entry.newItems)):comparable(entry)
+  ]));
 }
 function same(a,b,label){assert.equal(JSON.stringify(allowAllocationFix?comparable(a):a),JSON.stringify(allowAllocationFix?comparable(b):b),label);}
 for(let iteration=0;iteration<180;iteration++){

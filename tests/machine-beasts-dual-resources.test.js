@@ -38,7 +38,7 @@ test('zero mode never upgrades inventory without verified materials; free mode s
   const unchanged=CORE.allocateConvertedInventory(DATA,beast,restricted.pool,[item(5,'none',1)]);
   assert.equal(unchanged.inventoryConversion.sources.length,0);
   const downgraded=CORE.allocateConvertedInventory(DATA,beast,restricted.pool,[item(3,'none',1)]);
-  assert.deepEqual(downgraded.inventoryConversion.sources[0].bodyTargets,[{rank:3,bodies:1}]);
+  assert.deepEqual(downgraded.inventoryConversion.sources[0].bodyTargets,[{rank:3,bodies:1,modificationId:'none'}]);
   assert.equal(downgraded.inventoryConversion.rankMaterialsUnverified,true);
   const excluded=domain({none:{7:1,5:1}},{ownedLimits:{none:{7:0}}});
   assert.throws(()=>CORE.allocateConvertedInventory(DATA,beast,excluded.pool,[item(7,'none',1)]),/返料升阶/);
@@ -52,13 +52,13 @@ test('zero mode can downgrade one body but cannot assume that it funds another u
   assert.throws(()=>CORE.allocateConvertedInventory(DATA,beast,d.pool,[item(6,'none',2)]),/返料升阶/);
   const plan=CORE.allocateConvertedInventory(DATA,beast,d.pool,[item(6,'none',1),item(5,'none',1)]);
   assert.equal(plan.newCount,0);
-  assert.deepEqual(plan.inventoryConversion.sources.map(s=>[s.rank,s.bodyTargets]),[[7,[{rank:6,bodies:1}]]]);
+  assert.deepEqual(plan.inventoryConversion.sources.map(s=>[s.rank,s.bodyTargets]),[[7,[{rank:6,bodies:1,modificationId:'none'}]]]);
 });
 
 test('rank matching reuses the same source for eligible bodies and required cores',()=>{
   const d=domain({none:{6:1},initial:{10:1}});
   const plan=CORE.allocateConvertedInventory(DATA,beast,d.pool,[item(6,'initial',1)]);
-  assert.deepEqual(plan.inventoryConversion.sources.map(s=>[s.rank,s.returnedCores,s.bodyTargets]),[[10,40,[{rank:6,bodies:1}]]]);
+  assert.deepEqual(plan.inventoryConversion.sources.map(s=>[s.rank,s.returnedCores,s.bodyTargets]),[[10,40,[{rank:6,bodies:1,modificationId:'initial'}]]]);
   assert.ok(plan.unused.some(s=>s.rank===6&&s.modificationId==='none'&&!s.converted));
 });
 
@@ -71,7 +71,7 @@ test('zero-mode high assembly uses only 7+ components with its own switch',()=>{
   const eligible=domain({none:{7:2}},{allowNewHighRanks:true});
   const plan=CORE.allocateConvertedInventory(DATA,beast,eligible.pool,[item(8,'none',1)]);
   assert.equal(plan.newCount,0);
-  assert.deepEqual(plan.inventoryConversion.sources[0].bodyTargets,[{rank:8,bodies:2}]);
+  assert.deepEqual(plan.inventoryConversion.sources[0].bodyTargets,[{rank:8,bodies:2,modificationId:'none'}]);
 });
 
 test('Yueliao level 25 distinguishes zero-material input from free 0–7 inventory processing',()=>{

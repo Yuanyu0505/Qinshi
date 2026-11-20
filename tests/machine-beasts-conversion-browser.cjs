@@ -60,6 +60,21 @@ for(const [width,fallback] of [[390,false],[1280,false]])test('convertible stock
     assert.match(await section.locator('.machine-inventory-conversion').innerText(),/供5阶投入/);
     if(process.env.MACHINE_BEAST_SCREENSHOTS)await section.screenshot({path:path.join(process.env.MACHINE_BEAST_SCREENSHOTS,'zero-'+width+'.png')});
     assert.equal(await getAccountItem(page,'qinshi_machine_beasts_progress_v1'),saved);
+    await page.evaluate(()=>{
+      const view=window.MACHINE_BEAST_UI.captureView(),inventory={none:{8:1,9:1,10:1}};
+      view.calcDraft={research:0,fragments:0,showHighRanks:true,inventory};
+      view.singleInventoryPolicy={useOwnedInventory:true,limits:inventory};
+      view.singleNewRankMode='zeroToSeven';view.calcResult=null;window.MACHINE_BEAST_UI.restoreView(view);
+    });
+    await page.locator('[data-machine-action="calculate"]').click();
+    await page.waitForFunction(()=>window.MACHINE_BEAST_UI.captureView().calcResult!==null);
+    const repaired=await page.evaluate(()=>window.MACHINE_BEAST_UI.captureView().calcResult);
+    assert.deepEqual(repaired.selected.newItems.map(i=>[i.rank,i.count]),[[0,2]]);
+    const pathPanel=section.locator('.machine-inventory-conversion');
+    await pathPanel.evaluate(node=>{node.open=true;});
+    assert.match(await pathPanel.innerText(),/8阶×1.*→ 7阶0改×2.*→ 供7阶投入×1 ＋ 供6阶投入×1/s);
+    if(process.env.MACHINE_BEAST_SCREENSHOTS)await section.screenshot({path:path.join(process.env.MACHINE_BEAST_SCREENSHOTS,'group1-'+width+'.png')});
+    assert.equal(await getAccountItem(page,'qinshi_machine_beasts_progress_v1'),saved);
     assert.deepEqual(errors,[]);
   }finally{await context.close();}
 });

@@ -986,12 +986,10 @@
     var account = ACCOUNT_STORAGE.currentAccount && ACCOUNT_STORAGE.currentAccount(), accountId = account && account.id;
     var page = pages[key];
     if (!page || page.plan !== plan || page.result !== state.schoolResult || page.accountId !== accountId || page.sequence !== calculationSequence) {
-      var first = PLANNER.equivalentPlansPage(DATA, plan, '0', 10);
       page = pages[key] = { plan: plan, result: state.schoolResult, accountId: accountId, sequence: calculationSequence,
-        nextOffset: first.nextOffset, hasMore: first.hasMore, count: first.plans.length, busy: false,
-        html: renderEquivalentAlternatives(first.plans, key, 0), container: null };
+        nextOffset: '0', hasMore: true, count: 0, busy: false, batches: [], container: null };
     }
-    return '<section class="machine-equivalent-materials" data-equivalent-index="' + index + '"><h3>其他同等最优组合 · 另' + formatNumber(BigInt(plan.equivalents.count)-1n) + '套</h3><p class="muted-tip">各组合互相替代，请勿叠加投入。</p><div data-equivalent-items>' + page.html + '</div><p class="muted-tip" data-equivalent-count>' + equivalentCountText(page) + '</p><button type="button" class="seg" data-machine-action="more-equivalents" data-plan-index="' + index + '"' + (page.hasMore ? '' : ' hidden') + '>继续显示其他组合（每次10套）</button></section>';
+    return '<section class="machine-equivalent-materials" data-equivalent-index="' + index + '"><h3>其他同等最优组合 · 另' + formatNumber(BigInt(plan.equivalents.count)-1n) + '套</h3><p class="muted-tip">各组合互相替代，请勿叠加投入。</p><div data-equivalent-items>' + page.batches.join('') + '</div><p class="muted-tip" data-equivalent-count>' + equivalentCountText(page) + '</p><button type="button" class="seg" data-machine-action="more-equivalents" data-plan-index="' + index + '"' + (page.hasMore ? '' : ' hidden') + '>' + (page.count ? '继续显示其他组合（每次10套）' : '加载首批其他组合') + '</button></section>';
   }
 
   function equivalentCountText(page) {
@@ -1028,7 +1026,7 @@
     page.busy = true;
     button.setAttribute('aria-disabled', 'true');
     button.setAttribute('aria-busy', 'true');
-    var nextOffset = page.nextOffset, hasMore = page.hasMore, alternatives = [];
+    var nextOffset = page.nextOffset, hasMore = page.hasMore, parts = [];
     // One exact alternative per task: yield between graph decodes and allow cancellation.
     function decodeNext() {
       if (!current()) {
@@ -1039,16 +1037,16 @@
       try {
         var next = PLANNER.equivalentPlansPage(DATA, plan, nextOffset, 1);
         nextOffset = next.nextOffset; hasMore = next.hasMore;
-        alternatives = alternatives.concat(next.plans);
-        if (hasMore && alternatives.length < 10) { setTimeout(decodeNext, 0); return; }
-        var html = renderEquivalentAlternatives(alternatives, key, page.count);
+        if(next.plans.length)parts.push(renderEquivalentAlternatives(next.plans, key, page.count + parts.length));
+        if (hasMore && parts.length < 10) { setTimeout(decodeNext, 0); return; }
+        var html = parts.join('');
         items.insertAdjacentHTML('beforeend', html);
-        page.html += html; page.count += alternatives.length; page.nextOffset = nextOffset; page.hasMore = hasMore;
+        page.batches.push(html); page.count += parts.length; page.nextOffset = nextOffset; page.hasMore = hasMore;
         old.querySelector('[data-equivalent-count]').textContent = equivalentCountText(page);
         // Keep the final focused button in the DOM rather than removing its focus target.
         button.hidden = !hasMore && document.activeElement !== button;
         button.setAttribute('aria-disabled', String(!hasMore));
-        if (!hasMore) button.textContent = '已显示全部其他组合';
+        button.textContent = hasMore ? '继续显示其他组合（每次10套）' : '已显示全部其他组合';
         button.removeAttribute('aria-busy');
         page.busy = false;
       } catch (error) {
@@ -1057,6 +1055,15 @@
       }
     }
     setTimeout(decodeNext, 0);
+  }
+
+  function prepareFirstEquivalentPages() {
+    if(state.mode!=='calculator'||state.calculatorMode!=='school'||!state.schoolResult||el.calculatorResult.hidden)return;
+    (state.schoolResult.plans||[]).forEach(function(plan,index){
+      if(!plan.equivalents||BigInt(plan.equivalents.count)<=1n)return;
+      var page=equivalentPages[equivalentPageKey(plan)];
+      if(page&&!page.count)showMoreEquivalentMaterials(index);
+    });
   }
 
   function renderSchoolCalculatorResult(result, scroll) {
@@ -1074,6 +1081,7 @@
       el.calculatorResult.innerHTML = schoolComparison(result) + result.plans.map(function (plan, index) { return renderSchoolPlan(plan, result, index); }).join("");
     }
     finishResultRender(focused, scroll);
+    prepareFirstEquivalentPages();
   }
 
   function thresholdReference() {
@@ -1234,6 +1242,7 @@
     el.reference.hidden = mode !== "reference";
     if (mode === "progress" && !rendered.progress) renderProgress();
     if (mode === "calculator" && !rendered.calculator) renderCalculatorControls();
+    if (mode === "calculator") prepareFirstEquivalentPages();
     if (mode === "reference" && !rendered.reference) renderReference();
   }
 

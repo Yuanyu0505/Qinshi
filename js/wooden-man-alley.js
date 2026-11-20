@@ -148,6 +148,15 @@
     return 1;
   }
 
+  function availableToolUses(toolId, tier, resources, stageLimits, tierUsage) {
+    var cost = toolCost(toolId, tier);
+    var limit = stageLimits && stageLimits[tier.id] && stageLimits[tier.id][toolId];
+    var used = tierUsage && tierUsage[tier.id] && tierUsage[tier.id][toolId] || 0;
+    if (limit && limit.allowed === false) return 0;
+    var cap = limit && limit.max != null ? Math.max(0, limit.max - used) : Infinity;
+    return Math.floor(Math.min(resources[toolId] || 0, cap) / cost);
+  }
+
   function compactness(cells, size) {
     if (!cells.length) return 0;
     var rows = Array(size).fill(0);
@@ -161,8 +170,10 @@
 
   function makeAction(toolId, affectedCells, position, context) {
     var unique = affectedCells.filter(function (cell, index, list) { return list.indexOf(cell) === index; });
-    var remainingAfter = Math.max(0, context.remaining - unique.length);
-    var hitProbability = context.remaining ? unique.length / context.remaining : 1;
+    var random = toolId === "bomb";
+    var coverage = random ? Math.min(5, context.remaining) : unique.length;
+    var remainingAfter = Math.max(0, context.remaining - coverage);
+    var hitProbability = context.remaining ? coverage / context.remaining : 1;
     var continuation = remainingAfter ? (remainingAfter + 1) / 2 : 0;
     var expectedAfterAction = (1 - hitProbability) * continuation;
     var cost = toolCost(toolId, context.tier);
@@ -172,12 +183,13 @@
       toolId: toolId,
       cost: cost,
       affectedCells: unique,
+      coverage: coverage,
       hitProbability: hitProbability,
       expectedSwordSaving: Math.max(0, expectedSwordSaving),
       position: position,
-      random: toolId === "bomb",
+      random: random,
       efficiency: cost ? Math.max(0, expectedSwordSaving) / cost : 0,
-      failureCompactness: compactness(failureCells, context.size),
+      failureCompactness: random ? 0 : compactness(failureCells, context.size),
       preserveRank: toolById(context.data, toolId).preserveRank
     };
   }
@@ -194,7 +206,7 @@
     if (left.expectedSwordSaving !== right.expectedSwordSaving) return right.expectedSwordSaving - left.expectedSwordSaving;
     if (left.preserveRank !== right.preserveRank) return left.preserveRank - right.preserveRank;
     if (left.failureCompactness !== right.failureCompactness) return right.failureCompactness - left.failureCompactness;
-    if (left.affectedCells.length !== right.affectedCells.length) return right.affectedCells.length - left.affectedCells.length;
+    if (left.coverage !== right.coverage) return right.coverage - left.coverage;
     if (left.toolId !== right.toolId) return left.toolId.localeCompare(right.toolId);
     return positionOrder(left, size) - positionOrder(right, size);
   }
@@ -219,13 +231,14 @@
     var actions = [];
 
     function canUse(toolId) {
-      return allowed[toolId] !== false && resources[toolId] >= toolCost(toolId, tier) && remaining > 0;
+      return allowed[toolId] !== false && remaining > 0 &&
+        availableToolUses(toolId, tier, resources, source.stageLimits, source.tierUsage) > 0;
     }
 
     if (canUse("woodSword")) actions.push(makeAction("woodSword", unopened.slice(0, 1), null, context));
     if (canUse("mirror")) actions.push(makeAction("mirror", unopened.slice(0, 1), null, context));
     if (canUse("ironSword")) actions.push(makeAction("ironSword", unopened.slice(), null, context));
-    if (canUse("bomb")) actions.push(makeAction("bomb", unopened.slice(0, Math.min(5, remaining)), null, context));
+    if (canUse("bomb")) actions.push(makeAction("bomb", [], null, context));
 
     if (canUse("horizontalQi")) {
       for (var row = 0; row < size; row += 1) {
@@ -277,6 +290,7 @@
     normalizeProgress: normalizeProgress,
     advanceFloor: advanceFloor,
     remainingDays: remainingDays,
+    availableToolUses: availableToolUses,
     analyzeCurrentBoard: analyzeCurrentBoard
   };
 });

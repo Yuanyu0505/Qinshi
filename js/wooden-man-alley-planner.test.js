@@ -9,6 +9,136 @@ function progress(overrides = {}) {
   return CORE.normalizeProgress(Object.assign({ currentFloor: 1 }, overrides), DATA);
 }
 
+test("a non-greedy line order covers all five remaining cells", () => {
+  const saved = progress({ openedCells: [1, 3, 5, 7], resources: { horizontalQi: 1, verticalQi: 2 } });
+  const result = PLANNER.planToTarget({ progress: saved, targetFloor: 1, risk: "worst" }, DATA, CORE);
+  assert.strictEqual(result.achievable, true);
+  assert.strictEqual(result.demand.worst, 0);
+  assert.strictEqual(result.currentFloorAdvice.recommendation.position.row, 1);
+});
+
+test("bomb first branches on all 126 four-cell remainders; line first is better", () => {
+  const input = { progress: progress({ resources: { bomb: 1, horizontalQi: 1 } }), risk: "worst" };
+  let sum = 0, worst = 0, cases = 0;
+  for (let a=0;a<9;a++) for (let b=a+1;b<9;b++) for (let c=b+1;c<9;c++) for (let d=c+1;d<9;d++) {
+    const counts = [0,0,0];
+    [a,b,c,d].forEach(cell => counts[Math.floor(cell/3)]++);
+    const remain = 4 - Math.max(...counts);
+    sum += remain / 9 * (remain + 1) / 2;
+    worst = Math.max(remain,worst);
+    cases++;
+  }
+  assert.strictEqual(cases,126);
+  assert.ok(Math.abs(sum/cases-19/63)<1e-12);
+  const bombFirst = PLANNER.evaluateSmallBoardPolicy({ ...input, firstToolId:"bomb" }, DATA, CORE);
+  const lineFirst = PLANNER.evaluateSmallBoardPolicy({ ...input, firstToolId:"horizontalQi" }, DATA, CORE);
+  assert.ok(Math.abs(bombFirst.expected-sum/cases)<1e-12);
+  assert.strictEqual(bombFirst.worst,worst);
+  assert.strictEqual(lineFirst.worst,1);
+  assert.ok(Math.abs(lineFirst.expected-1/9)<1e-12);
+  const result = PLANNER.planToTarget({ ...input, targetFloor:1 }, DATA, CORE);
+  assert.strictEqual(result.currentFloorAdvice.recommendation.toolId,"horizontalQi");
+  assert.strictEqual(result.usesBombModel,true);
+});
+
+test("scope caps also constrain the official current-floor recommendation", () => {
+  for (const limit of [{ allowed:false }, { max:0 }]) {
+    const result=PLANNER.planToTarget({ progress:progress({resources:{horizontalQi:1}}),targetFloor:1,
+      stageLimits:{"floor-1-50":{horizontalQi:limit}} }, DATA, CORE);
+    assert.ok(!result.currentFloorAdvice.actions.some(action=>action.toolId==="horizontalQi"));
+    assert.strictEqual(result.currentFloorAdvice.recommendation,null);
+    assert.strictEqual(result.stages[0].tools.horizontalQi,undefined);
+  }
+});
+
+test("an exhaustively solved bomb model can certify a shortage that a loose coverage bound misses", () => {
+  const result = PLANNER.planToTarget({
+    progress: progress({currentFloor:51,openedCells:[0,4,8,12],resources:{bomb:1,horizontalQi:1,woodSword:3}}),
+    targetFloor:51,risk:"worst"
+  }, DATA, CORE);
+  assert.strictEqual(result.planningMethod,"exact");
+  assert.strictEqual(result.usesBombModel,true);
+  assert.strictEqual(result.demand.worst,4);
+  assert.strictEqual(result.demand.lowerBound,4);
+  assert.strictEqual(result.feasibilityStatus,"insufficient");
+  assert.strictEqual(result.achievable,false);
+});
+
+test("an exhausted stage cap is not reset when reporting partial next-floor progress", () => {
+  const result=PLANNER.planReachable({progress:progress({resources:{horizontalQi:2,woodSword:6}}),risk:"worst",
+      stageLimits:{"floor-1-50":{horizontalQi:{max:1}}}}, DATA, CORE);
+  assert.strictEqual(result.completedFloor,1);
+  assert.strictEqual(result.brokenOnNextFloor,0);
+  assert.strictEqual(result.remaining.horizontalQi,1);
+  assert.strictEqual(result.upperBoundFloor,1);
+});
+
+// Independent benchmark: try each physical tool use on the remaining set,
+// without using the production planner's row/column pairing theorem.
+function coverageOracle(size) {
+  const memo = new Map();
+  function solve(cells, h, v, cross) {
+    const key = [cells.join("."),h,v,cross].join("/");
+    if (memo.has(key)) return memo.get(key);
+    let answer = cells.length;
+    function take(remainder, a, b, c) {
+      if (remainder.length < cells.length) answer = Math.min(answer,solve(remainder,a,b,c));
+    }
+    for (let i=0;i<size&&answer;i++) {
+      if (h) take(cells.filter(cell=>Math.floor(cell/size)!==i),h-1,v,cross);
+      if (v) take(cells.filter(cell=>cell%size!==i),h,v-1,cross);
+      if (cross) for (let j=0;j<size&&answer;j++) {
+        take(cells.filter(cell=>Math.floor(cell/size)!==i&&cell%size!==j),h,v,cross-1);
+      }
+    }
+    memo.set(key,answer);
+    return answer;
+  }
+  return solve;
+}
+
+test("deterministic covering agrees with independent 3x3 exhaustive and 4x4 sampled physical search", () => {
+  for (const [size,floor,samples] of [[3,1,512],[4,51,64]]) {
+    const solve=coverageOracle(size);
+    const all=Array.from({length:size*size},(_,i)=>i);
+    for (let seed=0;seed<samples;seed++) {
+      const sample=size===3?seed:Math.imul(seed+1,0x9e37)&0xffff;
+      const unopened=all.filter(i=>sample&(1<<i));
+      const H=seed%3,V=(seed>>2)%3,X=(seed>>4)%3;
+      const expected=solve(unopened,H,V,X);
+      const p=progress({currentFloor:floor,openedCells:all.filter(i=>!(sample&(1<<i))),
+        resources:{horizontalQi:H,verticalQi:V,crossQi:X}});
+      const result=PLANNER.planToTarget({progress:p,targetFloor:floor,risk:"worst"},DATA,CORE);
+      assert.strictEqual(result.demand.worst,expected,`size ${size}, mask ${sample}, H${H} V${V} X${X}`);
+      assert.strictEqual(result.planningMethod,"exact");
+    }
+  }
+});
+
+test("a bounded multi-floor witness failure is not reported as proof of infeasibility", () => {
+  const saved=progress({resources:{verticalQi:3,crossQi:1,woodSword:4}});
+  const result=PLANNER.planToTarget({progress:saved,targetFloor:2,risk:"worst"},DATA,CORE);
+  // One cross plus four swords clear floor 1 while all three vertical
+  // actions can independently clear floor 2. The current witness misses it.
+  assert.strictEqual(result.demand.worst,5);
+  assert.strictEqual(result.demand.lowerBound,4);
+  assert.strictEqual(result.achievable,null);
+  assert.strictEqual(result.feasibilityStatus,"undetermined");
+  const range=PLANNER.planReachable({progress:saved,risk:"worst"},DATA,CORE);
+  assert.strictEqual(range.completedFloor,1);
+  assert.strictEqual(range.upperBoundFloor,2);
+  assert.strictEqual(range.exact,false);
+});
+
+test("reverse planning cannot cross an adjacent floor with one missing sword", () => {
+  for (const [stock,completed] of [[24,49],[25,50],[40,50],[41,51]]) {
+    const input={progress:progress({currentFloor:49,resources:{woodSword:stock-7}}),risk:"worst"};
+    const result=PLANNER.planReachable(input,DATA,CORE);
+    assert.strictEqual(result.completedFloor,completed);
+    assert.strictEqual(result.upperBoundFloor,completed);
+  }
+});
+
 test("applies all risk modes and rounds conservative demand once", () => {
   assert.strictEqual(PLANNER.applyRisk(12.2, 25, "expected"), 12.2);
   assert.strictEqual(PLANNER.applyRisk(12.2, 25, "conservative"), 15);

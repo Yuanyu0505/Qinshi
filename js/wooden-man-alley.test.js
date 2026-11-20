@@ -126,7 +126,9 @@ test("board analysis caps bomb coverage and completes a nearly cleared board", (
   }, DATA);
   const bomb = result.actions.find(action => action.toolId === "bomb");
   const iron = result.actions.find(action => action.toolId === "ironSword");
-  assert.strictEqual(bomb.affectedCells.length, 2);
+  assert.deepStrictEqual(bomb.affectedCells, []);
+  assert.strictEqual(bomb.coverage, 2);
+  assert.strictEqual(bomb.random, true);
   assert.strictEqual(bomb.hitProbability, 1);
   assert.strictEqual(iron.hitProbability, 1);
 });

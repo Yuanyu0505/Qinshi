@@ -5,6 +5,8 @@
 })(typeof globalThis !== "undefined" ? globalThis : this, function () {
   "use strict";
 
+  var AUXILIARIES = ["ironSword", "horizontalQi", "verticalQi", "crossQi", "bomb", "mirror"];
+
   function clone(value) { return JSON.parse(JSON.stringify(value)); }
 
   function applyRisk(expectedTotal, worstTotal, risk, multiplier) {
@@ -34,16 +36,167 @@
         floor: floor,
         tier: tier,
         unopenedCells: unopenedCells,
-        survivalProbability: 1,
         initialRemaining: remaining,
         expectedBase: expected,
         worstBase: remaining,
         expectedRemaining: expected,
         worstRemaining: remaining,
+        firstAction: null,
         tools: {}
       });
     }
     return states;
+  }
+
+  function toolBudgets(state, resources, limits, core) {
+    return AUXILIARIES.map(function (id) {
+      return Math.min(state.initialRemaining, core.availableToolUses(id, state.tier, resources, limits));
+    });
+  }
+
+  function bitCount(mask) {
+    var count = 0;
+    while (mask) { mask &= mask - 1; count += 1; }
+    return count;
+  }
+
+  function expectedRemainder(initial, remaining) {
+    return initial && remaining ? remaining * (remaining + 1) / (2 * initial) : 0;
+  }
+
+  function policyOrder(left, right, risk) {
+    if (!right) return -1;
+    if (risk === "worst") return left.worst - right.worst || left.expected - right.expected;
+    return left.expected - right.expected || left.worst - right.worst;
+  }
+
+  function deterministicFloorPolicy(state, budgets) {
+    var size = state.tier.boardSize;
+    var remaining = state.initialRemaining;
+    if (!remaining) return { expected: 0, worst: 0, firstAction: null, uses: [0, 0, 0, 0, 0, 0] };
+    if (budgets[0]) return { expected: 0, worst: 0, firstAction: { toolId: "ironSword", positionOrder: 0 }, uses: [1, 0, 0, 0, 0, 0] };
+    var possibilities = 1 << size;
+    var rowMasks = [], columnMasks = [];
+    for (var mask = 0; mask < possibilities; mask += 1) {
+      var count = bitCount(mask);
+      if (count <= budgets[1] + budgets[3]) rowMasks.push({ mask: mask, count: count });
+      if (count <= budgets[2] + budgets[3]) columnMasks.push({ mask: mask, count: count });
+    }
+    var best = null;
+    rowMasks.forEach(function (rows) {
+      columnMasks.forEach(function (columns) {
+        // Each selected cross pairs one of the chosen rows with one of the
+        // chosen columns. If a real cross repeats an axis, pairing distinct
+        // axes (including additional axes if needed) only improves coverage.
+        var crosses = Math.max(0, rows.count - budgets[1], columns.count - budgets[2]);
+        if (crosses > Math.min(budgets[3], rows.count, columns.count)) return;
+        var survivors = state.unopenedCells.filter(function (cell) {
+          return (rows.mask & (1 << Math.floor(cell / size))) === 0 &&
+            (columns.mask & (1 << (cell % size))) === 0;
+        }).length;
+        var mirror = Math.min(survivors, budgets[5]);
+        var worst = survivors - mirror;
+        var count = rows.count + columns.count - crosses + mirror;
+        if (!best || worst < best.worst || worst === best.worst && count < best.count) {
+          best = { worst: worst, count: count, rows: rows.mask, columns: columns.mask, crosses: crosses, mirror: mirror };
+        }
+      });
+    });
+    var firstRow = Math.log2(best.rows & -best.rows);
+    var firstColumn = Math.log2(best.columns & -best.columns);
+    var firstAction = best.crosses ? { toolId: "crossQi", positionOrder: firstRow * size + firstColumn }
+      : best.rows ? { toolId: "horizontalQi", positionOrder: firstRow }
+      : best.columns ? { toolId: "verticalQi", positionOrder: firstColumn }
+      : best.mirror ? { toolId: "mirror", positionOrder: 0 } : null;
+    return { expected: expectedRemainder(remaining, best.worst), worst: best.worst, firstAction: firstAction,
+      uses: [0, bitCount(best.rows) - best.crosses, bitCount(best.columns) - best.crosses, best.crosses, 0, best.mirror] };
+  }
+
+  // The unverified game model is disclosed to callers: the bomb uniformly
+  // samples exactly min(5, remaining) distinct cells, and a prize ends the
+  // floor. When it misses, the observed remainder informs the next action.
+  // This exact small-board search never returns a partially searched result.
+  function smallBoardPolicy(state, budgets, risk, firstToolId) {
+    var cells = state.unopenedCells, size = state.tier.boardSize;
+    if (cells.length > 12) return null;
+    var full = (1 << cells.length) - 1;
+    var placements = [[], [], [], [], [], []];
+    function add(tool, order, predicate) {
+      var mask = cells.reduce(function (m, cell, index) { return predicate(cell, index) ? m | (1 << index) : m; }, 0);
+      if (mask) placements[tool].push({ mask: mask, positionOrder: order });
+    }
+    if (budgets[0]) add(0, 0, function () { return true; });
+    for (var row = 0; row < size; row += 1) {
+      if (budgets[1]) add(1, row, function (cell) { return Math.floor(cell / size) === row; });
+      if (budgets[2]) add(2, row, function (cell) { return cell % size === row; });
+      if (budgets[3]) for (var col = 0; col < size; col += 1) {
+        add(3, row * size + col, function (cell) { return Math.floor(cell / size) === row || cell % size === col; });
+      }
+    }
+    if (budgets[4]) placements[4].push({ mask: full, positionOrder: 0 });
+    if (budgets[5]) cells.forEach(function (_, index) {
+      add(5, index, function (cell, position) { return position === index; });
+    });
+    var memo = new Map(), iterations = 0;
+    var exhausted = {};
+    function measure() { if (++iterations > 120000) throw exhausted; }
+    function visit(mask, stock, forced) {
+      var count = bitCount(mask);
+      var key = mask + ":" + stock.join(",");
+      if (!forced && memo.has(key)) return memo.get(key);
+      var best = forced ? null : { expected: count ? (count + 1) / 2 : 0, worst: count,
+        uses: [0, 0, 0, 0, 0, 0], firstAction: null };
+      if (!count) return best;
+      placements.forEach(function (options, tool) {
+        if (!stock[tool] || forced && forced !== AUXILIARIES[tool]) return;
+        var nextStock = stock.slice();
+        nextStock[tool] -= 1;
+        var seen = new Set();
+        options.forEach(function (option) {
+          var after = mask & ~option.mask;
+          if (after === mask || seen.has(after)) return;
+          seen.add(after);
+          measure();
+          var remaining = tool === 4 ? Math.max(0, count - 5) : bitCount(after);
+          var expected = 0, worst = 0, branches = 0, uses = [0, 0, 0, 0, 0, 0];
+          function settle(nextMask) {
+            measure();
+            var sub = visit(nextMask, nextStock, null);
+            expected += sub.expected;
+            worst = Math.max(worst, sub.worst);
+            branches += 1;
+            for (var i = 0; i < uses.length; i += 1) uses[i] = Math.max(uses[i], sub.uses[i]);
+          }
+          if (remaining && tool === 4) {
+            // Enumerate equiprobable residual masks; conditional on missing
+            // the prize all these masks still have the same probability.
+            for (var subset = mask & (mask - 1); subset; subset = (subset - 1) & mask) {
+              measure();
+              if (bitCount(subset) === remaining) settle(subset);
+            }
+          } else if (remaining) settle(after);
+          uses[tool] += 1;
+          var candidate = { expected: branches ? expected / branches * (remaining / count) : 0,
+            worst: worst, uses: uses, firstAction: { toolId: AUXILIARIES[tool], positionOrder: option.positionOrder } };
+          if (tool === 5) candidate.firstAction.cell = cells[option.positionOrder];
+          if (policyOrder(candidate, best, risk) < 0) best = candidate;
+        });
+      });
+      if (!forced) memo.set(key, best);
+      return best;
+    }
+    try { return visit(full, budgets, firstToolId); }
+    catch (error) { if (error === exhausted) return null; throw error; }
+  }
+
+  function evaluateSmallBoardPolicy(input, data, core) {
+    var source = input || {};
+    var progress = core.normalizeProgress(source.progress, data);
+    if (progress.completedAllFloors) return null;
+    var state = buildFloorStates(progress, progress.currentFloor, data, core)[0];
+    var resources = core.normalizeResources(Object.assign({}, progress.resources, source.resources || {}), data);
+    var limits = core.normalizeStageLimits(source.stageLimits || progress.calculator.stageLimits, data);
+    return smallBoardPolicy(state, toolBudgets(state, resources, limits, core), source.risk, source.firstToolId);
   }
 
   function compareActions(left, right) {
@@ -57,23 +210,20 @@
   }
 
   function actionCandidate(state, toolId, cells, positionOrder, cost) {
-    if (!cells.length || !state.unopenedCells.length) return null;
-    var affectedLookup = {};
-    cells.forEach(function (cell) { affectedLookup[cell] = true; });
-    var unique = state.unopenedCells.filter(function (cell) { return affectedLookup[cell]; });
-    if (!unique.length) return null;
-    var remaining = state.unopenedCells.length;
-    var after = remaining - unique.length;
-    var nextSurvival = remaining ? state.survivalProbability * after / remaining : 0;
-    var nextExpected = after ? nextSurvival * (after + 1) / 2 : 0;
+    var remaining = state.worstRemaining;
+    var unique = cells;
+    var coverage = toolId === "bomb" ? Math.min(5, remaining) : unique.length;
+    if (!coverage) return null;
+    var after = remaining - coverage;
+    var nextExpected = expectedRemainder(state.initialRemaining, after);
     var saving = Math.max(0, state.expectedRemaining - nextExpected);
     return {
       state: state,
       toolId: toolId,
       cost: cost,
       affectedCells: unique,
-      coverage: unique.length,
-      nextSurvival: nextSurvival,
+      coverage: coverage,
+      after: after,
       nextExpected: nextExpected,
       expectedSaving: saving,
       value: cost ? saving / cost : 0,
@@ -81,20 +231,67 @@
     };
   }
 
-  function bestActionForState(state, remainingResources, stageLimits, tierUsage) {
-    if (!state.unopenedCells.length) return null;
-    var tierId = state.tier.id;
+  function optimisticDemand(allocation, resources, limits, risk, data, core) {
+    var states = allocation.states;
+    if (allocation.exact) {
+      return applyRisk(allocation.expected, allocation.worst, risk, data.conservativeMultiplier);
+    }
+    var expected = 0, worst = 0, initial = 0;
+    var bestEfficiency = {};
+    states.forEach(function (state) {
+      var count = state.initialRemaining, covered = 0, size = state.tier.boardSize;
+      if (!count) return;
+      initial += count;
+      var sizes = [count, size, size, size * 2 - 1, 5, 1];
+      AUXILIARIES.forEach(function (tool, index) {
+        var uses = core.availableToolUses(tool, state.tier, resources, limits);
+        if (!uses) return;
+        var perUse = Math.min(count, sizes[index]);
+        covered += uses * perUse;
+        bestEfficiency[tool] = Math.max(bestEfficiency[tool] || 0, perUse / toolCost(tool, state.tier));
+      });
+      var floorLower = Math.max(0, count - covered);
+      expected += expectedRemainder(count, floorLower);
+      worst += floorLower;
+    });
+    // Relax overlap, tier spend and tool placement. No legal allocation can
+    // clear more than the sum of each unit's maximum across eligible floors.
+    var upperCoverage = AUXILIARIES.reduce(function (sum, tool) {
+      return sum + (resources[tool] || 0) * (bestEfficiency[tool] || 0);
+    }, 0);
+    worst = Math.max(worst, initial - Math.ceil(upperCoverage));
+    // The per-floor optimistic expectation above remains a lower bound even
+    // when other floors occasionally finish early and free shared tools.
+    return applyRisk(expected, worst, risk, data.conservativeMultiplier);
+  }
+
+  function currentAdvice(allocation, progress, resources, stageLimits, data, core) {
+    var advice = core.analyzeCurrentBoard({
+      floor: progress.currentFloor, openedCells: progress.openedCells, resources: resources, stageLimits: stageLimits
+    }, data);
+    var first = allocation.states[0] && allocation.states[0].firstAction;
+    var wanted = first ? first.toolId : "woodSword";
+    advice.recommendation = advice.actions.find(function (action) {
+      if (action.toolId !== wanted) return false;
+      if (!action.position) return true;
+      if (action.position.type === "row") return action.position.row === first.positionOrder;
+      if (action.position.type === "column") return action.position.column === first.positionOrder;
+      return action.position.row * advice.boardSize + action.position.column === first.positionOrder;
+    }) || null;
+    if (advice.recommendation && wanted === "mirror" && first.cell != null) {
+      advice.recommendation = Object.assign({}, advice.recommendation, { affectedCells: [first.cell] });
+    }
+    return advice;
+  }
+
+  function bestActionForState(state, remainingResources, stageLimits, tierUsage, core, bombsOnly) {
+    if (!state.worstRemaining) return null;
     var size = state.tier.boardSize;
     var unopened = state.unopenedCells;
     var candidates = [];
 
     function canUse(toolId) {
-      var cost = toolCost(toolId, state.tier);
-      var limit = stageLimits[tierId] && stageLimits[tierId][toolId];
-      var used = tierUsage[tierId] && tierUsage[tierId][toolId] || 0;
-      return (!limit || limit.allowed !== false) &&
-        (limit === undefined || limit.max === null || used + cost <= limit.max) &&
-        (remainingResources[toolId] || 0) >= cost;
+      return core.availableToolUses(toolId, state.tier, remainingResources, stageLimits, tierUsage) > 0;
     }
 
     function add(toolId, cells, order) {
@@ -103,8 +300,11 @@
       if (candidate) candidates.push(candidate);
     }
 
+    if (bombsOnly) {
+      add("bomb", [], 0);
+      return candidates[0] || null;
+    }
     add("ironSword", unopened, 0);
-    add("bomb", unopened.slice(0, Math.min(5, unopened.length)), 0);
     add("mirror", unopened.slice(0, 1), 0);
     if (canUse("horizontalQi")) {
       for (var row = 0; row < size; row += 1) {
@@ -129,15 +329,19 @@
     return candidates[0] || null;
   }
 
-  function planStages(progress, targetFloor, resources, stageLimits, data, core) {
+  function planStages(progress, targetFloor, resources, stageLimits, data, core, risk) {
     var states = buildFloorStates(progress, targetFloor, data, core);
     var remainingResources = clone(resources);
     var tierUsage = {};
-    states.forEach(function (state) {
-      state.bestAction = bestActionForState(state, remainingResources, stageLimits, tierUsage);
+    var exact = !states.some(function (state) {
+      return AUXILIARIES.some(function (id) { return core.availableToolUses(id, state.tier, resources, stageLimits) > 0; });
     });
 
-    while (true) {
+    function allocate(bombsOnly) {
+      states.forEach(function (state) {
+        state.bestAction = bestActionForState(state, remainingResources, stageLimits, tierUsage, core, bombsOnly);
+      });
+      while (true) {
       var candidate = null;
       states.forEach(function (state) {
         if (state.bestAction && compareActions(state.bestAction, candidate) < 0) candidate = state.bestAction;
@@ -147,15 +351,16 @@
       var used = tierUsage[tierId] && tierUsage[tierId][candidate.toolId] || 0;
       var affected = {};
       candidate.affectedCells.forEach(function (cell) { affected[cell] = true; });
+      if (!candidate.state.firstAction) candidate.state.firstAction = { toolId: candidate.toolId,
+        positionOrder: candidate.positionOrder, cell: candidate.affectedCells[0] };
       candidate.state.unopenedCells = candidate.state.unopenedCells.filter(function (cell) { return !affected[cell]; });
-      candidate.state.survivalProbability = candidate.nextSurvival;
       candidate.state.expectedRemaining = candidate.nextExpected;
-      candidate.state.worstRemaining = candidate.state.unopenedCells.length;
+      candidate.state.worstRemaining = candidate.after;
       remainingResources[candidate.toolId] -= candidate.cost;
       candidate.state.tools[candidate.toolId] = (candidate.state.tools[candidate.toolId] || 0) + candidate.cost;
       if (!tierUsage[tierId]) tierUsage[tierId] = {};
       tierUsage[tierId][candidate.toolId] = used + candidate.cost;
-      candidate.state.bestAction = bestActionForState(candidate.state, remainingResources, stageLimits, tierUsage);
+      candidate.state.bestAction = bestActionForState(candidate.state, remainingResources, stageLimits, tierUsage, core, bombsOnly);
 
       states.forEach(function (state) {
         var cached = state.bestAction;
@@ -164,9 +369,50 @@
         var cachedUsed = tierUsage[state.tier.id] && tierUsage[state.tier.id][cached.toolId] || 0;
         if ((remainingResources[cached.toolId] || 0) < cached.cost ||
             (limit && limit.max !== null && cachedUsed + cached.cost > limit.max)) {
-          state.bestAction = bestActionForState(state, remainingResources, stageLimits, tierUsage);
+          state.bestAction = bestActionForState(state, remainingResources, stageLimits, tierUsage, core, bombsOnly);
         }
       });
+      }
+    }
+
+    if (states.length === 1) {
+      var state = states[0], budgets = toolBudgets(state, resources, stageLimits, core);
+      var policy = deterministicFloorPolicy(state, budgets);
+      exact = !budgets[4] || !policy.worst;
+      if (budgets[4] && policy.worst) {
+        if (risk === "conservative") {
+          var expectedPolicy = smallBoardPolicy(state, budgets, "expected");
+          var worstPolicy = smallBoardPolicy(state, budgets, "worst");
+          if (expectedPolicy && worstPolicy) {
+            policy = applyRisk(expectedPolicy.expected, expectedPolicy.worst, risk, data.conservativeMultiplier) <=
+              applyRisk(worstPolicy.expected, worstPolicy.worst, risk, data.conservativeMultiplier) ? expectedPolicy : worstPolicy;
+            exact = true;
+          }
+        } else {
+          var randomPolicy = smallBoardPolicy(state, budgets, risk);
+          if (randomPolicy) { policy = randomPolicy; exact = true; }
+        }
+        if (!exact) {
+          // Executable fallback: all known placements first, then use
+          // bombs. Subsequent random hits never assume a fixed coordinate.
+          policy.uses[4] = Math.min(budgets[4], Math.ceil(policy.worst / 5));
+          policy.worst = Math.max(0, policy.worst - policy.uses[4] * 5);
+          policy.expected = expectedRemainder(state.initialRemaining, policy.worst);
+          if (!policy.firstAction) policy.firstAction = { toolId: "bomb", positionOrder: 0 };
+        }
+      }
+      state.expectedRemaining = policy.expected;
+      state.worstRemaining = policy.worst;
+      state.firstAction = policy.firstAction;
+      policy.uses.forEach(function (quantity, index) {
+        if (!quantity) return;
+        var id = AUXILIARIES[index], cost = quantity * toolCost(id, state.tier);
+        state.tools[id] = cost;
+        remainingResources[id] -= cost;
+      });
+    } else {
+      allocate(false);
+      allocate(true);
     }
 
     var stageMap = {};
@@ -199,6 +445,9 @@
       states: states,
       stages: Object.keys(stageMap).map(function (id) { return stageMap[id]; }),
       resources: remainingResources,
+      exact: exact,
+      mayUseBomb: states.some(function (state) { return core.availableToolUses("bomb", state.tier, resources, stageLimits) > 0; }),
+      usesBombModel: states.some(function (state) { return !!state.tools.bomb; }),
       expected: states.reduce(function (sum, state) { return sum + state.expectedRemaining; }, 0),
       worst: states.reduce(function (sum, state) { return sum + state.worstRemaining; }, 0)
     };
@@ -416,52 +665,58 @@
     var progress = core.normalizeProgress(source.progress, data);
     var targetFloor = Math.max(1, Math.min(data.maxFloor, Math.floor(Number(source.targetFloor) || progress.calculator.targetFloor)));
     if (!progress.completedAllFloors && targetFloor < progress.currentFloor) {
-      return { error: "目标层不能低于当前所在层。", achievable: false, targetFloor: targetFloor };
+      return { error: "目标层不能低于当前所在层。", achievable: null, targetFloor: targetFloor };
     }
+    var risk = ["expected", "conservative", "worst"].indexOf(source.risk) === -1 ? progress.calculator.risk : source.risk;
+    var resources = core.normalizeResources(Object.assign({}, progress.resources, source.resources || {}), data);
+    var purchaseInput = Object.assign({}, source, { progress: progress, resources: resources, packages: source.packages || progress.packages });
     if (progress.completedAllFloors) {
       return {
         achievable: true,
+        feasibilityStatus: "feasible",
+        planningMethod: "exact",
+        usesBombModel: false,
         targetFloor: data.maxFloor,
-        demand: { expected: 0, conservative: 0, worst: 0, selected: 0, risk: source.risk || "conservative" },
+        demand: { expected: 0, conservative: 0, worst: 0, selected: 0, lowerBound: 0, risk: risk },
         shortages: { woodSword: 0 },
-        remaining: clone(progress.resources),
+        remaining: resources,
+        remainingPackages: normalizePlanningPackages(purchaseInput.packages, data),
         stages: [],
         currentFloorAdvice: null,
-        purchasePlans: planPurchases(0, source, data)
+        purchasePlans: planPurchases(0, purchaseInput, data)
       };
     }
 
-    var resources = core.normalizeResources(Object.assign({}, progress.resources, source.resources || {}), data);
     var stageLimits = core.normalizeStageLimits(source.stageLimits || progress.calculator.stageLimits, data);
-    var allocation = planStages(progress, targetFloor, resources, stageLimits, data, core);
+    var allocation = planStages(progress, targetFloor, resources, stageLimits, data, core, risk);
     var expected = allocation.expected;
     var worst = allocation.worst;
     var conservative = applyRisk(expected, worst, "conservative", data.conservativeMultiplier);
-    var risk = ["expected", "conservative", "worst"].indexOf(source.risk) === -1 ? progress.calculator.risk : source.risk;
     var selected = applyRisk(expected, worst, risk, data.conservativeMultiplier);
+    var lowerBound = optimisticDemand(allocation, resources, stageLimits, risk, data, core);
     var integerDemand = Math.ceil(selected);
     var ownedSwords = resources.woodSword;
     var shortage = Math.max(0, integerDemand - ownedSwords);
-    var purchaseInput = Object.assign({}, source, { progress: progress, resources: resources, packages: source.packages || progress.packages });
     var purchases = planPurchases(shortage, purchaseInput, data);
-    var possiblePlans = [purchases.zeroPaid, purchases.minimumRmb, purchases.minimumIngot].filter(Boolean);
-    var achievable = shortage === 0 || possiblePlans.some(function (plan) { return plan.feasible; });
     var selectedPurchasePlan = selectPurchasePlan(purchases, source.purchasePreference, shortage);
     var settled = settlePlan(allocation.resources, source.packages || progress.packages, integerDemand, selectedPurchasePlan, data);
-    var advice = core.analyzeCurrentBoard({
-      floor: progress.currentFloor,
-      openedCells: progress.openedCells,
-      resources: resources
-    }, data);
+    var enoughForWitness = shortage === 0 || !!selectedPurchasePlan;
+    var maxSwords = ownedSwords + purchases.maximumProgress.progressSwords;
+    // A failed witness is not a proof. Only an optimistic requirement that
+    // exceeds even the most favorable legal purchase can certify shortage.
+    var feasibility = enoughForWitness ? "feasible" : maxSwords < Math.ceil(lowerBound) ? "insufficient" : "undetermined";
     return {
-      achievable: achievable,
+      achievable: feasibility === "undetermined" ? null : enoughForWitness,
+      feasibilityStatus: feasibility,
+      planningMethod: allocation.exact ? "exact" : "bounded",
+      usesBombModel: allocation.usesBombModel || (allocation.exact && allocation.mayUseBomb && integerDemand > 0),
       targetFloor: targetFloor,
-      demand: { expected: expected, conservative: conservative, worst: Math.ceil(worst), selected: selected, risk: risk },
+      demand: { expected: expected, conservative: conservative, worst: Math.ceil(worst), selected: selected, lowerBound: lowerBound, risk: risk },
       shortages: { woodSword: shortage },
       remaining: settled.resources,
       remainingPackages: settled.packages,
       stages: allocation.stages,
-      currentFloorAdvice: advice,
+      currentFloorAdvice: currentAdvice(allocation, progress, resources, stageLimits, data, core),
       purchasePlans: purchases,
       selectedPurchasePlan: selectedPurchasePlan
     };
@@ -470,31 +725,48 @@
   function planReachable(input, data, core) {
     var source = input && typeof input === "object" ? input : {};
     var progress = core.normalizeProgress(source.progress, data);
+    var risk = ["expected", "conservative", "worst"].indexOf(source.risk) === -1 ? progress.calculator.risk : source.risk;
+    var initialResources = core.normalizeResources(Object.assign({}, progress.resources, source.resources || {}), data);
     if (progress.completedAllFloors) {
-      return { completedFloor: data.maxFloor, nextFloor: null, expectedBrokenOnNextFloor: 0, remaining: clone(progress.resources), stages: [] };
+      return { completedFloor: data.maxFloor, upperBoundFloor: data.maxFloor, exact: true, risk: risk,
+        nextFloor: null, brokenOnNextFloor: 0, expectedBrokenOnNextFloor: 0, remaining: initialResources,
+        remainingPackages: normalizePlanningPackages(source.packages || progress.packages, data), stages: [], usesBombModel: false };
     }
     var low = progress.currentFloor;
     var high = data.maxFloor;
+    var proofUpper = high;
+    var proofUsesBombModel = false;
     var best = progress.currentFloor - 1;
     var bestPlan = null;
-    while (low <= high) {
-      var middle = Math.floor((low + high) / 2);
-      var candidate = planToTarget(Object.assign({}, source, { targetFloor: middle, purchasePreference: "minimumIngot" }), data, core);
-      if (candidate.achievable) {
-        best = middle;
+    function probe(floor) {
+      var candidate = planToTarget(Object.assign({}, source, { targetFloor: floor, purchasePreference: "minimumIngot" }), data, core);
+      if (candidate.feasibilityStatus === "feasible") {
+        best = floor;
         bestPlan = candidate;
-        low = middle + 1;
+        low = floor + 1;
       } else {
-        high = middle - 1;
+        if (candidate.feasibilityStatus === "insufficient" && floor - 1 < proofUpper) {
+          proofUpper = floor - 1;
+          proofUsesBombModel = candidate.usesBombModel;
+        }
+        // A failed witness directs the next probe only; it never decreases
+        // the rigorous upper bound, which changes on a proof of shortage.
+        high = floor - 1;
       }
     }
+    probe(high);
+    while (low <= high) {
+      probe(Math.floor((low + high) / 2));
+    }
     if (best >= data.maxFloor) {
-      return { completedFloor: data.maxFloor, nextFloor: null, expectedBrokenOnNextFloor: 0, remaining: bestPlan ? bestPlan.remaining : clone(progress.resources), stages: bestPlan ? bestPlan.stages : [] };
+      return { completedFloor: best, upperBoundFloor: best, exact: true, risk: risk, nextFloor: null,
+        brokenOnNextFloor: 0, expectedBrokenOnNextFloor: 0, remaining: bestPlan.remaining,
+        remainingPackages: bestPlan.remainingPackages, stages: bestPlan.stages, usesBombModel: bestPlan.usesBombModel };
     }
     var nextFloor = best + 1;
     var resourceSource = bestPlan
       ? core.normalizeResources(bestPlan.remaining, data)
-      : core.normalizeResources(Object.assign({}, progress.resources, source.resources || {}), data);
+      : initialResources;
     var packageSource = bestPlan && bestPlan.remainingPackages
       ? bestPlan.remainingPackages
       : normalizePlanningPackages(source.packages || progress.packages, data);
@@ -506,7 +778,13 @@
       calculator: progress.calculator
     }, data);
     var stageLimits = core.normalizeStageLimits(source.stageLimits || progress.calculator.stageLimits, data);
-    var partialAllocation = planStages(partialProgress, nextFloor, resourceSource, stageLimits, data, core);
+    if (bestPlan) bestPlan.stages.forEach(function (stage) {
+      Object.keys(stage.tools).forEach(function (tool) {
+        var limit = stageLimits[stage.tierId][tool];
+        if (limit && limit.max !== null) limit.max = Math.max(0, limit.max - stage.tools[tool]);
+      });
+    });
+    var partialAllocation = planStages(partialProgress, nextFloor, resourceSource, stageLimits, data, core, "worst");
     var state = partialAllocation.states[0];
     var alreadyBroken = core.boardCellCount(nextFloor, data) - state.initialRemaining;
     var auxiliaryBroken = state.initialRemaining - state.worstRemaining;
@@ -525,16 +803,22 @@
     var partialSettled = settlePlan(partialAllocation.resources, packageSource, swordsUsed, partialPurchase, data);
     return {
       completedFloor: best,
+      upperBoundFloor: proofUpper,
+      exact: best === proofUpper,
+      risk: risk,
       nextFloor: nextFloor,
+      brokenOnNextFloor: alreadyBroken + auxiliaryBroken + swordsUsed,
       expectedBrokenOnNextFloor: alreadyBroken + auxiliaryBroken + swordsUsed,
       remaining: partialSettled.resources,
       remainingPackages: partialSettled.packages,
-      stages: bestPlan ? bestPlan.stages : []
+      stages: bestPlan ? bestPlan.stages : [],
+      usesBombModel: !!(proofUsesBombModel || partialAllocation.usesBombModel || bestPlan && bestPlan.usesBombModel)
     };
   }
 
   return {
     applyRisk: applyRisk,
+    evaluateSmallBoardPolicy: evaluateSmallBoardPolicy,
     planStages: planStages,
     planPurchases: planPurchases,
     planToTarget: planToTarget,

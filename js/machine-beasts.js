@@ -518,6 +518,12 @@
   }
 
   function baseBodies(rank) { return rank > 7 ? Math.pow(2, rank - 7) : 1; }
+  function inventoryRankCapacity(origins, rank) {
+    var minimumSourceRank = Math.min(7, rank);
+    return origins.reduce(function (total, origin) {
+      return total + (origin.rank >= minimumSourceRank ? origin.count * origin.weight : 0);
+    }, 0);
+  }
   function modificationCoreNeed(data, id) {
     var values=data.modificationCoreRules&&data.modificationCoreRules.cumulative||{none:0,initial:40,heaven:55,immortal:75,saint:105,fullDivine:145};
     if(!Object.prototype.hasOwnProperty.call(values,id))throw Error('未知机关兽改造档位');
@@ -548,6 +554,9 @@
     var maximumRank = config.newRankMode === 'zero' ? 0 : config.allowNewHighRanks ? beast.maxRank : Math.min(7, beast.maxRank);
     var ownedMaximumRank=config.allowNewHighRanks?beast.maxRank:Math.min(7,beast.maxRank);
     pool.maximumNewRank=maximumRank;pool.maximumOwnedRank=ownedMaximumRank;
+    // The breakthrough guide lists costs, but not verified downgrade
+    // refunds. Use only proven, non-upgrading inventory paths in zero mode.
+    if(config.newRankMode==='zero')pool.rankConstrained=true;
     var canModify=!config.plainOnly&&beast.quality==='orange'&&(pool.allowExternalCores||pool.coreCount+loose>0);
     var types = [];
     origins.forEach(function (o) {
@@ -564,6 +573,13 @@
       var research=researchFor(data,beast,rank,mod.id);
       if (research) types.push({source:rank>maximumRank?'owned-processed':'new',rank:rank,modificationId:mod.id,researchEach:research,weight:baseBodies(rank),available:null});
     });
+    if(pool.rankConstrained){
+      types.forEach(function(t){if(t.rank>0)t.rankCap=inventoryRankCapacity(origins,t.rank);});
+      types=types.filter(function(t){return t.rankCap==null||t.rankCap>=t.weight;});
+      // Threshold capacities are nested. With descending rank, a state's
+      // body count at each transition is the corresponding suffix demand.
+      types.sort(function(a,b){return b.rank-a.rank;});
+    }
     types.forEach(function (t) { t.cores=modificationCoreNeed(data,t.modificationId);t.ownedWeight=t.source==='new'?0:t.weight;t.blueprints=Math.ceil(t.researchEach/data.resourceRules.blueprintDivisor);t.pieces=Math.ceil(t.researchEach/data.resourceRules.organPieceDivisor); });
     return {pool:pool,types:types};
   }
@@ -580,18 +596,25 @@
       origin.count-=i.count;items.push(Object.assign({},i));
     });
     var processing=[],mandatoryConverted=0;
-    var pending=rawItems.filter(function(i){return i.source!=='owned';}).slice().sort(function(a,b){return (a.source==='owned-processed'?0:1)-(b.source==='owned-processed'?0:1);});
+    var pending=rawItems.filter(function(i){return i.source!=='owned';}).sort(function(a,b){
+      return pool.rankConstrained ? b.rank-a.rank : (a.source==='owned-processed'?0:1)-(b.source==='owned-processed'?0:1);
+    });
     pending.forEach(function(i){
       var weight=baseBodies(i.rank),same=remaining.find(function(o){return o.rank===i.rank&&o.modificationId===i.modificationId;});
-      var credit=remaining.reduce(function(n,o){return n+o.count*o.weight;},0),free=i.source==='owned-processed'?Infinity:Math.max(0,Math.floor((credit-mandatoryConverted)/weight));
+      var required=i.source==='owned-processed'||pool.rankConstrained&&i.rank>0;
+      var credit=remaining.reduce(function(n,o){return n+o.count*o.weight;},0),free=required?Infinity:Math.max(0,Math.floor((credit-mandatoryConverted)/weight));
       var unchanged=same?Math.min(i.count,same.count,free):0;
       if(unchanged){same.count-=unchanged;items.push(Object.assign({},i,{source:'owned',count:unchanged}));}
-      if(i.count>unchanged){processing.push(Object.assign({},i,{count:i.count-unchanged}));if(i.source==='owned-processed')mandatoryConverted+=(i.count-unchanged)*weight;}
+      if(i.count>unchanged){processing.push(Object.assign({},i,{count:i.count-unchanged}));if(required)mandatoryConverted+=(i.count-unchanged)*weight;}
     });
-    var credit=remaining.reduce(function(n,o){return n+o.count*o.weight;},0),usedProcessed=0;
+    var credit=remaining.reduce(function(n,o){return n+o.count*o.weight;},0),usedProcessed=0,rankDemands=[];
     processing.forEach(function(i){
       var weight=baseBodies(i.rank),requested=i.count,owned=Math.min(requested,Math.floor(credit/weight));
-      if(i.source==='owned-processed'&&owned<requested)throw Error('库存本体不足，不能以新增本体加工到此阶数');
+      if((i.source==='owned-processed'||pool.rankConstrained&&i.rank>0)&&owned<requested)throw Error('库存本体不足，不能以新增本体加工到此阶数');
+      if(pool.rankConstrained&&i.rank>0&&owned){
+        if(i.rank>pool.maximumOwnedRank)throw Error('未开启高阶库存重组');
+        rankDemands.push({rank:i.rank,bodies:owned*weight});
+      }
       if(owned){items.push(Object.assign({},i,{source:'owned',count:owned,converted:true}));credit-=owned*weight;usedProcessed+=owned*weight;}
       var left=requested-owned;
       if(left&&credit){var used=credit;items.push(Object.assign({},i,{source:'new',count:1,converted:true,ownedBaseBodies:used,newBaseBodies:weight-used}));usedProcessed+=used;credit=0;left--;}
@@ -600,13 +623,36 @@
     var spent=processing.reduce(function(n,i){return n+i.count*modificationCoreNeed(data,i.modificationId);},0),loose=pool.looseCores||0,needed=usedProcessed,coreNeeded=Math.max(0,spent-loose),returned=0;
     // Reclaim mandatory cores first: the same dismantled stock also supplies
     // bodies. Selecting them independently would needlessly reprocess plain stock.
-    var usedBySource=[];
-    var reclaim=remaining.map(function(o,index){
-      var count=o.cores?Math.min(o.count,Math.ceil(coreNeeded/o.cores)):0;
-      coreNeeded-=Math.min(coreNeeded,count*o.cores);
-      usedBySource[index]=Math.min(needed,count*o.weight);
-      needed-=usedBySource[index];
-      return count;
+    var usedBySource=remaining.map(function(){return 0;});
+    var reclaim=remaining.map(function(){return 0;});
+    var targetsBySource=pool.rankConstrained?remaining.map(function(){return new Map();}):null;
+    rankDemands.sort(function(a,b){return b.rank-a.rank;}).forEach(function(demand){
+      var left=demand.bodies;
+      function assign(o,index,maximum){
+        if(!left||o.rank<Math.min(7,demand.rank))return;
+        var used=Math.min(left,maximum,o.count*o.weight-usedBySource[index]);
+        usedBySource[index]+=used;
+        var count=Math.ceil(usedBySource[index]/o.weight)-reclaim[index];
+        reclaim[index]+=count;
+        coreNeeded=Math.max(0,coreNeeded-count*o.cores);
+        if(used)targetsBySource[index].set(demand.rank,(targetsBySource[index].get(demand.rank)||0)+used);
+        left-=used;needed-=used;
+      }
+      // Reuse already split bodies, then favor a source which also supplies
+      // necessary cores rather than dismantling one extra beast for the cores.
+      remaining.forEach(function(o,index){assign(o,index,reclaim[index]*o.weight-usedBySource[index]);});
+      remaining.forEach(function(o,index){
+        if(o.cores&&coreNeeded)assign(o,index,Math.ceil(coreNeeded/o.cores)*o.weight);
+      });
+      remaining.forEach(function(o,index){assign(o,index,Infinity);});
+      if(left)throw Error('仅0阶：库存阶数不足，不能使用未核实的返料升阶');
+    });
+    remaining.forEach(function(o,index){
+      var count=o.cores?Math.min(o.count-reclaim[index],Math.ceil(coreNeeded/o.cores)):0;
+      coreNeeded=Math.max(0,coreNeeded-count*o.cores);
+      reclaim[index]+=count;
+      var used=Math.min(needed,reclaim[index]*o.weight-usedBySource[index]);
+      usedBySource[index]+=used;needed-=used;
     });
     remaining.forEach(function(o,index){
       var additional=Math.min(o.count-reclaim[index],Math.ceil(needed/o.weight));
@@ -619,7 +665,13 @@
       var count=reclaim[index];
       if(count){
         var supplied=count*o.weight,used=usedBySource[index],refund=count*o.cores,left=supplied-used;returned+=refund;remainingBase+=left;
-        sources.push(Object.assign({},o,{count:count,baseBodies:supplied,sevenRankEquivalent:o.weight,returnedCores:refund,usedBaseBodies:used,remainingBaseBodies:left}));o.count-=count;
+        var source=Object.assign({},o,{count:count,baseBodies:supplied,sevenRankEquivalent:o.weight,returnedCores:refund,usedBaseBodies:used,remainingBaseBodies:left});
+        if(targetsBySource){
+          source.bodyTargets=Array.from(targetsBySource[index],function(entry){return {rank:entry[0],bodies:entry[1]};});
+          var lowBodies=used-source.bodyTargets.reduce(function(sum,target){return sum+target.bodies;},0);
+          if(lowBodies)source.bodyTargets.push({rank:0,bodies:lowBodies});
+        }
+        sources.push(source);o.count-=count;
         if(left){var rank=o.rank>7?7:o.rank;unused.push({rank:rank,modificationId:'none',count:left,researchEach:researchFor(data,beast,rank,'none'),converted:true});}
       }
       if(o.count)unused.push({rank:o.rank,modificationId:o.modificationId,count:o.count,researchEach:o.researchEach});
@@ -637,7 +689,7 @@
       newPhysical:items.filter(function(i){return i.source!=='owned';}).reduce(function(n,i){return n+i.count;},0),
       ownedModified:items.reduce(function(n,i){return n+(i.modificationId==='none'?0:i.source==='owned'?i.count*baseBodies(i.rank):i.ownedBaseBodies||0);},0),
       newModified:items.reduce(function(n,i){return n+(i.modificationId==='none'||i.source==='owned'?0:i.newBaseBodies===undefined?i.count*baseBodies(i.rank):i.newBaseBodies);},0),
-      modificationCores:ledger,inventoryConversion:{sources:sources,usedBaseBodies:usedProcessed,remainingBaseBodies:remainingBase,availableBaseBodies:pool.baseCount,remainingItems:unused,modificationCores:ledger}};
+      modificationCores:ledger,inventoryConversion:Object.assign({sources:sources,usedBaseBodies:usedProcessed,remainingBaseBodies:remainingBase,availableBaseBodies:pool.baseCount,remainingItems:unused,modificationCores:ledger},pool.rankConstrained?{rankMaterialsUnverified:pool.origins.some(function(o){return o.rank>0;})}:{})};
   }
 
   // Sparse exact-research frontiers: both original inputs and processing use
@@ -657,7 +709,7 @@
     var countBound=Infinity;
     if(singleMinimumCount&&terminalAllowed)types.forEach(function(type){
       var quantity=Math.ceil(gap/type.researchEach),count=quantity*type.weight;
-      if((type.available===null||quantity<=type.available)&&(!limited||count<=pool.baseCount)&&quantity*type.ownedWeight<=pool.baseCount&&(pool.allowExternalCores||quantity*type.cores<=pool.coreCount+pool.looseCores))countBound=Math.min(countBound,count);
+      if((type.rankCap==null||count<=type.rankCap)&&(type.available===null||quantity<=type.available)&&(!limited||count<=pool.baseCount)&&quantity*type.ownedWeight<=pool.baseCount&&(pool.allowExternalCores||quantity*type.cores<=pool.coreCount+pool.looseCores))countBound=Math.min(countBound,count);
     });
     if(countBound!==Infinity){
       var boundTrackC=!pool.allowExternalCores&&!types.every(function(t){return BigInt(pool.coreCount+pool.looseCores)*BigInt(t.weight)>=BigInt(countBound)*BigInt(t.cores);});
@@ -665,7 +717,7 @@
       var reachable=Array(countBound+1);reachable[0]=[{r:0,c:0,o:0}];
       function feasible(from,index,quantity,n){
         var type=types[index],c=boundTrackC?from.c+quantity*type.cores:0,o=boundTrackO?from.o+quantity*type.ownedWeight:0;
-        if(n>countBound||o>pool.baseCount||!pool.allowExternalCores&&c>pool.coreCount+pool.looseCores||limited&&n>pool.baseCount)return;
+        if(n>countBound||type.rankCap!=null&&n>type.rankCap||o>pool.baseCount||!pool.allowExternalCores&&c>pool.coreCount+pool.looseCores||limited&&n>pool.baseCount)return;
         var r=Math.min(gap,from.r+quantity*type.researchEach),bucket=reachable[n]||[];
         if(bucket.some(function(old){return old.r>=r&&old.c<=c&&old.o<=o;}))return;
         reachable[n]=bucket.filter(function(old){return !(r>=old.r&&c<=old.c&&o<=old.o);});reachable[n].push({r:r,c:c,o:o});
@@ -715,7 +767,7 @@
       if(metrics)metrics.attempted++;
       var type=types[index],r=from.r+type.researchEach/unit*quantity,n=from.n+type.weight*quantity;
       var c=trackC?(from.c||0)+type.cores*quantity:0,o=trackO?(from.o||0)+type.ownedWeight*quantity:0;
-      if(n>countBound||r>=rows.length||(!terminalAllowed&&r>=stop)||limited&&n>pool.baseCount||o>pool.baseCount||!pool.allowExternalCores&&c>pool.coreCount+pool.looseCores){if(metrics)metrics.rejected++;return;}
+      if(n>countBound||type.rankCap!=null&&n>type.rankCap||r>=rows.length||(!terminalAllowed&&r>=stop)||limited&&n>pool.baseCount||o>pool.baseCount||!pool.allowExternalCores&&c>pool.coreCount+pool.looseCores){if(metrics)metrics.rejected++;return;}
       var m=from.m+(type.modificationId==='none'?0:type.weight*quantity),b=from.b+type.blueprints*quantity,p=from.p+type.pieces*quantity;
       var bucket=rows[r]||[];
       for(var i=0;i<bucket.length;i++){

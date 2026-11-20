@@ -41,18 +41,18 @@ function enumerate(d,b,p={},o={}){
   const maxResearch=Math.max(...types.map(t=>t.research),...stock.map(t=>t.research));
   const bound=Math.max(0,gap)+maxResearch;
   const loose=o.useOwnedInventory===false?0:o.ownedLooseCores||0;
-  function fates(at,direct,bodies,returned){
+  function fates(at,direct,dismantled,returned){
     if(at<stock.length){
       const item=stock[at];
-      fates(at+1,direct,bodies,returned); // keep
-      fates(at+1,direct.concat(item),bodies,returned); // direct
-      fates(at+1,direct,bodies+weight(item.rank),returned+NEED[item.mod]); // dismantle
+      fates(at+1,direct,dismantled,returned); // keep
+      fates(at+1,direct.concat(item),dismantled,returned); // direct
+      fates(at+1,direct,dismantled.concat(Array(weight(item.rank)).fill(Math.min(7,item.rank))),returned+NEED[item.mod]); // dismantle
       return;
     }
     const r0=direct.reduce((s,i)=>s+i.research,0),n0=direct.reduce((s,i)=>s+weight(i.rank),0);
     const b0=direct.reduce((s,i)=>s+Math.ceil(i.research/3),0),p0=direct.reduce((s,i)=>s+Math.ceil(i.research/2),0);
     const m0=direct.reduce((s,i)=>s+(i.mod==='none'?0:weight(i.rank)),0);
-    function products(index,research,invested,blueprints,pieces,modified,spent,ownedOnly,largest){
+    function products(index,research,invested,blueprints,pieces,modified,spent,ownedOnly,largest,rankDemand){
       if(research>=bound)return;
       if(!o.allowNewModifications&&spent>returned+loose)return;
       if(index<types.length){
@@ -60,11 +60,16 @@ function enumerate(d,b,p={},o={}){
         const cap=Math.floor((bound-1-research)/t.research);
         for(let q=0;q<=cap;q++)products(index+1,research+q*t.research,invested+q*w,
           blueprints+q*Math.ceil(t.research/3),pieces+q*Math.ceil(t.research/2),
-          modified+(t.mod==='none'?0:q*w),spent+q*NEED[t.mod],ownedOnly+(t.rank>maxNew?q*w:0),q?Math.max(largest,t.research):largest);
+          modified+(t.mod==='none'?0:q*w),spent+q*NEED[t.mod],ownedOnly+(t.rank>maxNew?q*w:0),q?Math.max(largest,t.research):largest,
+          o.newRankMode==='zero'&&t.rank>0?rankDemand.concat(Array(q*w).fill(Math.min(7,t.rank))):rankDemand);
         return;
       }
       const processed=invested-n0,added=Math.max(0,invested-totalStock),ownedUsed=processed-added;
-      if(ownedUsed<0||ownedUsed>bodies||ownedOnly>ownedUsed)return;
+      if(ownedUsed<0||ownedUsed>dismantled.length||ownedOnly>ownedUsed)return;
+      if(rankDemand.length){
+        const supply=dismantled.slice().sort((a,b)=>b-a),demand=rankDemand.slice().sort((a,b)=>b-a);
+        if(demand.some((rank,index)=>!(supply[index]>=rank)))return;
+      }
       // Extra last-level research from an individually removable input is
       // never optimal under either formal objective, and is not a candidate.
       if(research>=gap&&research-largest>=gap)return;
@@ -75,9 +80,9 @@ function enumerate(d,b,p={},o={}){
         research,invested,added,blueprints,pieces,modified,bodyYuan:fragments,
         overflow:research?start+research-d.researchThresholds[end]:0,returned,spent});
     }
-    products(0,r0,n0,b0,p0,m0,0,0,Math.max(0,...direct.map(i=>i.research)));
+    products(0,r0,n0,b0,p0,m0,0,0,Math.max(0,...direct.map(i=>i.research)),[]);
   }
-  fates(0,[],0,0);
+  fates(0,[],[],0);
   return [...new Map(results.map(r=>[JSON.stringify([r.level,r.effects,r.research,r.invested,r.added,r.blueprints,r.pieces,r.modified,r.bodyYuan,r.overflow]),r])).values()];
 }
 const singleTuple=(r,gap)=>[r.added,r.invested,r.research-gap,r.blueprints,r.pieces];
@@ -219,12 +224,14 @@ test('processed high-rank cores cost per physical unit, not weighted base bodies
   assert.deepEqual([plan.modificationCores.returned,plan.modificationCores.spent,plan.modificationCores.remaining],[145,40,105]);
 });
 
-test('owned zero-to-seven processing stays independent from purchased zero-only bodies',()=>{
+test('zero-material mode prevents unverified processing while preserving high-rank stock direct use',()=>{
   const d=fixture(1,7);
   for(const row of Object.values(d.researchValues.orange))for(const mod of Object.keys(NEED))row[mod]=0;
   d.researchValues.orange[0].none=2;d.researchValues.orange[7].none=9;
-  const owned=checkSingle(d,{inventory:{none:{0:1}}},{newRankMode:'zero'},'owned full domain');
-  assert.deepEqual(actualSingle(owned.totals),[0,1,0,3,5]);
+  const owned=checkSingle(d,{inventory:{none:{0:1}}},{newRankMode:'zero'},'zero stock cannot upgrade');
+  assert.deepEqual(actualSingle(owned.totals),[4,5,1,5,5]);
+  const rankSeven=checkSingle(d,{inventory:{none:{7:1}}},{newRankMode:'zero'},'original rank seven');
+  assert.deepEqual(actualSingle(rankSeven.totals),[0,1,0,3,5]);
   const bought=checkSingle(d,{},{newRankMode:'zero'},'new zero only');
   assert.deepEqual(actualSingle(bought.totals),[5,5,1,5,5]);
   const expanded=checkSingle(d,{},{newRankMode:'zeroToSeven'},'new full domain');
@@ -273,4 +280,22 @@ test('equivalent pages exclude unfunded higher modifications while preserving di
       assert.ok(ledger.externalDeficit===(alternative.beasts[0].items[0].modificationId==='heaven'?15:0));
     }
   }
+});
+
+test('zero-mode equivalent paging excludes equal-price allocations exceeding a rank threshold',()=>{
+  const d=fixture(1,7,1),b=d.beasts[0];
+  b.maxLevel=1;
+  d.researchThresholds={0:0,1:8};
+  d.researchValues.orange={0:{none:2},4:{none:6},5:{none:4},6:{none:4},7:{none:6}};
+  d.resourceRules.blueprintDivisor=2;
+  const result=SCHOOL.calculateSchoolPlans(d,'dual',{[b.id]:{inventory:{none:{7:1,0:1}}}},
+    {targetStage:1,newRankMode:'zero',convertOwnedInventory:true});
+  assert.equal(result.valid,true,JSON.stringify(result.errors));
+  const primary=JSON.parse(JSON.stringify(result.plans[0]));
+  assert.equal(primary.equivalents.count,'2');
+  const page=SCHOOL.equivalentPlansPage(d,primary,'0',1);
+  assert.equal(page.plans.length,1);
+  assert.equal(page.hasMore,false);
+  assert.deepEqual([primary,...page.plans].map(p=>p.beasts[0].items.map(i=>i.rank).sort((a,b)=>a-b)).sort(),
+    [[0,4],[0,7]]);
 });

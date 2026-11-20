@@ -13,7 +13,7 @@ for (const file of ['data/machine-beasts.js', 'js/machine-beasts.js', 'js/number
 }
 const source = fs.readFileSync(path.join(root, 'js/machine-beasts-ui.js'), 'utf8');
 vm.runInContext(source.replace('window.MACHINE_BEAST_UI = {',
-  'window.testUI = { calcTargetOptions, calcTargetPicker, calculatorInventorySelector, conversionSummary, investmentLists, itemList, researchReference, formatNumber }; window.MACHINE_BEAST_UI = {'), context);
+  'window.testUI = { calcTargetOptions, calcTargetPicker, calculatorInventorySelector, conversionSummary, investmentLists, itemList, researchReference, formatNumber, newRankModeSelector, rankMaterialsNote, planBeastOrder, investmentInventoryLimits, renderEquivalentAlternatives }; window.MACHINE_BEAST_UI = {'), context);
 const ui = context.window.testUI;
 
 test('UI number formatting preserves BigInt precision and uses four-digit groups', () => {
@@ -41,8 +41,39 @@ test('inventory row keeps usage cap and disabled state together', () => {
   assert.match(html, /class="machine-owned-stock"/);
 });
 
+test('plan rendering sorts by quality, rank and modification, without changing input order', () => {
+  const item = (rank, modificationId = 'none') => ({rank,modificationId,count:1,source:'owned',researchEach:48000});
+  const row = (beastId, items) => ({beastId,beastName:beastId,items,startLevel:0,endLevel:1,resources:{}});
+  const stock = [row('war-demon',[item(10,'fullDivine')]), row('mechanical-bear',[item(7)]),
+    row('potu-qilang',[item(2)]), row('mechanical-yueliao',[item(0,'fullDivine'), item(7,'heaven')]),
+    row('mechanical-flame-puppet',[item(6,'fullDivine')]), row('eight-claw-centipede',[item(0)])];
+  const expected = ['mechanical-yueliao','mechanical-bear','mechanical-flame-puppet','war-demon','eight-claw-centipede','potu-qilang'];
+  assert.deepEqual(Array.from(ui.planBeastOrder(stock), x=>x.beastId),expected);
+  assert.equal(stock[0].beastId,'war-demon');
+  assert.equal(stock[3].items[0].rank,0);
+  const list = ui.itemList([item(6,'fullDivine'),item(7),item(7,'heaven'),item(0)],'','owned');
+  assert.match(list,/（天改）7阶×1[\s\S]*?（0改）7阶×1[\s\S]*?（神改）6阶×1[\s\S]*?（0改）0阶×1/);
+  const alternativeHtml = ui.renderEquivalentAlternatives([{beasts:stock,totals:{},stableKey:'k'}], 'school', 0);
+  assert.deepEqual(Array.from(alternativeHtml.matchAll(/<article class="machine-school-plan-beast"><header><strong>([^<]+)<\/strong>/g), match=>match[1]),expected);
+});
+
+test('zero mode states the material verification boundary and lists only real rank processing paths', () => {
+  assert.match(ui.newRankModeSelector('single','zero'),/不额外投入升阶材料[\s\S]*直投、降阶或拆解[\s\S]*返料升阶待核实/);
+  assert.match(ui.newRankModeSelector('single','zeroToSeven'),/可新增0–7阶[\s\S]*自由升降/);
+  assert.match(ui.rankMaterialsNote(true),/材料可行性无法确认[\s\S]*仅比较无需库存升阶的方案/);
+  assert.equal(ui.rankMaterialsNote(false),'');
+  const flow = ui.conversionSummary({sources:[{rank:9, modificationId:'fullDivine', count:1, baseBodies:4, bodyTargets:[{rank:5,bodies:1},{rank:7,bodies:1}], remainingBaseBodies:2}]},null,'test',
+    [{rank:5,count:1,modificationId:'none',source:'owned',converted:true},{rank:7,count:1,modificationId:'none',source:'owned',converted:true}]);
+  assert.match(flow, /神改）9阶×1[\s\S]*?供7阶投入 · 1份折算本体[\s\S]*?供5阶投入 · 1份折算本体/);
+  assert.doesNotMatch(flow,/升阶材料返还|NaN|undefined/);
+  const caps = ui.investmentInventoryLimits('test',{id:'war-demon'},{inventory:{none:{7:4},initial:{7:1}}},{limits:{none:{7:2}}},true);
+  assert.match(caps,/（升神）7阶：库存 1只／最多使用 1只[\s\S]*?（0改）7阶：库存 4只／最多使用 2只/);
+  const disabled = ui.investmentInventoryLimits('test',{id:'war-demon'},{inventory:{none:{7:4}}},{limits:{}},false);
+  assert.match(disabled,/（0改）7阶：库存 4只／最多使用 0只/);
+});
+
 test('conversion disclosure shows original source and separate unpriced core deficit', () => {
-  const html = ui.conversionSummary({ sources: [{ rank: 7, modificationId: 'fullDivine', count: 1, baseBodies: 128, returnedCores: 145 }], usedBaseBodies: 64, remainingBaseBodies: 64 }, { returned: 145, spent: 160, reused: 145, externalDeficit: 15, remaining: 0, looseOwned: 0, estimatedBoxes: 75, unpriced: true }, 'test');
+  const html = ui.conversionSummary({ sources: [{ rank: 10, modificationId: 'fullDivine', count: 1, baseBodies: 8, usedBaseBodies:4, remainingBaseBodies:4, returnedCores: 145 }], usedBaseBodies: 4, remainingBaseBodies: 4 }, { returned: 145, spent: 160, reused: 145, externalDeficit: 15, remaining: 0, looseOwned: 0, estimatedBoxes: 75, unpriced: true }, 'test');
   assert.match(html, /<details/);
   for (const text of ['库存转换与改造神核', '返还', '145', '分配', '160', '缺口', '15', '剩余', '约75箱', '非保底', '改造神核未计价']) assert.ok(html.includes(text), text);
   assert.doesNotMatch(html, /NaN|undefined|神核[^<]*元宝/);

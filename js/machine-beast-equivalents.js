@@ -56,6 +56,7 @@
       if (memo.has(key)) return memo.get(key);
       var t = types[index], mod = t.modificationId === 'none' ? 0 : t.weight;
       var cap = Math.min(Math.floor(research / t.researchEach), Math.floor(blueprints / t.blueprints), t.available == null ? Infinity : t.available);
+      if(t.rankCap!=null)cap=Math.min(cap,Math.floor((t.rankCap-newCount)/t.weight));
       var typeWaste = t.blueprints * data.resourceRules.blueprintDivisor - t.researchEach;
       if (typeWaste > 0) cap = Math.min(cap, Math.floor(waste / typeWaste));
       if (mod) cap = Math.min(cap, Math.floor(modified / mod));

@@ -207,6 +207,30 @@
     return "machine-quality-" + beast.quality;
   }
 
+  var planTierOrder = ["蓝色", "紫色", "橙一", "橙二", "橙三", "橙四", "橙五"];
+
+  function comparePlanForms(left, right) {
+    return Number(right.rank) - Number(left.rank) ||
+      DATA.modifications.findIndex(function (mod) { return mod.id === right.modificationId; }) -
+      DATA.modifications.findIndex(function (mod) { return mod.id === left.modificationId; });
+  }
+
+  function planBeastOrder(rows, details) {
+    var bestByBeast = new Map();
+    (details || rows).forEach(function (row) {
+      (row.items || []).forEach(function (form) {
+        var best = bestByBeast.get(row.beastId);
+        if (!best || comparePlanForms(form, best) < 0) bestByBeast.set(row.beastId, form);
+      });
+    });
+    return rows.slice().sort(function (left, right) {
+      var leftModel = beastById(left.beastId), rightModel = beastById(right.beastId);
+      var quality = planTierOrder.indexOf(rightModel && rightModel.tier) - planTierOrder.indexOf(leftModel && leftModel.tier);
+      var empty = { rank: -1 };
+      return quality || comparePlanForms(bestByBeast.get(left.beastId) || empty, bestByBeast.get(right.beastId) || empty);
+    });
+  }
+
   function schoolById(id) {
     return DATA.schools.find(function (school) { return school.id === id; }) || DATA.schools[0];
   }
@@ -587,16 +611,22 @@
         if (count) entries.push({ beastId: beast.id, modificationId: modification.id, modificationName: modification.name, rank: rank, count: count });
       });
     });
-    return entries;
+    return entries.sort(comparePlanForms);
+  }
+
+  function inventoryLimit(entry, policy, enabled) {
+    if (!enabled) return 0;
+    var limits = policy.limits[entry.modificationId];
+    return limits && Object.prototype.hasOwnProperty.call(limits, entry.rank)
+      ? Math.min(entry.count, CORE.integer(limits[entry.rank])) : entry.count;
   }
 
   function calculatorInventorySelector(beast, progress, policy, scope, showGlobal) {
     var entries = inventoryEntries(beast, progress);
     var global = showGlobal ? '<label class="machine-owned-global"><input type="checkbox" data-owned-global data-owned-scope="' + scope + '"' + (policy.useOwnedInventory ? ' checked' : '') + '>使用已有库存</label>' : '';
     var rows = entries.map(function (entry) {
-      var modificationLimits = policy.limits[entry.modificationId] || {};
-      var enabled = CORE.integer(modificationLimits[entry.rank]) > 0;
-      var limit = enabled ? Math.min(entry.count, CORE.integer(modificationLimits[entry.rank])) : 0;
+      var limit = inventoryLimit(entry, policy, true);
+      var enabled = limit > 0;
       return '<div class="machine-owned-inventory-row" data-beast-id="' + entry.beastId + '" data-mod="' + entry.modificationId + '" data-rank="' + entry.rank + '">' +
         '<label class="machine-owned-toggle"><input type="checkbox" data-machine-owned-enabled data-owned-scope="' + scope + '" data-beast-id="' + entry.beastId + '" data-mod="' + entry.modificationId + '" data-rank="' + entry.rank + '"' + (enabled ? ' checked' : '') + (policy.useOwnedInventory ? '' : ' disabled') + '>使用<span class="machine-owned-form">' + escapeHtml(combinedRankLabel(entry.modificationName, entry.rank)) + '</span></label>' +
         '<span class="machine-owned-stock">已有×' + formatNumber(entry.count) + '</span>' +
@@ -608,9 +638,10 @@
 
   function newRankModeSelector(scope, selected) {
     var name = "machine-" + scope + "-new-rank-mode";
-    return '<div class="machine-new-rank-mode"><span>新增本体阶数</span>' +
+    return '<div class="machine-new-rank-mode"><span>本体与库存加工</span>' +
       '<label><input type="radio" name="' + name + '" value="zero" data-new-rank-mode-scope="' + scope + '"' + (selected === "zero" ? " checked" : "") + '>仅0阶</label>' +
-      '<label><input type="radio" name="' + name + '" value="zeroToSeven" data-new-rank-mode-scope="' + scope + '"' + (selected !== "zero" ? " checked" : "") + '>0–7阶</label><small>仅限制新增本体，库存仍可加工</small></div>';
+      '<label><input type="radio" name="' + name + '" value="zeroToSeven" data-new-rank-mode-scope="' + scope + '"' + (selected !== "zero" ? " checked" : "") + '>0–7阶</label><small>' +
+      (selected === "zero" ? '仅新增0阶；不额外投入升阶材料。库存可直投、降阶或拆解；返料升阶待核实。' : '可新增0–7阶，库存可在0–7阶自由升降。') + '</small></div>';
   }
 
   function resetCalculator(beastId) {
@@ -692,7 +723,7 @@
       '<section class="panel machine-calculator-panel"><h2>材料与库存范围</h2><label class="machine-fragment-field"><span>当前机关兽碎片</span><input type="number" min="0" step="1" inputmode="numeric" value="' + state.calcDraft.fragments + '" data-calc-field="fragments"></label>' +
       '<details class="machine-temporary-inventory" data-detail-key="inventory:single:' + beast.id + '"><summary>临时调整当前库存</summary>' + inventoryEditor(beast, state.calcDraft, "calculator") + '</details>' +
       calculatorInventorySelector(beast, state.calcDraft, state.singleInventoryPolicy, "single", true) + newRankModeSelector("single", state.singleNewRankMode) + '</section><div data-machine-cost-slot></div>' +
-      '<div class="machine-calculator-actions machine-calc-actionbar"><button type="button" class="seg" data-machine-action="reload-calculator">从个人进度重新读取</button><button type="button" class="seg active" data-machine-action="calculate">计算最优方案</button><button type="button" class="seg" data-machine-action="cancel-calculation" hidden disabled>取消计算</button><a href="#machine-beast-calculator-result" data-machine-jump data-machine-result-link hidden>查看计算结果</a><span role="status" data-machine-calculating-status hidden></span></div>';
+      '<div class="machine-calculator-actions machine-calc-actionbar"><button type="button" class="seg" data-machine-action="reload-calculator">从个人进度重新读取</button><button type="button" class="seg active" data-machine-action="calculate">计算方案</button><button type="button" class="seg" data-machine-action="cancel-calculation" hidden disabled>取消计算</button><a href="#machine-beast-calculator-result" data-machine-jump data-machine-result-link hidden>查看计算结果</a><span role="status" data-machine-calculating-status hidden></span></div>';
   }
 
   function schoolStageOptions(school, selected) {
@@ -768,11 +799,11 @@
       '</section><section class="panel machine-school-strategy"><h2>策略与价格</h2>' +
       '<div class="machine-school-options"><label><input type="checkbox" data-school-option="useOwnedInventory"' + (draft.useOwnedInventory ? ' checked' : '') + '>使用已有库存</label>' +
       '<label><input type="checkbox" data-reference-cost-field="bluePurpleInventoryOnly"' + (state.referenceCostDraft.bluePurpleInventoryOnly !== false ? ' checked' : '') + '>蓝紫本体仅使用库存</label>' +
-      '<label><input type="checkbox" data-school-option="allowNewHighRanks"' + (draft.allowNewHighRanks ? ' checked' : '') + (draft.newRankMode === "zero" ? ' disabled' : '') + '>允许加工及新增8–10阶</label>' +
+      '<label><input type="checkbox" data-school-option="allowNewHighRanks"' + (draft.allowNewHighRanks ? ' checked' : '') + '>' + (draft.newRankMode === "zero" ? '允许库存重组8–10阶' : '允许加工及新增8–10阶') + '</label>' +
       '<label><input type="checkbox" data-school-option="allowNewModifications"' + (draft.allowNewModifications ? ' checked' : '') + '>允许额外改造神核（未计价）</label></div>' +
       newRankModeSelector("school", draft.newRankMode) +
       disclosure('school:rules', '查看库存限制、比较规则与完整说明', '<p class="muted-tip">蓝紫限制开启后，只允许使用已保存的完整蓝紫库存及指定阶数使用上限，不会通过碎片补出新本体；关闭使用已有库存时，蓝紫不能新增投入。蓝紫本体获取成本未计入，神图等其他消耗正常计价。</p><p class="muted-tip">两套方案都必须精确达到目标累计等级，不得超额培养；已达到或超过目标则不再投入。投入最小方案：已计价元宝最少 → 新增效果节点最多 → 等级内研发度溢出最少 → 神图总消耗最少。最多效果档位方案：新增效果节点最多 → 已计价元宝最少 → 溢出最少 → 神图总消耗最少。允许改造参与时，两套目标均先比较改造本体折算投入数量（已有与新增均计入），再按上述顺序比较；实质指标完全相同时保留全部同等最优组合，稳定键仅决定主展示顺序，其他组合在培养材料中查看。新增节点按实际effects统计；高档替换低档，最终仅生效最高已解锁档位。</p>') +
-      '<div data-machine-cost-slot></div></section><div class="machine-calculator-actions machine-calc-actionbar"><button type="button" class="seg" data-machine-action="reload-school-calculator">从个人进度重新读取</button><button type="button" class="seg active" data-machine-action="calculate-school">计算两套最优方案</button><button type="button" class="seg" data-machine-action="cancel-calculation" hidden disabled>取消计算</button><a href="#machine-school-participants" data-machine-jump>参与兽与临时库存</a><a href="#machine-beast-calculator-result" data-machine-jump data-machine-result-link hidden>查看结果</a><span role="status" data-machine-calculating-status hidden></span></div>' +
+      '<div data-machine-cost-slot></div></section><div class="machine-calculator-actions machine-calc-actionbar"><button type="button" class="seg" data-machine-action="reload-school-calculator">从个人进度重新读取</button><button type="button" class="seg active" data-machine-action="calculate-school">计算流派方案</button><button type="button" class="seg" data-machine-action="cancel-calculation" hidden disabled>取消计算</button><a href="#machine-school-participants" data-machine-jump>参与兽与临时库存</a><a href="#machine-beast-calculator-result" data-machine-jump data-machine-result-link hidden>查看结果</a><span role="status" data-machine-calculating-status hidden></span></div>' +
       '<section class="panel" id="machine-school-participants"><h2>参与兽与临时库存 <small>已选 <span data-school-participant-count>' + school.beastIds.filter(function (id) { return draft.participating[id]; }).length + '</span>／' + school.beastIds.length + '</small></h2><p class="muted-tip">未参与者的现有等级仍计入累计。</p><div class="machine-school-beast-controls">' + orderedBeastIds.map(function (beastId) {
         var beast = beastById(beastId);
         return renderSchoolBeastControl(beast, draft, Boolean(calculatorQuery) && isSearchMatch(beast, "calculator"));
@@ -825,7 +856,30 @@
         group.newBaseBodies += item.newBaseBodies;
       }
     });
-    return Array.from(groups.values());
+    return Array.from(groups.values()).sort(comparePlanForms);
+  }
+
+  function rankMaterialsNote(unverified) {
+    return unverified ? '<p class="muted-tip">返料升阶的材料可行性无法确认：降阶返还与转用规则尚未核实，仅比较无需库存升阶的方案。</p>' : '';
+  }
+
+  function schoolRankMaterialsUnverified(result) {
+    result = result || {};
+    if (result.rankMaterialsUnverified != null) return result.rankMaterialsUnverified;
+    return Boolean(state.schoolDraft && state.schoolDraft.newRankMode === "zero") ||
+      (result.plans || []).some(function (plan) { return plan.beasts.some(function (detail) { return detail.inventoryConversion && detail.inventoryConversion.rankMaterialsUnverified; }); });
+  }
+
+  function investmentInventoryLimits(key, beast, progress, policy, enabled, remainingItems) {
+    if (!beast || !progress || !policy) return '';
+    var entries = inventoryEntries(beast, progress);
+    if (!entries.length) return '';
+    var title = remainingItems ? '原库存、使用上限及预计剩余' : '原库存与使用上限';
+    return disclosure(key + ':inventory-limits', title, '<ul>' + entries.map(function (entry) {
+      var allowed = inventoryLimit(entry, policy, enabled);
+      return '<li>' + escapeHtml(combinedRankLabel(entry.modificationName, entry.rank)) + '：库存 ' +
+        formatNumber(entry.count) + '只／最多使用 ' + formatNumber(allowed) + '只</li>';
+    }).join('') + '</ul>' + (remainingItems ? '<h4>预计剩余库存</h4>' + itemList(remainingItems, '无剩余库存') : ''));
   }
 
   function itemList(items, empty, emphasizeRequirement) {
@@ -837,12 +891,12 @@
     }).join("") + '</ul>' : '<p class="muted-tip">' + escapeHtml(empty) + '</p>';
   }
 
-  function investmentLists(ownedItems, newItems, conversion, school) {
+  function investmentLists(ownedItems, newItems, conversion, school, inventoryDetails) {
     var mixed = newItems.some(function (item) { return item.ownedBaseBodies > 0; });
     var reclaimed = conversion && conversion.sources.some(function (source) { return source.returnedCores > 0; });
     var empty = mixed ? '库存本体用于混合投入' : reclaimed ? '库存仅用于返还神核' : '未使用库存';
     var attributes = school ? ' class="machine-school-plan-material"' : '';
-    return '<article' + attributes + '><h3>使用已有库存</h3>' + itemList(ownedItems, empty, 'owned') +
+    return '<article' + attributes + '><h3>使用已有库存</h3>' + itemList(ownedItems, empty, 'owned') + (inventoryDetails || '') +
       '</article><article' + attributes + '><h3>' + (mixed ? '含新增本体的投入' : '新增投入') + '</h3>' + itemList(newItems, '无需新增机关兽', true) + '</article>';
   }
 
@@ -872,6 +926,17 @@
       body = '<dl class="machine-conversion-flow">' + line('加工前', forms(groupInvestmentItems(inputs))) +
         line('加工投入', outputs.length ? forms(outputs) : '无') +
         (remaining.length ? line('加工剩余', forms(groupInvestmentItems(remaining))) : '') + '</dl>';
+      var paths = sources.map(function (source, index) {
+        return { origin: inputs[index], targets: source.bodyTargets };
+      }).filter(function (path) { return path.targets && path.targets.length; }).sort(function (left, right) {
+        return comparePlanForms(left.origin, right.origin);
+      });
+      if (paths.length) body += '<dl class="machine-conversion-flow">' +
+        paths.map(function (path) {
+          return line(forms([path.origin]), path.targets.slice().sort(comparePlanForms).map(function (target) {
+            return '<span>供' + target.rank + '阶投入 · ' + formatNumber(target.bodies) + '份折算本体</span>';
+          }).join(''));
+        }).join('') + '</dl>';
     }
     if (hasCores) {
       body += '<dl class="machine-core-ledger">' + [
@@ -888,8 +953,10 @@
     var focused = rememberPresentation(el.calculatorResult);
     state.referenceCostRequirements = {};
     el.calculatorResult.hidden = false;
+    var unverified = result.rankMaterialsUnverified != null ? result.rankMaterialsUnverified :
+      Boolean(result.inventoryConversion && result.inventoryConversion.rankMaterialsUnverified || !result.valid && state.singleNewRankMode === "zero");
     if (!result.valid) {
-      el.calculatorResult.innerHTML = '<section class="panel machine-result is-error"><h2>无法计算</h2><ul>' + result.errors.map(function (error) { return '<li>' + escapeHtml(error) + '</li>'; }).join("") + '</ul>' + resultNavigation() + '</section>';
+      el.calculatorResult.innerHTML = '<section class="panel machine-result is-error"><h2>' + (unverified ? '暂无可确认方案' : '无法计算') + '</h2><ul>' + result.errors.map(function (error) { return '<li>' + escapeHtml(error) + '</li>'; }).join("") + '</ul>' + rankMaterialsNote(unverified) + resultNavigation() + '</section>';
       finishResultRender(focused, scroll);
       return;
     }
@@ -902,7 +969,7 @@
       ? '<div><span>仍需贡献</span><b>' + formatNumber(result.exchange.contribution) + '</b></div><div><span>约需元宝</span><b>' + formatNumber(result.exchange.yuan) + '</b></div>'
       : '<div class="machine-no-exchange"><span>贡献兑换</span><b>该档次不可通过贡献兑换碎片</b></div>';
     el.calculatorResult.innerHTML = '<section class="panel machine-result"><div class="machine-result-head"><div><h2>' + escapeHtml(beastById(state.calcBeastId).name) + '升至' + result.target.level + '级</h2></div><b>计算结果</b></div>' +
-      resultNavigation() + '<p class="machine-exact-target">当前 ' + result.current.level + '级 → 目标 ' + result.target.level + '级</p><div class="machine-summary-priority machine-single-priority"><div><span>预计达到</span><b>' + result.totals.projectedLevel + '级</b></div><div><span>'+(result.inventoryConversion?'新增0阶本体需求':'新增完整机关兽需求')+'</span><b>' + (result.inventoryConversion?result.totals.newInvestedCount:newPhysical) + '只</b></div><div><span>神图缺口</span><b data-single-priority-blueprints>' + (reference ? formatNumber(reference.blueprints.missing) : '请修正参考设置') + '</b></div><div><span>参考元宝（不参与单兽排序）</span><b class="machine-money" data-single-priority-yuan>' + (reference && reference.complete ? formatNumber(reference.totalYuan) : '费用未完整计价') + '</b></div></div>' +
+      resultNavigation() + rankMaterialsNote(unverified) + '<p class="machine-exact-target">当前 ' + result.current.level + '级 → 目标 ' + result.target.level + '级</p><div class="machine-summary-priority machine-single-priority"><div><span>预计达到</span><b>' + result.totals.projectedLevel + '级</b></div><div><span>'+(result.inventoryConversion?'新增0阶本体需求':'新增完整机关兽需求')+'</span><b>' + (result.inventoryConversion?result.totals.newInvestedCount:newPhysical) + '只</b></div><div><span>神图缺口</span><b data-single-priority-blueprints>' + (reference ? formatNumber(reference.blueprints.missing) : '请修正参考设置') + '</b></div><div><span>参考元宝（不参与单兽排序）</span><b class="machine-money" data-single-priority-yuan>' + (reference && reference.complete ? formatNumber(reference.totalYuan) : '费用未完整计价') + '</b></div></div>' +
       disclosure(detailKey + ':metrics', '研发度、投入与全部资源指标', '<div class="machine-result-metrics"><div><span>当前等级</span><b>' + result.current.level + '级</b></div><div><span>当前研发度</span><b>' + formatNumber(result.current.research) + '</b></div>' +
       '<div><span>目标研发度</span><b>' + formatNumber(result.target.research) + '</b></div><div><span>仍缺研发度</span><b>' + formatNumber(result.target.deficit) + '</b></div>' +
       '<div><span>'+(result.inventoryConversion?'0阶本体折算投入':'投入总只数')+'</span><b>' + result.totals.investedCount + '</b></div><div><span>投入研发度</span><b>' + formatNumber(result.totals.research) + '</b></div>' +
@@ -910,6 +977,7 @@
       '<div class="machine-result-metrics machine-resource-metrics"><div><span>觉醒神图</span><b>' + formatNumber(result.totals.awakeningBlueprints) + '</b></div><div><span>机关破片</span><b>' + formatNumber(result.totals.organPieces) + '</b></div>' +
       '<div><span>本体缺口</span><b>' + result.shortage.bodyEquivalent + '本体</b></div><div><span>机关兽碎片缺口</span><b>' + formatNumber(result.shortage.fragments) + '</b></div>' + exchange + '</div>') +
       '<div class="machine-result-columns">' + investmentLists(result.selected.ownedItems, result.selected.newItems, result.inventoryConversion, false) + '</div>' + conversionSummary(result.inventoryConversion, result.modificationCores, detailKey, result.selected.ownedItems.concat(result.selected.newItems)) +
+      investmentInventoryLimits(detailKey, beastById(state.calcBeastId), state.calcDraft, state.singleInventoryPolicy, state.singleInventoryPolicy && state.singleInventoryPolicy.useOwnedInventory) +
       '<p class="machine-final-effect">最终最高生效效果：' + (finalEffect ? finalEffect.level + '级档位 · ' + escapeHtml(finalEffect.text) : '尚未解锁效果') + '</p>' +
       disclosure(detailKey + ':cost', '参考成本明细', costSlot("single", requirements)) +
       '<details class="machine-unused machine-disclosure" data-detail-key="' + detailKey + ':unused"><summary>预计剩余库存（' + formatNumber(result.unused.reduce(function (total, item) { return total + item.count; }, 0)) + '只）</summary>' + itemList(result.unused, "无剩余库存") + '</details></section>';
@@ -922,7 +990,9 @@
     if (scroll !== false) jumpTo('machine-beast-calculator-result');
   }
 
-  function schoolPlanTitle(kind) {
+  function schoolPlanTitle(kind, unverified) {
+    if (unverified && kind === "cost") return "投入优先方案";
+    if (unverified && kind === "effects") return "效果优先方案";
     if (kind === "cost") return "投入最小方案";
     if (kind === "effects") return "最多效果档位方案";
     return "两种目标得到相同方案";
@@ -935,14 +1005,23 @@
   function renderSchoolBeastPlan(detail) {
     var ownedItems = detail.items.filter(function (item) { return item.source === "owned"; });
     var newItems = detail.items.filter(function (item) { return item.source === "new"; });
+    var detailKey = 'school:beast:' + detail.beastId + ':' + detail.endLevel + ':' + detail.items.map(function (item) {
+      return item.source + '/' + item.modificationId + '/' + item.rank + '/' + item.count;
+    }).join(';');
+    var draft = state.schoolDraft;
+    var inventoryDetails = draft && draft.progressByBeast && draft.ownedPoliciesByBeast
+      ? investmentInventoryLimits(detailKey, beastById(detail.beastId), draft.progressByBeast[detail.beastId], draft.ownedPoliciesByBeast[detail.beastId], draft.useOwnedInventory, detail.inventoryConversion && detail.inventoryConversion.remainingItems) : '';
     return '<article class="machine-school-plan-beast"><header><strong>' + escapeHtml(detail.beastName) + '</strong><b>' + detail.startLevel + '级 → ' + detail.endLevel + '级</b></header>' +
       '<div class="machine-card-primary machine-plan-primary" tabindex="0" role="region" aria-label="效果节点与已有新增投入，可横向滚动"><span>新增效果节点 <b>' + formatNumber(detail.unlockedEffects) + '</b></span><span class="machine-owned-investment">' + (detail.inventoryConversion ? '库存折算' : '已有投入') + ' <b>' + formatNumber(detail.inventoryConversion ? detail.ownedInvestedCount : ownedItems.reduce(function (sum, item) { return sum + item.count; }, 0)) + '只</b></span><span class="machine-investment-demand">' + (detail.inventoryConversion ? '新增折算' : '新增投入') + ' <b>' + formatNumber(detail.inventoryConversion ? detail.newInvestedCount : newItems.reduce(function (sum, item) { return sum + item.count; }, 0)) + '只</b></span></div>' +
-      investmentLists(ownedItems, newItems, detail.inventoryConversion, true) + conversionSummary(detail.inventoryConversion, detail.modificationCores, 'school:beast:' + detail.beastId + ':' + detail.endLevel + ':' + detail.items.map(function (item) { return item.source + '/' + item.modificationId + '/' + item.rank + '/' + item.count; }).join(';'), detail.items) +
+      investmentLists(ownedItems, newItems, detail.inventoryConversion, true, inventoryDetails) + conversionSummary(detail.inventoryConversion, detail.modificationCores, detailKey, detail.items) +
       '<div class="machine-school-plan-beast-metrics" tabindex="0" role="region" aria-label="研发度增长与溢出，可横向滚动"><span>研发度 ' + formatNumber(detail.startResearch) + ' → ' + formatNumber(detail.endResearch) + '</span><span>增加 ' + formatNumber(detail.addedResearch) + '</span><span>溢出 ' + formatNumber(detail.overflowResearch) + '</span></div>' +
       '<div class="machine-school-plan-resources"><span>折算投入 <b>' + detail.investedCount + '只</b></span><span>新增效果节点 <b>' + formatNumber(detail.unlockedEffects) + '</b></span><span>最终生效档位 <b>' + (detail.finalEffect ? detail.finalEffect.level + '级' : '尚未解锁') + '</b></span><span>机关兽碎片缺口 <b>' + formatNumber(detail.resources.fragments) + '</b></span><span>神图总消耗 <b>' + formatNumber(detail.resources.awakeningBlueprints) + '</b></span><span>机关破片 <b>' + formatNumber(detail.resources.organPieces) + '</b></span><span>改造本体折算投入 <b>' + formatNumber(detail.modifiedInvestedCount) + '</b>（已有 ' + formatNumber(detail.ownedModifiedInvestedCount) + '／新增 ' + formatNumber(detail.newModifiedInvestedCount) + '）</span></div></article>';
   }
 
   function schoolComparison(result) {
+    var unverified = schoolRankMaterialsUnverified(result);
+    var costName = unverified ? '投入优先' : '投入最小';
+    var effectsName = unverified ? '效果优先' : '最多效果';
     var rows = [
       ["current", "当前累计等级", function () { return result.current.totalLevel; }],
       ["target", "目标累计等级", function () { return result.target.totalLevel; }],
@@ -956,29 +1035,29 @@
     var difference = '';
     if (cost && effects) {
       var yuanDelta = effects.totals.pricedYuan - cost.totals.pricedYuan, nodeDelta = effects.totals.unlockedEffects - cost.totals.unlockedEffects;
-      difference = '<p class="machine-plan-difference">最多效果相对投入最小：已计价参考元宝 ' + (yuanDelta > 0 ? '+' : '') + formatNumber(yuanDelta) + '；新增节点 ' + (nodeDelta > 0 ? '+' : '') + nodeDelta + '。未计价部分不在差值内。</p>';
+      difference = '<p class="machine-plan-difference">' + effectsName + '相对' + costName + '：已计价参考元宝 ' + (yuanDelta > 0 ? '+' : '') + formatNumber(yuanDelta) + '；新增节点 ' + (nodeDelta > 0 ? '+' : '') + nodeDelta + '。未计价部分不在差值内。</p>';
       var effectRows = new Map((effects.finalEffects || []).map(function (row) { return [row.beastId, row]; }));
       var costCultivated = new Set(cost.beasts.map(function (row) { return row.beastId; }));
       var effectsCultivated = new Set(effects.beasts.map(function (row) { return row.beastId; }));
-      var beastDifferences = (cost.finalEffects || []).map(function (row) {
+      var beastDifferences = planBeastOrder(cost.finalEffects || [], cost.beasts.concat(effects.beasts)).map(function (row) {
         var other = effectRows.get(row.beastId);
         if (!other || (row.level === other.level && costCultivated.has(row.beastId) === effectsCultivated.has(row.beastId))) return '';
-        var only = costCultivated.has(row.beastId) !== effectsCultivated.has(row.beastId) ? '；仅' + (costCultivated.has(row.beastId) ? '投入最小' : '最多效果') + '方案培养' : '';
-        return '<li data-plan-difference-beast="' + escapeHtml(row.beastId) + '"><b>' + escapeHtml(row.beastName) + '</b><span>投入最小 ' + row.level + '级／最多效果 ' + other.level + '级' + only + '</span></li>';
+        var only = costCultivated.has(row.beastId) !== effectsCultivated.has(row.beastId) ? '；仅' + (costCultivated.has(row.beastId) ? costName : effectsName) + '方案培养' : '';
+        return '<li data-plan-difference-beast="' + escapeHtml(row.beastId) + '"><b>' + escapeHtml(row.beastName) + '</b><span>' + costName + ' ' + row.level + '级／' + effectsName + ' ' + other.level + '级' + only + '</span></li>';
       }).join('');
       if (beastDifferences) difference += '<section class="machine-beast-differences"><h3>方案差异 · 机关兽培养</h3><ul>' + beastDifferences + '</ul></section>';
     }
-    return '<section class="panel machine-school-comparison" id="machine-school-comparison"><h2>精确达标方案对照</h2>' + resultNavigation() +
+    return '<section class="panel machine-school-comparison" id="machine-school-comparison"><h2>精确达标方案对照</h2>' + resultNavigation() + rankMaterialsNote(unverified) +
       '<p class="machine-exact-target">当前 ' + result.current.totalLevel + ' → 目标 ' + result.target.totalLevel + '级 · 本次增长额度 ' + result.target.remaining + '级</p>' +
       '<div class="machine-school-mobile-summaries">' + result.plans.map(function (p, index) {
-        return '<article><h3>' + escapeHtml(schoolPlanTitle(p.kind)) + '</h3>' + schoolPriority(p, result) + '<nav><a href="#' + schoolPlanAnchor(p) + '" data-machine-jump>查看方案明细</a><a href="#machine-school-final-effects-' + index + '" data-machine-jump>最终生效效果</a></nav></article>';
+        return '<article><h3>' + escapeHtml(schoolPlanTitle(p.kind, unverified)) + '</h3>' + schoolPriority(p, result) + '<nav><a href="#' + schoolPlanAnchor(p) + '" data-machine-jump>查看方案明细</a><a href="#machine-school-final-effects-' + index + '" data-machine-jump>最终生效效果</a></nav></article>';
       }).join('') + '</div><table class="machine-school-desktop-comparison"><thead><tr><th scope="col">指标</th>' + result.plans.map(function (p) {
-      return '<th scope="col">' + escapeHtml(schoolPlanTitle(p.kind)) + '</th>';
+      return '<th scope="col">' + escapeHtml(schoolPlanTitle(p.kind, unverified)) + '</th>';
     }).join("") + '</tr></thead><tbody>' + rows.map(function (row) {
       return '<tr data-school-metric="' + row[0] + '"><th scope="row">' + row[1] + '</th>' + result.plans.map(function (p) { return '<td>' + row[2](p) + '</td>'; }).join("") + '</tr>';
     }).join("") + '<tr><th scope="row">最终生效效果</th>' + result.plans.map(function (_, index) {
       return '<td><a href="#machine-school-final-effects-' + index + '" data-machine-jump>查看逐兽最高档位</a></td>';
-    }).join("") + '</tr></tbody></table>' + difference + '<nav class="machine-result-navigation" aria-label="跳转方案">' + result.plans.map(function (p) { return '<a href="#' + schoolPlanAnchor(p) + '" data-machine-jump>' + escapeHtml(schoolPlanTitle(p.kind)) + '</a>'; }).join('') + '</nav><p class="muted-tip">新增节点用于方案排序，不代表低档效果仍在叠加生效。蓝紫本体、机关破片及制作成本未计入参考元宝。</p></section>';
+    }).join("") + '</tr></tbody></table>' + difference + '<nav class="machine-result-navigation" aria-label="跳转方案">' + result.plans.map(function (p) { return '<a href="#' + schoolPlanAnchor(p) + '" data-machine-jump>' + escapeHtml(schoolPlanTitle(p.kind, unverified)) + '</a>'; }).join('') + '</nav><p class="muted-tip">新增节点用于方案排序，不代表低档效果仍在叠加生效。蓝紫本体、机关破片及制作成本未计入参考元宝。</p></section>';
   }
 
   function schoolPlanAnchor(plan) { return 'machine-school-plan-' + (plan.kind === 'cost' ? 'cost' : plan.kind === 'effects' ? 'effects' : 'merged'); }
@@ -995,25 +1074,27 @@
   }
 
   function schoolFinalEffects(plan, index) {
-    return '<details class="machine-school-final-effects machine-disclosure" id="machine-school-final-effects-' + index + '" data-detail-key="' + schoolPlanAnchor(plan) + ':' + state.schoolDraft.schoolId + ':' + state.schoolDraft.targetStage + ':effects"><summary>' + (plan.equivalents && BigInt(plan.equivalents.count)>1n ? '主展示组合 · ' : '') + '最终生效效果 · 全部机关兽最高档位</summary><div class="machine-disclosure-body"><dl>' + (plan.finalEffects || []).map(function (row) {
+    return '<details class="machine-school-final-effects machine-disclosure" id="machine-school-final-effects-' + index + '" data-detail-key="' + schoolPlanAnchor(plan) + ':' + state.schoolDraft.schoolId + ':' + state.schoolDraft.targetStage + ':effects"><summary>' + (plan.equivalents && BigInt(plan.equivalents.count)>1n ? '主展示组合 · ' : '') + '最终生效效果 · 全部机关兽最高档位</summary><div class="machine-disclosure-body"><dl>' + planBeastOrder(plan.finalEffects || [], plan.beasts).map(function (row) {
       return '<div data-final-beast="' + escapeHtml(row.beastId) + '"><dt>' + escapeHtml(row.beastName) + ' · ' + row.level + '级' + (row.changed ? '' : '<small>原等级不变</small>') + '</dt><dd data-active-effect>' + (row.effect ? '<b>' + row.effect.level + '级档位</b> ' + escapeHtml(row.effect.text) : '尚未解锁效果') + '</dd></div>';
     }).join("") + '</dl></div></details>';
   }
 
   function renderSchoolPlan(plan, result, index) {
+    var unverified = schoolRankMaterialsUnverified(result);
     var totals = plan.totals;
+    var orderedBeasts = planBeastOrder(plan.beasts);
     var physical = { owned: 0, new: 0 };
     plan.beasts.forEach(function (detail) { detail.items.forEach(function (item) { physical[item.source] += item.count; }); });
     var anchor = schoolPlanAnchor(plan), detailKey = anchor + ':' + state.schoolDraft.schoolId + ':' + result.target.stage;
-    return '<section class="panel machine-result machine-school-plan" id="' + anchor + '"><div class="machine-result-head"><div><h2>' + escapeHtml(schoolPlanTitle(plan.kind)) + '</h2></div><b>' + result.target.stage + '阶 · 累计' + result.target.totalLevel + '级</b></div>' +
+    return '<section class="panel machine-result machine-school-plan" id="' + anchor + '"><div class="machine-result-head"><div><h2>' + escapeHtml(schoolPlanTitle(plan.kind, unverified)) + '</h2></div><b>' + result.target.stage + '阶 · 累计' + result.target.totalLevel + '级</b></div>' +
       '<nav class="machine-result-navigation"><a href="#machine-school-comparison" data-machine-jump>返回方案对照</a><a href="#machine-beast-calculator-controls" data-machine-jump>调整设置</a></nav>' + schoolPriority(plan, result) +
       disclosure(detailKey + ':metrics', '研发度、折算投入与全部资源指标', '<div class="machine-school-plan-summary"><div><span>当前累计等级</span><b>' + result.current.totalLevel + '</b></div><div><span>目标累计等级</span><b>' + result.target.totalLevel + '</b></div><div><span>推荐最终等级</span><b>' + totals.projectedTotalLevel + '</b></div><div><span>新增研发等级</span><b>' + (totals.projectedTotalLevel - result.current.totalLevel) + '</b></div>' +
       '<div><span>折算投入总只数</span><b>' + totals.investedCount + '</b></div><div><span>'+(plan.beasts.some(function(b){return b.inventoryConversion;})?'库存0阶本体投入':'已有完整机关兽消耗')+'</span><b>' + (plan.beasts.some(function(b){return b.inventoryConversion;})?totals.ownedInvestedCount:physical.owned) + '只</b><span>折算 ' + totals.ownedInvestedCount + '只</span></div><div><span>'+(plan.beasts.some(function(b){return b.inventoryConversion;})?'新增0阶本体需求':'新增完整机关兽需求')+'</span><b>' + (plan.beasts.some(function(b){return b.inventoryConversion;})?totals.newInvestedCount:physical.new) + '只</b><span>折算 ' + totals.newInvestedCount + '只</span></div>' +
       '<div><span>新增效果节点</span><b>' + formatNumber(totals.unlockedEffects) + '</b></div><div><span>研发度溢出</span><b>' + formatNumber(totals.overflowResearch) + '</b></div><div><span>觉醒神图总消耗</span><b>' + formatNumber(totals.awakeningBlueprints) + '</b></div>' +
       '<div><span>机关破片</span><b>' + formatNumber(totals.organPieces) + '</b></div><div><span>机关兽碎片缺口</span><b>' + formatNumber(totals.fragments) + '</b></div><div><span>已计价参考元宝' + (plan.cost && !plan.cost.complete ? '（已知小计）' : '') + '</span><b>' + formatNumber(plan.cost ? plan.cost.knownYuan : totals.pricedYuan) + '</b></div>' +
       '<div><span>改造本体折算投入</span><b>' + formatNumber(totals.modifiedInvestedCount) + '</b><span>已有 ' + formatNumber(totals.ownedModifiedInvestedCount) + '／新增 ' + formatNumber(totals.newModifiedInvestedCount) + '</span></div></div>') +
-      disclosure(detailKey + ':cost', '费用明细 · 神图需求 ' + formatNumber(totals.awakeningBlueprints), costSlot("school-" + index, { awakeningBlueprints: totals.awakeningBlueprints, beasts: plan.beasts.map(function (detail) { return { beastId: detail.beastId, fragments: detail.resources.fragments }; }) })) +
-      disclosure(detailKey + ':materials', '培养材料' + (plan.equivalents && BigInt(plan.equivalents.count) > 1n ? ' · 同等最优共' + formatNumber(BigInt(plan.equivalents.count)) + '套' : ''), '<div class="machine-cultivation-layout">' + (plan.beasts.length ? '<div class="machine-school-plan-beasts">' + plan.beasts.map(renderSchoolBeastPlan).join("") + '</div>' : '<p class="machine-school-complete">目标已达成，无需新增投入。</p>') + equivalentMaterials(plan, index) + '</div>') + schoolFinalEffects(plan, index) + '</section>';
+      disclosure(detailKey + ':cost', '费用明细 · 神图需求 ' + formatNumber(totals.awakeningBlueprints), costSlot("school-" + index, { awakeningBlueprints: totals.awakeningBlueprints, beasts: orderedBeasts.map(function (detail) { return { beastId: detail.beastId, fragments: detail.resources.fragments }; }) })) +
+      disclosure(detailKey + ':materials', '培养材料' + (plan.equivalents && BigInt(plan.equivalents.count) > 1n ? (unverified ? ' · 同等组合共' : ' · 同等最优共') + formatNumber(BigInt(plan.equivalents.count)) + '套' : ''), '<div class="machine-cultivation-layout">' + (orderedBeasts.length ? '<div class="machine-school-plan-beasts">' + orderedBeasts.map(renderSchoolBeastPlan).join("") + '</div>' : '<p class="machine-school-complete">目标已达成，无需新增投入。</p>') + equivalentMaterials(plan, index) + '</div>') + schoolFinalEffects(plan, index) + '</section>';
   }
 
   function equivalentPageKey(plan) {
@@ -1029,7 +1110,8 @@
       page = pages[key] = { plan: plan, result: state.schoolResult, accountId: accountId, sequence: calculationSequence,
         nextOffset: '0', hasMore: true, count: 0, busy: false, batches: [], container: null };
     }
-    return '<section class="machine-equivalent-materials" data-equivalent-index="' + index + '"><h3>其他同等最优组合 · 另' + formatNumber(BigInt(plan.equivalents.count)-1n) + '套</h3><p class="muted-tip">各组合互相替代，请勿叠加投入。</p><div data-equivalent-items>' + page.batches.join('') + '</div><p class="muted-tip" data-equivalent-count>' + equivalentCountText(page) + '</p><button type="button" class="seg" data-machine-action="more-equivalents" data-plan-index="' + index + '"' + (page.hasMore ? '' : ' hidden') + '>' + (page.count ? '继续显示其他组合（每次10套）' : '加载首批其他组合') + '</button></section>';
+    var title = schoolRankMaterialsUnverified(state.schoolResult) ? '其他同等组合' : '其他同等最优组合';
+    return '<section class="machine-equivalent-materials" data-equivalent-index="' + index + '"><h3>' + title + ' · 另' + formatNumber(BigInt(plan.equivalents.count)-1n) + '套</h3><p class="muted-tip">各组合互相替代，请勿叠加投入。</p><div data-equivalent-items>' + page.batches.join('') + '</div><p class="muted-tip" data-equivalent-count>' + equivalentCountText(page) + '</p><button type="button" class="seg" data-machine-action="more-equivalents" data-plan-index="' + index + '"' + (page.hasMore ? '' : ' hidden') + '>' + (page.count ? '继续显示其他组合（每次10套）' : '加载首批其他组合') + '</button></section>';
   }
 
   function equivalentCountText(page) {
@@ -1038,9 +1120,10 @@
 
   function renderEquivalentAlternatives(alternatives, key, start) {
     return alternatives.map(function (alternative, position) {
-      var title = '其他组合 ' + (start+position+1) + ' · ' + alternative.beasts.map(function (b) { return b.beastName + ' ' + b.startLevel + '→' + b.endLevel + '级'; }).join('、');
-      var effects = '<dl class="machine-equivalent-effects">' + alternative.beasts.map(function (b) { return '<div><dt>' + escapeHtml(b.beastName) + '最终最高生效效果</dt><dd>' + (b.finalEffect ? b.finalEffect.level + '级 · ' + escapeHtml(b.finalEffect.text) : '尚未解锁') + '</dd></div>'; }).join('') + '</dl>';
-      return disclosure(key + ':alternative:' + alternative.stableKey, escapeHtml(title), '<p>' + schoolMaterialSummary(alternative) + '</p><div class="machine-school-plan-beasts">' + alternative.beasts.map(renderSchoolBeastPlan).join('') + '</div>' + effects, 'machine-equivalent-combination');
+      var orderedBeasts = planBeastOrder(alternative.beasts);
+      var title = '其他组合 ' + (start+position+1) + ' · ' + orderedBeasts.map(function (b) { return b.beastName + ' ' + b.startLevel + '→' + b.endLevel + '级'; }).join('、');
+      var effects = '<dl class="machine-equivalent-effects">' + orderedBeasts.map(function (b) { return '<div><dt>' + escapeHtml(b.beastName) + '最终最高生效效果</dt><dd>' + (b.finalEffect ? b.finalEffect.level + '级 · ' + escapeHtml(b.finalEffect.text) : '尚未解锁') + '</dd></div>'; }).join('') + '</dl>';
+      return disclosure(key + ':alternative:' + alternative.stableKey, escapeHtml(title), '<p>' + schoolMaterialSummary(alternative) + '</p><div class="machine-school-plan-beasts">' + orderedBeasts.map(renderSchoolBeastPlan).join('') + '</div>' + effects, 'machine-equivalent-combination');
     }).join('');
   }
 
@@ -1111,7 +1194,8 @@
     state.referenceCostRequirements = {};
     el.calculatorResult.hidden = false;
     if (!result.valid) {
-      el.calculatorResult.innerHTML = '<section class="panel machine-result is-error"><h2>无法计算</h2><ul>' + result.errors.map(function (error) { return '<li>' + escapeHtml(error) + '</li>'; }).join("") + '</ul>' + resultNavigation() + '</section>';
+      var unverified = schoolRankMaterialsUnverified(result);
+      el.calculatorResult.innerHTML = '<section class="panel machine-result is-error"><h2>' + (unverified ? '暂无可确认方案' : '无法计算') + '</h2><ul>' + result.errors.map(function (error) { return '<li>' + escapeHtml(error) + '</li>'; }).join("") + '</ul>' + rankMaterialsNote(unverified) + resultNavigation() + '</section>';
       finishResultRender(focused, scroll);
       return;
     }
@@ -1666,7 +1750,6 @@
         state.singleNewRankMode = target.value;
       } else {
         state.schoolDraft.newRankMode = target.value;
-        if (target.value === "zero") state.schoolDraft.allowNewHighRanks = false;
       }
       renderCalculatorControls();
     } else if (target.matches("[data-school-participant]")) {

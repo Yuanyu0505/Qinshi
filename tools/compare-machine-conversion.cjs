@@ -4,6 +4,7 @@ const assert=require('node:assert/strict');
 const {load}=require('./machine-baseline-loader.cjs');
 const revision=process.argv[2]||'d667c2b';
 const allowAllocationFix=process.argv.includes('--allow-1149-allocation-fix');
+const freeRanksOnly=process.argv.includes('--free-ranks-only');
 // Correct only the independently reproduced stock-cap defect in the reference,
 // so that the performance changes are still checked against the old solver.
 const stockRule='zeroTotalFee=bestFee===0&&(price===0||hi<=stock);';
@@ -41,6 +42,9 @@ for(let iteration=0;iteration<180;iteration++){
   const data={beasts:[beast,{...beast,id:'b',name:'B'}],schools:[{id:'s',name:'S',beastIds:['a','b'],stages:[{stage:1,requiredTotalLevel:1+random(5)}]}],modifications,researchThresholds:{0:0,1:3,2:7,3:12},researchValues:{[quality]:Object.fromEntries(Array.from({length:9},(_,rank)=>[rank,Object.fromEntries(modifications.map(mod=>[mod.id,1+random(8)]))]))},resourceRules:{blueprintDivisor:3,organPieceDivisor:2},referenceCostRules:{blueprintPrice:7,contributionPerYuan:3,orangeFiveBodyPrice:45}};
   const progress=Object.fromEntries(['a','b'].map(id=>[id,{research:random(3),fragments:random(7),showMods:true,showHighRanks:true,inventory:{none:{0:random(3),8:random(2)},initial:{0:random(2),8:random(2)},fullDivine:{0:random(2)}}}]));
   const options={convertOwnedInventory:true,targetLevel:1+random(3),targetStage:1,newRankMode:iteration%2?'zero':'zeroToSeven',allowNewModifications:iteration%3===0,allowNewHighRanks:iteration%5===0,useOwnedInventory:iteration%7!==0,bluePurpleInventoryOnly:iteration%3!==1,ownedLooseCores:iteration%2?40:0,ownedLooseCoresByBeast:{a:iteration%2?55:0,b:iteration%3?0:145},ownedLimits:{initial:{8:iteration%2}},ownedLimitsByBeast:{a:{initial:{8:iteration%2},fullDivine:{0:iteration%2}},b:{none:{0:iteration%3}}},referenceCostSettings:{awakeningBlueprintStock:random(8),awakeningBlueprintPrice:iteration%2?1.1:7}};
+  // Historical zero mode had free upgrades. The revised zero mode is
+  // compared to a physical-stock oracle rather than the invalid old output.
+  if(freeRanksOnly)options.newRankMode='zeroToSeven';
   for(const b of data.beasts){
     same(before.core.calculateInvestmentPlan(data,b,progress[b.id],options),after.core.calculateInvestmentPlan(data,b,progress[b.id],options),'single '+iteration+' '+b.id);singles++;
     const p=before.core.normalizeBeastProgress(b,progress[b.id],data);

@@ -80,23 +80,26 @@ function compare(a,b){for(let i=0;i<a.length;i++)if(a[i]!==b[i])return a[i]-b[i]
 // It never calls the conversion helper, production research/fee helpers or DP.
 function brute(data,p,options,school){
   const b=data.beasts[0],inventory=p.inventory||{},types=[],max=options.newRankMode==='zero'?0:options.allowNewHighRanks?8:7;
-  let pool=0,corePool=0;const coreCosts={none:0,initial:40};
+  let pool=0,corePool=0;const coreCosts={none:0,initial:40},stockRanks=[];
   for(const [mod,ranks]of Object.entries(inventory))for(const [rankText,count]of Object.entries(ranks)){
     const rank=Number(rankText),cap=options.useOwnedInventory===false||b.quality!=='orange'&&mod!=='none'?0:Math.min(count,options.ownedLimits?.[mod]?.[rankText]??count),weight=rank>7?2**(rank-7):1;
     pool+=cap*weight;
     corePool+=cap*coreCosts[mod];
-    types.push({research:data.researchValues[b.quality][rank][mod],cap,weight,modified:mod!=='none',cores:coreCosts[mod],ownedWeight:weight});
+    for(let i=0;i<cap*weight;i++)stockRanks.push(Math.min(rank,7));
+    types.push({rank,research:data.researchValues[b.quality][rank][mod],cap,weight,modified:mod!=='none',cores:coreCosts[mod],ownedWeight:weight});
   }
   const ownedMax=options.allowNewHighRanks?8:7;
   for(const rank of [0,7,8].filter(r=>r<=Math.max(max,pool?ownedMax:0)))for(const mod of data.modifications){
     if(mod.id!=='none'&&(b.quality!=='orange'||!corePool&&!options.allowNewModifications))continue;
     const research=data.researchValues[b.quality][rank][mod.id],weight=rank>7?2**(rank-7):1;
-    if(research)types.push({research,weight,modified:mod.id!=='none',cores:coreCosts[mod.id],ownedWeight:rank>max?weight:0,cap:Math.ceil(9/research)});
+    if(research)types.push({rank,research,weight,modified:mod.id!=='none',cores:coreCosts[mod.id],ownedWeight:rank>max?weight:0,cap:Math.ceil(9/research)});
   }
   let best=null,rows=[];
-  function visit(index,r,n,m,B,pieces,cores=0,owned=0){
+  stockRanks.sort((a,b)=>b-a);
+  function visit(index,r,n,m,B,pieces,cores=0,owned=0,products=[]){
     if(owned>pool||!options.allowNewModifications&&cores>corePool)return;
-    if(index<types.length){const t=types[index];for(let q=0;q<=t.cap;q++)visit(index+1,r+q*t.research,n+q*t.weight,m+(t.modified?q*t.weight:0),B+q*Math.ceil(t.research/3),pieces+q*Math.ceil(t.research/2),cores+q*t.cores,owned+q*t.ownedWeight);return;}
+    if(index<types.length){const t=types[index];for(let q=0;q<=t.cap;q++)visit(index+1,r+q*t.research,n+q*t.weight,m+(t.modified?q*t.weight:0),B+q*Math.ceil(t.research/3),pieces+q*Math.ceil(t.research/2),cores+q*t.cores,owned+q*t.ownedWeight,options.newRankMode==='zero'&&t.rank>0?products.concat(Array(q*t.weight).fill(Math.min(t.rank,7))):products);return;}
+    if(products.sort((a,b)=>b-a).some((rank,i)=>!(stockRanks[i]>=rank)))return;
     const final=r>=9?2:r>=5?1:0,added=Math.max(0,n-pool);
     if(school==='rows'){
       if(b.quality!=='orange'&&options.bluePurpleInventoryOnly!==false&&added)return;

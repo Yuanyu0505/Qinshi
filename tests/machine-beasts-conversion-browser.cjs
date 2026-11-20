@@ -1,6 +1,7 @@
 'use strict';
 const {test,before,after}=require('node:test');
 const assert=require('node:assert/strict');
+const path=require('node:path');
 const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
 const {createServer}=require('../serve.js');
 const {openApp,getAccountItem}=require('./browser-test-helpers.cjs');
@@ -29,7 +30,7 @@ for(const [width,fallback] of [[390,false],[1280,false]])test('convertible stock
     await page.locator('.machine-inventory-conversion').waitFor();
     assert.equal(await getAccountItem(page,'qinshi_machine_beasts_progress_v1'),saved);
     const dimensions=await page.evaluate(()=>[document.documentElement.scrollWidth,innerWidth]);assert.ok(dimensions[0]<=dimensions[1]);
-    await page.locator('#machine-beast-calculator-result').screenshot({path:'outputs/machine-beast-conversion-'+width+'.png'});
+    if(process.env.MACHINE_BEAST_SCREENSHOTS)await page.locator('#machine-beast-calculator-result').screenshot({path:path.join(process.env.MACHINE_BEAST_SCREENSHOTS,'free-'+width+'.png')});
     await page.evaluate(()=>{
       const view=window.MACHINE_BEAST_UI.captureView();view.calcDraft.inventory={none:{10:1}};
       view.singleInventoryPolicy={useOwnedInventory:true,limits:{none:{10:1}}};view.singleNewRankMode='zero';view.calcTargetLevel=1;view.calcResult=null;window.MACHINE_BEAST_UI.restoreView(view);
@@ -39,6 +40,25 @@ for(const [width,fallback] of [[390,false],[1280,false]])test('convertible stock
     const high=await page.evaluate(()=>window.MACHINE_BEAST_UI.captureView().calcResult);
     assert.equal(high.inventoryConversion.remainingBaseBodies,7);
     assert.ok(!(await page.locator('#machine-beast-calculator-result').innerText()).includes('NaN'));
+    assert.equal(await getAccountItem(page,'qinshi_machine_beasts_progress_v1'),saved);
+    await page.evaluate(()=>{
+      const view=window.MACHINE_BEAST_UI.captureView();
+      view.calcBeastId='mechanical-yueliao';view.calcDraft={research:0,fragments:0,inventory:{none:{2:1,3:1,4:1,5:1,6:1,7:1}}};
+      view.singleInventoryPolicy={useOwnedInventory:true,limits:{none:{2:1,3:1,4:1,5:1,6:1,7:1}}};view.singleNewRankMode='zero';view.calcTargetLevel=25;view.calcResult=null;
+      window.MACHINE_BEAST_UI.restoreView(view);
+    });
+    await page.locator('[data-machine-action="calculate"]').click();
+    await page.waitForFunction(()=>window.MACHINE_BEAST_UI.captureView().calcResult!==null);
+    const restricted=await page.evaluate(()=>window.MACHINE_BEAST_UI.captureView().calcResult);
+    assert.equal(restricted.totals.newInvestedCount,17);
+    assert.ok(restricted.selected.newItems.every(i=>i.rank===0));
+    const section=page.locator('#machine-beast-calculator-result');
+    assert.match(await section.innerText(),/材料可行性无法确认/);
+    const ranks=(await section.locator('.machine-result-columns article').first().locator('li strong').allTextContents()).map(text=>Number(text.match(/(\d+)阶/)[1]));
+    assert.deepEqual(ranks,ranks.slice().sort((a,b)=>b-a));
+    await section.locator('.machine-inventory-conversion > summary').click();
+    assert.match(await section.locator('.machine-inventory-conversion').innerText(),/供5阶投入/);
+    if(process.env.MACHINE_BEAST_SCREENSHOTS)await section.screenshot({path:path.join(process.env.MACHINE_BEAST_SCREENSHOTS,'zero-'+width+'.png')});
     assert.equal(await getAccountItem(page,'qinshi_machine_beasts_progress_v1'),saved);
     assert.deepEqual(errors,[]);
   }finally{await context.close();}

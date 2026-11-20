@@ -17,8 +17,8 @@ test('baseline loader keeps the complete native module graph private', () => {
   assert.equal(typeof baseline.planner.equivalentPlansPage, 'function');
 });
 
-test('inventory conversion retains baseline plans and bounded pages with the 1.1.49 allocation correction', { timeout: 60000 }, () => {
-  const child = spawnSync(process.execPath, [path.resolve(__dirname, '../tools/compare-machine-conversion.cjs'), 'd667c2b', '--allow-1149-allocation-fix'], {
+test('free-rank inventory conversion retains baseline plans and bounded pages', { timeout: 60000 }, () => {
+  const child = spawnSync(process.execPath, [path.resolve(__dirname, '../tools/compare-machine-conversion.cjs'), 'd667c2b', '--allow-1149-allocation-fix', '--free-ranks-only'], {
     encoding: 'utf8', timeout: 55000, windowsHide: true, maxBuffer: 1024 * 1024
   });
   assert.equal(child.error, undefined, child.error?.message);

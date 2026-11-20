@@ -74,6 +74,7 @@ Windows / Node v24.16.0；同一机器、相同输入、每场独立原生子进
 ## 测试、日志与复现命令
 
 - 全站最终：`node tools/run-tests.cjs unit`，**1271/1271通过，0失败/跳过**，日志`outputs/1147-full-unit-final.txt`。首轮1266/1267，唯一旧资料顺序断言来自1.1.46以前，按已确认顺序同步后重跑，不改资料。
+- 合并本地master后再次执行同一全量命令，**1271/1271通过，0失败/跳过**，日志`outputs/1147-merged-unit.txt`；核心提交567bcc4。
 - 最终真实Worker/价格/库存/取消重试/等级控件/PWA：**34/34通过**，日志`outputs/1147-final-browser.txt`。
 - 独立穷举守恒+完整差分、53位/大域边界和诊断：见`1147-no-slice-green.txt`、`1147-boundary-unit.txt`。差分固定种子1147，360单兽、180流派、720完整前沿、689分页全JSON一致。
 - 三场大输入：`node tools/freeze-machine-school.cjs --check`，主结果、来源账本、神核、完整同等图及全部77页等均与d667c2b冻结JSON逐字节相同，日志`1147-frozen-checked.txt`。

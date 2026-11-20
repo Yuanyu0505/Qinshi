@@ -71,3 +71,37 @@ test('cancel prevents a scheduled fallback from executing', async () => {
   assert.equal(called, false);
   runner.dispose();
 });
+
+test('progress does not settle the run and stale task progress is ignored', async () => {
+  const phases = [];
+  const runner = load(WorkerPort).create({ kind: 'beast-school', onProgress: value => phases.push(value.phase) });
+  let settled = false;
+  const pending = runner.run({}).then(value => { settled = true; return value; });
+  const port = WorkerPort.all.at(-1);
+  port.onmessage({ data: { id: port.message.id - 1, progress: { phase: 'stale' } } });
+  port.onmessage({ data: { id: port.message.id, progress: { phase: 'candidate-preparation' } } });
+  await Promise.resolve();
+  assert.deepEqual(phases, ['candidate-preparation']);
+  assert.equal(settled, false);
+  port.respond({ valid: true });
+  assert.equal((await pending).valid, true);
+  runner.dispose();
+});
+
+test('throwing progress consumer cannot prevent the final result', async () => {
+  const runner = load(WorkerPort).create({ kind: 'beast-school', onProgress() { throw Error('view gone'); } });
+  const pending = runner.run({});
+  const port = WorkerPort.all.at(-1);
+  assert.doesNotThrow(() => port.onmessage({ data: { id: port.message.id, progress: { phase: 'school-combine' } } }));
+  port.respond('complete');
+  assert.equal(await pending, 'complete');
+  runner.dispose();
+});
+
+for (const kind of ['beast-single', 'beast-school']) test(kind + ' unavailable background computation reports incomplete without blocking fallback', async () => {
+  let calls = 0;
+  const runner = load(undefined).create({ kind, fallback() { calls++; return { valid: true }; } });
+  await assert.rejects(runner.run({}), error => /精确计算未完成/.test(error.message) && /后台计算/.test(error.message));
+  assert.equal(calls, 0);
+  runner.dispose();
+});

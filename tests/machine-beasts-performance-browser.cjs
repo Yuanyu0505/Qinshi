@@ -14,7 +14,7 @@ test('seven mixed-stock pressure cases complete in real Workers with responsive 
     await context.route('**/*',route=>new URL(route.request().url()).origin===origin?route.continue():route.abort());
     const page=await context.newPage();await openApp(page,origin+'/#machine-beasts');
     let source=fs.readFileSync(require.resolve('../js/machine-beasts.js'),'utf8');
-    const initial='rows[0]=[{r:0,n:0,m:0,b:0,p:0,counts:Array(types.length).fill(0)}];',put='bucket.push({r:r,n:n,m:m,b:b,p:p,counts:counts});rows[r]=bucket;';
+    const initial='rows[0]=[{r:0,n:0,m:0,b:0,p:0,counts:packedZero}];',put='bucket.push({r:r,n:n,m:m,b:b,p:p,counts:counts});rows[r]=bucket;';
     assert.ok(source.includes(initial)&&source.includes(put));
     source=source.replace(initial,'probe.domain(types,unit,rows.length);'+initial).replace(put,put+'probe.put(r,bucket.length);');
     await context.route('**/js/machine-beasts.js*',route=>route.fulfill({contentType:'application/javascript',body:source}));

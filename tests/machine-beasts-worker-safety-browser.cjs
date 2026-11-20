@@ -137,7 +137,7 @@ test('instrumented real Worker pressure records frontiers and completes or remai
     // Test-only instrumentation is served to Workers, never written to product JS.
     await context.route('**/js/machine-beasts.js*',async route=>{
       const response=await route.fetch();let source=await response.text();
-      const init='rows[0]=[{r:0,n:0,m:0,b:0,p:0,counts:Array(types.length).fill(0)}];';
+      const init='rows[0]=[{r:0,n:0,m:0,b:0,p:0,counts:packedZero}];';
       const put='bucket.push({r:r,n:n,m:m,b:b,p:p,counts:counts});rows[r]=bucket;';
       const header='var __pressure={puts:0,states:0,peakStates:0,frontierPeak:0,buckets:0},__buckets={};function __pressurePut(r,n){__pressure.puts++;var old=__buckets[r]||0;if(!old)__pressure.buckets++;__buckets[r]=n;__pressure.states+=n-old;__pressure.peakStates=Math.max(__pressure.peakStates,__pressure.states);__pressure.frontierPeak=Math.max(__pressure.frontierPeak,n);if(__pressure.puts%5000===0&&typeof document==="undefined")self.postMessage({diagnostic:__pressure});}\n';
       assert.ok(source.includes(init)&&source.includes(put));

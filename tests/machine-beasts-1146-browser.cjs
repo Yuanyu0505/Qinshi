@@ -14,7 +14,7 @@ for(const width of [360,1280])test('bounded target picker and reference alignmen
   try{
     await openApp(page,origin+'/#machine-beasts');await page.locator('[data-machine-beast-mode="calculator"]').click();
     await page.evaluate(()=>{
-      const view=window.MACHINE_BEAST_UI.captureView();view.calcBeastId='red-serpent';view.calcDraft={research:0,fragments:0,showHighRanks:false,showMods:false,inventory:{none:{7:1,6:1,5:1}}};
+      const view=window.MACHINE_BEAST_UI.captureView();view.calcBeastId='mechanical-bear';view.calcDraft={research:0,fragments:0,showHighRanks:false,showMods:false,inventory:{none:{7:1,6:1,5:1}}};
       view.singleInventoryPolicy={useOwnedInventory:true,limits:{none:{7:1,6:1,5:1}}};view.calcTargetLevel=25;view.calcResult=null;window.MACHINE_BEAST_UI.restoreView(view);
     });
     const picker=page.locator('[data-calc-target-picker]'),select=page.locator('[data-calc-target]');
@@ -28,7 +28,7 @@ for(const width of [360,1280])test('bounded target picker and reference alignmen
     assert.equal(await page.evaluate(()=>window.MACHINE_BEAST_UI.captureView().calcTargetLevel),12);
     await picker.locator('summary').click();await select.press('Escape');
     assert.equal(await picker.evaluate(node=>node.open),false);
-    await picker.locator('summary').click();await page.locator('.machine-calculator-panel h2').first().click();
+    await picker.locator('summary').click();await page.mouse.click(2,2);
     assert.equal(await picker.evaluate(node=>node.open),false);
     const rows=await page.locator('.machine-owned-inventory-row').evaluateAll(nodes=>nodes.map(row=>{
       const rect=row.getBoundingClientRect();return {y:rect.y,overflow:row.scrollWidth>row.clientWidth,inputWidth:row.querySelector('input[type="number"]').getBoundingClientRect().width};

@@ -34,7 +34,7 @@ if(process.argv[2]==='--case'){
     if(metrics.puts%5000===0)log('progress');
   }};
   let source=revision?execFileSync('git',['-c','safe.directory='+root.replaceAll('\\','/'),'show',revision+':js/machine-beasts.js'],{cwd:root,encoding:'utf8'}):fs.readFileSync(path.join(root,'js/machine-beasts.js'),'utf8');
-  const point='rows[0]=[{r:0,n:0,m:0,b:0,p:0,counts:Array(types.length).fill(0)}];';
+  const point=source.includes('counts:Array(types.length).fill(0)')?'rows[0]=[{r:0,n:0,m:0,b:0,p:0,counts:Array(types.length).fill(0)}];':'rows[0]=[{r:0,n:0,m:0,b:0,p:0,counts:packedZero}];';
   const update='bucket.push({r:r,n:n,m:m,b:b,p:p,counts:counts});rows[r]=bucket;';
   if(!source.includes(point)||!source.includes(update))throw Error('Diagnostic hook no longer matches current solver');
   if(!native)source=source.replace(point,'probe.domain(types,unit,rows.length);'+point).replace(update,update+'probe.put(r,bucket.length);');

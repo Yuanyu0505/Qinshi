@@ -49,7 +49,7 @@ function diagnosticRun(spec,native=false){
   }};
   function hook(source,marker,replacement){if(!source.includes(marker))throw Error('Diagnostic hook no longer matches solver: '+marker);return source.replace(marker,replacement);}
   let coreSource=fs.readFileSync(path.join(root,'js/machine-beasts.js'),'utf8');
-  const initial='rows[0]=[{r:0,n:0,m:0,b:0,p:0,counts:Array(types.length).fill(0)}];';
+  const initial=coreSource.includes('counts:Array(types.length).fill(0)')?'rows[0]=[{r:0,n:0,m:0,b:0,p:0,counts:Array(types.length).fill(0)}];':'rows[0]=[{r:0,n:0,m:0,b:0,p:0,counts:packedZero}];';
   const put='bucket.push({r:r,n:n,m:m,b:b,p:p,counts:counts});rows[r]=bucket;';
   if(!native){coreSource=hook(coreSource,initial,'probe.begin(beast.id,types,unit,rows.length);'+initial);coreSource=hook(coreSource,put,put+'probe.put(r,bucket.length);');}
   globalThis.__qinshiSchoolDiagnosticProbe=probe;

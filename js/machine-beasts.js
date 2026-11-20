@@ -627,12 +627,14 @@
   // base-body budget n. Per-origin bounded processing prevents double spending;
   // componentwise dominance is safe for every remaining type and shared fee.
   function conversionCandidates(data, beast, progress, config, gap, terminalAllowed, singleMinimumCount, deferAllocation) {
+    var diagnostic=typeof config.onDiagnostic==='function'?config.onDiagnostic:null,started=diagnostic?Date.now():0,metrics=null;
     var domain=conversionMaterials(data,beast,progress,config),types=domain.types,pool=domain.pool;
     if(!gap||!types.length)return [];
     function gcd(a,b){while(b){var c=a%b;a=b;b=c;}return a;}
     var unit=types.reduce(function(n,t){return gcd(n,t.researchEach);},0),stop=Math.ceil(gap/unit);
     var maximum=Math.max.apply(null,types.map(function(t){return t.researchEach/unit;}));
     var rows=Array(stop+maximum),limited=beast.quality!=='orange'&&config.bluePurpleInventoryOnly!==false;
+    if(diagnostic)metrics={beastId:beast.id,typeCount:types.length,researchGcd:unit,bucketCapacity:rows.length,attempted:0,accepted:0,rejected:0,states:1,peakStates:1,peakBucket:1,maximumBodies:0,decodedVectors:0,allocations:0};
     // The single-beast incumbent must satisfy the SAME finite cores and
     // owned-only body restrictions. School callers retain the full frontier.
     var countBound=Infinity;
@@ -654,12 +656,12 @@
       }
       types.forEach(function(type,index){
         if(type.available===null){
-          for(var n=0;n+type.weight<=countBound;n++)if(reachable[n])reachable[n].slice().forEach(function(s){if(s.r<gap)feasible(s,index,1,n+type.weight);});
+          for(var n=0;n+type.weight<=countBound;n++)if(reachable[n])reachable[n].forEach(function(s){if(s.r<gap)feasible(s,index,1,n+type.weight);});
         }else{
           var left=Math.min(type.available,Math.floor(countBound/type.weight)),chunk=1;
           while(left>0){
             var quantity=Math.min(left,chunk),weight=quantity*type.weight;
-            for(var n=countBound-weight;n>=0;n--)if(reachable[n])reachable[n].slice().forEach(function(s){if(s.r<gap)feasible(s,index,quantity,n+weight);});
+            for(var n=countBound-weight;n>=0;n--)if(reachable[n])reachable[n].forEach(function(s){if(s.r<gap)feasible(s,index,quantity,n+weight);});
             left-=quantity;chunk*=2;
           }
         }
@@ -670,46 +672,63 @@
     var maximumResearch=(rows.length-1)*unit;
     var trackC=!pool.allowExternalCores&&!types.every(function(t){return BigInt(pool.coreCount+pool.looseCores)*BigInt(t.researchEach)>=BigInt(maximumResearch)*BigInt(t.cores);});
     var trackO=!(countBound<=pool.baseCount||types.every(function(t){return BigInt(pool.baseCount)*BigInt(t.researchEach)>=BigInt(maximumResearch)*BigInt(t.ownedWeight);}));
-    rows[0]=[{r:0,n:0,m:0,b:0,p:0,counts:Array(types.length).fill(0)}];
+    // Every type count is bounded by maximumResearch / its own item research.
+    // A strictly larger power-of-two radix prevents carry between count slots.
+    // Earlier types occupy higher bits, preserving the old stable lexicographic
+    // order exactly; no parent state or full per-state JS array must stay alive.
+    var countBits=0n,shifts=Array(types.length),radices=Array(types.length);
+    for(var index=types.length-1;index>=0;index--){
+      var type=types[index],limit=Math.floor(maximumResearch/type.researchEach);
+      if(type.available!==null)limit=Math.min(limit,type.available);
+      var radix=2n,bits=1n;while(radix<=BigInt(limit)){radix<<=1n;bits++;}
+      shifts[index]=countBits;radices[index]=radix;countBits+=bits;
+    }
+    // Powers of two encode exactly in Number only when the ENTIRE vector is
+    // within the 53-bit integer range. Larger modified domains use BigInt.
+    var packedNumbers=countBits<=53n,packedZero=packedNumbers?0:0n;
+    var countSteps=shifts.map(function(shift){return packedNumbers?Math.pow(2,Number(shift)):1n<<shift;});
+    function incrementCounts(packed,index,quantity){return packedNumbers?packed+countSteps[index]*quantity:packed+countSteps[index]*BigInt(quantity);}
+    function unpackCounts(packed){return shifts.map(function(shift,index){return packedNumbers?Math.floor(packed/countSteps[index])%Number(radices[index]):Number((packed>>shift)&(radices[index]-1n));});}
+    rows[0]=[{r:0,n:0,m:0,b:0,p:0,counts:packedZero}];
     function stable(counts){return counts.map(function(n){return String(n).padStart(16,'0');}).join('');}
-    // Equal-cost tie order is the same as the old zero-padded decimal key.
-    // Compare the pending increment without allocating that key or its vector.
     function earlierOrEqual(left,right,index,quantity){
-      for(var at=0;at<types.length;at++){
-        var a=left[at],b=right[at]+(at===index?quantity:0);
-        if(a!==b)return a<b;
-      }
-      return true;
+      return left<=incrementCounts(right,index,quantity);
     }
     function put(from,index,quantity){
+      if(metrics)metrics.attempted++;
       var type=types[index],r=from.r+type.researchEach/unit*quantity,n=from.n+type.weight*quantity;
       var c=trackC?(from.c||0)+type.cores*quantity:0,o=trackO?(from.o||0)+type.ownedWeight*quantity:0;
-      if(n>countBound||r>=rows.length||(!terminalAllowed&&r>=stop)||limited&&n>pool.baseCount||o>pool.baseCount||!pool.allowExternalCores&&c>pool.coreCount+pool.looseCores)return;
+      if(n>countBound||r>=rows.length||(!terminalAllowed&&r>=stop)||limited&&n>pool.baseCount||o>pool.baseCount||!pool.allowExternalCores&&c>pool.coreCount+pool.looseCores){if(metrics)metrics.rejected++;return;}
       var m=from.m+(type.modificationId==='none'?0:type.weight*quantity),b=from.b+type.blueprints*quantity,p=from.p+type.pieces*quantity;
       var bucket=rows[r]||[];
       for(var i=0;i<bucket.length;i++){
         var old=bucket[i];
         if(old.n<=n&&old.m<=m&&old.b<=b&&old.p<=p&&(!trackC||(old.c||0)<=c)&&(!trackO||(old.o||0)<=o)){
-          if(old.n!==n||old.m!==m||old.b!==b||old.p!==p||trackC&&(old.c||0)!==c||trackO&&(old.o||0)!==o||earlierOrEqual(old.counts,from.counts,index,quantity))return;
+          if(old.n!==n||old.m!==m||old.b!==b||old.p!==p||trackC&&(old.c||0)!==c||trackO&&(old.o||0)!==o||earlierOrEqual(old.counts,from.counts,index,quantity)){if(metrics)metrics.rejected++;return;}
         }
       }
-      var counts=from.counts.slice();counts[index]+=quantity;
+      var counts=incrementCounts(from.counts,index,quantity);
       var kept=0;
       for(var at=0;at<bucket.length;at++){
         var old=bucket[at];
         if(!(n<=old.n&&m<=old.m&&b<=old.b&&p<=old.p&&(!trackC||c<=(old.c||0))&&(!trackO||o<=(old.o||0))))bucket[kept++]=old;
       }
+      if(metrics){metrics.accepted++;metrics.states+=1-(bucket.length-kept);metrics.peakStates=Math.max(metrics.peakStates,metrics.states);metrics.peakBucket=Math.max(metrics.peakBucket,kept+1);metrics.maximumBodies=Math.max(metrics.maximumBodies,n);}
       bucket.length=kept;
       bucket.push({r:r,n:n,m:m,b:b,p:p,counts:counts});rows[r]=bucket;
       if(trackC)bucket[bucket.length-1].c=c;if(trackO)bucket[bucket.length-1].o=o;
+      if(metrics&&metrics.accepted%5000===0)diagnostic(Object.assign({phase:'conversion-progress',elapsedMs:Date.now()-started},metrics));
     }
     types.forEach(function(type,index){
+      // Every transition strictly increases research (and base-body count in
+      // the bound DP), so it cannot mutate its own source bucket. No slice is
+      // needed; bounded types still iterate descending, unbounded ascending.
       if(type.available!==null){
         var left=Math.min(type.available,Math.ceil(gap/type.researchEach)),chunk=1;
-        while(left>0){var q=Math.min(left,chunk);for(var r=stop-1;r>=0;r--)if(rows[r])rows[r].slice().forEach(function(s){put(s,index,q);});left-=q;chunk*=2;}
-      }else for(var r=0;r<stop;r++)if(rows[r])rows[r].slice().forEach(function(s){put(s,index,1);});
+        while(left>0){var q=Math.min(left,chunk);for(var r=stop-1;r>=0;r--)if(rows[r])rows[r].forEach(function(s){put(s,index,q);});left-=q;chunk*=2;}
+      }else for(var r=0;r<stop;r++)if(rows[r])rows[r].forEach(function(s){put(s,index,1);});
     });
-    var compact=new Map(),start=levelForResearch(progress.research,data.researchThresholds,beast.maxLevel);
+    var compact=new Map(),compactCounts=new Map(),start=levelForResearch(progress.research,data.researchThresholds,beast.maxLevel);
     rows.forEach(function(bucket){if(!bucket)return;bucket.forEach(function(s){
       if(!s.r)return;
       var research=s.r*unit,level=levelForResearch(progress.research+research,data.researchThresholds,beast.maxLevel);
@@ -718,14 +737,18 @@
       // School material graphs later reconstruct all tied physical vectors.
       var key=[level,s.n,s.b,s.m].concat(deferAllocation?[]:[s.p]).join('/'),prior=compact.get(key);
       if(prior&&prior.research<research)return;
-      var order=stable(s.counts);
-      if(prior&&prior.research===research&&prior.stable<=order)return;
-      var rawItems=[];s.counts.forEach(function(count,index){if(count){var t=types[index];rawItems.push({source:t.source,rank:t.rank,modificationId:t.modificationId,count:count,researchEach:t.researchEach,sevenRankEquivalent:t.weight});}});
+      if(prior&&prior.research===research&&compactCounts.get(key)<=s.counts)return;
+      if(metrics)metrics.decodedVectors++;
+      var counts=unpackCounts(s.counts),order=stable(counts);
+      var rawItems=[];counts.forEach(function(count,index){if(count){var t=types[index];rawItems.push({source:t.source,rank:t.rank,modificationId:t.modificationId,count:count,researchEach:t.researchEach,sevenRankEquivalent:t.weight});}});
       // Feasibility was proved in the frontier. Materialize only surviving
       // school candidates, not thousands of discarded source/ledger objects.
       var allocation=deferAllocation?{invested:s.n,newCount:Math.max(0,s.n-pool.baseCount),owned:Math.min(s.n,pool.baseCount),items:[],_conversionPool:pool}:allocateConvertedInventory(data,beast,pool,rawItems);
+      if(metrics&&!deferAllocation)metrics.allocations++;
       compact.set(key,Object.assign(allocation,{endLevel:level,research:research,blueprints:s.b,pieces:s.p,modified:s.m,stable:order,rawItems:rawItems}));
+      compactCounts.set(key,s.counts);
     });});
+    if(metrics)diagnostic(Object.assign({phase:'conversion-complete',elapsedMs:Date.now()-started,retainedCandidates:compact.size},metrics));
     return Array.from(compact.values());
   }
 

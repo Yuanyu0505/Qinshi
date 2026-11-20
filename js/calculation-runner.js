@@ -35,7 +35,7 @@
       // These exact solvers can run for seconds. A timer does not make their
       // synchronous fallback interruptible; fail safely instead of freezing UI.
       if (options.kind === "beast-single" || options.kind === "beast-school") {
-        settle(job, new Error("当前环境无法启动后台计算，已停止本次机关兽计算，可重新计算；若仍失败，请更新浏览器后重试。"));
+        settle(job, new Error("本次精确计算未完成，后台计算不可用或已中断；可调整参与范围或稍后重新计算。若仍失败，请更新浏览器后重试。"));
         return;
       }
       job.timer = root.setTimeout(function () {
@@ -63,6 +63,13 @@
           if (!worker) worker = new root.Worker(workerUrl.href);
           worker.onmessage = function (event) {
             if (pending !== job || !event.data || event.data.id !== job.id) return;
+            if (event.data.progress) {
+              // Progress is advisory; a detached view must not strand the job.
+              if (typeof options.onProgress === "function") {
+                try { options.onProgress(event.data.progress); } catch (_) {}
+              }
+              return;
+            }
             if (event.data.error) settle(job, new Error(event.data.error));
             else settle(job, null, event.data.result);
           };

@@ -25,7 +25,13 @@ self.onmessage = function (event) {
       var beast = self.MACHINE_BEAST_DATA.beasts.find(function (item) { return item.id === payload.beastId; });
       result = self.MACHINE_BEAST_CORE.calculateInvestmentPlan(self.MACHINE_BEAST_DATA, beast, payload.progress, payload.options);
     } else {
-      result = self.MACHINE_BEAST_SCHOOL_PLANNER.calculateSchoolPlans(self.MACHINE_BEAST_DATA, payload.schoolId, payload.progressByBeast, payload.options);
+      var options = Object.assign({}, payload.options), lastPhase = null;
+      options.onPhase = function (phase) {
+        if (phase === lastPhase) return;
+        lastPhase = phase;
+        self.postMessage({ id: message.id, progress: { phase: phase } });
+      };
+      result = self.MACHINE_BEAST_SCHOOL_PLANNER.calculateSchoolPlans(self.MACHINE_BEAST_DATA, payload.schoolId, payload.progressByBeast, options);
     }
     self.postMessage({ id: message.id, result: result });
   } catch (error) { self.postMessage({ id: message.id, error: error.message || "计算失败" }); }

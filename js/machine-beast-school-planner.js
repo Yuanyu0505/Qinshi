@@ -230,8 +230,9 @@
       progress.research, progress.inventory, config.ownedLimits || {}, config.useOwnedInventory !== false,
       config.bluePurpleInventoryOnly !== false, config.newRankMode || "zeroToSeven", !!config.allowNewHighRanks,
       config.plainOnly, config.allowNewModifications, config.ownedLooseCores||0, progress.showMods, config.maxAddedLevel,!!config.convertOwnedInventory]);
-    var raw = cache && cache.get(typesKey);
+    var raw = cache && cache.get(typesKey),diagnostic=typeof config.onDiagnostic==='function'?config.onDiagnostic:null,started=diagnostic?Date.now():0,cacheHit=Boolean(raw);
     if (!raw) { raw = rawCandidates(data, beast, progress, config); if (cache) cache.set(typesKey, raw); }
+    if(diagnostic)diagnostic({phase:'raw-candidates',beastId:beast.id,cacheHit:cacheHit,count:raw.length,elapsedMs:Date.now()-started});
     var byLevel = new Map(), costs = new Map();
     var minimumModified = new Map();
     raw.forEach(function (r) { minimumModified.set(r.endLevel, Math.min(minimumModified.has(r.endLevel) ? minimumModified.get(r.endLevel) : Infinity, r.modified)); });
@@ -276,18 +277,21 @@
       }
       paretoInsert(bucket, value); byLevel.set(r.endLevel, bucket);
     });
-    return [emptyCandidate(beast, progress, current)].concat(Array.from(byLevel.values()).flat().map(function (v) {
+    var allocations=0,retained=[emptyCandidate(beast, progress, current)].concat(Array.from(byLevel.values()).flat().map(function (v) {
       var candidate=v.candidate,r=candidate._conversionRaw;
       if(r){
         // Cache entries are immutable numeric signatures of identical domains,
         // not shared stock. Rebind identity to this beast's independent pool.
         var allocation=CORE.allocateConvertedInventory(data,beast,Object.assign({},r._conversionPool,{beastId:beast.id}),r.rawItems);
+        allocations++;
         candidate.items=allocation.items;candidate.ownedPhysicalCount=allocation.ownedPhysical;candidate.newPhysicalCount=allocation.newPhysical;
         candidate.ownedModifiedInvestedCount=allocation.ownedModified;candidate.newModifiedInvestedCount=allocation.newModified;
         candidate.inventoryConversion=allocation.inventoryConversion;candidate.modificationCores=allocation.modificationCores;
       }
       delete candidate._conversionRaw;return candidate;
     }));
+    if(diagnostic)diagnostic({phase:'candidate-complete',beastId:beast.id,count:retained.length,allocations:allocations,elapsedMs:Date.now()-started});
+    return retained;
   }
 
   function combine(data, sets, baseline, needed, settings, effectMode) {
@@ -454,7 +458,7 @@
 
   function calculateSchoolPlans(data, id, progressByBeast, options) {
     try {
-      var config = options || {}, school = schoolById(data, id);
+      var config = options || {}, school = schoolById(data, id),diagnostic=typeof config.onDiagnostic==='function'?config.onDiagnostic:null;
       if (!school) throw Error("未找到对应机关术流派");
       var stage = CORE.integer(config.targetStage, defaultTargetStage(data, school, progressByBeast));
       var targetStage = school.stages.find(function (s) { return s.stage === stage; });
@@ -510,15 +514,18 @@
         });
         return reachable.has(needed);
       }
+      if(typeof config.onPhase==='function')config.onPhase('candidate-preparation');
       buildSets(true);
       // If a zero-modification exact solution exists it dominates EVERY
       // modified solution under both formal orders, regardless of its price.
       if (!exactReachable()) buildSets(false);
       if (!exactReachable()) throw Error("当前条件下无法精确达到目标，请调整参与范围、材料或蓝紫库存限制");
+      if(typeof config.onPhase==='function')config.onPhase('school-combine');
       var cost = combine(data, sets, baseline, needed, settings, false);
       var effects = combine(data, sets, baseline, needed, settings, true);
       if (!cost || !effects) throw Error("当前条件下无法精确达到目标");
       var plans = cost.stableKey === effects.stableKey ? [Object.assign({}, cost, { kind: "merged" })] : [cost, effects];
+      if(typeof config.onPhase==='function')config.onPhase('equivalent-graph');
       plans.forEach(function (plan) {
         plan.beasts.forEach(function (b) { b.finalEffect = CORE.activeBeastEffect(data.beasts.find(function (beast) { return beast.id === b.beastId; }), b.endLevel); });
         plan.finalEffects = school.beastIds.map(function (beastId) {
@@ -528,7 +535,9 @@
           var level = detail ? detail.endLevel : CORE.levelForResearch((progress[beastId] || {}).research, data.researchThresholds, beast.maxLevel);
           return { beastId: beastId, beastName: beast.name, level: level, changed: Boolean(detail), effect: CORE.activeBeastEffect(beast, level) };
         }).filter(Boolean);
+        var packStart=diagnostic?Date.now():0;
         plan.equivalents = EQUIVALENTS.pack(data, plan._trace, equivalentSources, settings);
+        if(diagnostic)diagnostic({phase:'equivalent-pack',kind:plan.kind,count:plan.equivalents.count,elapsedMs:Date.now()-packStart});
         delete plan._trace;
       });
       return Object.assign(resultBase, { alreadyReached: false, plans: plans,

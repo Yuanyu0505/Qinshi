@@ -42,6 +42,7 @@
   var searchRefresh = {};
   var pendingSearches = {};
   var calculationRunners = {};
+  var calculationProgressContexts = {};
   var calculationSequence = 0;
   var calculating = false;
   var calculatingKind = null;
@@ -99,8 +100,15 @@
       return kind === "beast-single" ? CORE.calculateInvestmentPlan(DATA, beastById(input.beastId), input.progress, input.options)
         : PLANNER.calculateSchoolPlans(DATA, input.schoolId, input.progressByBeast, input.options);
     }
+    calculationProgressContexts[kind] = { sequence: sequence, accountId: accountId };
     if (!calculationRunners[kind] && window.QinshiCalculationRunner) {
-      calculationRunners[kind] = window.QinshiCalculationRunner.create({ kind: kind, fallback: fallback });
+      calculationRunners[kind] = window.QinshiCalculationRunner.create({ kind: kind, fallback: fallback, onProgress: function (progress) {
+        var active = calculationProgressContexts[kind], current = ACCOUNT_STORAGE.currentAccount && ACCOUNT_STORAGE.currentAccount();
+        if (!active || active.sequence !== calculationSequence || (current && current.id) !== active.accountId || !calculating || calculatingKind !== kind) return;
+        var labels = { 'candidate-preparation': '正在准备候选…', 'school-combine': '正在组合流派方案…', 'equivalent-graph': '正在统计同等方案…' };
+        if (!progress || !labels[progress.phase]) return;
+        el.calculator.querySelectorAll('[data-machine-calculating-status]').forEach(function (status) { status.textContent = labels[progress.phase]; });
+      } });
     }
     setCalculating(true);
     el.calculatorResult.hidden = true;

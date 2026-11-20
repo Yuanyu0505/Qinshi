@@ -17,6 +17,28 @@
   }
   function openSection(root,id){var host=root&&root.document&&root.document.getElementById('partition-other-reference'),open=host&&sectionOpeners.get(host);return open?open(id):false;}
   function esc(value){return String(value==null?'':value).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+  function limitedEventsHtml(events){
+    function formatted(value){return esc(NUMBER_FORMAT.formatText(value));}
+    function block(title,aside,content,index){
+      return '<details class="ref-event-block"'+(index===0?' open':'')+'><summary><span>'+title+'</span>'+aside+'</summary>'+content+'</details>';
+    }
+    var days=events.sevenDays.map(function(day,i){
+      return block('第'+(i+1)+'天','<small>累计消耗体力 '+day.stamina+' 点</small>',
+        '<ul class="ref-event-list">'+day.tasks.map(function(task){
+          return '<li><span>'+formatted(task[0])+'</span>'+(task[1]?'<small>'+formatted(task[1])+'</small>':'')+'</li>';
+        }).join('')+'</ul>',i);
+    }).join('');
+    var rounds=events.lanternRounds.map(function(round,i){
+      return block('第'+(i+1)+'轮','','<dl class="ref-event-rewards">'+round.map(function(tier){
+        return '<div><dt>'+tier[0]+' 盏花灯</dt><dd><ul class="ref-event-list">'+tier[1].map(function(reward){
+          var contents=reward[2]||events.packageContents[reward[0]];
+          return '<li><span>'+esc(reward[0])+' ×'+formatted(String(reward[1]))+'</span>'+(contents?'<small>'+formatted(contents)+'</small>':'')+'</li>';
+        }).join('')+'</ul></dd></div>';
+      }).join('')+'</dl>',i);
+    }).join('');
+    return '<section class="panel ref-section" data-ref-kind="limited-events"><header class="ref-heading"><h2 tabindex="-1">限时活动</h2><button type="button" class="seg" data-ref-home>返回目录</button></header><div class="ref-event-grid">'+
+      '<section><h3>共赴逍遥</h3>'+days+'</section><section><h3>醉梦楼</h3><p>'+esc(events.candleRule)+'</p>'+rounds+'</section></div></section>';
+  }
   function filterRows(table,query,quality){
     var q=String(query||'').trim().toLocaleLowerCase(),index=table.columns.indexOf('品质');
     return table.rows.filter(function(row){var values=table.section==='cards'?row.filter(function(value,i){return table.columns[i]!=='特别说明';}):row;return (!quality||index<0||row[index]===quality)&&(!q||values.join(' ').toLocaleLowerCase().includes(q));});
@@ -183,6 +205,7 @@
     function controls(){
       if(sectionId==='six-halls'){showSixHalls();return;}
       parkSixHalls();
+      if(sectionId==='limited-events'){body.innerHTML=limitedEventsHtml(data.limitedEvents);return;}
       var s=state(),section=data.sections.find(function(x){return x.id===sectionId;}),list=sectionTables(),table=currentTable();
       if(table)s.table=table.id;
       var cards=sectionId==='cards';
@@ -257,7 +280,7 @@
       return '<div class="ref-table-scroll" tabindex="0" role="region" aria-label="'+esc(titleFor(table))+'对照表"><table data-ref-table-id="'+esc(table.id)+'" class="ref-table'+(table.section==='cards'?' ref-card-stats':'')+(isMapping(table)?' ref-element-mappings':'')+(table.section==='origins'?' ref-origin-table':'')+(table.section==='treasure'?' ref-treasure-table':'')+'"><caption class="ref-visually-hidden">'+esc(titleFor(table))+'</caption>'+colgroup+'<thead><tr>'+table.columns.map(function(c){return '<th scope="col">'+esc(columnLabel(table,c))+'</th>';}).join('')+'</tr></thead><tbody>'+rows.map(function(row){return '<tr>'+row.map(function(v,i){var quality=table.columns[i]==='品质'&&/^[蓝紫橙红]$/.test(v);return i===0&&table.id!=='spirits-combinations'?'<th scope="row">'+esc(v)+'</th>':'<td'+(String(v).length>20?' class="ref-long-text"':'')+'>'+(quality?'<span class="ref-quality ref-quality-'+({'蓝':'blue','紫':'purple','橙':'orange','红':'red'}[v])+'">'+esc(v)+'</span>':cellHtml(table,table.columns[i],v))+'</td>';}).join('')+'</tr>';}).join('')+'</tbody></table></div>';
     }
     function results(){
-      if(sectionId==='six-halls')return;
+      if(sectionId==='six-halls'||sectionId==='limited-events')return;
       var table=displayTable(currentTable()),s=state(),html='';
       updateViewOptions(table);
       if(table){

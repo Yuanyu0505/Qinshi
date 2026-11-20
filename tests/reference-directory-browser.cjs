@@ -69,7 +69,7 @@ test('damaged or unwritable ordering preference never hides module access',async
       Storage.prototype.setItem=function(key,value){if(key==='qinshi_reference_section_order_v1')throw new Error('test storage unavailable');return original.call(this,key,value);};
     });
     await openApp(page,url+'/#other-reference');
-    assert.equal(await page.locator('[data-ref-section]').count(),15);
+    assert.equal(await page.locator('[data-ref-section]').count(),16);
     await page.locator('[data-ref-sort-toggle]').click();
     await page.locator('[data-ref-section="settings"]').click();
     await page.locator('[data-ref-section="cards"]').click();

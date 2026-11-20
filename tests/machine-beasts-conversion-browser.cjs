@@ -70,6 +70,9 @@ for(const [width,fallback] of [[390,false],[1280,false]])test('convertible stock
     await page.waitForFunction(()=>window.MACHINE_BEAST_UI.captureView().calcResult!==null);
     const repaired=await page.evaluate(()=>window.MACHINE_BEAST_UI.captureView().calcResult);
     assert.deepEqual(repaired.selected.newItems.map(i=>[i.rank,i.count]),[[0,2]]);
+    const resultText=await section.innerText();
+    assert.doesNotMatch(resultText,/最终投入组合/);
+    assert.match(resultText,/使用已有库存[\s\S]*新增投入/);
     const pathPanel=section.locator('.machine-inventory-conversion');
     await pathPanel.evaluate(node=>{node.open=true;});
     assert.match(await pathPanel.innerText(),/8阶×1.*→ 7阶0改×2.*→ 供7阶投入×1 ＋ 供6阶投入×1/s);

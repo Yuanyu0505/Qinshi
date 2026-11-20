@@ -16,11 +16,11 @@ async function open(width=1440,height=900,extra={}){
  await p.locator('#partition-other-reference [data-ref-section]').first().waitFor();
  return {context,p,errors};
 }
-test('fifteen sections, Chinese filter focus, independent state and source viewer are read-only',async()=>{
+test('sixteen sections, Chinese filter focus, independent state and source viewer are read-only',async()=>{
  const {context,p,errors}=await open();
  try{
  const before=await p.evaluate(()=>JSON.stringify({...localStorage}));
- assert.equal(await p.locator('.ref-index [data-ref-section]').count(),15);
+ assert.equal(await p.locator('.ref-index [data-ref-section]').count(),16);
  for(const id of ['cards','elements','origins','treasure','speed','guardians','levels','spirits','disciples']){
   await p.locator('.ref-index [data-ref-section="'+id+'"]').click();
   assert.ok(await p.locator('#partition-other-reference h2').innerText());
@@ -44,6 +44,27 @@ test('fifteen sections, Chinese filter focus, independent state and source viewe
  assert.equal(await p.locator('[data-ref-search]').inputValue(),'无双鬼');
  assert.equal(await p.evaluate(()=>JSON.stringify({...localStorage})),before);
  assert.deepEqual(errors,[]);
+ }finally{await context.close();}
+});
+test('limited events opens from directory search and shows day and lantern milestones on mobile',async()=>{
+ const {context,p,errors}=await open(390);
+ try{
+  await p.locator('[data-ref-directory-search]').fill('限时活动');
+  const entries=p.locator('[data-ref-section]');assert.equal(await entries.count(),1);await entries.first().click();
+  const section=p.locator('[data-ref-kind="limited-events"]');
+  assert.deepEqual(await section.locator('h3').allTextContents(),['共赴逍遥','醉梦楼']);
+  const groups=section.locator('.ref-event-grid > section');
+  assert.equal(await groups.nth(0).locator('details').count(),7);
+  assert.equal(await groups.nth(1).locator('details').count(),5);
+  await section.getByText('第5天',{exact:true}).click();
+  assert.equal(await section.getByText('使用鱼竿 300 个',{exact:true}).isVisible(),true);
+  await section.getByText('第3轮',{exact:true}).click();
+  assert.equal(await section.getByText('护符自选礼包 ×1',{exact:true}).isVisible(),true);
+  assert.ok(await section.evaluate(n=>n.scrollWidth<=n.clientWidth));
+  await p.setViewportSize({width:1280,height:900});
+  assert.equal(await section.getByText('护符自选礼包 ×1',{exact:true}).isVisible(),true);
+  await section.locator('[data-ref-home]').click();assert.equal(await p.locator('[data-ref-directory-search]').inputValue(),'限时活动');
+  assert.deepEqual(errors,[]);
  }finally{await context.close();}
 });
 test('levels have ten-level filters, origins search all source lists and speed schemes keep independent drafts',async()=>{

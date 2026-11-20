@@ -45,7 +45,7 @@ test('starting another run rejects the stale run and cannot accept its later res
 
 test('worker failure falls back asynchronously using a detached input snapshot', async () => {
   const payload = { value: 7 };
-  const runner = load(WorkerPort).create({ kind: 'wooden', fallback: x => x.value });
+  const runner = load(WorkerPort).create({ kind: 'realm', fallback: x => x.value });
   const pending = runner.run(payload);
   payload.value = 99;
   WorkerPort.all.at(-1).onerror({ preventDefault() {} });
@@ -54,7 +54,7 @@ test('worker failure falls back asynchronously using a detached input snapshot',
 });
 
 test('unsupported worker still computes and propagates fallback errors', async () => {
-  const runner = load(undefined).create({ kind: 'wooden', fallback: x => { if (x.fail) throw Error('bad input'); return x.value; } });
+  const runner = load(undefined).create({ kind: 'realm', fallback: x => { if (x.fail) throw Error('bad input'); return x.value; } });
   assert.equal(await runner.run({ value: 0 }), 0);
   await assert.rejects(runner.run({ fail: true }), /bad input/);
   runner.dispose();
@@ -62,7 +62,7 @@ test('unsupported worker still computes and propagates fallback errors', async (
 
 test('cancel prevents a scheduled fallback from executing', async () => {
   let called = false;
-  const runner = load(undefined).create({ kind: 'wooden', fallback() { called = true; } });
+  const runner = load(undefined).create({ kind: 'realm', fallback() { called = true; } });
   const pending = runner.run({});
   const rejected = assert.rejects(pending, error => error.name === 'AbortError');
   runner.cancel();
@@ -103,5 +103,31 @@ for (const kind of ['beast-single', 'beast-school']) test(kind + ' unavailable b
   const runner = load(undefined).create({ kind, fallback() { calls++; return { valid: true }; } });
   await assert.rejects(runner.run({}), error => /精确计算未完成/.test(error.message) && /后台计算/.test(error.message));
   assert.equal(calls, 0);
+  runner.dispose();
+});
+
+test('wooden background unavailable does not invoke any UI-thread planner', async () => {
+  let fallbackCalls = 0;
+  const runner = load(undefined).create({ kind: 'wooden', fallback() { fallbackCalls++; } });
+  await assert.rejects(runner.run({}), /后台计算.*重试/);
+  assert.equal(fallbackCalls, 0);
+});
+
+test('wooden worker failure ends only that job, allowing a fresh worker retry', async () => {
+  let fallbackCalls = 0;
+  const runner = load(WorkerPort).create({kind: 'wooden', fallback() { fallbackCalls++; }});
+  const failed = runner.run({});
+  const old = WorkerPort.all.at(-1);
+  const rejected = assert.rejects(failed, /后台计算.*重试/);
+  old.onerror({ preventDefault() {} });
+  await rejected;
+  const next = runner.run({});
+  const fresh = WorkerPort.all.at(-1);
+  assert.notEqual(fresh, old);
+  assert.ok(old.terminated);
+  old.respond('stale');
+  fresh.respond('retried');
+  assert.equal(await next, 'retried');
+  assert.equal(fallbackCalls, 0);
   runner.dispose();
 });

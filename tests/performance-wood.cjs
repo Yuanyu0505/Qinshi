@@ -122,6 +122,8 @@ test('wood worker matches synchronous results and leaves the UI event loop respo
       const resource = change('[data-wooden-resource="woodSword"]', '18');
       document.querySelector('[data-wooden-mode="calculator"]').click();
       const details = document.querySelector('[data-wooden-advanced]'); details.open = true;
+      const firstStage = document.querySelector('details[data-wooden-limit-stage]');
+      if (firstStage) firstStage.open = true;
       const calcResource = change('[data-wooden-calc-resource="woodSword"]', '20');
       const stage = change('[data-wooden-stage-max]', '3');
       return { board, resource, calcResource, stage, details: details.isConnected && details.open };
@@ -131,7 +133,7 @@ test('wood worker matches synchronous results and leaves the UI event loop respo
 }));
 
 test('typing while calculating immediately invalidates pending UI output', async () => {
-  const page = await fixture();
+  const page = await fixture(true);
   try {
     const result = await page.evaluate(async () => {
       document.querySelector('[data-wooden-mode="calculator"]').click();
@@ -157,5 +159,69 @@ test('wood calculator loads through real app navigation and calculates', async (
     await page.locator('[data-wooden-calc-action="calculate"]').click();
     await page.waitForFunction(() => document.querySelector('#wooden-man-calculator').getAttribute('aria-busy') === 'false');
     assert.match(await page.locator('#wooden-calculation-result').innerText(), /木剑/);
+  } finally { await page.close(); }
+});
+
+test('read-only save restores the field and reports failure next to the editing area', async () => {
+  const page = await fixture();
+  try {
+    const snapshot = await page.evaluate(() => {
+      woodControl.setResource('woodSword', 9);
+      woodControl.restoreView({mode:'progress'});
+      document.dispatchEvent(new CustomEvent('qinshi:partitionchange',{detail:{name:'wooden-man-alley'}}));
+      const field = document.querySelector('[data-wooden-resource="woodSword"]');
+      QinshiAccounts.setItem = () => false;
+      field.focus();
+      field.value = '28';
+      field.dispatchEvent(new Event('input',{bubbles:true}));
+      field.dispatchEvent(new Event('change',{bubbles:true}));
+      const alert = document.querySelector('#wooden-man-progress [data-wooden-error-slot]');
+      return { same: document.activeElement === field, value: field.value, shown: !alert.hidden, role: alert.getAttribute('role'), message: alert.textContent, saved: JSON.parse(QinshiAccounts.getItem(WOODEN_MAN_ALLEY_UI.STORE_KEY)).resources.woodSword };
+    });
+    assert.equal(snapshot.same,true);
+    assert.equal(snapshot.value,'9');
+    assert.equal(snapshot.saved,9);
+    assert.equal(snapshot.shown,true);
+    assert.equal(snapshot.role,'alert');
+    assert.match(snapshot.message,/保存失败/);
+  } finally { await page.close(); }
+});
+
+for (const width of [320, 390]) test('wood calculation fails safely without Worker and retries at ' + width, async () => {
+  const page = await fixture(true, width);
+  try {
+    const cdp = await page.context().newCDPSession(page);
+    await cdp.send('Emulation.setCPUThrottlingRate', { rate: 4 });
+    const beforeHeap = await cdp.send('Runtime.getHeapUsage');
+    const results = await page.evaluate(async () => {
+      const nativeWorker = window.Worker;
+      const original = WOODEN_MAN_ALLEY_PLANNER.planToTarget;
+      const durations = [];
+      const longTasks = [];
+      const observer = new PerformanceObserver(list => longTasks.push(...list.getEntries().map(entry => entry.duration)));
+      observer.observe({type:'longtask'});
+      window.Worker = undefined;
+      WOODEN_MAN_ALLEY_PLANNER.planToTarget = () => { throw Error('must not sync fallback'); };
+      document.querySelector('[data-wooden-mode="calculator"]').click();
+      for (let n=0; n<6; n++) {
+        const start = performance.now();
+        await woodControl.calculateAsync();
+        durations.push(performance.now() - start);
+      }
+      const error = woodControl.state.error;
+      window.Worker = nativeWorker;
+      WOODEN_MAN_ALLEY_PLANNER.planToTarget = original;
+      woodControl.updateCalculator('targetFloor',1);
+      const start = performance.now();
+      const result = await woodControl.calculateAsync();
+      const retryMs = performance.now() - start;
+      await new Promise(resolve => setTimeout(resolve, 50));
+      observer.disconnect();
+      return {error, durations, retryMs, resultTarget: result && result.targetFloor, longTasks};
+    });
+    const afterHeap = await cdp.send('Runtime.getHeapUsage');
+    assert.match(results.error,/后台计算不可用/);
+    assert.equal(results.resultTarget,1);
+    console.log(JSON.stringify({width,cpuThrottle:4,heapBefore:beforeHeap.usedSize,heapAfter:afterHeap.usedSize,...results}));
   } finally { await page.close(); }
 });

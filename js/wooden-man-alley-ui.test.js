@@ -31,6 +31,10 @@ test("loads missing or corrupt progress with safe defaults", () => {
   assert.strictEqual(control.state.progress.currentFloor, 1);
   assert.deepEqual(control.state.progress.openedCells, []);
   assert.match(control.state.error, /读取失败/);
+  assert.strictEqual(control.setResource("woodSword", 3), false);
+  assert.strictEqual(store.getItem(UI.STORE_KEY), "not json");
+  assert.strictEqual(control.clearEvent(), true);
+  assert.strictEqual(control.setResource("woodSword", 3), true);
 });
 
 test("keeps progress isolated between game accounts", () => {
@@ -45,6 +49,84 @@ test("keeps progress isolated between game accounts", () => {
   const restored = controller({ store });
   assert.strictEqual(restored.state.progress.resources.woodSword, 20);
   assert.strictEqual(restored.accountLabel(), "主号 · 一区");
+});
+
+for (const reject of [() => false, () => { throw Error("unwritable"); }]) {
+  test("failed personal changes leave progress, undo and draft intact: " + reject.toString(), () => {
+    const store = fakeStore();
+    const control = controller({ store });
+    control.setFloor(500);
+    control.setResource("woodSword", 9);
+    control.toggleCell(0);
+    control.setCalculatorResource("woodSword", 28);
+    const before = JSON.parse(JSON.stringify(control.state));
+    store.setItem = reject;
+    for (const edit of [
+      () => control.setResource("woodSword", 12),
+      () => control.setFloor(33),
+      () => control.toggleCell(1),
+      () => control.undoBoard(),
+      () => control.completeFloor(),
+      () => control.clearBoard(),
+      () => control.setPackageField("small", "limit", 2),
+      () => control.setActivityEndDate("2099-01-01"),
+      () => control.clearEvent(),
+      () => control.saveCalculatorProgress()
+    ]) {
+      assert.equal(edit(), false);
+      assert.deepEqual({ ...control.state, error: before.error }, before);
+      assert.match(control.state.error, /保存失败/);
+    }
+    assert.equal(JSON.parse(store.getItem(UI.STORE_KEY)).resources.woodSword, 9);
+    assert.equal(control.state.progress.completedAllFloors, false);
+  });
+}
+
+test("failed last-cell advance leaves the floor and successful undo intact", () => {
+  const store = fakeStore();
+  const control = controller({ store });
+  control.setFloor(500);
+  for (let i = 0; i < 48; i++) control.toggleCell(i);
+  const commit = store.setItem;
+  const before = JSON.parse(JSON.stringify(control.state.undo));
+  store.setItem = () => false;
+  assert.equal(control.toggleCell(48), false);
+  assert.equal(control.state.progress.openedCells.length, 48);
+  assert.equal(control.state.progress.completedAllFloors, false);
+  assert.deepEqual(control.state.undo, before);
+  store.setItem = commit;
+  assert.equal(control.toggleCell(48), true);
+  assert.equal(control.state.progress.completedAllFloors, true);
+  assert.equal(control.undoBoard(), true);
+  assert.equal(control.state.progress.openedCells.length, 48);
+});
+
+test("same controller rejects stale saves and results after an account switch", async () => {
+  let resolve;
+  const store = fakeStore();
+  const control = controller({ store, runner: { run: () => new Promise(done => { resolve = done; }), cancel() {} } });
+  control.setFloor(20);
+  control.setCalculatorResource("woodSword", 99);
+  const pending = control.calculateAsync();
+  store.switchTo("b");
+  resolve({ targetFloor: 75 });
+  assert.equal(await pending, null);
+  assert.equal(control.state.calculatorResult, null);
+  assert.equal(control.state.calculatorDraft.resources.woodSword, 0);
+  assert.deepEqual(control.state.undo, []);
+  assert.equal(control.saveCalculatorProgress(), false);
+  assert.equal(store.getItem(UI.STORE_KEY), null);
+  assert.equal(JSON.parse(store.raw.a[UI.STORE_KEY]).currentFloor, 20);
+});
+
+test("switch during destructive confirmation cannot commit anything to the newly selected account", () => {
+  const store = fakeStore();
+  const control = controller({ store, confirm: () => { store.switchTo("b"); return true; } });
+  control.setResource("woodSword", 9);
+  assert.equal(control.clearEvent(), false);
+  assert.equal(store.getItem(UI.STORE_KEY), null);
+  assert.equal(control.state.progress.resources.woodSword, 0);
+  assert.equal(JSON.parse(store.raw.a[UI.STORE_KEY]).resources.woodSword, 9);
 });
 
 test("toggles, undoes and clears board cells", () => {
@@ -158,10 +240,11 @@ test("async calculator discards a result after input changes", async () => {
   assert.equal(control.state.calculatorBusy, false);
 });
 
-test("async calculator keeps synchronous planner compatibility and handles failures", async () => {
+test("sync calculator remains available to explicit callers, async never blocks without a worker", async () => {
   const control = controller();
-  const expected = control.calculate();
-  assert.deepEqual(await control.calculateAsync(), expected);
+  assert.ok(control.calculate().demand);
+  assert.equal(await control.calculateAsync(), null);
+  assert.match(control.state.error, /后台计算不可用/);
   const failed = controller({ runner: { run: () => Promise.reject(new Error("worker unavailable")), cancel() {} } });
   assert.equal(await failed.calculateAsync(), null);
   assert.match(failed.state.error, /计算失败/);

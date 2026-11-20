@@ -66,10 +66,10 @@ for(const kind of ['beast-single','beast-school']){
   });
 }
 
-test('non-beast Worker failure retains permanent asynchronous fallback policy',async()=>{
+test('lightweight secret-realm Worker failure retains permanent asynchronous fallback policy',async()=>{
   let attempts=0,port,calls=0;
   class TemporaryWorker{constructor(){attempts++;port=this;}postMessage(){}terminate(){}}
-  const runner=load(TemporaryWorker).create({kind:'wooden',fallback(input){calls++;return input.value;}});
+  const runner=load(TemporaryWorker).create({kind:'secret-realm',fallback(input){calls++;return input.value;}});
   const first=runner.run({value:1});port.onerror({preventDefault(){}});
   assert.equal(await first,1);
   assert.equal(await runner.run({value:2}),2);

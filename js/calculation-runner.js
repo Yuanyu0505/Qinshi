@@ -13,6 +13,7 @@
   function abortError() { var error = new Error("计算已取消"); error.name = "AbortError"; return error; }
   function create(options) {
     var worker = null, pending = null, sequence = 0, unavailable = false;
+    var backgroundOnly = ["beast-single", "beast-school", "wooden"].indexOf(options.kind) !== -1;
     function stopWorker() {
       if (worker) worker.terminate();
       worker = null;
@@ -34,8 +35,12 @@
       if (pending !== job) return;
       // These exact solvers can run for seconds. A timer does not make their
       // synchronous fallback interruptible; fail safely instead of freezing UI.
-      if (options.kind === "beast-single" || options.kind === "beast-school") {
-        settle(job, new Error("本次精确计算未完成，后台计算不可用或已中断；可调整参与范围或稍后重新计算。若仍失败，请更新浏览器后重试。"));
+      if (backgroundOnly) {
+        var error = new Error(options.kind === "wooden" ?
+          "木人巷计算未完成，后台计算不可用或已中断。请重试；若仍失败，请更新浏览器。" :
+          "本次精确计算未完成，后台计算不可用或已中断；可调整参与范围或稍后重新计算。若仍失败，请更新浏览器后重试。");
+        error.name = "WorkerUnavailableError";
+        settle(job, error);
         return;
       }
       job.timer = root.setTimeout(function () {
@@ -53,10 +58,9 @@
         catch (error) { reject(error); return; }
         var job = { id: ++sequence, input: snapshot, resolve: resolve, reject: reject, timer: null };
         pending = job;
-        // Beast failures end this run only: the next explicit run may create one
-        // fresh Worker. Other calculators retain their permanent fallback policy.
-        var retryWorker = options.kind === "beast-single" || options.kind === "beast-school";
-        if ((unavailable && !retryWorker) || !workerUrl || typeof root.Worker !== "function" || (root.location && root.location.protocol === "file:")) {
+        // For background-only solvers a failure ends only the current job.
+        // Other calculators retain their permanent fallback policy.
+        if ((unavailable && !backgroundOnly) || !workerUrl || typeof root.Worker !== "function" || (root.location && root.location.protocol === "file:")) {
           fallback(job); return;
         }
         try {

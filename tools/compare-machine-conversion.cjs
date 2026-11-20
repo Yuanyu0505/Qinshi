@@ -3,7 +3,16 @@
 const assert=require('node:assert/strict');
 const {load}=require('./machine-baseline-loader.cjs');
 const revision=process.argv[2]||'d667c2b';
-const before=load(revision),after=load();let seed=1147,singles=0,schools=0,frontiers=0,pages=0;
+// Correct only the independently reproduced stock-cap defect in the reference,
+// so that the performance changes are still checked against the old solver.
+const stockRule='zeroTotalFee=bestFee===0&&(price===0||hi<=stock);';
+const before=load(revision),reference=load(revision,(file,source)=>{
+  if(file!=='js/machine-beast-school-planner.js')return source;
+  if(!source.includes(stockRule))return source;
+  return source.replace(stockRule,'zeroTotalFee=bestFee===0&&(price===0||freeSets.reduce(function(n,cs){return sumSafe(n,Math.max.apply(null,cs.map(function(c){return c.resources.awakeningBlueprints;})));},0)<=stock);');
+}),after=load();
+let seed=1147,singles=0,schools=0,frontiers=0,pages=0;
+const oldStockDefects=[];
 const random=n=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return (seed>>>8)%n;};
 function same(a,b,label){assert.equal(JSON.stringify(a),JSON.stringify(b),label);}
 for(let iteration=0;iteration<180;iteration++){
@@ -19,7 +28,9 @@ for(let iteration=0;iteration<180;iteration++){
       same(before.core.conversionCandidates(data,b,p,options,12-p.research,frontierMode),after.core.conversionCandidates(data,b,p,options,12-p.research,frontierMode),'full frontier '+iteration+' '+b.id+' '+frontierMode);frontiers++;
     }
   }
-  const a=before.planner.calculateSchoolPlans(data,'s',progress,options),b=after.planner.calculateSchoolPlans(data,'s',progress,options);
+  const original=before.planner.calculateSchoolPlans(data,'s',progress,options);
+  const a=reference.planner.calculateSchoolPlans(data,'s',progress,options),b=after.planner.calculateSchoolPlans(data,'s',progress,options);
+  if(JSON.stringify(original)!==JSON.stringify(a))oldStockDefects.push({iteration,oldValid:original.valid,correctedValid:a.valid});
   same(a,b,'school '+iteration);schools++;
   if(a.valid)for(let index=0;index<a.plans.length;index++){
     const count=BigInt(a.plans[index].equivalents.count),last=count>4n?String(count-4n):'0';
@@ -31,4 +42,4 @@ for(let iteration=0;iteration<180;iteration++){
     }
   }
 }
-console.log(JSON.stringify({baseline:revision,seed:1147,singles,schools,frontiers,pages,comparison:'entire JSON; both complete raw frontier modes; stable order, allocations, core ledgers, BigInt counts and every bounded page; all baseline modules loaded natively from the revision',result:'identical'}));
+console.log(JSON.stringify({baseline:revision,seed:1147,singles,schools,frontiers,pages,oldStockDefects,comparison:'entire JSON including every bounded page against baseline with only the verified stock-cap defect corrected',result:'identical'}));

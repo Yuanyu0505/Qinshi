@@ -6,7 +6,7 @@ const path = require('node:path');
 const Module = require('node:module');
 const { execFileSync } = require('node:child_process');
 const root = path.resolve(__dirname, '..');
-function load(revision = null) {
+function load(revision = null, transform = (_, source) => source) {
   const modules = new Map();
   function get(relative) {
     relative = relative.replaceAll('\\', '/');
@@ -18,7 +18,7 @@ function load(revision = null) {
     compiled.paths = Module._nodeModulePaths(path.dirname(filename));
     modules.set(relative, compiled);
     compiled.require = name => name.startsWith('.') ? get(path.posix.normalize(path.posix.join(path.posix.dirname(relative), name))) : require(name);
-    compiled._compile(source, filename);
+    compiled._compile(transform(relative, source), filename);
     return compiled.exports;
   }
   return { core: get('js/machine-beasts.js'), equivalents: get('js/machine-beast-equivalents.js'), planner: get('js/machine-beast-school-planner.js'), data: get('data/machine-beasts.js') };

@@ -20,3 +20,21 @@ test('fully covered shared stock compares overflow then blueprints without retai
   }
   assert.ok(peak<=169,'at most one lexicographic prefix per gain/effect is needed when every cost is provably zero: '+peak);
 });
+
+test('a zero-fee witness at the stock cap does not make expensive prefixes free',()=>{
+  const sandbox={module:{exports:{}},require:name=>name==='./machine-beasts.js'?CORE:EQ};
+  const source=fs.readFileSync(require.resolve('../js/machine-beast-school-planner.js'),'utf8');
+  vm.runInNewContext(source.replace('return { defaultTargetStage:','return { testCombine:combine, defaultTargetStage:'),sandbox);
+  function candidate(key,b,o){
+    return {beastId:'war-demon',startLevel:0,endLevel:1,modifiedInvestedCount:0,unlockedEffects:0,overflowResearch:o,stableKey:key,items:[],resources:{pricedBodyYuan:0,awakeningBlueprints:b}};
+  }
+  const sets=[[candidate('light',1,5),candidate('heavy',2,0)],[candidate('last',1,0)]];
+  const settings=CORE.normalizeReferenceCostSettings(DATA,{awakeningBlueprintPrice:7,awakeningBlueprintStock:2,useAwakeningBlueprintStock:true});
+  for(const mode of [false,true]){
+    const result=sandbox.module.exports.testCombine(DATA,sets,0,2,settings,mode);
+    assert.ok(result);
+    assert.equal(result.totals.pricedYuan,0);
+    assert.equal(result.totals.overflowResearch,5);
+    assert.equal(result.totals.awakeningBlueprints,2);
+  }
+});

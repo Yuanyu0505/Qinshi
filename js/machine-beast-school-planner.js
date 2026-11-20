@@ -214,10 +214,54 @@
     return a.body < b.body || a.blueprints < b.blueprints || a.effects > b.effects ||
       a.overflow < b.overflow || a.key <= b.key;
   }
-  function paretoInsert(frontier, value) {
-    for (var i = 0; i < frontier.length; i++) if (dominates(frontier[i], value)) return;
-    for (var i = frontier.length - 1; i >= 0; i--) if (dominates(value, frontier[i])) frontier.splice(i, 1);
+  function paretoInsert(frontier, value, stats) {
+    for (var i = 0; i < frontier.length; i++) {
+      if(stats)stats.comparisons++;
+      if (dominates(frontier[i], value)) { if(stats)stats.hits++; return; }
+    }
+    for (var i = frontier.length - 1; i >= 0; i--) {
+      if(stats)stats.comparisons++;
+      if (dominates(value, frontier[i])) { if(stats)stats.hits++; frontier.splice(i, 1); }
+    }
     frontier.push(value);
+  }
+
+  function mixedFrontier(values, stats) {
+    var widths = Array.from(new Set(values.map(function(v){return v.blueprints;}))).sort(function(a,b){return a-b;});
+    var effects = Array.from(new Set(values.map(function(v){return v.effects;}))).sort(function(a,b){return b-a;});
+    var stride=effects.length+1, cells=(widths.length+1)*stride;
+    // Small buckets do not amortize sorting; enormous coordinate products
+    // use the original exact scan. Neither branch limits retained candidates.
+    if(values.length<48 || cells>2000000){
+      var frontier=[];
+      values.forEach(function(v){paretoInsert(frontier,v,stats);});
+      return frontier;
+    }
+    var bx=new Map(),ey=new Map();
+    widths.forEach(function(v,i){bx.set(v,i+1);});
+    effects.forEach(function(v,i){ey.set(v,i+1);});
+    var tree=new Float64Array(cells);tree.fill(Infinity);
+    var keep=new Uint8Array(values.length);
+    var order=values.map(function(_,i){return i;});
+    // Any dominator sorts first. The prefix query then enforces blueprint
+    // and effect inequalities and stores the minimum overflow. Identical
+    // vectors keep the first original entry when their stable keys tie.
+    order.sort(function(i,j){
+      var a=values[i],b=values[j];
+      return a.body-b.body || a.blueprints-b.blueprints || b.effects-a.effects || a.overflow-b.overflow || cmp([a.key],[b.key]) || i-j;
+    });
+    order.forEach(function(index){
+      var v=values[index], x=bx.get(v.blueprints), y=ey.get(v.effects), best=Infinity;
+      if(stats)stats.indexQueries++;
+      for(var i=x;i>0;i-=i&-i)for(var j=y;j>0;j-=j&-j)best=Math.min(best,tree[i*stride+j]);
+      if(best<=v.overflow){if(stats)stats.indexHits++;return;}
+      keep[index]=1;
+      for(var i=x;i<=widths.length;i+=i&-i)for(var j=y;j<stride;j+=j&-j){
+        var at=i*stride+j;tree[at]=Math.min(tree[at],v.overflow);
+      }
+    });
+    // Preserve original frontier traversal and hence trace merge ordering.
+    return values.filter(function(_,i){return keep[i];});
   }
 
   function machineBeastCandidates(data, beast, rawProgress, options) {
@@ -294,7 +338,7 @@
     return retained;
   }
 
-  function combine(data, sets, baseline, needed, settings, effectMode) {
+  function combine(data, sets, baseline, needed, settings, effectMode, diagnostic) {
     var stock = settings.useAwakeningBlueprintStock ? settings.awakeningBlueprintStock : 0;
     var price = settings.awakeningBlueprintPrice, feeCache = new Map();
     var freeBodies=sets.every(function(cs){return cs.every(function(c){return c.resources.pricedBodyYuan===0;});});
@@ -318,22 +362,38 @@
     // Exact remaining gain, with modification count first and crossed nodes
     // second. This is a feasibility bound, not a cost/frontier replacement.
     var suffixGoals = Array(sets.length + 1);
-    suffixGoals[sets.length] = new Map([[0, { modified: 0, effects: 0 }]]);
+    suffixGoals[sets.length] = new Map([[0, { modified: 0, effects: 0, minBody:0, minBlueprints:0, witnessBody:0, witnessBlueprints:0, witnessEffects:0 }]]);
     for (var si = sets.length - 1; si >= 0; si--) {
       var goals = new Map();
       sets[si].forEach(function (c) {
         suffixGoals[si + 1].forEach(function (tail, gain) {
           var added = gain + c.endLevel - c.startLevel;
           if (added > needed) return;
-          var value = { modified: tail.modified + c.modifiedInvestedCount, effects: tail.effects + c.unlockedEffects };
+          var body=c.resources.pricedBodyYuan,b=c.resources.awakeningBlueprints;
+          var value = { modified: tail.modified + c.modifiedInvestedCount, effects: tail.effects + c.unlockedEffects,
+            minBody:sumSafe(body,tail.minBody),minBlueprints:sumSafe(b,tail.minBlueprints),
+            witnessBody:sumSafe(body,tail.witnessBody),witnessBlueprints:sumSafe(b,tail.witnessBlueprints),
+            witnessEffects:tail.witnessEffects+c.unlockedEffects };
           var old = goals.get(added);
-          if (!old || cmp([value.modified, -value.effects], [old.modified, -old.effects]) < 0) goals.set(added, value);
+          if (!old || value.modified<old.modified) goals.set(added,value);
+          else if(value.modified===old.modified){
+            old.effects=Math.max(old.effects,value.effects);
+            old.minBody=Math.min(old.minBody,value.minBody);
+            old.minBlueprints=Math.min(old.minBlueprints,value.minBlueprints);
+            // Only a feasible witness, never an approximate answer. Linear
+            // scoring chooses a witness; all pruning uses the actual fee.
+            var score=value.witnessBody+price*value.witnessBlueprints, oldScore=old.witnessBody+price*old.witnessBlueprints;
+            if(effectMode?value.witnessEffects>old.witnessEffects||value.witnessEffects===old.witnessEffects&&score<oldScore:score<oldScore){
+              old.witnessBody=value.witnessBody;old.witnessBlueprints=value.witnessBlueprints;old.witnessEffects=value.witnessEffects;
+            }
+          }
         });
       });
       suffixGoals[si] = goals;
     }
     var goal = suffixGoals[0].get(needed);
     if (!goal) return null;
+    var incumbent=sumSafe(goal.witnessBody,fee(goal.witnessBlueprints));
     var suffixGain=Array(sets.length+1).fill(0),suffixEffects=Array(sets.length+1).fill(0);
     for(var k=sets.length-1;k>=0;k--){
       suffixGain[k]=suffixGain[k+1]+Math.max.apply(null,sets[k].map(function(c){return c.endLevel-c.startLevel;}));
@@ -359,14 +419,20 @@
         if(y<bestFee||y===bestFee&&e>bestEffects){bestFee=y;bestEffects=e;}});
       if(bestFee!==Infinity&&(bestFee===0||freeBodies)){
         bodyOnlyZero=true;if(!effectMode)requiredEffects=bestEffects;
-        var hi=freeSets.reduce(function(n,cs){return sumSafe(n,Math.max.apply(null,cs.map(function(c){return c.resources.awakeningBlueprints;})));},0),lo=0;
+        var maximumFreeBlueprints=freeSets.reduce(function(n,cs){return sumSafe(n,Math.max.apply(null,cs.map(function(c){return c.resources.awakeningBlueprints;})));},0);
+        var hi=maximumFreeBlueprints,lo=0;
         while(lo<hi){var mid=Math.ceil((lo+hi)/2);if(fee(mid)<=bestFee)lo=mid;else hi=mid-1;}blueprintBudget=lo;
-        zeroTotalFee=bestFee===0&&(price===0||hi<=stock);
+        // hi is now the affordable budget, not the maximum that a future
+        // continuation could spend. Merging by overflow is only safe if no
+        // completion can cross the stock cap.
+        zeroTotalFee=bestFee===0&&(price===0||maximumFreeBlueprints<=stock);
       }
     }
     var states = new Map([[0, [{ gain: 0, modified: 0, body: 0, blueprints: 0, effects: 0, overflow: 0, key: "", beasts: [], trace: null }]]]);
+    if(diagnostic)diagnostic({phase:'combine-bound',effectMode:effectMode,goal:goal,incumbent:incumbent,stock:stock,requiredEffects:requiredEffects,bodyOnlyZero:bodyOnlyZero,zeroTotalFee:zeroTotalFee,blueprintBudget:blueprintBudget});
     sets.forEach(function (allCandidates,setIndex) {
       var candidates = bodyOnlyZero?freeSets[setIndex]:allCandidates;
+      var started=diagnostic?Date.now():0, stats=diagnostic?{phase:'combine-layer',effectMode:effectMode,index:setIndex,candidates:candidates.length,equalBodyBuckets:0,mixedBodyBuckets:0,maxMixed:0,collected:0,retained:0,comparisons:0,hits:0,indexQueries:0,indexHits:0}:null;
       var collected = new Map();
       states.forEach(function (frontier) {
         frontier.forEach(function (s) {
@@ -376,10 +442,15 @@
             var tail = suffixGoals[setIndex + 1].get(needed - gain);
             var modified = s.modified + c.modifiedInvestedCount;
             if (!tail || modified + tail.modified !== goal.modified) return;
+            var body=sumSafe(s.body,c.resources.pricedBodyYuan),blueprints=sumSafe(s.blueprints,c.resources.awakeningBlueprints);
+            // Each independently minimized suffix resource is a lower bound
+            // on every legal completion; they need not share a witness.
+            if(stock>0 && maximumBlueprints>stock && !bodyOnlyZero &&
+              sumSafe(sumSafe(body,tail.minBody),fee(sumSafe(blueprints,tail.minBlueprints)))>incumbent)return;
             var changed = c.items.length > 0;
             var v = { gain: gain, modified: modified,
-              body: sumSafe(s.body, c.resources.pricedBodyYuan),
-              blueprints: sumSafe(s.blueprints, c.resources.awakeningBlueprints),
+              body: body,
+              blueprints: blueprints,
               effects: s.effects + c.unlockedEffects, overflow: sumSafe(s.overflow, c.overflowResearch),
               key: s.key + c.beastId + ":" + c.stableKey + "|",
               beasts: changed ? s.beasts.concat([c]) : s.beasts, trace: EQUIVALENTS.append(s.trace, c) };
@@ -417,7 +488,9 @@
         var values = Array.from(bucket.values.values());
         if (bucket.saturated) values.push(bucket.saturated);
         var frontier = [];
-        if (values.length && values.every(function (v) { return v.body === values[0].body; })) {
+        var equalBody=values.length && values.every(function (v) { return v.body === values[0].body; });
+        if(stats){stats.collected+=values.length;if(equalBody)stats.equalBodyBuckets++;else {stats.mixedBodyBuckets++;stats.maxMixed=Math.max(stats.maxMixed,values.length);}}
+        if (equalBody) {
           // Equal body cost: exact 3D dominance sweep, O(n log effects), rather
           // than quadratic pairwise scans for thousands of free-stock states.
           values.sort(function (a,b) { return cmp([a.blueprints,-a.effects,a.overflow,a.key],[b.blueprints,-b.effects,b.overflow,b.key]); });
@@ -430,10 +503,12 @@
             frontier.push(v);
             for(var i=at;i<tree.length;i+=i&-i)tree[i]=Math.min(tree[i],v.overflow);
           });
-        } else values.forEach(function(v){paretoInsert(frontier,v);});
+        } else frontier=mixedFrontier(values,stats);
+        if(stats)stats.retained+=frontier.length;
         next.set(key,frontier);
       });
       states = next;
+      if(stats){stats.elapsedMs=Date.now()-started;diagnostic(stats);}
     });
     var finals = states.get(needed);
     if (!finals || !finals.length) return null;
@@ -521,8 +596,8 @@
       if (!exactReachable()) buildSets(false);
       if (!exactReachable()) throw Error("当前条件下无法精确达到目标，请调整参与范围、材料或蓝紫库存限制");
       if(typeof config.onPhase==='function')config.onPhase('school-combine');
-      var cost = combine(data, sets, baseline, needed, settings, false);
-      var effects = combine(data, sets, baseline, needed, settings, true);
+      var cost = combine(data, sets, baseline, needed, settings, false,diagnostic);
+      var effects = combine(data, sets, baseline, needed, settings, true,diagnostic);
       if (!cost || !effects) throw Error("当前条件下无法精确达到目标");
       var plans = cost.stableKey === effects.stableKey ? [Object.assign({}, cost, { kind: "merged" })] : [cost, effects];
       if(typeof config.onPhase==='function')config.onPhase('equivalent-graph');

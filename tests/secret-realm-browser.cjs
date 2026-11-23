@@ -65,7 +65,7 @@ test('completed plans survive mode period and partition navigation but not chang
     assert.equal(await page.locator('[name=platformId] option').count(),3);
     assert.match(await page.locator('[name=platformId] option:checked').innerText(),/小7\/果盘.*4折/);
     assert.equal(await page.locator('[data-realm-form=settings] button').count(),0);
-    assert.deepEqual(await page.locator('.realm-costs').evaluateAll(nodes=>nodes.map(el=>getComputedStyle(el).gridTemplateColumns.split(' ').length)),[5,5]);
+    assert.deepEqual(await page.locator('.realm-costs').evaluateAll(nodes=>nodes.map(el=>el.querySelectorAll('[data-realm-metric]').length)),[10,10]);
     await page.locator('[name=vouchers]').fill('1');assert.equal(await page.locator('.realm-plan').count(),0);
   }finally{await context.close();}
 });
@@ -147,7 +147,7 @@ test('per-period source switches persist, all respects 648, and following preser
 });
 test('custom platform discount is saved and reused after mode navigation including fractional folds',async()=>{
   const {context,page}=await openRealm();try{
-    await page.locator('[data-realm-mode=planner]').click();const form=page.locator('[data-realm-form=platform]');await form.locator('[name=platformName]').fill('自定义测试平台');await form.locator('[name=discount]').fill('4.333');await form.locator('[type=submit]').click();
+    await page.locator('[data-realm-mode=planner]').click();await page.locator('.realm-platform-management > summary').click();const form=page.locator('[data-realm-form=platform]');await form.locator('[name=platformName]').fill('自定义测试平台');await form.locator('[name=discount]').fill('4.333');await form.locator('[type=submit]').click();
     const state=await saved(page);assert.ok(state);assert.equal(state.settings.platforms.at(-1).discount,4.333);
     await page.locator('[data-realm-mode=progress]').click();await page.locator('[data-realm-mode=planner]').click();assert.match(await page.locator('[name=platformId] option:checked').innerText(),/自定义测试平台.*4\.333/);
   }finally{await context.close();}

@@ -28,7 +28,7 @@
   function read(c){var raw=c.root.QinshiAccounts.getItem(KEY);return raw==null?c.core.createDefault(c.data):c.core.normalize(JSON.parse(raw),c.data);}
   function write(c,state){if(c.root.QinshiAccounts.setItem(KEY,JSON.stringify(state))===false)throw Error('当前账号为只读状态，未保存。');}
   function load(c){
-    pause(c);var nextAccount=accountId(c);if(nextAccount!==c.account){c.drafts={};c.results={};}c.account=nextAccount;c.accessWritable=!readonly(c);c.readError=false;
+    pause(c);var nextAccount=accountId(c);if(nextAccount!==c.account){c.drafts={};c.results={};c.platformManagementOpen=false;c.dateManagementOpen=false;}c.account=nextAccount;c.accessWritable=!readonly(c);c.readError=false;
     try{var saved=read(c),next=c.core.advance(saved,Date.now(),c.data);if(JSON.stringify(next)!==JSON.stringify(saved)&&!readonly(c))write(c,next);c.state=next;c.error='';}
     catch(e){c.results={};c.result=null;c.readError=true;c.state=c.core.createDefault(c.data);c.error='秘境数据读取或状态保存失败，原存储未被覆盖，已暂停编辑和计算。请恢复备份或重新读取。'+e.message;}
     var ids=realmIds(c);if(ids.indexOf(c.realmId)===-1)c.realmId=ids[0]||null;
@@ -55,14 +55,14 @@
     return tools+'<div class="secret-realm-sources">'+c.data.sources.filter(function(s){return !s.firstOnly||period===1;}).map(function(s){
       var rec=records[s.id]||{enabled:s.id!=='pack648',obtained:0,purchased:0};
       var title=actual?'<h3>'+esc(s.name)+'</h3>':'<label class="realm-check"><input type="checkbox" data-realm-enable="'+s.id+'"'+(rec.enabled?' checked':'')+(disabled?' disabled':'')+'><strong>'+esc(s.name)+'</strong></label>';
-      var counts={1:'一',2:'两',4:'四',6:'六',14:'十四'};
-      var frequency=s.firstOnly?'仅首期一次':s.daily?'每天一次，每期十四次':s.limit===null?'不限次数':'每期'+(counts[s.limit]||s.limit)+'次';
-      var details='<p class="realm-muted">'+frequency+'，'+emphasis(s.draws)+'抽/次'+(s.price?' · '+money(s.price)+'/次':s.id==='ingots'?' · 2000元宝/次':'')+'</p>';
+      var frequency=s.firstOnly?'仅首期 1 次':s.daily?'每天 1 次／每期 14 次':s.limit===null?'不限次数 · 逐期许可':'每期 '+s.limit+' 次';
+      var cost=s.price?money(s.price)+'/次':s.id==='ingots'?'2000 元宝/次':'免费';
+      var details='<p class="realm-source-meta"><span>'+emphasis(s.draws)+' 抽/次</span><span>'+cost+'</span><span>'+frequency+'</span></p>';
       var form='';if(actual){
         var locked=!active||disabled;
         form='<form data-realm-form="source" data-source-id="'+s.id+'">'+(s.id==='paid-pass'?'<label class="realm-check"><input type="checkbox" name="purchased"'+(rec.purchased?' checked':'')+(locked?' disabled':'')+'>已购买付费通行证</label>':'')+'<div class="realm-fields">'+(isPack(s)?field('本期已购次数','purchased',rec.purchased||0,{disabled:locked}):field('本期已获取抽数','obtained',rec.obtained||0,{disabled:locked}))+(s.currencyReceipt?field('本期已领取'+currencyName(c),'currencyObtained',rec.currencyObtained||0,{disabled:locked}):'')+'</div></form>';
       }
-      return '<article class="realm-source'+(s.id==='pack648'?' realm-unlimited':'')+'" data-realm-source="'+s.id+'">'+title+details+(s.currency?'<p class="realm-muted">'+(s.currencyReceipt?'每期':'每次购买')+'直接赠送'+emphasis(s.currency)+'个'+currencyName(c)+(s.id==='paid-pass'?'（免费'+emphasis(40)+'个之外额外获得）':'')+'</p>':'')+form+'</article>';
+      return '<article class="realm-source'+(s.id==='pack648'?' realm-unlimited':'')+'" data-realm-source="'+s.id+'">'+title+details+(s.currency?'<p class="realm-muted realm-source-gift">'+(s.currencyReceipt?'每期':'每次购买')+'直接赠送 '+emphasis(s.currency)+' '+currencyName(c)+(s.id==='paid-pass'?'（免费 '+emphasis(40)+' 个之外额外获得）':'')+'</p>':'')+form+'</article>';
     }).join('')+'</div>';
   }
   function platformOptions(c){
@@ -73,21 +73,29 @@
     });
     return groups.map(function(g){var selected=g.items.find(function(p){return p.id===settings.platformId;});var p=selected||g.items[0],label=g.items.map(function(p){return p.name;}).join('/');return '<option value="'+esc(p.id)+'"'+(selected?' selected':'')+'>'+esc(label)+(g.discount===10?' · 无折扣':' · '+esc(g.discount)+'折')+'</option>';}).join('');
   }
-  function settingsMarkup(c){var settings=c.state.settings,disabled=readonly(c)||c.readError;return '<details class="realm-settings" open><summary>平台折扣与共用代金</summary><p class="realm-muted">同账号共用，计算不扣减代金。各期金额保留到分，总预算向上取整到元。</p><form data-realm-form="settings"><div class="realm-fields"><label class="realm-field">平台<select name="platformId"'+(disabled?' disabled':'')+'>'+platformOptions(c)+'</select></label>'+field('已有代金（元）','vouchers',settings.vouchers,{disabled:disabled})+'</div><label class="realm-check"><input type="checkbox" name="useVouchers"'+(settings.useVouchers?' checked':'')+(disabled?' disabled':'')+'>使用已有代金（先抵折前价，再打折）</label></form><form data-realm-form="platform" class="realm-inline"><label class="realm-field">自定义平台名称<input type="text" name="platformName" maxlength="40"'+(disabled?' disabled':'')+'></label>'+field('折扣（例如4.3表示4.3折）','discount','4.3',{step:'any',disabled:disabled})+'<button class="seg" type="submit"'+(disabled?' disabled':'')+'>保存自定义平台</button></form></details>';}
+  function settingsMarkup(c){
+    var settings=c.state.settings,disabled=readonly(c)||c.readError;
+    return '<section class="realm-settings"><h3>平台折扣与共用代金</h3><form data-realm-form="settings" class="realm-fields"><label class="realm-field">平台<select name="platformId"'+(disabled?' disabled':'')+'>'+platformOptions(c)+'</select></label>'+
+      field('已有代金（元）','vouchers',settings.vouchers,{disabled:disabled})+
+      '<label class="realm-check"><input type="checkbox" name="useVouchers"'+(settings.useVouchers?' checked':'')+(disabled?' disabled':'')+'>使用已有代金（先抵折前价，再打折）</label></form>'+
+      '<details class="realm-platform-management"'+(c.platformManagementOpen?' open':'')+'><summary>管理自定义平台</summary><form data-realm-form="platform" class="realm-inline"><label class="realm-field">自定义平台名称<input type="text" name="platformName" maxlength="40"'+(disabled?' disabled':'')+'></label>'+
+      field('折扣（例如4.3表示4.3折）','discount','4.3',{step:'any',disabled:disabled})+'<button class="seg" type="submit"'+(disabled?' disabled':'')+'>保存自定义平台</button></form>'+platformDeleteMarkup(c)+'</details></section>';
+  }
   function referenceMarkup(c){
     var gaoyue=c.realmId==='gaoyue',ref=c.data.gaoyueReference;
-    return '<section class="realm-reference"><h3>抽数来源与单期限额</h3><p>每种秘境共6期，每期14天；首期赠送仅第1期有。通行证拆为免费11抽和付费额外88抽。每次实际抽取赠送1个'+currencyName(c)+'，领取抽取券并不等于已经抽取。</p><div class="realm-table-wrap"><table><thead><tr><th>来源</th><th>每份抽数</th><th>人民币原价</th><th>单期上限</th><th>直接赠送道具</th></tr></thead><tbody>'+c.data.sources.map(function(s){
+    return '<section class="realm-reference"><h3>抽数来源与单期限额</h3><p>每种秘境共6期，每期14天；首期赠送仅第1期有。通行证拆为免费11抽和付费额外88抽。每次实际抽取赠送1个'+currencyName(c)+'，领取抽取券并不等于已经抽取。</p><div class="realm-table-wrap" role="region" aria-label="抽数来源与单期限额" tabindex="0"><table><thead><tr><th scope="col">来源</th><th scope="col">每份抽数</th><th scope="col">人民币原价</th><th scope="col">单期上限</th><th scope="col">直接赠送道具</th></tr></thead><tbody>'+c.data.sources.map(function(s){
       return '<tr><th>'+esc(s.name)+'</th><td>'+s.draws+'</td><td>'+money(s.price)+(s.id==='ingots'?'，另需2000元宝':'')+'</td><td>'+(s.firstOnly?'仅第1期1次':s.daily?'每日1次，共14次':s.limit===null?'不限，需逐期许可':s.limit+'次')+'</td><td>'+(s.currency?number(s.currency)+(s.currencyReceipt?'个／期':'个／份'):'—')+'</td></tr>';
     }).join('')+'</tbody></table></div><p>免费每期110个道具＝14次免费抽取＋免费通行证40＋熊猫头56；另有70张可保存券，实际使用后还可获得70个道具。未使用的券不发放抽取赠送。</p>'+
     (gaoyue?'<h3>高月商店兑换参考</h3><div class="realm-rewards">'+ref.shop.map(function(r){return '<div><span>'+number(r[0])+'月石</span><span>'+esc(r[1])+'</span></div>';}).join('')+'</div><p>120神魄按40月石兑换5个计算，共需960月石；仅为资料，不自动兑换或扣余额。</p>':'')+
-    '<h3>累计奖励 · 共35档</h3><div class="realm-rewards">'+c.data.rewards.map(function(r){var specific=gaoyue&&ref.rewards.find(function(x){return x[0]===r.draws;});return '<div><span>'+number(r.draws)+'抽</span><span>'+esc(specific?specific[1]:r.name)+'</span></div>';}).join('')+'</div></section>';
+    '<h3>累计奖励 · 共35档</h3><div class="realm-rewards realm-reward-tiers">'+c.data.rewards.map(function(r){var specific=gaoyue&&ref.rewards.find(function(x){return x[0]===r.draws;});return '<div><span>'+number(r.draws)+'抽</span><span>'+esc(specific?specific[1]:r.name)+'</span></div>';}).join('')+'</div></section>';
   }
   function schemeMarkup(c,label,plan,kind){
     if(!plan)return '<section class="realm-plan"><h3>'+label+'</h3><p>在当前条件下无法达标。</p></section>';
     var currency=esc(currencyName(c)),periodsId='realm-plan-periods-'+c.realmId+'-'+kind;
-    return '<section class="realm-plan"><h3>'+label+' · '+(plan.reachPeriod==null?'现有余额／库存可达标':'第'+plan.reachPeriod+'期达标')+'</h3><div class="realm-costs">'+
-      '<span>总计折前原价 '+metric('original',money(plan.totalBefore))+'</span><span>使用代金 '+metric('voucher',money(plan.voucherUsed))+'</span><span>代金抵扣后折前应付 '+metric('payable',money(plan.totalBefore-plan.voucherUsed))+'</span><span class="realm-budget">总计折后预算 '+metric('cash',money(plan.totalAfter))+'</span><span>实际计划抽取 '+metric('draws',number(plan.plannedDraws))+' 次</span>'+
-      '<span>最终累计 '+metric('cumulative',number(plan.finalCumulative))+' 抽</span><span>剩余抽取券 '+metric('tickets',number(plan.remainingTickets))+' 张</span><span>直接赠送'+currency+' '+metric('gift',number(plan.directCurrency))+' 个</span><span>抽取赠送'+currency+' '+metric('gift',number(plan.currencyFromDraws))+' 个</span><span>预计'+currency+'余额 '+metric('balance',number(plan.currencyBalance))+' 个</span></div>'+
+    return '<section class="realm-plan"><h3>'+label+' <span>· '+(plan.reachPeriod==null?'现有余额／库存可达标':'第'+plan.reachPeriod+'期达标')+'</span></h3><div class="realm-costs">'+
+      '<div class="realm-cost-primary"><span class="realm-budget">总计折后预算 '+metric('cash',money(plan.totalAfter))+'</span><span>实际计划抽取 '+metric('draws',number(plan.plannedDraws))+' 次</span><span>预计'+currency+'余额 '+metric('balance',number(plan.currencyBalance))+' 个</span></div>'+
+      '<div class="realm-cost-secondary"><span>总计折前原价 '+metric('original',money(plan.totalBefore))+'</span><span>使用代金 '+metric('voucher',money(plan.voucherUsed))+'</span><span>代金抵扣后折前应付 '+metric('payable',money(plan.totalBefore-plan.voucherUsed))+'</span>'+
+      '<span>最终累计 '+metric('cumulative',number(plan.finalCumulative))+' 抽</span><span>剩余抽取券 '+metric('tickets',number(plan.remainingTickets))+' 张</span><span>直接赠送'+currency+' '+metric('gift',number(plan.directCurrency))+' 个</span><span>抽取赠送'+currency+' '+metric('gift',number(plan.currencyFromDraws))+' 个</span></div></div>'+
       (plan.initialDraws?'<p>使用现有库存抽取 '+metric('draws',number(plan.initialDraws))+' 次。</p>':'')+
       (plan.periods.length?'<div class="realm-inline realm-plan-tools"><button type="button" class="seg" data-realm-toggle-periods aria-controls="'+esc(periodsId)+'" aria-expanded="false">一键展开每期详情</button></div>':'')+
       '<div class="realm-plan-periods" id="'+esc(periodsId)+'">'+plan.periods.map(function(p){return '<details class="realm-period-result"><summary>第'+p.number+'期：本期计划抽取 '+metric('period-draws',number(p.plannedDraws))+'抽、折后现金 '+metric('cash',money(p.discountedCash))+'</summary><p>本期折前原价 '+metric('original',money(p.before))+' ／代金抵扣 '+metric('voucher',money(p.voucherUsed))+' ／代金抵扣后折前应付 '+metric('payable',money(p.before-p.voucherUsed))+' ／折后现金 '+metric('cash',money(p.discountedCash))+'</p><p>本期计划抽取 '+metric('period-draws',number(p.plannedDraws))+' 次；剩余券 '+metric('tickets',number(p.remainingTickets))+'；直接赠送'+currency+' '+metric('gift',number(p.directCurrency))+'；抽取赠送'+currency+' '+metric('gift',number(p.currencyFromDraws))+'；预计'+currency+'余额 '+metric('balance',number(p.currencyBalance))+'</p><div class="realm-result-rows">'+p.rows.filter(function(row){return row.draws||row.purchases||row.directCurrency;}).map(function(row){
@@ -103,33 +111,43 @@
     button.setAttribute('aria-expanded',String(expanded));
     button.textContent=expanded?'一键收起每期详情':'一键展开每期详情';
   }
-  function renderResults(c){var host=c.host.querySelector('[data-realm-results]');if(!host)return;if(c.busy){host.innerHTML='<p role="status">正在后台精确计算，可随时修改条件取消…</p>';return;}var result=c.result;if(!result){host.innerHTML='<p>设置目标后点击计算，同时对比最快与最省钱方案。</p>';return;}if(!result.valid){host.textContent=result.error||'计算条件不正确。';return;}var same=result.fastest&&result.cheapest&&JSON.stringify(result.fastest)===JSON.stringify(result.cheapest);host.innerHTML=(!result.fastest?'<p role="status">当前条件无法达标，抽数目标还差 '+number(result.shortfall||0)+' 抽，'+currencyName(c)+'目标还差 '+number(result.currencyShortfall||0)+' 个。请调整目标或允许的来源。</p>':'')+(same?schemeMarkup(c,'最快／最省钱方案',result.fastest,'combined'):schemeMarkup(c,'最快方案',result.fastest,'fastest')+schemeMarkup(c,'最省钱方案',result.cheapest,'cheapest'));}
+  function renderResults(c){var host=c.host.querySelector('[data-realm-results]');if(!host)return;if(c.busy){host.innerHTML='<p role="status">正在精确计算，可修改条件取消…</p>';return;}var result=c.result;if(!result){host.innerHTML='';return;}if(!result.valid){host.textContent=result.error||'计算条件不正确。';return;}var same=result.fastest&&result.cheapest&&JSON.stringify(result.fastest)===JSON.stringify(result.cheapest);host.innerHTML=(!result.fastest?'<p role="status">当前条件无法达标，抽数目标还差 '+number(result.shortfall||0)+' 抽，'+currencyName(c)+'目标还差 '+number(result.currencyShortfall||0)+' 个。请调整目标或允许的来源。</p>':'')+'<div class="realm-plan-list'+(same?'':' realm-plan-compare')+'">'+(same?schemeMarkup(c,'最快／最省钱方案',result.fastest,'combined'):schemeMarkup(c,'最快方案',result.fastest,'fastest')+schemeMarkup(c,'最省钱方案',result.cheapest,'cheapest'))+'</div>';}
   function scheduleClock(c){if(c.clock)c.root.clearTimeout(c.clock);if(!c.visible)return;var now=Date.now(),day=Math.floor((now+28800000)/86400000),next=(day+1)*86400000-28800000;c.clock=c.root.setTimeout(function(){if(!c.visible)return;load(c);render(c);},Math.max(25,Math.min(2147483647,next-now+25)));}
   function platformDeleteMarkup(c){return '<div class="realm-inline realm-platform-list">'+c.state.settings.platforms.filter(function(p){return !c.data.platforms.some(function(d){return d.id===p.id;});}).map(function(p){return '<span>'+esc(p.name)+' · '+esc(p.discount)+'折 <button type="button" class="seg realm-delete" data-realm-delete-platform="'+esc(p.id)+'"'+(readonly(c)||c.readError?' disabled':'')+'>删除此平台</button></span>';}).join('')+'</div>';}
-  function goalMarkup(c){var r=goals(c);return '<form data-realm-form="calculate" class="realm-goal"><div class="realm-goal-switches"><label class="realm-check"><input type="checkbox" name="targetEnabled"'+(r.targetEnabled?' checked':'')+'>启用累计抽数目标</label><label class="realm-check"><input type="checkbox" name="currencyTargetEnabled"'+(r.currencyTargetEnabled?' checked':'')+'>启用'+currencyName(c)+'目标</label></div><div class="realm-fields realm-goal-row">'+field('目标累计抽数','target',r.target,{disabled:c.readError})+field('目标'+currencyName(c)+'余额','currencyTarget',r.currencyTarget,{disabled:c.readError})+'<label class="realm-field">抽取模式<select name="drawMode"><option value="stop"'+(r.drawMode==='stop'?' selected':'')+'>点到即止（余券留库存）</option><option value="all"'+(r.drawMode==='all'?' selected':'')+'>全部抽光（仅使用方案余券）</option></select></label><label class="realm-field">按奖励选目标<select data-realm-reward'+(c.readError?' disabled':'')+'><option value="">选择奖励门槛</option>'+c.data.rewards.map(function(r){return '<option value="'+r.draws+'">'+r.draws+'抽 · '+esc(r.name)+'</option>';}).join('')+'</select></label><button type="submit" class="seg" data-realm-calculate'+(c.readError?' disabled':'')+'>计算最快／最省钱方案</button></div><p class="realm-muted">抽光仅使用同一购买方案的余券，不追加来源或购买。最快先比较达标期数；最省钱先比较取整后的折后预算，再比较代金消耗。</p></form>';}
+  function goalMarkup(c){
+    var r=goals(c),currency=esc(currencyName(c));
+    return '<form data-realm-form="calculate" class="realm-goal"><div class="realm-goal-command"><button type="submit" class="seg" data-realm-calculate'+(c.readError?' disabled':'')+'>计算最快／最省钱方案</button></div><div class="realm-goal-row">'+
+      '<div class="realm-goal-pair"><label class="realm-check"><input type="checkbox" name="targetEnabled"'+(r.targetEnabled?' checked':'')+'>启用累计抽数目标</label><div class="realm-goal-values">'+
+      field('目标累计抽数','target',r.target,{disabled:c.readError})+'<label class="realm-field">按奖励选目标<select data-realm-reward'+(c.readError?' disabled':'')+'><option value="">选择奖励门槛</option>'+c.data.rewards.map(function(reward){return '<option value="'+reward.draws+'">'+reward.draws+'抽 · '+esc(reward.name)+'</option>';}).join('')+'</select></label></div></div>'+
+      '<div class="realm-goal-pair"><label class="realm-check"><input type="checkbox" name="currencyTargetEnabled"'+(r.currencyTargetEnabled?' checked':'')+'>启用'+currency+'目标</label><div class="realm-goal-values">'+
+      field('目标'+currencyName(c)+'余额','currencyTarget',r.currencyTarget,{disabled:c.readError})+'</div></div></div>'+
+      '<div class="realm-goal-actions"><label class="realm-field">抽取模式<select name="drawMode"><option value="stop"'+(r.drawMode==='stop'?' selected':'')+'>点到即止（余券留库存）</option><option value="all"'+(r.drawMode==='all'?' selected':'')+'>全部抽光（仅使用方案余券）</option></select></label>'+
+      '<details class="realm-goal-help"><summary>抽取与方案规则</summary><p class="realm-muted">抽光仅使用方案余券，不追加购买。计算不扣代金；各期金额保留到分，总预算向上取整到元。</p><p class="realm-muted">最快优先比较达标期数；最省钱先比较取整后的折后预算，再比较代金消耗。</p></details></div></form>';
+  }
   function render(c){
     restoreResult(c);
     var state=c.state,realm=state.realms[c.realmId],disabled=readonly(c)||c.readError;
-    var html='<div class="realm-toolbar"><div class="segs realm-switches" aria-label="当前秘境">'+realmIds(c).map(function(id){var definition=c.data.realms.find(function(d){return d.id===id;});return '<button type="button" class="seg'+(c.realmId===id?' active':'')+'" data-realm-id="'+esc(id)+'" aria-pressed="'+(c.realmId===id)+'">'+esc(definition?definition.name:id)+'</button>';}).join('')+'</div><button type="button" class="seg" data-realm-action="reload">重新读取</button></div><div class="segs realm-modes">'+[['progress','个人进度'],['planner','目标规划'],['reference','资料参考']].map(function(m){return '<button type="button" class="seg'+(c.mode===m[0]?' active':'')+'" data-realm-mode="'+m[0]+'">'+m[1]+'</button>';}).join('')+'</div><p data-realm-error class="error" role="alert"'+(c.error?'':' hidden')+'>'+esc(c.error)+'</p>'+(readonly(c)?'<p role="status">当前账号只读，可查看及临时计算，不能保存修改。</p>':'');
+    var html='<div class="realm-toolbar"><div class="segs realm-switches" aria-label="当前秘境">'+realmIds(c).map(function(id){var definition=c.data.realms.find(function(d){return d.id===id;});return '<button type="button" class="seg'+(c.realmId===id?' active':'')+'" data-realm-id="'+esc(id)+'" aria-pressed="'+(c.realmId===id)+'">'+esc(definition?definition.name:id)+'</button>';}).join('')+'</div><button type="button" class="seg" data-realm-action="reload">重新读取</button></div><nav class="segs realm-modes" aria-label="秘境内容">'+[['progress','个人进度'],['planner','目标规划'],['reference','资料参考']].map(function(m){return '<button type="button" class="seg'+(c.mode===m[0]?' active':'')+'" data-realm-mode="'+m[0]+'" aria-pressed="'+(c.mode===m[0])+'">'+m[1]+'</button>';}).join('')+'</nav><p data-realm-error class="error" role="alert"'+(c.error?'':' hidden')+'>'+esc(c.error)+'</p>'+(readonly(c)?'<p role="status">当前账号只读，可查看及临时计算，不能保存修改。</p>':'');
     if(c.mode==='reference')html+=referenceMarkup(c);
-    else if(!realm)html+='<p>当前账号已无秘境记录。删除的秘境不会自动恢复；共用平台和代金设置仍保留。</p>'+settingsMarkup(c)+platformDeleteMarkup(c);
+    else if(!realm)html+='<p>当前账号已无秘境记录。删除的秘境不会自动恢复；共用平台和代金设置仍保留。</p>'+settingsMarkup(c);
     else{
       if(c.period<realm.currentPeriod||c.period>6)c.period=realm.currentPeriod;
       var st=c.core.status(realm,c.period,Date.now(),c.data);
-      html+='<p data-realm-status class="realm-status">'+esc(c.data.realms.find(function(r){return r.id===c.realmId;}).name)+' · 第'+c.period+'期 · '+statusLabel(st)+(realm.finished?' · 六期全部结束':'')+'</p><div class="segs realm-periods">';
-      for(var n=1;n<=6;n++)html+='<button type="button" class="seg'+(n===c.period?' active':'')+'" data-realm-period="'+n+'"'+(n<realm.currentPeriod?' disabled':'')+'>第'+n+'期'+(n<realm.currentPeriod?' · 已结束':'')+'</button>';
-      html+='</div>'+dateMarkup(c,realm,c.period,st);
+      html+='<p data-realm-status class="realm-status">第'+c.period+'期 · '+statusLabel(st)+(realm.finished?' · 六期全部结束':'')+'</p><nav class="segs realm-periods" aria-label="秘境期次">';
+      for(var n=1;n<=6;n++)html+='<button type="button" class="seg'+(n===c.period?' active':'')+'" data-realm-period="'+n+'" aria-pressed="'+(n===c.period)+'"'+(n<realm.currentPeriod?' disabled':'')+'>第'+n+'期'+(n<realm.currentPeriod?' <small class="realm-period-ended">已结束</small>':'')+'</button>';
+      html+='</nav>'+(c.mode==='planner'&&!realm.finished?'<details class="realm-date-management"'+(c.dateManagementOpen?' open':'')+'><summary>本期日期（北京时间）'+(realm.periods[c.period]?.startDate?' · '+esc(realm.periods[c.period].startDate):'')+'</summary>'+dateMarkup(c,realm,c.period,st)+'</details>':dateMarkup(c,realm,c.period,st));
       if(c.mode==='progress')html+='<form data-realm-form="totals"><div class="realm-fields">'+field('累计已抽次数（包含本期已抽）','cumulative',c.readError?'':realm.cumulative,{disabled:disabled})+field('当前持有未使用抽数','inventory',c.readError?'':realm.inventory,{disabled:disabled})+field('当前持有'+currencyName(c),'currency',c.readError?'':realm.currency,{disabled:disabled})+'</div></form><p class="realm-muted">修改后自动保存；来源记录只扣减剩余额度，不自动更新库存或累计。请分别更新累计、未用券库存及兑换道具余额。每日来源只使用本期累计填写值，不判断今天额度。已购礼包的赠送道具包含在手填余额，不重复发放。</p>';
       if(!realm.finished){
-        if(c.mode==='planner')html+=settingsMarkup(c)+platformDeleteMarkup(c)+goalMarkup(c);
+        if(c.mode==='planner')html+=goalMarkup(c)+settingsMarkup(c);
         html+=sourceMarkup(c,realm,c.period,st);
-        if(c.mode==='planner')html+='<div data-realm-results aria-live="polite"></div>';
+        if(c.mode==='planner')html+='<button type="button" class="seg realm-back-to-goal" data-realm-action="goal">返回计算设置</button><div data-realm-results aria-live="polite"></div>';
         else if(st.phase!=='active')html+='<p class="realm-muted">本期尚未开始：可填写累计、库存和规划条件，但不能生成实际购买／获取记录。</p>';
       }else html+='<p>六期已全部结束，仅保留累计已抽和未使用库存。</p><button type="button" class="seg realm-delete" data-realm-action="delete"'+(disabled?' disabled':'')+'>删除此秘境全部信息</button>';
     }
     c.host.innerHTML=html+'<p data-realm-save-status class="realm-muted" role="status" aria-live="polite"></p>';c.host.setAttribute('aria-busy',String(c.busy));renderResults(c);scheduleClock(c);
   }
   function get(form,name){return form.elements.namedItem(name);}
+  function focusDisclosure(c,selector){var summary=c.host.querySelector(selector+' > summary');if(summary)summary.focus({preventScroll:true});}
   function autoSave(c,input){
     var form=input.closest('form'),kind=form&&form.dataset.realmForm;
     if(['totals','settings','source'].indexOf(kind)===-1||input.disabled)return;
@@ -165,6 +183,8 @@
   function attach(c){
     c.host.addEventListener('toggle',function(event){
       if(event.target.matches('.realm-period-result'))syncPeriodToggle(event.target.closest('.realm-plan'));
+      else if(event.target.matches('.realm-platform-management'))c.platformManagementOpen=event.target.open;
+      else if(event.target.matches('.realm-date-management'))c.dateManagementOpen=event.target.open;
     },true);
     c.host.addEventListener('input',function(event){var input=event.target;rememberGoal(c,input);if(input.closest('[data-realm-form="calculate"]'))cancel(c);else autoSave(c,input);});
     c.host.addEventListener('change',function(event){var input=event.target;
@@ -181,10 +201,14 @@
         periods.forEach(function(period){period.open=expand;});syncPeriodToggle(plan);
       }
       else if(b.dataset.realmId){if(realmIds(c).indexOf(b.dataset.realmId)===-1)return;pause(c);c.realmId=b.dataset.realmId;c.period=c.state.realms[c.realmId].currentPeriod;render(c);}
-      else if(b.dataset.realmDeletePlatform&&c.root.confirm('确认删除此自定义平台？若正在使用，将切换为直充无折扣；秘境进度和代金不变。'))commit(c,function(s){return c.core.deletePlatform(s,b.dataset.realmDeletePlatform,c.data);});
+      else if(b.dataset.realmDeletePlatform&&c.root.confirm('确认删除此自定义平台？若正在使用，将切换为直充无折扣；秘境进度和代金不变。')){
+        c.platformManagementOpen=true;
+        if(commit(c,function(s){return c.core.deletePlatform(s,b.dataset.realmDeletePlatform,c.data);}))focusDisclosure(c,'.realm-platform-management');
+      }
       else if(b.dataset.realmMode){pause(c);c.mode=b.dataset.realmMode;render(c);}
       else if(b.dataset.realmPeriod){pause(c);c.period=Number(b.dataset.realmPeriod);render(c);}
       else if(b.dataset.realmAction==='reload'){c.drafts={};load(c);render(c);}
+      else if(b.dataset.realmAction==='goal'){var action=c.host.querySelector('[data-realm-calculate]:not(:disabled)')||c.host.querySelector('.realm-goal input:not(:disabled)');if(action){action.focus({preventScroll:true});action.scrollIntoView({block:'center',behavior:'instant'});}}
       else if(b.dataset.realmAction==='all'||b.dataset.realmAction==='none')commit(c,function(s){return c.core.setAll(s,c.realmId,c.period,b.dataset.realmAction==='all',Date.now(),c.data);});
       else if(b.dataset.realmAction==='following')commit(c,function(s){return c.core.applyFollowing(s,c.realmId,c.period,Date.now(),c.data);});
       else if(b.dataset.realmAction==='delete'&&c.root.confirm('确认删除当前账号中此秘境的全部信息？删除后不会自动恢复，其他账号、共用代金和平台设置不受影响。'))commit(c,function(s){return c.core.deleteRealm(s,c.realmId,Date.now(),c.data);});
@@ -192,11 +216,15 @@
     c.host.addEventListener('submit',function(event){var form=event.target,kind=form.dataset.realmForm;if(!kind)return;event.preventDefault();
       if(kind==='calculate'){calculate(c,form);return;}
       if(['totals','settings','source'].indexOf(kind)!==-1)return;
-      commit(c,function(s){
+      if(kind==='platform')c.platformManagementOpen=true;
+      if(kind==='date'&&c.mode==='planner')c.dateManagementOpen=true;
+      var saved=commit(c,function(s){
         if(kind==='date')return c.core.setStartDate(s,c.realmId,c.period,get(form,'startDate').value,Date.now(),c.data);
         if(kind==='platform'){var settings=copy(s.settings),id='custom-'+Date.now().toString(36);settings.platforms.push({id:id,name:get(form,'platformName').value,discount:inputNumber(get(form,'discount').value)});settings.platformId=id;return c.core.updateSettings(s,settings,c.data);}
         throw Error('未知保存操作。');
       });
+      if(saved&&kind==='platform')focusDisclosure(c,'.realm-platform-management');
+      if(saved&&kind==='date'&&c.mode==='planner')focusDisclosure(c,'.realm-date-management');
     });
   }
   function init(root){

@@ -47,7 +47,7 @@ test('currency-only goal and overflow mode calculate on worker and merge identic
 
 test('custom platform deletion confirms, falls back to direct and leaves vouchers intact',async()=>{
   const {context,page}=await open();try{
-    await page.locator('[data-realm-mode=planner]').click();const f=page.locator('[data-realm-form=platform]');await f.locator('[name=platformName]').fill('测试平台');await f.locator('[name=discount]').fill('3.7');await f.locator('[type=submit]').click();
+    await page.locator('[data-realm-mode=planner]').click();await page.locator('.realm-platform-management > summary').click();const f=page.locator('[data-realm-form=platform]');await f.locator('[name=platformName]').fill('测试平台');await f.locator('[name=discount]').fill('3.7');await f.locator('[type=submit]').click();
     assert.equal(await page.locator('[data-realm-delete-platform]').count(),1);page.once('dialog',d=>d.dismiss());await page.locator('[data-realm-delete-platform]').click();assert.equal(await page.locator('[data-realm-delete-platform]').count(),1);
     page.once('dialog',d=>d.accept());await page.locator('[data-realm-delete-platform]').click();assert.equal(await page.locator('[data-realm-delete-platform]').count(),0);assert.equal(await page.locator('[name=platformId]').inputValue(),'direct');
   }finally{await context.close();}
@@ -85,7 +85,7 @@ test('wooden reference includes added milestones and distinguishes guide estimat
     await page.locator('.tab[data-partition=wooden-man-alley]').click();await page.locator('[data-wooden-mode=reference]').click();
     const reference=page.locator('#partition-wooden-man-alley');const text=await reference.innerText();
     for(const floor of [10,25,50,130,280,380,430])assert.match(text,new RegExp(floor+'层'));
-    assert.match(text,/不超过.*最坏需求/);assert.match(text,/0\.7依据未说明/);assert.match(text,/2,262,400/);
+    assert.match(text,/不超过.*最坏需求/);assert.match(text,/0\.7依据未说明/);assert.match(text,/226,2400/);
   }finally{await context.close();}
 });
 

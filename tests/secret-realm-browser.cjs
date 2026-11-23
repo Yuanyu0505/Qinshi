@@ -47,7 +47,8 @@ test('reference tables and reward entries are centered in three separated sectio
     const panels=reference.locator(':scope > section');
     assert.deepEqual(await panels.locator('h3').allTextContents(),['抽数来源与单期限额','高月商店兑换参考','累计奖励 · 共35档']);
     assert.equal(await panels.evaluateAll(nodes=>nodes.slice(1).every((node,i)=>node.getBoundingClientRect().top-nodes[i].getBoundingClientRect().bottom>=16)),true);
-    assert.equal(await reference.locator('h3, p, th, td, .realm-rewards span').evaluateAll(nodes=>nodes.every(node=>getComputedStyle(node).textAlign==='center')),true);
+    assert.equal(await panels.locator('h3, h3 + p').evaluateAll(nodes=>nodes.every(node=>getComputedStyle(node).textAlign==='left')),true);
+    assert.equal(await reference.locator('th, td, .realm-rewards span').evaluateAll(nodes=>nodes.every(node=>getComputedStyle(node).textAlign==='center')),true);
   }finally{await context.close();}
 });
 

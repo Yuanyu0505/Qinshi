@@ -27,6 +27,30 @@ async function saveTotals(page,cumulative,inventory){const form=page.locator('[d
 async function setupSixYuan(page){await page.locator('[data-realm-mode=planner]').click();await page.locator('[data-realm-action=none]').click();await page.locator('[data-realm-enable=pack6]').check();await page.locator('[name=target]').fill('3');}
 async function runPlan(page){await page.locator('[data-realm-calculate]').click();await page.waitForFunction(()=>{const h=document.querySelector('#secret-realm-content');return h.getAttribute('aria-busy')==='false'&&document.querySelector('[data-realm-results] .realm-plan');},null,{timeout:10000});}
 
+test('planner shows the date form without a disclosure and still saves the selected date',async()=>{
+  const {context,page}=await openRealm({now:'2026-10-20T04:00:00+08:00'});try{
+    await page.locator('[data-realm-mode=planner]').click();
+    const form=page.locator('[data-realm-form=date]'),field=form.locator('[name=startDate]'),save=form.locator('[type=submit]');
+    assert.equal(await field.isVisible(),true);
+    assert.equal(await save.isVisible(),true);
+    assert.equal(await form.evaluate(node=>Boolean(node.closest('details'))),false);
+    await field.fill('2026-10-21');await save.click();
+    assert.equal((await saved(page)).realms.gaoyue.periods[2].startDate,'2026-10-21');
+    assert.equal(await field.isVisible(),true);
+  }finally{await context.close();}
+});
+
+test('reference tables and reward entries are centered in three separated sections',async()=>{
+  const {context,page}=await openRealm({width:390});try{
+    await page.locator('[data-realm-mode=reference]').click();
+    const reference=page.locator('.realm-reference');
+    const panels=reference.locator(':scope > section');
+    assert.deepEqual(await panels.locator('h3').allTextContents(),['抽数来源与单期限额','高月商店兑换参考','累计奖励 · 共35档']);
+    assert.equal(await panels.evaluateAll(nodes=>nodes.slice(1).every((node,i)=>node.getBoundingClientRect().top-nodes[i].getBoundingClientRect().bottom>=16)),true);
+    assert.equal(await reference.locator('h3, p, th, td, .realm-rewards span').evaluateAll(nodes=>nodes.every(node=>getComputedStyle(node).textAlign==='center')),true);
+  }finally{await context.close();}
+});
+
 test('plan highlights only voucher cash balance and period draws without bold numeric styling; reference stays neutral',async()=>{
   const {context,page}=await openRealm({width:1100});try{
     await setupSixYuan(page);await runPlan(page);

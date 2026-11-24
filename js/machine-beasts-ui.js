@@ -818,10 +818,10 @@
       '<div><span>当前累计觉醒等级</span><b data-school-current>' + snapshot.totalLevel + '</b></div><div><span>距离目标</span><b data-school-remaining>' + Math.max(0, targetTotal - snapshot.totalLevel) + '级</b></div></div>' +
       '</section><section class="panel machine-school-strategy"><h2>策略与价格</h2>' +
       '<div class="machine-school-options"><label><input type="checkbox" data-school-option="useOwnedInventory"' + (draft.useOwnedInventory ? ' checked' : '') + '>使用已有库存</label>' +
-      '<label><input type="checkbox" data-school-option="useFragments"' + (draft.useFragments ? ' checked' : '') + '>碎片加入计算</label>' +
       '<label><input type="checkbox" data-reference-cost-field="bluePurpleInventoryOnly"' + (state.referenceCostDraft.bluePurpleInventoryOnly !== false ? ' checked' : '') + '>蓝紫本体仅使用库存</label>' +
       '<label><input type="checkbox" data-school-option="allowNewHighRanks"' + (draft.allowNewHighRanks ? ' checked' : '') + '>' + (draft.newRankMode === "zero" ? '允许库存重组8–10阶' : '允许加工及新增8–10阶') + '</label>' +
-      '<label><input type="checkbox" data-school-option="allowNewModifications"' + (draft.allowNewModifications ? ' checked' : '') + '>允许额外改造神核（未计价）</label></div>' +
+      '<label><input type="checkbox" data-school-option="allowNewModifications"' + (draft.allowNewModifications ? ' checked' : '') + '>允许额外改造神核（未计价）</label>' +
+      '<label><input type="checkbox" data-school-option="useFragments"' + (draft.useFragments ? ' checked' : '') + '>机关兽碎片加入计算</label></div>' +
       newRankModeSelector("school", draft.newRankMode) +
       disclosure('school:rules', '查看库存限制、比较规则与完整说明', '<p class="muted-tip">蓝紫限制开启后，只允许使用已保存的完整蓝紫库存及指定阶数使用上限，不会通过碎片补出新本体；关闭使用已有库存时，蓝紫不能新增投入。蓝紫本体获取成本未计入，神图等其他消耗正常计价。</p><p class="muted-tip">两套方案都必须精确达到目标累计等级，不得超额培养；已达到或超过目标则不再投入。投入最小方案：已计价元宝最少 → 新增效果节点最多 → 等级内研发度溢出最少 → 神图总消耗最少。最多效果档位方案：新增效果节点最多 → 已计价元宝最少 → 溢出最少 → 神图总消耗最少。允许改造参与时，两套目标均先比较改造本体折算投入数量（已有与新增均计入），再按上述顺序比较；实质指标完全相同时保留全部同等组合，可分别在培养材料和最终生效效果中查看。新增节点按实际效果统计；高档替换低档，最终仅生效最高已解锁档位。</p>') +
       '<div data-machine-cost-slot></div></section><div class="machine-calculator-actions machine-calc-actionbar"><button type="button" class="seg" data-machine-action="reload-school-calculator">从个人进度重新读取</button><button type="button" class="seg active" data-machine-action="calculate-school">计算流派方案</button><button type="button" class="seg" data-machine-action="cancel-calculation" hidden disabled>取消计算</button><a href="#machine-school-participants" data-machine-jump>参与兽与临时库存</a><a href="#machine-beast-calculator-result" data-machine-jump data-machine-result-link hidden>查看结果</a><span role="status" data-machine-calculating-status hidden></span></div>' +
@@ -1125,11 +1125,23 @@
     return schoolPlanAnchor(plan) + ':' + state.schoolDraft.schoolId + ':' + state.schoolDraft.targetStage + ':' + plan.stableKey + ':' + [plan.totals.pricedYuan,plan.totals.awakeningBlueprints,plan.totals.overflowResearch,plan.equivalents.count].join('/');
   }
 
-  function schoolCombination(plan, key, position, pane) {
-    var levels = planBeastOrder(plan.beasts).map(function (beast) { return beast.beastName + beast.endLevel + '级'; });
-    var title = '组合' + formatNumber(position) + (levels.length ? ' · ' + levels.join('、') : '');
-    var body = pane === 'materials' ? schoolMaterialRows(plan) : schoolFinalEffectRows(plan);
-    return disclosure(key + ':' + pane + ':combination:' + plan.stableKey, escapeHtml(title), body, 'machine-equivalent-combination');
+  function schoolCombinationLevels(plan) {
+    return planBeastOrder(plan.beasts).map(function (beast) {
+      return { id: beast.beastId, name: beast.beastName, level: beast.endLevel };
+    });
+  }
+
+  function schoolCombinationMarkup(stableKey, key, position, pane, levels, body, differentSlots) {
+    var labels = levels.map(function (beast, slot) {
+      return '<span data-combination-slot="' + slot + '"' + (differentSlots && differentSlots.has(slot) ? ' class="is-different"' : '') + '>' + escapeHtml(beast.name + beast.level + '级') + '</span>';
+    });
+    var title = '组合' + formatNumber(position) + (labels.length ? ' ：' + labels.join('、') : '');
+    return disclosure(key + ':' + pane + ':combination:' + stableKey, title, body, 'machine-equivalent-combination');
+  }
+
+  function schoolCombination(plan, key, position, pane, differentSlots) {
+    return schoolCombinationMarkup(plan.stableKey, key, position, pane, schoolCombinationLevels(plan),
+      pane === 'materials' ? schoolMaterialRows(plan) : schoolFinalEffectRows(plan), differentSlots);
   }
 
   function equivalentGroup(plan, index, pane) {
@@ -1139,18 +1151,32 @@
     var page = pages[key];
     if (!page || page.plan !== plan || page.result !== state.schoolResult || page.accountId !== accountId || page.sequence !== calculationSequence) {
       page = pages[key] = { plan: plan, result: state.schoolResult, accountId: accountId, sequence: calculationSequence,
-        nextOffset: '0', hasMore: true, count: 0, busy: false, batches: { materials: [], effects: [] }, containers: [] };
+        nextOffset: '0', hasMore: true, count: 0, busy: false, alternatives: [], containers: [],
+        primaryLevels: schoolCombinationLevels(plan), differentSlots: new Set() };
     }
     var marker = pane === 'materials' ? 'data-equivalent-index' : 'data-equivalent-effects-index';
+    var alternatives = page.alternatives.map(function (entry) {
+      return schoolCombinationMarkup(entry.stableKey, key, entry.position, pane, entry.levels, entry[pane], page.differentSlots);
+    });
     return '<section class="machine-equivalent-group" ' + marker + '="' + index + '">' +
-      (pane === 'materials' ? '<p class="muted-tip">各组合互相替代，请勿叠加投入。</p>' : '') +
-      '<div class="machine-equivalent-list" data-equivalent-items>' + schoolCombination(plan, key, 1, pane) + page.batches[pane].join('') + '</div>' +
-      '<p class="muted-tip" data-equivalent-count>' + equivalentCountText(page) + '</p><button type="button" class="seg" data-machine-action="more-equivalents" data-equivalent-pane="' + pane + '" data-plan-index="' + index + '"' +
+      '<div class="machine-equivalent-list" data-equivalent-items>' + schoolCombination(plan, key, 1, pane, page.differentSlots) + alternatives.join('') + '</div>' +
+      '<button type="button" class="seg" data-machine-action="more-equivalents" data-equivalent-pane="' + pane + '" data-plan-index="' + index + '"' +
       (page.hasMore ? '' : ' hidden') + '>' + (page.count ? '查看更多组合（每次10套）' : '加载更多组合') + '</button></section>';
   }
 
-  function equivalentCountText(page) {
-    return '已列出组合 ' + formatNumber(page.count + 1) + '／' + formatNumber(BigInt(page.plan.equivalents.count));
+  function registerCombinationDifferences(page, alternatives) {
+    var newSlots = [];
+    alternatives.forEach(function (entry) {
+      for (var slot = 0; slot < Math.max(page.primaryLevels.length, entry.levels.length); slot++) {
+        if (page.differentSlots.has(slot)) continue;
+        var primary = page.primaryLevels[slot], alternative = entry.levels[slot];
+        if (!primary || !alternative || primary.id !== alternative.id || primary.name !== alternative.name || primary.level !== alternative.level) {
+          page.differentSlots.add(slot);
+          newSlots.push('[data-combination-slot="' + slot + '"]');
+        }
+      }
+    });
+    return newSlots.join(', ');
   }
 
   function showMoreEquivalentMaterials(index) {
@@ -1190,19 +1216,23 @@
         nextOffset = next.nextOffset; hasMore = next.hasMore;
         if (next.plans.length) {
           var alternative = next.plans[0], position = page.count + alternatives.length + 2;
-          alternatives.push({ materials: schoolCombination(alternative, key, position, 'materials'), effects: schoolCombination(alternative, key, position, 'effects') });
+          alternatives.push({ stableKey: alternative.stableKey, position: position, levels: schoolCombinationLevels(alternative),
+            materials: schoolMaterialRows(alternative), effects: schoolFinalEffectRows(alternative) });
         }
         if (hasMore && alternatives.length < 10) { setTimeout(decodeNext, 0); return; }
+        var newDifferences = registerCombinationDifferences(page, alternatives);
         page.count += alternatives.length; page.nextOffset = nextOffset; page.hasMore = hasMore;
+        Array.prototype.push.apply(page.alternatives, alternatives);
         groups.forEach(function (group, groupIndex) {
           var button = buttons[groupIndex], pane = button.dataset.equivalentPane;
-          var html = alternatives.map(function (entry) { return entry[pane]; }).join('');
+          var html = alternatives.map(function (entry) {
+            return schoolCombinationMarkup(entry.stableKey, key, entry.position, pane, entry.levels, entry[pane], page.differentSlots);
+          }).join('');
           var target = group.querySelector('[data-equivalent-items]');
+          if (newDifferences) target.querySelectorAll(newDifferences).forEach(function (label) { label.classList.add('is-different'); });
           var previous = target.lastElementChild;
           target.insertAdjacentHTML('beforeend', html);
           for (var added = previous.nextElementSibling; added; added = added.nextElementSibling) restorePresentation(added, null);
-          page.batches[pane].push(html);
-          group.querySelector('[data-equivalent-count]').textContent = equivalentCountText(page);
           // Keep the final focused button in the DOM rather than removing its focus target.
           button.hidden = !hasMore && document.activeElement !== button;
           button.setAttribute('aria-disabled', String(!hasMore));

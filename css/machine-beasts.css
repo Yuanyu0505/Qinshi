@@ -265,10 +265,11 @@
 #partition-machine-beasts .machine-calculator-modes { display: inline-flex; margin-bottom: 10px; }
 
 #partition-machine-beasts .machine-temporary-inventory { margin-top: 10px; padding: 8px 10px; border: 1px dashed var(--line); border-radius: 8px; }
+#partition-machine-beasts section.machine-temporary-inventory { padding: 0; border: 0; }
 
 #partition-machine-beasts .machine-temporary-inventory summary { color: var(--gold-dim); cursor: pointer; }
 
-#partition-machine-beasts .machine-temporary-inventory > h3 { color: var(--gold-dim); margin: 0 0 6px; font-size: 15px; }
+#partition-machine-beasts .machine-temporary-inventory > h3 { color: var(--text); margin: 0 0 6px; font: inherit; font-weight: 700; }
 
 #partition-machine-beasts .machine-owned-inventory { margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--line); container: machine-owned / inline-size; }
 
@@ -403,6 +404,7 @@
 #partition-machine-beasts .machine-equivalent-list { display: grid; gap: 8px; }
 #partition-machine-beasts .machine-equivalent-combination { border-inline: 0; border-radius: 0; }
 #partition-machine-beasts .machine-equivalent-combination > summary { padding-inline: 0; }
+#partition-machine-beasts .machine-equivalent-combination > summary .is-different { color: #a9d9ff; }
 #partition-machine-beasts .machine-equivalent-combination > .machine-disclosure-body { padding-inline: 0; }
 #partition-machine-beasts .machine-school-plan-resources,
 #partition-machine-beasts .machine-school-plan-beast-metrics { display: grid; grid-template-columns: minmax(0, 1.8fr) minmax(0, 1fr) minmax(0, .8fr); column-gap: 4px; align-content: start; }

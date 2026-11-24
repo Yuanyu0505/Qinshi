@@ -329,6 +329,11 @@
         var allocation=CORE.allocateConvertedInventory(data,beast,Object.assign({},r._conversionPool,{beastId:beast.id}),r.rawItems);
         allocations++;
         candidate.items=allocation.items;candidate.ownedPhysicalCount=allocation.ownedPhysical;candidate.newPhysicalCount=allocation.newPhysical;
+        if(allocation.realizedResources){
+          candidate.addedResearch=allocation.realizedResources.research;
+          candidate.resources.awakeningBlueprints=allocation.realizedResources.blueprints;
+          candidate.resources.organPieces=allocation.realizedResources.pieces;
+        }
         candidate.ownedModifiedInvestedCount=allocation.ownedModified;candidate.newModifiedInvestedCount=allocation.newModified;
         candidate.inventoryConversion=allocation.inventoryConversion;candidate.modificationCores=allocation.modificationCores;
       }
@@ -612,6 +617,7 @@
         }).filter(Boolean);
         var packStart=diagnostic?Date.now():0;
         plan.equivalents = EQUIVALENTS.pack(data, plan._trace, equivalentSources, settings);
+        if(config.convertOwnedInventory)EQUIVALENTS.preferFewerOperations(data,plan);
         if(diagnostic)diagnostic({phase:'equivalent-pack',kind:plan.kind,count:plan.equivalents.count,elapsedMs:Date.now()-packStart});
         delete plan._trace;
       });

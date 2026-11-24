@@ -39,6 +39,7 @@ jobs:
           cp js/ui-performance.js _site/js/
           cp js/number-format.js _site/js/
           cp js/responsive-ux.js _site/js/
+          cp js/select-picker.js _site/js/
           cp js/other-reference-ui.js _site/js/
           cp js/soul-shop.js js/soul-shop-ui.js _site/js/
           cp -R assets/other-reference _site/assets/

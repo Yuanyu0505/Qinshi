@@ -68,7 +68,7 @@ test('plan rendering sorts by quality, rank and modification, without changing i
   const list = ui.itemList([item(6,'fullDivine'),item(7),item(7,'heaven'),item(0)],'','owned');
   assert.match(list,/（天改）7阶×1[\s\S]*?（0改）7阶×1[\s\S]*?（神改）6阶×1[\s\S]*?（0改）0阶×1/);
   const alternativeHtml = ui.schoolCombination({beasts:stock,totals:{},stableKey:'k'}, 'school', 2, 'materials');
-  assert.match(alternativeHtml, /<details[^>]+><summary>组合2 · mechanical-yueliao1级、mechanical-bear1级/);
+  assert.match(alternativeHtml, /<details[^>]+><summary>组合2 ：<span[^>]+>mechanical-yueliao1级<\/span>、<span[^>]+>mechanical-bear1级<\/span>/);
   assert.doesNotMatch(alternativeHtml, /<details[^>]+\sopen[\s>]/);
   assert.deepEqual(Array.from(alternativeHtml.matchAll(/<article class="machine-school-plan-beast"><header><strong>([^<]+)<\/strong>/g), match=>match[1]),expected);
 });
@@ -116,11 +116,13 @@ test('Yueliao single plan groups final forms and shows actual conversion endpoin
   assert.equal(result.totals.awakeningBlueprints,2281);
   const items=result.selected.ownedItems;
   const list=ui.itemList(items,'','owned');
-  assert.match(list,/7阶×6/);
+  assert.match(list,/7阶×3/);
+  assert.match(list,/6阶×1/);
+  assert.match(list,/0阶×2/);
   assert.equal((list.match(/7阶×/g)||[]).length,1);
   const conversion=ui.conversionSummary(result.inventoryConversion,result.modificationCores,'sample');
-  for(const rank of [6, 5, 4, 3, 2]) assert.ok(conversion.includes('（0改）' + rank + '阶×1 → （0改）7阶×1'));
-  assert.doesNotMatch(conversion,/加工前|加工投入|返还神核|machine-core-ledger|0阶×2/);
+  for(const [from,to] of [[5,7],[4,7],[3,0],[2,0]]) assert.ok(conversion.includes('（0改）' + from + '阶×1 → （0改）' + to + '阶×1'));
+  assert.doesNotMatch(conversion,/加工前|加工投入|返还神核|machine-core-ledger|0阶×2|6阶×1 →/);
 });
 
 test('new investment combines equal output shapes without hiding mixed body sources', () => {

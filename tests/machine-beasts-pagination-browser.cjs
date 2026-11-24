@@ -4,6 +4,16 @@ const {test,before,after}=require('node:test'),assert=require('node:assert/stric
 const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
 const {createServer}=require('../serve.js'),{openApp}=require('./browser-test-helpers.cjs');
 const data=require('../data/machine-beasts.js'),planner=require('../js/machine-beast-school-planner.js');
+const {execFileSync}=require('node:child_process'),root=require('node:path').resolve(__dirname,'..');
+const {load}=require('../tools/machine-baseline-loader.cjs');
+// The historical stress graph had 768 raw paths, many of which are now the
+// same physical plan. Freeze the solver for this UI-only load scenario.
+const stressRevision='aea9a10';
+const stress=load(stressRevision);
+const stressFiles=['machine-beasts','machine-beast-equivalents','machine-beast-school-planner'].map(name=>[name,execFileSync('git',['-c','safe.directory='+root.replaceAll('\\','/'),'show',stressRevision+':js/'+name+'.js'],{cwd:root,encoding:'utf8'})]);
+async function installStressSolver(context){
+  for(const [name,body] of stressFiles)await context.route('**/js/'+name+'.js*',route=>route.fulfill({contentType:'application/javascript',body}));
+}
 const baseline=process.env.PAGINATION_BASELINE_REVISION||'';
 const clicks=Number(process.env.PAGINATION_CLICKS||76);
 const outputDir=process.env.PAGINATION_OUTPUT_DIR||'outputs/1148-pagination';
@@ -21,10 +31,13 @@ function fixtureInput(){
 }
 let browser,server,origin,result,expected;
 before(async()=>{
-  const fixture=fixtureInput();result=planner.calculateSchoolPlans(data,'hegemonic',fixture.progress,fixture.options);
+  const fixture=fixtureInput();
+  const current=planner.calculateSchoolPlans(data,'hegemonic',fixture.progress,fixture.options);
+  assert.equal(current.valid,true);assert.equal(current.plans[1].equivalents.count,'3');
+  result=stress.planner.calculateSchoolPlans(stress.data,'hegemonic',fixture.progress,fixture.options);
   assert.equal(result.valid,true);assert.equal(result.plans[1].equivalents.count,'768');
   expected=[];let page={nextOffset:'0',hasMore:true};
-  while(page.hasMore){page=planner.equivalentPlansPage(data,result.plans[1],page.nextOffset,10);expected.push(...page.plans.map(plan=>plan.stableKey));}
+  while(page.hasMore){page=stress.planner.equivalentPlansPage(stress.data,result.plans[1],page.nextOffset,10);expected.push(...page.plans.map(plan=>plan.stableKey));}
   server=createServer();await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));origin='http://127.0.0.1:'+server.address().port;
   browser=await chromium.launch({channel:'msedge',headless:true});fs.mkdirSync(outputDir,{recursive:true});
 });
@@ -32,6 +45,7 @@ after(async()=>{await browser?.close();if(server)await new Promise(resolve=>serv
 test('mode navigation retains loaded DOM and resumes pagination after canceling pending tasks',async()=>{
   const context=await browser.newContext({viewport:{width:390,height:1000},serviceWorkers:'block'});
   await context.route('**/*',route=>new URL(route.request().url()).origin===origin?route.continue():route.abort());
+  await installStressSolver(context);
   const source=fs.readFileSync(require.resolve('../js/machine-beasts-ui.js'),'utf8');
   await context.route('**/js/machine-beasts-ui.js*',route=>route.fulfill({contentType:'application/javascript',body:source.replace('window.MACHINE_BEAST_UI = {','window.paginationTest={state,el,equivalentGroup};window.MACHINE_BEAST_UI = {')}));
   const page=await context.newPage();
@@ -63,6 +77,7 @@ test('mode navigation retains loaded DOM and resumes pagination after canceling 
 for(const width of (process.env.PAGINATION_WIDTHS||'320,390,820,1366,1920').split(',').map(Number))test('exact 768 pagination preserves DOM and focus at '+width,async()=>{
   const context=await browser.newContext({viewport:{width,height:1000},serviceWorkers:'block'});
   await context.route('**/*',route=>new URL(route.request().url()).origin===origin?route.continue():route.abort());
+  await installStressSolver(context);
   const root=require('node:path').resolve(__dirname,'..');
   const source=baseline?require('node:child_process').execFileSync('git',['-c','safe.directory='+root,'show',baseline+':js/machine-beasts-ui.js'],{cwd:root,encoding:'utf8'}):fs.readFileSync(require.resolve('../js/machine-beasts-ui.js'),'utf8');
   const markupRenderer=baseline?'equivalentMaterials':'equivalentGroup';
@@ -111,7 +126,7 @@ for(const width of (process.env.PAGINATION_WIDTHS||'320,390,820,1366,1920').spli
       }
       await new Promise(resolve=>setTimeout(resolve,0));
       const current=ui.el.calculatorResult.querySelector('[data-equivalent-index="1"]');
-      return {times,wallMs:performance.now()-wallStart,scrollChanges,calls,decoded,count:(current.querySelector('[data-equivalent-count]')||Array.from(current.querySelectorAll('p')).find(n=>n.textContent.startsWith('已列出'))).textContent,
+      return {times,wallMs:performance.now()-wallStart,scrollChanges,calls,decoded,count:current.querySelectorAll('.machine-equivalent-combination').length,
         keys:Array.from(current.querySelectorAll('.machine-equivalent-combination')).slice(baseline?0:1).map(node=>node.dataset.detailKey.split(baseline?':alternative:':':combination:')[1]),
         nodeIdentity:window.paginationFirst.isConnected,focus:document.activeElement===button,
         longTasks:window.paginationLongTasks,overflow:document.documentElement.scrollWidth>innerWidth};

@@ -21,6 +21,50 @@
   }
   function gcd(a, b) { while (b) { var n = a % b; a = b; b = n; } return a; }
 
+  function physicalKey(items) {
+    var groups = new Map();
+    items.forEach(function (i) {
+      var key = [i.source, i.rank, i.modificationId, i.ownedBaseBodies || 0, i.newBaseBodies || 0].join('/');
+      groups.set(key, (groups.get(key) || 0) + i.count);
+    });
+    return JSON.stringify(Array.from(groups).sort());
+  }
+
+  // Count distinct realized material plans before multiplying them across
+  // beasts. Only graphs containing a live folded/explicit high-rank alias
+  // need this local pass; never enumerate the full school Cartesian product.
+  function removeOriginalAliases(data, beast, pool, graph) {
+    if (!pool || graph.count === '1') return graph;
+    var r7 = CORE.researchFor(data, beast, 7, 'none'), rules = data.resourceRules;
+    if (!r7 || !graph.types.some(function (t) { return t.rank > 7 && t.modificationId === 'none' && t.available !== 0; })) return graph;
+    var active = new Set(graph.nodes.filter(function (node) {
+      return node.edges.some(function (edge) { return edge[0] > 0; });
+    }).map(function (node) { return node.type; }));
+    if (!r7 || !graph.types.some(function (t, i) {
+      return active.has(i) && t.rank === 7 && t.modificationId === 'none';
+    })) return graph;
+    var aliases = pool.origins.some(function (origin) {
+      return origin.rank > 7 && origin.modificationId === 'none' && origin.researchEach === r7 * origin.weight &&
+        Math.ceil(origin.researchEach / rules.blueprintDivisor) === origin.weight * Math.ceil(r7 / rules.blueprintDivisor) &&
+        Math.ceil(origin.researchEach / rules.organPieceDivisor) === origin.weight * Math.ceil(r7 / rules.organPieceDivisor) &&
+        graph.types.some(function (t, i) { return active.has(i) && t.rank === origin.rank && t.modificationId === 'none'; });
+    });
+    if (!aliases) return graph;
+    var seen = new Map(), size = BigInt(graph.count);
+    for (var ordinal = 0n; ordinal < size; ordinal++) {
+      var allocation = CORE.allocateConvertedInventory(data, beast, pool, materialItems(graph, ordinal));
+      var key = physicalKey(allocation.items), previous = seen.get(key), c = allocation.inventoryConversion;
+      var score = [allocation.modificationCores.externalDeficit, c.operations, c.rankDistance];
+      var first = previous ? score.findIndex(function (n, i) { return n !== previous.score[i]; }) : -1;
+      if (!previous || first >= 0 && score[first] < previous.score[first]) seen.set(key, { ordinal: String(ordinal), score: score });
+    }
+    if (BigInt(seen.size) < size) {
+      graph.count = String(seen.size);
+      graph.physicalOrdinals = Array.from(seen.values()).map(function (entry) { return entry.ordinal; });
+    }
+    return graph;
+  }
+
   // Reconstruct ALL tied quantity vectors, not the bounded-stock binary chunk
   // histories. Fixed type order gives every physical allocation exactly one path.
   function materialGraph(data, candidate, source, settings) {
@@ -73,7 +117,7 @@
     }
     var root = visit(0, targetResearch, targetB, targetM, 0,0,0);
     if (root < 0) throw Error('无法重建主方案的同等材料路径');
-    return { types: types, nodes: nodes, root: root, count: nodes[root].count };
+    return removeOriginalAliases(data, beast, source.conversionPool, { types: types, nodes: nodes, root: root, count: nodes[root].count });
   }
 
   function pack(data, trace, sources, settings) {
@@ -101,6 +145,7 @@
   }
 
   function materialItems(graph, rank) {
+    if (graph.physicalOrdinals) rank = BigInt(graph.physicalOrdinals[Number(rank)]);
     var items = [], at = graph.root;
     while (at !== 0) {
       var node = graph.nodes[at], selected = null;
@@ -141,10 +186,15 @@
       detail.ownedModifiedInvestedCount=allocation.ownedModified;detail.newModifiedInvestedCount=allocation.newModified;
       detail.inventoryConversion=allocation.inventoryConversion;
       detail.modificationCores=allocation.modificationCores;
+      if(allocation.realizedResources){
+        detail.addedResearch=allocation.realizedResources.research;
+        pieces=allocation.realizedResources.pieces;
+      }
     }
     var fragments = Math.max(0, detail.newInvestedCount * beast.fragmentsPerBody - packed.fragmentsBefore);
     var cost = CORE.calculateSchoolReferenceCost(data, { awakeningBlueprints: 0, beasts: [{ beastId: beast.id, fragments: fragments }] }, settings);
     detail.resources = Object.assign({}, base.resources, { organPieces: pieces, fragments: fragments,
+      awakeningBlueprints: allocation&&allocation.realizedResources?allocation.realizedResources.blueprints:base.resources.awakeningBlueprints,
       contribution: cost.beasts.length ? cost.beasts[0].contribution : 0, yuan: cost.knownYuan, pricedBodyYuan: cost.knownYuan });
     detail.finalEffect = CORE.activeBeastEffect(beast, detail.endLevel);
     return detail;
@@ -190,18 +240,69 @@
     return { kind: plan.kind, totals: totals, beasts: beasts, cost: cost, finalEffects: finalEffects, stableKey: signature(beasts) };
   }
 
+  function preferFewerOperations(data, plan) {
+    var graph=plan.equivalents,candidates=new Map(),nodes=new Map(),zero=[0,0,0];
+    function add(a,b){return a.map(function(n,i){return n+b[i];});}
+    var current=plan.beasts.reduce(function(score,b){return add(score,CORE.processingScore(b));},zero);
+    if(!current.some(Boolean))return plan;
+    function bestCandidate(id){
+      if(candidates.has(id))return candidates.get(id);
+      var c=graph.candidates[id],materials=c.materials,best={score:zero,ordinal:0n};
+      if(c.conversionPool&&c.detail.items.length&&(c.conversionPool.baseCount||materials.types.some(function(t){
+        return t.modificationId!=='none';
+      }))){
+        var beast=data.beasts.find(function(b){return b.id===c.detail.beastId;});
+        var top=materials.types.reduce(function(best,t){
+          return t.available!==0&&(!best||t.researchEach*best.weight>best.researchEach*t.weight)?t:best;
+        },null);
+        var bodies=top?Number((BigInt(c.detail.addedResearch)*BigInt(top.weight)+BigInt(top.researchEach)-1n)/BigInt(top.researchEach)):0;
+        var floor=CORE.processingFloor(materials.types,c.conversionPool,bodies,CORE.minimumCoreDeficit(materials.types,c.conversionPool,c.detail.modifiedInvestedCount,true));
+        best=null;
+        for(var step=0n,end=BigInt(materials.count);step<end;step++){
+          var i=step%2n===0n?step/2n:end-1n-step/2n;
+          var allocation=CORE.allocateConvertedInventory(data,beast,c.conversionPool,materialItems(materials,i));
+          var score=CORE.processingScore(allocation);
+          if(!best||CORE.compareProcessing(score,best.score)<0)best={score:score,ordinal:i};
+          if(CORE.compareProcessing(score,floor)<=0)break;
+        }
+      }
+      candidates.set(id,best);return best;
+    }
+    function bestNode(id){
+      if(!id)return {score:zero,ordinal:0n};
+      if(nodes.has(id))return nodes.get(id);
+      var best=null,offset=0n;
+      graph.nodes[id].edges.some(function(edge){
+        var prior=bestNode(edge[0]),local=bestCandidate(edge[1]),width=BigInt(graph.candidates[edge[1]].materials.count);
+        var score=add(prior.score,local.score);
+        if(!best||CORE.compareProcessing(score,best.score)<0)best={score:score,ordinal:offset+prior.ordinal*width+local.ordinal};
+        offset+=BigInt(graph.nodes[edge[0]].count)*width;
+        return !score.some(Boolean);
+      });
+      nodes.set(id,best);return best;
+    }
+    var best=bestNode(graph.root);
+    return CORE.compareProcessing(best.score,current)<0?Object.assign(plan,decode(data,plan,best.ordinal)):plan;
+  }
+
   function page(data, plan, offset, limit) {
     var graph = plan.equivalents, at = BigInt(offset || '0'), size = Math.max(1, Math.min(50, CORE.integer(limit, 10)));
     if (!graph) return { plans: [], nextOffset: '0', hasMore: false, count: '1' };
     if (at < 0n) throw Error('同等方案分页序号无效');
-    var total = BigInt(graph.count), primary = signature(plan.beasts), plans = [];
+    var compare = graph.candidates.some(function (candidate) { return candidate.materials.physicalOrdinals; }) ?
+      function (beasts) {
+        return JSON.stringify(beasts.filter(function (b) { return b.items.length; }).map(function (b) {
+          return [b.beastId, physicalKey(b.items)];
+        }).sort());
+      } : signature;
+    var total = BigInt(graph.count), primary = compare(plan.beasts), plans = [];
     while (at < total && plans.length < size) {
       var candidate = decode(data, plan, at++);
-      if (signature(candidate.beasts) !== primary) plans.push(candidate);
+      if (compare(candidate.beasts) !== primary) plans.push(candidate);
     }
     // Do not leave a spurious final page containing only the excluded primary.
-    if (at + 1n === total && signature(decode(data, plan, at).beasts) === primary) at = total;
+    if (at + 1n === total && compare(decode(data, plan, at).beasts) === primary) at = total;
     return { plans: plans, nextOffset: String(at), hasMore: at < total, count: graph.count };
   }
-  return { append: append, merge: merge, pack: pack, page: page, signature: signature };
+  return { append: append, merge: merge, pack: pack, page: page, signature: signature, preferFewerOperations: preferFewerOperations };
 });

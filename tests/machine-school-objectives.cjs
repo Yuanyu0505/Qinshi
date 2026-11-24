@@ -206,6 +206,17 @@ for (const width of [1280,1440]) test(width+'px equal optimum combinations start
   await effects.locator(':scope > summary').click();
   const effectCombinations=effects.locator('.machine-equivalent-list > .machine-equivalent-combination');
   assert.deepEqual(await effectCombinations.evaluateAll(nodes=>nodes.map(n=>n.open)),[false,false]);
+  for (const pane of [materials,effects]) {
+    assert.doesNotMatch(await pane.textContent(), /各组合互相替代|已列出组合/);
+    const labels=await pane.locator('.machine-equivalent-combination > summary').evaluateAll(summaries=>summaries.map(summary=>({
+      title:summary.textContent, slots:Array.from(summary.querySelectorAll('[data-combination-slot]'), node=>({text:node.textContent,marked:node.classList.contains('is-different')}))
+    })));
+    assert.match(labels[0].title,/^组合1 ：/);
+    assert.match(labels[1].title,/^组合2 ：/);
+    const different=labels[0].slots.map((slot,index)=>slot.text!==labels[1].slots[index]?.text);
+    assert.ok(different.some(Boolean),'fixture includes combination differences');
+    for (const {slots} of labels) assert.deepEqual(slots.map(slot=>slot.marked),slots.map((_,index)=>different[index]??true));
+  }
   for (let n=0;n<2;n++) assert.equal(await combinations.nth(n).locator('summary').first().textContent(),await effectCombinations.nth(n).locator('summary').textContent());
   await effectCombinations.nth(1).locator('summary').click();
   assert.ok(await effectCombinations.nth(1).locator('[data-final-beast]').count() > result.plans[index].beasts.length);

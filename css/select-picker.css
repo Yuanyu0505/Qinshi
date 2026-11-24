@@ -1,0 +1,35 @@
+.qin-select-popover {
+  --qin-select-row: 44px;
+  position: fixed;
+  inset: auto;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  max-width: none;
+  z-index: 1100;
+  overflow: auto;
+  overscroll-behavior: contain;
+  touch-action: pan-y;
+  border: 1px solid #b48b44;
+  border-radius: 8px;
+  background: var(--panel, #211b13);
+  color: var(--text, #f2e4cd);
+  box-shadow: 0 8px 24px #0009;
+  font: inherit;
+}
+.qin-select-popover:focus-visible { outline: 2px solid #d2ad61; outline-offset: 1px; }
+.qin-select-option, .qin-select-group {
+  box-sizing: border-box;
+  line-height: var(--qin-select-row);
+  height: var(--qin-select-row);
+  padding-inline: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.qin-select-option { cursor: pointer; box-shadow: inset 0 -1px #4b3c28; }
+.qin-select-group { color: var(--muted, #b7ad99); font-size: .85em; font-weight: 700; }
+.qin-select-option[aria-selected="true"] { box-shadow: inset 3px 0 #d2ad61, inset 0 -1px #4b3c28; }
+.qin-select-option:not([aria-disabled="true"]):hover,
+.qin-select-option.is-active { background: #4a3820; color: #fff5df; }
+.qin-select-option[aria-disabled="true"] { cursor: default; opacity: .55; }

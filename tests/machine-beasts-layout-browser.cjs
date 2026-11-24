@@ -80,6 +80,9 @@ test('round2: excluded card stays compact, expanded fields and participation pre
   const id = await page.locator('[data-school-card]').first().getAttribute('data-school-card');
   const card = page.locator('[data-school-card="' + id + '"]');
   const globalFragments = page.locator('[data-school-option="useFragments"]');
+  const lastOption = page.locator('.machine-school-options > label').last();
+  assert.equal(await lastOption.textContent(), '机关兽碎片加入计算');
+  assert.equal(await lastOption.locator('[data-school-option="useFragments"]').count(), 1);
   assert.equal(await globalFragments.isChecked(), false);
   assert.equal(await card.locator('[data-use-calc-fragments]').count(), 0);
   await globalFragments.check();
@@ -178,6 +181,12 @@ test('school actions scroll away instead of overlapping research and inventory f
 test('single inventory stays visible and retains focus when flags changed', async () => scenario(async page => {
   const inventory = page.locator('.machine-temporary-inventory');
   assert.equal(await inventory.locator('summary').count(), 0);
+  assert.equal(await inventory.evaluate(node => getComputedStyle(node).borderStyle), 'none');
+  const headerStyle = node => {
+    const css = getComputedStyle(node);
+    return [css.color, css.fontFamily, css.fontSize, css.fontWeight];
+  };
+  assert.deepEqual(await inventory.locator('h3').evaluate(headerStyle), await page.locator('.machine-owned-head > strong').evaluate(headerStyle));
   assert.equal(await inventory.locator('[data-calc-inventory]').first().isVisible(), true);
   await page.locator('[data-calc-flag="showHighRanks"]').check();
   assert.equal(await inventory.locator('[data-calc-inventory][data-rank="10"]').first().isVisible(), true);

@@ -2,13 +2,13 @@
 const {test}=require('node:test'),assert=require('node:assert/strict');
 const fs=require('node:fs'),vm=require('node:vm'),path=require('node:path');
 function fixture(){
-  const calls=[],tasks=[],appended=[];
+  const calls=[],tasks=[];
   function makePane(pane){
     const button={dataset:{equivalentPane:pane},disabled:false,hidden:false,focus(){},setAttribute(){},removeAttribute(){}};
-    const count={textContent:''},batches=[];
+    const batches=[];
     const items={lastElementChild:{nextElementSibling:null},insertAdjacentHTML(position,html){assert.equal(position,'beforeend');batches.push(html);}};
-    const section={isConnected:true,querySelector(selector){return selector.includes('items')?items:selector.includes('count')?count:button;},querySelectorAll(){return[];},replaceWith(){assert.fail('pagination must not replace existing DOM');}};
-    return {button,count,section,batches};
+    const section={isConnected:true,querySelector(selector){return selector.includes('items')?items:button;},querySelectorAll(){return[];},replaceWith(){assert.fail('pagination must not replace existing DOM');}};
+    return {button,section,batches};
   }
   const materials=makePane('materials'),effects=makePane('effects');
   const plan={kind:'cost',stableKey:'primary',beasts:[],totals:{pricedYuan:0,awakeningBlueprints:0,overflowResearch:0},equivalents:{count:'36'}};
@@ -20,12 +20,18 @@ function fixture(){
   const source=fs.readFileSync(path.join(__dirname,'../js/machine-beasts-ui.js'),'utf8');
   vm.runInContext(source.replace('window.MACHINE_BEAST_UI = {','window.paginationTest={state,presentation,el,rendered,setMode,equivalentGroup,showMoreEquivalentMaterials,cancelCalculation};window.MACHINE_BEAST_UI = {'),context);
   const ui=context.paginationTest;ui.state.schoolDraft={schoolId:'hegemonic',targetStage:5};ui.state.schoolResult={plans:[plan]};
-  ui.equivalentMaterials=(p,i)=>{ui.equivalentGroup(p,i,'materials');ui.equivalentGroup(p,i,'effects');};
+  ui.equivalentMaterials=(p,i)=>[ui.equivalentGroup(p,i,'materials'),ui.equivalentGroup(p,i,'effects')];
   ui.el.calculatorResult={querySelector:selector=>selector.includes('effects')?effects.section:materials.section,contains:node=>node===materials.section||node===effects.section,querySelectorAll:()=>[],hidden:false,removeAttribute(){}};
   ui.el.calculator={querySelectorAll:()=>[]};
   ui.el.modes={querySelectorAll:()=>[]};ui.el.progress={};ui.el.reference={};
   Object.assign(ui.rendered,{calculator:true,progress:true,reference:true});ui.state.mode='calculator';
-  return {ui,plan,calls,appended:materials.batches,button:materials.button,count:materials.count,effects,step(){tasks.shift()();},flush(){while(tasks.length)tasks.shift()();},account(value){account=value;},first(){ui.equivalentMaterials(plan,0);assert.deepEqual(calls,[],'main result render must not decode alternatives');ui.showMoreEquivalentMaterials(0);while(tasks.length)tasks.shift()();assert.match(materials.count.textContent,/11／36/);assert.equal(effects.count.textContent,materials.count.textContent);calls.length=0;materials.batches.length=0;effects.batches.length=0;}};
+  function assertVisibleCount(expected){
+    for(const pane of ui.equivalentMaterials(plan,0)){
+      assert.equal((pane.match(/class="machine-disclosure machine-equivalent-combination"/g)||[]).length,expected);
+      assert.doesNotMatch(pane,/已列出组合|各组合互相替代/);
+    }
+  }
+  return {ui,plan,calls,appended:materials.batches,button:materials.button,effects,assertVisibleCount,step(){tasks.shift()();},flush(){while(tasks.length)tasks.shift()();},account(value){account=value;},first(){ui.equivalentMaterials(plan,0);assert.deepEqual(calls,[],'main result render must not decode alternatives');ui.showMoreEquivalentMaterials(0);while(tasks.length)tasks.shift()();assertVisibleCount(11);calls.length=0;materials.batches.length=0;effects.batches.length=0;}};
 }
 // A replay from offset zero, a whole-section replacement, or a missing stale guard breaks these tests.
 test('first ten are cached; later batches decode only the next ten and append',()=>{
@@ -34,7 +40,7 @@ test('first ten are cached; later batches decode only the next ten and append',(
   for(let i=0;i<3;i++){f.ui.showMoreEquivalentMaterials(0);f.ui.showMoreEquivalentMaterials(0);f.flush();}
   assert.equal(f.calls.reduce((n,row)=>n+row[1],0),25);
   assert.deepEqual(f.calls.map(row=>row[0]),Array.from({length:25},(_,i)=>String(i+10)));
-  assert.equal(f.appended.length,3);assert.equal(f.effects.batches.length,3);assert.match(f.count.textContent,/36／36/);assert.equal(f.effects.count.textContent,f.count.textContent);assert.equal(f.button.hidden,true);
+  assert.equal(f.appended.length,3);assert.equal(f.effects.batches.length,3);f.assertVisibleCount(36);assert.equal(f.button.hidden,true);
 });
 test('queued pages cannot write after account, result, or cancellation changes',()=>{
   for(const change of [f=>f.account('fake-B'),f=>{f.ui.state.schoolResult={plans:[f.plan]};},f=>f.ui.cancelCalculation(true)]){
@@ -50,14 +56,14 @@ test('real setMode round trip retains loaded pages and resumes at the next offse
   const f=fixture();f.first();f.ui.showMoreEquivalentMaterials(0);f.flush();
   f.ui.setMode('progress');f.ui.setMode('reference');f.ui.setMode('calculator');
   f.ui.showMoreEquivalentMaterials(0);f.flush();
-  assert.equal(f.appended.length,2);assert.match(f.count.textContent,/31／36/);
+  assert.equal(f.appended.length,2);f.assertVisibleCount(31);
   assert.deepEqual(f.calls,Array.from({length:20},(_,i)=>[String(i+10),1]));
 });
 test('mode switch cancels a partial batch without allowing its queued task to revive',()=>{
   const f=fixture();f.first();f.ui.showMoreEquivalentMaterials(0);f.step();
   f.ui.setMode('progress');f.ui.setMode('calculator');
   f.ui.showMoreEquivalentMaterials(0);f.flush();
-  assert.equal(f.appended.length,1);assert.match(f.count.textContent,/21／36/);
+  assert.equal(f.appended.length,1);f.assertVisibleCount(21);
   assert.deepEqual(f.calls,[['10',1],...Array.from({length:10},(_,i)=>[String(i+10),1])]);
 });
 test('returning to the school calculator resumes an interrupted initial batch',()=>{
@@ -65,7 +71,7 @@ test('returning to the school calculator resumes an interrupted initial batch',(
   f.ui.equivalentMaterials(f.plan,0);
   f.ui.showMoreEquivalentMaterials(0);f.step();
   f.ui.setMode('reference');f.ui.setMode('calculator');f.flush();
-  assert.match(f.count.textContent,/11／36/);
+  f.assertVisibleCount(11);
   assert.equal(f.appended.length,1);
   assert.deepEqual(f.calls,[['0',1],...Array.from({length:10},(_,i)=>[String(i),1])]);
 });

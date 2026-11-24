@@ -17,8 +17,8 @@ test('baseline loader keeps the complete native module graph private', () => {
   assert.equal(typeof baseline.planner.equivalentPlansPage, 'function');
 });
 
-test('free-rank inventory conversion retains baseline plans and bounded pages', { timeout: 60000 }, () => {
-  const child = spawnSync(process.execPath, [path.resolve(__dirname, '../tools/compare-machine-conversion.cjs'), 'd667c2b', '--allow-1149-allocation-fix', '--free-ranks-only'], {
+test('free-rank conversion outside exact original/fold equivalence retains baseline plans and pages', { timeout: 60000 }, () => {
+  const child = spawnSync(process.execPath, [path.resolve(__dirname, '../tools/compare-machine-conversion.cjs'), 'd667c2b', '--allow-1149-allocation-fix', '--free-ranks-only', '--exclude-neutral-originals', '--check-processing-ties'], {
     encoding: 'utf8', timeout: 55000, windowsHide: true, maxBuffer: 1024 * 1024
   });
   assert.equal(child.error, undefined, child.error?.message);

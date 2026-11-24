@@ -1421,13 +1421,12 @@
     });
     return '<section class="panel" id="machine-reference-talents"><h2>橙色机关兽突破天赋与改造效果</h2>' +
       table('突破天赋', ['8阶', '9阶', '10阶'], function (row) { return [row.rank8, guide.rank9, row.rank10]; }, guide.fiveElements.breakthrough) +
-      table('改造效果', stageNames, function (row) { return row.modification; }, guide.fiveElements.modification) +
-      '<p class="muted-tip">资料：' + escapeHtml(guide.source) + '。资料表未列升神效果。</p></section>';
+      table('改造效果', stageNames, function (row) { return row.modification; }, guide.fiveElements.modification) + '</section>';
   }
 
   function renderReference() {
     var focused = rememberPresentation(el.referenceContent);
-    var groups = [['机关兽与流派', [['effects','归属与效果'],['schools','流派效果'],['talents','突破天赋与改造效果']]], ['材料与突破', [['materials','材料来源'],['blueprints','研发材料'],['breakthrough','突破材料']]], ['等级与研发数值', [['thresholds','等级门槛'],['values','阶数与改造']]]];
+    var groups = [['机关兽与流派', [['effects','研发效果'],['schools','流派效果'],['talents','突破/改造效果']]], ['材料与突破', [['materials','材料来源'],['blueprints','研发材料'],['breakthrough','突破材料']]], ['等级与研发数值', [['thresholds','等级门槛'],['values','阶数与改造']]]];
     el.referenceContent.innerHTML = '<nav class="machine-reference-index" id="machine-reference-index" aria-label="机关兽资料目录">' + groups.map(function (group) { return '<div class="machine-reference-index-group"><b>' + group[0] + '</b><div>' + group[1].map(function (entry) { return '<a href="#machine-reference-' + entry[0] + '" data-machine-jump>' + entry[1] + '</a>'; }).join('') + '</div></div>'; }).join('') + '</nav>' + beastReference() + schoolReference() + talentReference() + materialReference() + blueprintGuideReference() + breakthroughGuideReference() + thresholdReference() + researchReference();
     updateResearchQuickLookup();
     el.referenceContent.querySelectorAll(':scope > section.panel').forEach(addReferenceReturn);

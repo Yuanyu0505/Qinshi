@@ -219,10 +219,10 @@ for (const width of [1280,1440]) test(width+'px equal optimum combinations start
     const separators=await pane.locator('.machine-combination-separator').evaluateAll(nodes=>nodes.map(node=>({
       text:node.textContent,
       blue:getComputedStyle(node).color==='rgb(169, 217, 255)',
-      between:node.previousElementSibling.classList.contains('is-different')&&node.nextElementSibling.classList.contains('is-different')
+      followsDifference:node.previousElementSibling.classList.contains('is-different')
     })));
     assert.ok(separators.length>0);
-    for(const separator of separators){assert.equal(separator.text,'、');assert.equal(separator.blue,separator.between);}
+    for(const separator of separators){assert.equal(separator.text,'、');assert.equal(separator.blue,separator.followsDifference);}
   }
   for (let n=0;n<2;n++) assert.equal(await combinations.nth(n).locator('summary').first().textContent(),await effectCombinations.nth(n).locator('summary').textContent());
   await effectCombinations.nth(1).locator('summary').click();

@@ -20,10 +20,9 @@ async function openPaths(page){
 }
 async function generate(section){
   await section.locator('[data-craft-action="generate"]').click();
-  // Existing cards remain visible while the zero-delay generation task is pending.
-  // Wait for its completion signal before querying the replacement DOM.
   await section.locator('[data-craft-status]').waitFor({state:'hidden'});
   await section.locator('.craft-strategy').first().waitFor();
+  await section.locator('[data-craft-results][aria-busy="true"]').waitFor({state:'hidden'});
 }
 async function setup(width){
   const page=await browser.newPage({viewport:{width,height:950},serviceWorkers:'block'});
@@ -37,6 +36,8 @@ async function setup(width){
 }
 async function favoriteCount(page,count){
   await page.waitForFunction(({key,count})=>JSON.parse(window.QinshiAccounts.getItem(key)||'{"entries":[]}').entries.length===count,{key:FAVORITES,count});
+  // The storage transaction completes before the visual re-grouping batches.
+  await page.locator('#inscription-crafting-paths [data-craft-results][aria-busy="true"]').waitFor({state:'hidden'});
 }
 async function expectedDescription(page,index){
   return page.evaluate(index=>{
@@ -127,10 +128,24 @@ test('main list numbers remain continuous when guaranteed cards and entire proba
   }finally{await page.close();}
 });
 
+// These two rendering fixtures replace the reply, not the production solver.
+// Native Worker parity and cancellation are covered by inscription-crafting.cjs.
+async function stubRouteReply(page){
+  await page.evaluate(()=>{
+    window.Worker=class {
+      postMessage(goal){
+        queueMicrotask(()=>{if(!this.closed)this.onmessage({data:{result:window.InscriptionPaths.representative(goal)}});});
+      }
+      terminate(){this.closed=true;}
+    };
+  });
+}
+
 test('variant labels sort terms and propagate only explicitly sourced symbolic X',async()=>{
   const {page,section}=await setup(1024);
   try{
     const labels=()=>section.locator('[data-route-variant] option').allTextContents();
+    await stubRouteReply(page);
     await page.evaluate(()=>{
       const original=window.InscriptionPaths.representative;
       window.InscriptionPaths.representative=function(goal){
@@ -163,6 +178,7 @@ test('variant labels sort terms and propagate only explicitly sourced symbolic X
 test('a real randomly filled ingredient keeps its concrete term in symbolic mode',async()=>{
   const {page,section}=await setup(1024);
   try{
+    await stubRouteReply(page);
     await section.locator('[data-craft-field="dun"]').selectOption('鬼遁');
     await section.locator('[data-craft-field="quality"]').selectOption('p2');
     await section.locator('[data-craft-field="attr"]').nth(0).selectOption('速');

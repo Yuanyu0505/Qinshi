@@ -1,0 +1,214 @@
+{
+  "suite": "Qin 铭文 H01-H08 可重放事件验收 v98",
+  "sourceSnapshot": "1.1.58 / 41d76ad",
+  "status": "全部未执行",
+  "dataProvenance": "固定手工合法铭文+独立预期；H08生成器只构造合法性能工作集，不作为主算法正确性Oracle",
+  "cases": [
+    {
+      "id": "H01",
+      "title": "失败品复用 AA+B，历史来源链与回滚",
+      "module": "Lab",
+      "expected": {
+        "seedRecords": 2,
+        "initialLots": {
+          "A": 2,
+          "B": 1
+        },
+        "previewOutcomes": 4,
+        "eachProbability": 0.25,
+        "events": [
+          "选A×2+B×1→预占3",
+          "roll(0)→两个lot归零+新增第三条合成记录，三条来源recordID=[seed-a,seed-a,seed-b]",
+          "credit→新增o2批次1",
+          "route→三个合法父来源",
+          "back→库存还原A×2+B×1、记录2条、产物批次0"
+        ],
+        "pass": "每步数量和sourceRecordId与固定预期一致，且原输入快照不变"
+      },
+      "status": "未执行"
+    },
+    {
+      "id": "H02",
+      "title": "同签名不同合成来源+手动来源，禁止自动改写来源",
+      "module": "Lab",
+      "expected": {
+        "initialLots": {
+          "record-1": 1,
+          "record-2": 1,
+          "manual": 1
+        },
+        "groupQty": 3,
+        "unknownSourceTopUp": "reject",
+        "explicitTopUp": {
+          "targetQty": 4,
+          "sourceRecordId": "record-1"
+        },
+        "events": [
+          "groupQuantity(4)不传sourceRecordId必须拒绝且源对象不变",
+          "指定record-1后新增带原配方引用的批次1",
+          "选3份→roll→扣3份，保留1份",
+          "back→还原4份，旧手动来源1份未修改"
+        ],
+        "pass": "三条来源始终可追溯，手动批次不被替换为模拟来源"
+      },
+      "status": "未执行"
+    },
+    {
+      "id": "H03",
+      "title": "预占、超额拒绝、抽取入包、撤销与解除预占",
+      "module": "Lab",
+      "expected": {
+        "initialLots": {
+          "A": 2,
+          "B": 2
+        },
+        "afterSelect": {
+          "A": {
+            "reserved": 2,
+            "available": 0
+          },
+          "B": {
+            "reserved": 1,
+            "available": 1
+          }
+        },
+        "events": [
+          "选A×2+B×1",
+          "再选B×2→必须拒绝且原对象不变",
+          "roll→A=0，B=1",
+          "credit→总库存2，记录1",
+          "back→A=2，B=2，记录0",
+          "clear-inputs→预占0，总库存4"
+        ],
+        "pass": "pending/refs/undo/修订与数量守恒；目标调整另由UX/A矩阵浏览器核验"
+      },
+      "status": "未执行"
+    },
+    {
+      "id": "H04",
+      "title": "收藏规则版本更新与损坏路线失效，不自动删除",
+      "module": "Favorites",
+      "expected": {
+        "initialEntries": 0,
+        "afterSave": 1,
+        "afterLegacyVersionFlag": {
+          "entries": 1,
+          "valid": true,
+          "rulesUpdated": true
+        },
+        "afterDamagedNode": {
+          "entries": 1,
+          "valid": false,
+          "rawUnchanged": true
+        },
+        "afterExplicitRemove": 0,
+        "events": [
+          "新收藏有效",
+          "仅旧规则版本标志→重新检验后仍可用并显示版本更新",
+          "人工篡改路线词条为非法?→失效但保留原字节",
+          "用户明确remove才删除"
+        ],
+        "pass": "可失效但不可擅自替换路线或自动删除存储"
+      },
+      "status": "未执行"
+    },
+    {
+      "id": "H05",
+      "title": "账号A→B→A及草稿隔离",
+      "module": "State account adapter",
+      "expected": {
+        "A": {
+          "draft": "A saved",
+          "originalRawUnchangedAfterB": true
+        },
+        "B": {
+          "draft": "B saved"
+        },
+        "events": [
+          "A保存draft A",
+          "A保留一份仅内存未保存草稿",
+          "切B看到空档并保存draft B",
+          "回A仍是draft A，不能出现B",
+          "回B仍是B，不能出现A"
+        ],
+        "pass": "测试账号内存适配器的持久化隔离，真实DOM未保存草稿处理还需A01–A10实测"
+      },
+      "status": "未执行"
+    },
+    {
+      "id": "H06",
+      "title": "损坏JSON/拒绝写入/抛错/只读，原字节不变",
+      "module": "State account adapter",
+      "expected": {
+        "corruptRead": {
+          "inspectValid": false,
+          "rawUnchanged": true
+        },
+        "failedWriteModes": [
+          "false",
+          "throw",
+          "readonly"
+        ],
+        "events": [
+          "写入不合法JSON→inspect失败，不转换空档",
+          "失败状态updateDraft必须拒绝且原字节不变",
+          "正常存档setItem=false→拒绝、不写入",
+          "setItem抛错→拒绝、不写入",
+          "只读→拒绝、不写入",
+          "解除失败→单次正常提交"
+        ],
+        "pass": "对真实存储失败要由D/A矩阵补充页面反馈与焦点验证"
+      },
+      "status": "未执行"
+    },
+    {
+      "id": "H07",
+      "title": "直接配方与代表性多阶段策略语义区分",
+      "module": "Paths",
+      "expected": {
+        "goal": {
+          "prefix": "天府",
+          "dun": "地遁",
+          "quality": "o2",
+          "attrs": [
+            "技能穿透",
+            "技能穿透",
+            "技能穿透"
+          ]
+        },
+        "baselineDirectRecipes": 193,
+        "baselineRepresentativeStrategies": 2,
+        "events": [
+          "固定1.1.58参数生成直接配方和代表性路线",
+          "分别检查API合法性，不能用2与193作同一全集比较",
+          "每一直接配方检查preview目标可达且概率匹配",
+          "代表路线中每一真实craft节点检查材料数、晋升条件、目标结果"
+        ],
+        "pass": "193/2仅用于同参数同基线回归，不得用其证明全局最优或擅改路线数"
+      },
+      "status": "未执行"
+    },
+    {
+      "id": "H08",
+      "title": "历史缓存容量边界与1000条压力、内容篡改检测",
+      "module": "Lab",
+      "expected": {
+        "sizes": [
+          256,
+          257,
+          337,
+          1000
+        ],
+        "generator": "固定前缀×遁位×蓝二配对枚举，确定性挑选首个合法可见结果，仅作为合法压力输入生成器，不充当计算正确性Oracle",
+        "events": [
+          "每种大小均要求全部合法",
+          "每种大小仅篡改最后一条产物属性→历史校验必须拒绝",
+          "记录时间仅在用户明确授权、同设备环境下采集P95",
+          "同一合法数据多轮运行必须得到相同有效性与源引用"
+        ],
+        "pass": "不可用丢弃历史、仅按recordID缓存、跳过来源检查等方式加速"
+      },
+      "status": "未执行"
+    }
+  ]
+}

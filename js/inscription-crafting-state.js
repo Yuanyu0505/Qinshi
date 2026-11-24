@@ -4,7 +4,8 @@
   var api = factory(common ? require("./inscription-rules.js") : root.InscriptionRules, common ? require("./inscription-simulation.js") : root.InscriptionSimulation);
   if (typeof module === "object" && module.exports) module.exports = api;
   if (root) root.InscriptionCraftingState = api;
-})(typeof window !== "undefined" ? window : null, function (Rules, Lab) {
+  if (typeof window !== "undefined" && window.location && window.location.protocol === "file:") window.InscriptionCraftingStateFactory = factory;
+})(typeof window !== "undefined" ? window : typeof self !== "undefined" ? self : null, function (Rules, Lab) {
   "use strict";
   var KEY = "qinshi_inscription_crafting_v1", QUERY_KEY = "qinshi_inscription_path_query_v1", ARCHIVE_KEY = "qinshi_inscription_simulation_archives_v1", sequence = 0;
   function copy(value) { return JSON.parse(JSON.stringify(value)); }
@@ -330,7 +331,9 @@
       if (!found.valid) return found;
       try {
         var saved = found.state.draft.simpleWorkbench, value;
-        if (saved !== undefined) value = checkSimple(copy(saved));
+        // Validate the detached snapshot below, once. Keep saved itself intact
+        // for the concurrency token, including values normalized by validation.
+        if (saved !== undefined) value = copy(saved);
         else {
           value = { version: 1, target: defaultTarget(), simulation: blankSimulation() };
           var old = found.state.draft["crafting-paths"] || found.state.draft["crafting-simulator"], f = old && old.form;
@@ -353,5 +356,25 @@
       save: function (value, expected, accountId) { legacy.saveSimple(value, expected, accountId); return inspect(); }
     };
   }
-  return { KEY: KEY, QUERY_KEY: QUERY_KEY, checkedTarget: checkedTarget, createQueryStore: createQueryStore, createStore: createStore, createWorkbench: createWorkbench, blankSimulation: blankSimulation, targetAfterContextChange: targetAfterContextChange, context: context, xOptions: xOptions, infer: infer, preview: simulationPreview };
+  // Isolated transactions reuse the normal validators, spill no changes to
+  // browser storage, and never know the actual account identifier.
+  function runWorkbenchSnapshot(request) {
+    var raw=request.raw, writing=request.type==="prepare-workbench-write";
+    var store=createWorkbench({
+      currentAccount:function(){return {id:"snapshot"};},
+      getItem:function(key){return key===KEY?raw:null;},
+      setItem:function(key,value){
+        if(!writing||key!==KEY)fail("快照仅允许本次模拟事务");
+        raw=String(value);return true;
+      }
+    });
+    if(!writing)return store.inspect();
+    var op=request.operation;
+    var next=op.action?Lab.act(request.state,op.action,op.payload):copy(request.state);
+    if(op.target)next.target=op.target;
+    var result=store.save(next,request.token,"snapshot");
+    if(!result.valid)fail(result.errors.join("；"));
+    return {raw:raw,result:result};
+  }
+  return { KEY: KEY, QUERY_KEY: QUERY_KEY, checkedTarget: checkedTarget, createQueryStore: createQueryStore, createStore: createStore, createWorkbench: createWorkbench, runWorkbenchSnapshot:runWorkbenchSnapshot, blankSimulation: blankSimulation, targetAfterContextChange: targetAfterContextChange, context: context, xOptions: xOptions, infer: infer, preview: simulationPreview };
 });

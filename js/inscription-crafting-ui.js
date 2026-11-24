@@ -3,7 +3,23 @@
   var R=root.InscriptionRules, P=root.InscriptionPaths, S=root.InscriptionCraftingState, F=root.InscriptionFlowchart, T=root.InscriptionTerms, L=root.InscriptionSimulation, X=root.InscriptionReverse;
   var views={}, store, state, token, accountId, loaded=false, sequence=0;
   var recovery=null,simulationView=null,roots={},activeChildren={};
+  var historyRead=null,historyWrite=null,simulationRaw=null,simulationReady=false,historySizeLimit=96000;
   var activeMode='crafting-paths';
+  var scriptUrl=new URL(document.currentScript&&document.currentScript.src||'js/inscription-crafting-ui.js',document.baseURI);
+  var workerUrl=new URL('inscription-path-worker.js',scriptUrl);
+  workerUrl.search=scriptUrl.search;
+  function createPlanningWorker(forHistory){
+    if(root.location.protocol!=='file:')return new root.Worker(workerUrl);
+    // file: uses the exact same factories, without a synchronous fallback.
+    var code='var rules=('+root.InscriptionRulesFactory.toString()+')();'+(forHistory
+      ?'var lab=('+root.InscriptionSimulationFactory.toString()+')(rules);var state=('+root.InscriptionCraftingStateFactory.toString()+')(rules,lab);'+
+        'self.onmessage=function(e){try{self.postMessage({result:state.runWorkbenchSnapshot(e.data)});}'+
+        'catch(error){self.postMessage({error:String(error.message||error)});}};'
+      :'var paths=('+root.InscriptionPathsFactory.toString()+')(rules);self.onmessage=paths.serveRouteRequests(self);');
+    var url=URL.createObjectURL(new Blob([code],{type:'text/javascript'}));
+    try{var worker=new root.Worker(url);worker.localScriptUrl=url;return worker;}
+    catch(error){URL.revokeObjectURL(url);throw error;}
+  }
   function targetFor(v){return v.scene?state.target:v.locator.target;}
   var favoriteStore, favoriteState=null, favoriteOperation=0, favoriteBusy=false;
   var modelNote='等概率模型，非实测游戏频率。各步骤概率以材料备齐为前提；置换概率未知，不计算整条路线的总成功率。';
@@ -44,7 +60,7 @@
     try {
       var result=store.save(next,token,accountId);
       if (!result.valid) throw new Error(result.errors.join('；'));
-      state=result.state; token=result.token; return true;
+      state=result.state; token=result.token; simulationRaw=root.QinshiAccounts.getItem(S.KEY); return true;
     } catch(error) { status(v,error.message); return false; }
   }
   function normalizeTarget(target) {
@@ -61,7 +77,186 @@
     if(!next.xTerm||!S.xOptions(next).some(function(t){return t.attr===next.xTerm.attr&&t.tier===next.xTerm.tier;}))next.xTerm=null;
     return next;
   }
-  function clearPlan(v){v.generation++;if(area(v,'results')){area(v,'results').innerHTML='';v.planTarget='';v.plan=null;v.routeSelections=new Map();}}
+  function stopPlanningWorker(worker,cooperative){
+    var timer, stopped=false;
+    function retire(){
+      if(stopped)return;
+      stopped=true;
+      root.clearTimeout(timer);
+      worker.onmessage=worker.onerror=worker.onmessageerror=null;
+      worker.terminate();
+      if(worker.localScriptUrl)URL.revokeObjectURL(worker.localScriptUrl);
+    }
+    if(!cooperative){retire();return;}
+    // Detach the old result handler immediately; let the worker discard its
+    // unfinished iterator before terminating. Bound cleanup if it cannot reply.
+    worker.onmessage=function(event){if(event.data&&event.data.cancelled)retire();};
+    worker.onerror=worker.onmessageerror=retire;
+    timer=root.setTimeout(retire,150);
+    try{worker.postMessage({type:'cancel-route'});}catch(error){retire();}
+  }
+  function finishPlanning(v,cooperative){
+    var worker=v.worker;
+    v.worker=null;
+    if(worker)stopPlanningWorker(worker,cooperative);
+    var results=area(v,'results');
+    if(results)results.setAttribute('aria-busy','false');
+    hidePlanCancellation(v);
+  }
+  function hidePlanCancellation(v){
+    var cancel=v.el.querySelector('[data-craft-action="cancel-plan"]');
+    if(cancel){
+      if(document.activeElement===cancel)v.el.querySelector('[data-craft-action="generate"]').focus();
+      cancel.hidden=true;
+    }
+  }
+  function cancelPlanning(v,message){
+    if(!v.worker&&!v.planMount)return;
+    v.generation++;
+    finishPlanning(v,true);
+    cancelPlanMount(v,true);
+    status(v,message||'');
+  }
+  function cancelPlanMount(v,discard){
+    var mount=v.planMount;
+    if(!mount)return;
+    root.cancelAnimationFrame(mount.frame);
+    root.clearTimeout(mount.timer);
+    v.planMount=null;
+    var host=area(v,'results');
+    host.setAttribute('aria-busy','false');
+    hidePlanCancellation(v);
+    if(discard){host.innerHTML='';v.plan=null;v.planTarget='';}
+  }
+  function mountRouteBatches(v,host,cards,graphs){
+    var mount=v.planMount={frame:0,timer:0},account=accountId,generation=v.generation;
+    var cardIndex=0,graphIndex=0,graphPhase;
+    host.setAttribute('aria-busy','true');
+    v.el.querySelector('[data-craft-action="cancel-plan"]').hidden=false;
+    function schedule(){
+      mount.frame=root.requestAnimationFrame(function(){
+        // Mount after the paint opportunity, not inside the animation frame.
+        mount.timer=root.setTimeout(step,0);
+      });
+    }
+    function step(){
+      if(v.planMount!==mount)return;
+      if(generation!==v.generation||accountId!==account||currentAccount()!==account||
+        activeMode!==v.mode||activeChildren[v.mode]!==v.child){
+        cancelPlanMount(v,true);return;
+      }
+      try{
+        if(cardIndex<cards.length){
+          for(var end=Math.min(cardIndex+2,cards.length);cardIndex<end;cardIndex++)cards[cardIndex]();
+        }else if(graphPhase)graphPhase=graphPhase();
+        else if(graphIndex<graphs.length)graphPhase=graphs[graphIndex++]();
+      }catch(error){
+        cancelPlanMount(v,true);status(v,error.message);return;
+      }
+      if(cardIndex<cards.length||graphIndex<graphs.length||graphPhase)schedule();
+      else cancelPlanMount(v,false);
+    }
+    schedule();
+  }
+  function isolateInitialDrawing(viewer,drawing){
+    var viewport=drawing.parentNode,labels=[],labelIndex=0;
+    // Let the unchanged scrollport reserve its height before Blink lays out
+    // its SVG. Release the boundary before starting the next graph.
+    viewport.style.height=drawing.style.height;
+    viewport.style.contain='size layout';
+    drawing.remove();
+    drawing.style.visibility='hidden';
+    drawing.querySelectorAll('text').forEach(function(label){
+      var anchor=document.createComment('flow-text');
+      label.replaceWith(anchor);
+      labels.push({anchor:anchor,label:label});
+    });
+    function current(){return viewport.isConnected&&viewer.finishInitialDrawing;}
+    function restore(){
+      if(!current())return;
+      drawing.style.removeProperty('visibility');
+      delete viewer.finishInitialDrawing;
+      viewport.style.removeProperty('height');
+      viewport.style.removeProperty('contain');
+      if(!viewport.style.length)viewport.removeAttribute('style');
+    }
+    function drawLabels(){
+      if(!current())return;
+      // Bound the glyph layout per frame; reveal only the original, complete SVG.
+      for(var end=Math.min(labelIndex+6,labels.length);labelIndex<end;labelIndex++){
+        var entry=labels[labelIndex];entry.anchor.replaceWith(entry.label);
+      }
+      return labelIndex<labels.length?drawLabels:restore;
+    }
+    function attach(){
+      if(!current())return;
+      if(!viewport.contains(drawing))viewport.appendChild(drawing);
+      return drawLabels;
+    }
+    viewer.finishInitialDrawing=function(action){
+      if(!attach())return;
+      F.zoom(viewer,action);
+      viewport.style.height=drawing.style.height;
+    };
+    return attach;
+  }
+  function cancelAllPlanning(){Object.keys(views).forEach(function(key){cancelPlanning(views[key]);});}
+  function cancelHistoryRead(){
+    if(!historyRead)return;
+    historyRead.worker.terminate();
+    if(historyRead.worker.localScriptUrl)URL.revokeObjectURL(historyRead.worker.localScriptUrl);
+    historyRead=null;
+  }
+  function cancelHistoryWrite(){
+    if(!historyWrite)return;
+    historyWrite.worker.terminate();
+    if(historyWrite.worker.localScriptUrl)URL.revokeObjectURL(historyWrite.worker.localScriptUrl);
+    area(simulationView,'simulator').removeAttribute('aria-busy');
+    status(historyWrite.view,'');
+    historyWrite=null;
+  }
+  function cancelBackground(){cancelAllPlanning();cancelHistoryRead();cancelHistoryWrite();}
+  function queueSimulationWrite(v,operation,done,guard){
+    if(!simulationRaw||simulationRaw.length<historySizeLimit)return false;
+    var accounts=root.QinshiAccounts,raw=simulationRaw,account=accountId,beforeToken=token;
+    function check(){
+      if(currentAccount()!==account||accountId!==account||accounts.getItem(S.KEY)!==raw||token!==beforeToken){
+        throw new Error('模拟存档已更新，请重新打开合成模拟后重试。');
+      }
+      if(accounts.isReadOnly&&accounts.isReadOnly())throw new Error('当前账号只读，未保存。');
+      if(guard)guard();
+    }
+    try{
+      check();
+      var worker=createPlanningWorker(true);
+      var request=historyWrite={worker:worker,view:v};
+      area(simulationView,'simulator').setAttribute('aria-busy','true');
+      status(v,'正在计算并校验模拟档案……');
+      function settle(reply){
+        if(historyWrite!==request)return;
+        cancelHistoryWrite();
+        if(activeMode!=='crafting-simulator'||currentAccount()!==account||accountId!==account)return;
+        try{
+          check();
+          var prepared=reply&&reply.result;
+          if(!prepared||!prepared.result||!prepared.result.valid||typeof prepared.raw!=='string'){
+            throw new Error(reply&&reply.error||'模拟档案未能完成校验，请重试。');
+          }
+          // The real adapter still enforces the current lease and account at
+          // this single write; the Worker has no access to live storage.
+          if(accounts.setItem(S.KEY,prepared.raw)===false)throw new Error('模拟数据未保存，请检查账号编辑权限。');
+          simulationRaw=prepared.raw;state=prepared.result.state;token=prepared.result.token;
+          done(true);
+        }catch(error){status(v,error.message);done(false);}
+      }
+      worker.onmessage=function(event){settle(event.data);};
+      worker.onerror=function(event){event.preventDefault();settle(null);};
+      worker.onmessageerror=function(){settle(null);};
+      worker.postMessage({type:'prepare-workbench-write',raw:raw,state:state,token:beforeToken,operation:operation});
+    }catch(error){cancelHistoryWrite();status(v,error.message);done(false);}
+    return true;
+  }
+  function clearPlan(v){cancelPlanning(v);v.generation++;if(area(v,'results')){area(v,'results').innerHTML='';v.planTarget='';v.plan=null;v.routeSelections=new Map();}}
   function saveLocator(v,next){
     try{var result=v.locatorStore.save(next,v.locatorToken,accountId);v.locator=result.value;v.locatorToken=result.token;return true;}
     catch(e){status(v,e.message);return false;}
@@ -85,7 +280,14 @@
     var queryOnly=next.discipleKey===beforeTarget.discipleKey&&next.slot===beforeTarget.slot&&next.dun===beforeTarget.dun&&next.quality===beforeTarget.quality&&JSON.stringify(next.attrs)===JSON.stringify(beforeTarget.attrs);
     if(queryOnly)incompatible=false;
     if(incompatible&&sceneExists(sim)&&!root.confirm('切换将重新准备当前模拟材料，已生成的结果保留到虚拟背包。是否继续？')){renderFilters(v);return false;}
-    try{if(guard)guard();var draft=incompatible?L.act(state,'reset'):clone(state);draft.target=next;
+    var intended=JSON.stringify(next);
+    function done(saved){if(saved){simulationView.bagSelection={};renderSimulator(simulationView);}else renderFilters(v);}
+    function checkIntent(){
+      if(JSON.stringify(targetFor(v))!==intended)throw new Error('模拟目标已修改，本次未保存。');
+      if(guard)guard();
+    }
+    try{if(queueSimulationWrite(v,{action:incompatible?'reset':null,target:next},done,checkIntent))return true;
+      if(guard)guard();var draft=incompatible?L.act(state,'reset'):clone(state);draft.target=next;
       if(save(v,draft)){simulationView.bagSelection={};renderSimulator(simulationView);return true;}
       else renderFilters(v);
     }catch(e){status(v,e.message);renderFilters(v);}
@@ -94,7 +296,7 @@
   function initRoot(mode){
     var host=document.getElementById('inscription-'+mode);roots[mode]=host;activeChildren[mode]='direct';
     host.innerHTML='<div class="craft-actions craft-locator-tabs" role="group" aria-label="查询方式">'+['direct','reverse'].map(function(child){return '<button type="button" class="seg'+(child==='direct'?' active':'')+'" data-locator-tab="'+child+'" aria-pressed="'+(child==='direct')+'">'+(child==='direct'?'按弟子／遁位查询':'按属性反查')+'</button>';}).join('')+'</div><div data-locator-panel="direct"></div><div data-locator-panel="reverse" hidden></div>'+
-      (mode==='crafting-simulator'?'<section class="craft-panel"><h3>共用模拟现场</h3><p class="craft-note">紫色中档材料从虚拟背包取用。</p><div data-craft-simulator></div></section>':'');
+      (mode==='crafting-simulator'?'<section class="craft-panel"><h3>共用模拟现场</h3><div data-craft-simulator></div></section>':'');
     init(mode,'direct',host.querySelector('[data-locator-panel="direct"]'));
     if(mode==='crafting-simulator'){
       simulationView={mode:mode,scene:true,el:host,bagSources:{},bagSelection:{}};
@@ -104,6 +306,7 @@
       scene.addEventListener('input',function(e){if(e.target.matches('[data-bag-count]'))updateBagSelection(simulationView,e.target);});
     }
     host.querySelectorAll('[data-locator-tab]').forEach(function(b){b.addEventListener('click',function(){
+      if(activeChildren[mode]!==b.dataset.locatorTab)cancelPlanning(views[mode+'-'+activeChildren[mode]]);
       if(!views[mode+'-'+b.dataset.locatorTab])init(mode,b.dataset.locatorTab,host.querySelector('[data-locator-panel="'+b.dataset.locatorTab+'"]'));
       activeChildren[mode]=b.dataset.locatorTab;host.querySelectorAll('[data-locator-panel]').forEach(function(panel){panel.hidden=panel.dataset.locatorPanel!==b.dataset.locatorTab;});
       host.querySelectorAll('[data-locator-tab]').forEach(function(tab){tab.classList.toggle('active',tab===b);tab.setAttribute('aria-pressed',String(tab===b));});
@@ -130,7 +333,7 @@
       (mode==='crafting-paths'?'<div class="craft-controls craft-x-picker"><label>具体杂词 X（可选）<select data-craft-field="x-term"></select></label></div><p class="craft-note" data-craft-x-note></p>':'')+
       '<div data-craft-analysis></div></section>'+
       '<details class="craft-panel craft-values"><summary>所选属性的品质、档位与数值</summary><div data-craft-matrix></div></details>'+
-      (mode==='crafting-paths'?'<div class="craft-actions">'+button('generate','一键查询合成路径')+'</div><div data-craft-results></div>':'<div class="craft-actions">'+button('apply-simulation','应用到模拟')+'</div>');
+      (mode==='crafting-paths'?'<div class="craft-actions">'+button('generate','一键查询合成路径')+button('cancel-plan','取消计算',' hidden')+'</div><div data-craft-results></div>':'<div class="craft-actions">'+button('apply-simulation','应用到模拟')+'</div>');
     el.addEventListener('change',function(event){onChange(v,event.target);});
     el.addEventListener('click',function(event){
       var attrControl=event.target.closest('[data-craft-attr-trigger],[data-craft-attr-option]');
@@ -140,12 +343,18 @@
       if(control) onClick(v,control);
     });
     el.addEventListener('keydown',function(event){if(event.target.matches('[data-craft-attr-trigger]'))onAttrKey(v,event);});
+    function updateSearch(input){
+      if(input.value!==v.locator.search){
+        var value=clone(v.locator);value.search=input.value;saveLocator(v,value);
+      }
+      suggestions(v);
+    }
     el.addEventListener('input',function(event){
-      if(event.target===field(v,'search')){var value=clone(v.locator);value.search=event.target.value;saveLocator(v,value);suggestions(v);}
+      if(event.target===field(v,'search')&&!event.isComposing&&!v.searchComposing)updateSearch(event.target);
       if(event.target.matches('[data-result-filter="search"]')&&!event.isComposing&&!v.reverseComposing)onChange(v,event.target);
     });
-    el.addEventListener('compositionstart',function(event){if(event.target.matches('[data-result-filter="search"]'))v.reverseComposing=true;});
-    el.addEventListener('compositionend',function(event){if(event.target.matches('[data-result-filter="search"]')){v.reverseComposing=false;onChange(v,event.target);}});
+    el.addEventListener('compositionstart',function(event){if(event.target===field(v,'search'))v.searchComposing=true;if(event.target.matches('[data-result-filter="search"]'))v.reverseComposing=true;});
+    el.addEventListener('compositionend',function(event){if(event.target===field(v,'search')){v.searchComposing=false;updateSearch(event.target);}if(event.target.matches('[data-result-filter="search"]')){v.reverseComposing=false;onChange(v,event.target);}});
     field(v,'search').addEventListener('focus',function(){if(!itemFor(targetFor(v))) suggestions(v);});
     field(v,'search').addEventListener('keydown',function(event){
       var list=area(v,'suggestions'), choices=Array.from(list.querySelectorAll('[data-craft-action="choose-disciple"]'));
@@ -412,23 +621,27 @@
   function renderPlan(v,plan) {
     var host=area(v,'results'),target=targetFor(v);
     var opened={};host.querySelectorAll('details[data-route-card]').forEach(function(details){opened[details.dataset.routeCard]=details.open;});
+    cancelPlanMount(v,false);
     if(!v.routeSelections)v.routeSelections=new Map();
     v.plan=plan;
     host.innerHTML='<section class="craft-panel"><h3>从蓝二到'+qLabel(target.quality)+'的完整路线</h3><p class="craft-note">'+modelNote+'</p>'+
       '<p class="craft-note">'+(target.discipleKey?esc(itemFor(target).name+' · '+target.slot.replace('|',' · '))+'。':'通用遁位路线：全部材料必须为同一个前缀、同一个遁位。')+
       (plan.symbolicX===false?'具体杂词 X：'+T.html(plan.xTerm,target.quality)+'；按实际词条逐阶段校验并计算，不会自动替换成其他 X。':'杂词条 X 不指定具体属性，默认采用同一种词条/不分档词条；本路线需要一致的 X 不可换成多个不同杂词条。所示概率以同一种合法不分档杂词为条件。')+'</p>'+
       (plan.notes||[]).map(function(note){return '<p class="craft-note">'+esc(note)+'</p>';}).join('')+
-      '<p class="craft-note">按材料准备方式展示常规代表路线，不穷举所有材料树，也不把投料顺序变化算作新方案。每步概率均以该步材料已经备齐为条件，置换概率未知。</p><div data-route-groups></div></section>';
+      '<p class="craft-note">按材料准备方式展示常规代表路线，不穷举所有材料树；投料换序不算新方案。</p><div data-route-groups></div></section>';
     var groups=host.querySelector('[data-route-groups]');
     var entries=plan.strategies.map(function(route,index){return {route:route,index:index,favorite:favoriteFor(route,target,plan.xAttr)};});
     var ideas=P.groupStrategies(plan.strategies);
+    var batched=plan.strategies.length>=8, cardJobs=[], graphJobs=[];
     ['favorites','deterministic','probability'].forEach(function(kind){
       var routes=kind==='favorites'?entries.filter(function(entry){return !!entry.favorite;}).map(function(entry){return {id:'favorite:'+entry.index,kind:entry.route.kind,variants:[entry]};}):
         ideas.filter(function(group){return group.kind===kind;}).map(function(group){return {id:group.id,kind:group.kind,label:group.label,variants:group.variants.filter(function(variant){return !entries[variant.index].favorite;}).map(function(variant){return entries[variant.index];})};}).filter(function(group){return group.variants.length;});
       if(kind==='favorites'&&!routes.length)return;
       var heading=document.createElement('h4');heading.className=kind==='favorites'?'craft-favorite-group-title':'';heading.textContent=kind==='favorites'?'已收藏方案（统一置顶）':kind==='deterministic'?'未收藏 · 必中合成方案（置换准备另计）':'未收藏 · 概率合成方案';groups.appendChild(heading);
       if(!routes.length){var note=document.createElement('p');note.className='craft-note';note.textContent=entries.some(function(entry){return entry.route.kind===kind;})?'此类方案均已收藏并置顶。':kind==='deterministic'?'当前目标没有已知的全程必中合成路线，不会把随机补词条当作必中。':'当前目标不需要单独展示额外的概率路线。';groups.appendChild(note);}
+      var anchor=batched?groups.appendChild(document.createComment('route-group-end')):null;
       routes.forEach(function(group,index){
+        function mountCard(){
         var entry=group.variants.find(function(variant){return variant.index===v.routeSelections.get(group.id);})||group.variants[0],route=entry.route;
         var details=document.createElement('details');details.className='craft-strategy';
         details.dataset.routeCard=group.id;details.dataset.routeKind=route.kind;
@@ -453,21 +666,32 @@
         }
         v.routeSelections.set(group.id,entry.index);
         var rendered=false;
-        function fill(){if(rendered)return;rendered=true;var body=details.querySelector('.craft-strategy-body');body.renderFlow=function(show){
+        function fill(isolated){if(rendered)return;rendered=true;var body=details.querySelector('.craft-strategy-body');body.renderFlow=function(show,isolate){
           var old=body.querySelector('[data-flow-viewer]'),zoom=old?Number(old.dataset.zoom):0.9;
           body.innerHTML=F.render(route,plan.xAttr,{showFailures:show,positionLabel:target.discipleKey?target.slot.replace('|',' · '):position(target).dun});
           body.dataset.failures=show?'open':'closed';
           var viewer=body.querySelector('[data-flow-viewer]'),drawing=viewer.querySelector('svg');viewer.dataset.zoom=String(zoom);if(F.bind)F.bind(viewer);
           drawing.style.width=Math.round(Number(drawing.dataset.flowWidth)*zoom)+'px';drawing.style.height=Math.round(Number(drawing.dataset.flowHeight)*zoom)+'px';
           viewer.querySelector('[data-craft-action="diagram-reset"]').textContent=Math.round(zoom*100)+'%';
-        };body.renderFlow(false);}
-        details.addEventListener('toggle',function(){if(details.open)fill();});
-        groups.appendChild(details);if(Object.prototype.hasOwnProperty.call(opened,group.id)?opened[group.id]:index===0){fill();details.open=true;}
+          if(isolate)return isolateInitialDrawing(viewer,drawing);
+        };return body.renderFlow(false,isolated);}
+        var defaultOpen=Object.prototype.hasOwnProperty.call(opened,group.id)?opened[group.id]:index===0;
+        var waitingForGraph=defaultOpen;
+        details.addEventListener('toggle',function(){if(details.open&&!waitingForGraph)fill();});
+        groups.insertBefore(details,anchor);
+        if(defaultOpen){
+          graphJobs.push(function(){waitingForGraph=false;if(details.open)return fill(true);});
+          details.open=true;
+        }
+        }
+        if(batched)cardJobs.push(mountCard);
+        else mountCard();
       });
     });
     if(favoriteState&&(!favoriteState.valid||favoriteState.readOnly)){
       var warning=document.createElement('p');warning.className='craft-legacy-warning';warning.textContent=!favoriteState.valid?'收藏读取失败，原始数据已保留：'+favoriteState.errors.join('；'):'账号当前为只读，仍可查询路线；收藏操作需先取得编辑权。';groups.prepend(warning);
     }
+    if(batched||graphJobs.length)mountRouteBatches(v,host,cardJobs,graphJobs);
   }
   function toggleFavorite(v,control) {
     if(favoriteBusy)return;
@@ -487,20 +711,39 @@
     }catch(error){favoriteBusy=false;status(v,'收藏未成功保存：'+error.message);Object.keys(views).forEach(function(key){views[key].el.querySelectorAll('[data-craft-action="toggle-favorite"]').forEach(function(button){button.disabled=!!favoriteState.readOnly;});});}
   }
   function generate(v) {
+    cancelAllPlanning();
+    v.cancelledTarget=null;
     var target=targetFor(v),p=position(target),best=R.bestTargets(p.dun,target.quality,target.attrs);
     if(!best.targets.length){status(v,best.reason);return;}
     var request=++v.generation, selected=JSON.stringify(target),account=accountId;
-    status(v,'正在整理完整合成路线……');
-    root.setTimeout(function(){
-      if(!loaded||currentAccount()!==account||accountId!==account||request!==v.generation||JSON.stringify(targetFor(v))!==selected)return;
-      try{
-        var result=P.representative({prefix:p.prefix,dun:p.dun,quality:target.quality,attrs:target.attrs,xTerm:target.xTerm||null});
+    var worker;
+    function settle(result,error) {
+      if(v.worker!==worker||request!==v.generation)return;
+      finishPlanning(v);
+      if(!loaded||currentAccount()!==account||accountId!==account||activeMode!==v.mode||activeChildren[v.mode]!==v.child||JSON.stringify(targetFor(v))!==selected){status(v,'');return;}
+      try {
+        if(error)throw new Error(error);
         if(!result.valid)throw new Error(result.errors.concat(result.notes||[]).join('；'));
         if(!result.strategies.length)throw new Error('当前目标尚无可展示的完整路线；不会用不合法步骤补齐。');
         v.planTarget=selected;renderPlan(v,result);status(v,'');
         if(!v.locator.generated){var value=clone(v.locator);value.generated=true;saveLocator(v,value);}
       }catch(error){status(v,error.message);}
-    },0);
+    }
+    var failure='无法启动或完成路线计算，请重试。'+(root.location.protocol==='file:'?'也可通过本地服务打开工具。':'');
+    try {
+      worker=createPlanningWorker();
+      v.worker=worker;
+      v.el.querySelector('[data-craft-action="cancel-plan"]').hidden=false;
+      area(v,'results').setAttribute('aria-busy','true');
+      status(v,'正在整理完整合成路线……');
+      worker.onmessage=function(event){settle(event.data.result,event.data.error);};
+      worker.onerror=function(event){event.preventDefault();settle(null,failure);};
+      worker.onmessageerror=function(){settle(null,failure);};
+      worker.postMessage({prefix:p.prefix,dun:p.dun,quality:target.quality,attrs:target.attrs,xTerm:target.xTerm||null});
+    }catch(error){
+      finishPlanning(v);
+      status(v,failure);
+    }
   }
   function availableStages(v) {
     var index=R.qualities.findIndex(function(q){return q.id===targetFor(v).quality;});
@@ -596,7 +839,11 @@
         }).join('')+'</fieldset>';
       }).join('')+'</div><div data-craft-preview></div><div class="craft-actions">'+button('roll','模拟合成')+'</div><div data-craft-pending></div>';
     var preview;
-    try{var candidate=clone(state);candidate.simulation.inputs=inputs;preview=S.preview(candidate);
+    try{
+      // Preview reads history and stock but never edits them. Only the input
+      // view changes here; do not serialize the entire album again after save.
+      var candidate=Object.assign({},state,{simulation:Object.assign({},sim,{inputs:inputs})});
+      preview=S.preview(candidate);
       area(v,'preview').innerHTML='<p class="craft-note">'+modelNote+' 百分比取整显示，可能因四舍五入相加不等于100%，实际抽取使用精确概率。</p>'+outcomes(preview.outcomes);
     }catch(error){area(v,'preview').innerHTML='<p class="craft-note">'+esc(friendly(error.message))+'</p>';}
     host.querySelector('[data-craft-action="roll"]').disabled=!preview||!!sim.pending||!!sim.legacy;
@@ -624,14 +871,21 @@
     });
     if(simulationView)renderSimulator(simulationView);
   }
-  function labAction(v,action,payload){
-    try{var draft=L.act(state,action,payload);if(save(v,draft)){if(['select','next','reset','back','clear-bag','clear-inputs','prepare'].includes(action))v.bagSelection={};renderSimulator(v);return true;}}
+  function labAction(v,action,payload,after){
+    function done(saved){
+      if(saved&&['select','next','reset','back','clear-bag','clear-inputs','prepare'].includes(action))v.bagSelection={};
+      if(saved&&after)after();
+      renderSimulator(v);
+    }
+    if(queueSimulationWrite(v,{action:action,payload:payload},done))return;
+    try{var draft=L.act(state,action,payload);if(save(v,draft)){done(true);return true;}}
     catch(error){status(v,error.message);}
     renderSimulator(v);return false;
   }
   function onChange(v,control) {
     if(control.matches('[data-route-variant]'))return;
     if(!loaded||currentAccount()!==accountId){status(v,'请重新打开铭文分区后再操作。');return;}
+    if(historyWrite&&v.mode==='crafting-simulator'){status(v,'正在校验保存，请稍后再操作。');return;}
     status(v,'');
     if(control.matches('[data-result-member]')){var card=v.reverseCards[Number(control.dataset.resultMember)];if(card)v.reverseMembers[card.key]=decodeURIComponent(control.value);return;}
     if(control.matches('[data-result-filter]')){
@@ -688,9 +942,13 @@
   }
   function onClick(v,control) {
     var action=control.dataset.craftAction;
+    if(action==='cancel-plan'){v.cancelledTarget=JSON.stringify(targetFor(v));cancelPlanning(v,'已取消路线计算');return;}
     if(action==='diagram-failures'){var body=control.closest('.craft-strategy-body');if(body&&body.renderFlow)body.renderFlow(body.dataset.failures!=='open');return;}
-    if(action.indexOf('diagram-')===0){F.zoom(control.closest('[data-flow-viewer]'),action.slice(8));return;}
+    if(action.indexOf('diagram-')===0){var viewer=control.closest('[data-flow-viewer]');if(viewer&&viewer.finishInitialDrawing)viewer.finishInitialDrawing(action.slice(8));else F.zoom(viewer,action.slice(8));return;}
     if(!loaded||currentAccount()!==accountId){status(v,'请重新打开铭文分区后再操作。');return;}
+    if(historyWrite&&v.mode==='crafting-simulator'){status(v,'正在校验保存，请稍后再操作。');return;}
+    if(action==='retry-history'){activate(v.mode,true);return;}
+    if((v.scene||action==='apply-simulation')&&!simulationReady){status(v,'模拟档案尚未读完，请稍后再试。');return;}
     status(v,'');
     if(action==='apply-simulation'){try{checkReverse(v);applySimulation(v,clone(targetFor(v)),function(){checkReverse(v);});}catch(e){status(v,e.message);}return;}
     if(action==='reverse-search'){
@@ -733,14 +991,14 @@
     }
     if(action==='generate'){generate(v);return;}
     if(action==='open-bag'||action==='select-bag'){
-      if(action==='select-bag'&&state.simulation.pending&&!labAction(v,'prepare',{clear:true}))return;
+      if(action==='select-bag'&&state.simulation.pending){labAction(v,'prepare',{clear:true},function(){v.bagOpen=true;});return;}
       v.bagOpen=true;renderSimulator(v);var bag=v.el.querySelector('.craft-backpack');if(bag)bag.scrollIntoView({block:'nearest',behavior:'smooth'});return;
     }
     if(action==='close-bag'){v.bagOpen=false;renderSimulator(v);return;}
     if(action==='use-selected'){
       var selection=Array.from(v.el.querySelectorAll('[data-bag-id]')).filter(function(row){return row.querySelector('[data-bag-check]').checked;}).map(function(row){return {id:row.dataset.bagId,quantity:Number(row.querySelector('[data-bag-count]').value)};});
       if(!selection.length){status(v,'请勾选至少一批符合当前配方的铭文。');return;}
-      if(labAction(v,'select',{selection:selection})){v.bagOpen=false;renderSimulator(v);}return;
+      labAction(v,'select',{selection:selection},function(){v.bagOpen=false;});return;
     }
     if(action==='clear-bag'){
       if(root.confirm('确认清空本账号的整个虚拟合成背包？将取消当前背包选材，历史合成路线保留。真实个人铭文不受影响。'))labAction(v,action);return;
@@ -769,23 +1027,65 @@
       control.disabled=true;labAction(v,action==='roll'?'simulate':action==='repeat'?'repeat-simulate':action);
     }
   }
+  function acceptSimulation(result,raw,force){
+    recovery=null;
+    if(result.valid){state=L.upgrade(result.state);token=result.token;if(state.simulation.legacy)recovery={reason:'旧现场材料来源或规则需要重新确认',raw:raw};}
+    else{state=L.upgrade({version:1,target:{discipleKey:'',slot:'',dun:'',quality:'o2',attrs:['','',''],xTerm:null},simulation:S.blankSimulation()});token=null;recovery={reason:result.errors.join('；'),raw:raw};}
+    state.target=normalizeTarget(state.target);
+    simulationReady=true;simulationRaw=raw;
+    if(force||recovery||simulationView.renderedToken!==token||simulationView.renderedAccount!==accountId)renderSimulator(simulationView);
+  }
+  function loadSimulation(account,force){
+    if(historyWrite)return;
+    var raw,host=area(simulationView,'simulator');
+    function showError(){
+      simulationReady=false;
+      host.innerHTML='<div class="craft-status" role="alert">无法读取模拟档案，本次未修改存档。'+button('retry-history','重试读取')+'</div>';
+    }
+    try{raw=root.QinshiAccounts.getItem(S.KEY);}
+    catch(error){cancelHistoryRead();showError();return;}
+    if(!raw||raw.length<historySizeLimit){
+      cancelHistoryRead();
+      acceptSimulation(store.inspect(),raw,force);
+      return;
+    }
+    if(historyRead&&historyRead.account===account&&historyRead.raw===raw)return;
+    cancelHistoryRead();
+    simulationReady=false;
+    host.innerHTML='<p class="craft-note" role="status">正在校验模拟档案……</p>';
+    try{
+      var worker=createPlanningWorker(true);
+      var request=historyRead={worker:worker,raw:raw,account:account};
+      function settle(data){
+        if(historyRead!==request)return;
+        cancelHistoryRead();
+        if(activeMode!=='crafting-simulator'||accountId!==account||currentAccount()!==account)return;
+        // Never enable controls from a stale account or a replaced snapshot.
+        try{if(root.QinshiAccounts.getItem(S.KEY)!==raw){loadSimulation(account,true);return;}}
+        catch(error){showError();return;}
+        if(!data||!data.result){showError();return;}
+        acceptSimulation(data.result,raw,true);
+      }
+      worker.onmessage=function(event){settle(event.data);};
+      worker.onerror=function(event){event.preventDefault();settle(null);};
+      worker.onmessageerror=function(){settle(null);};
+      worker.postMessage({type:'inspect-workbench',raw:raw});
+    }catch(error){cancelHistoryRead();showError();}
+  }
   function activate(mode,force) {
+    if(mode!=='crafting-simulator'){cancelHistoryRead();cancelHistoryWrite();}
     if(mode==='crafting-favorites'){if(root.InscriptionRouteFavorites)root.InscriptionRouteFavorites.activate();return;}
     if(!R||!P||!S||!F||!T||!L||!X||!root.QinshiAccounts||!root.INSCRIPTION_DATA)return;
     if(!store)store=S.createWorkbench(root.QinshiAccounts);
     activeMode=mode;
     if(!roots[mode])initRoot(mode);
     var account=currentAccount(),changedAccount=!loaded||accountId!==account;
-    var result=store.inspect();
     accountId=account;loaded=true;
     if(changedAccount){favoriteOperation++;favoriteBusy=false;}
-    recovery=null;
-    if(result.valid){state=L.upgrade(result.state);token=result.token;if(state.simulation.legacy)recovery={reason:'旧现场材料来源或规则需要重新确认',raw:root.QinshiAccounts.getItem(S.KEY)};}
-    else {state=L.upgrade({version:1,target:{discipleKey:'',slot:'',dun:'',quality:'o2',attrs:['','',''],xTerm:null},simulation:S.blankSimulation()});token=null;recovery={reason:result.errors.join('；'),raw:root.QinshiAccounts.getItem(S.KEY)};}
-    state.target=normalizeTarget(state.target);
+    if(changedAccount){cancelHistoryRead();cancelHistoryWrite();simulationReady=false;simulationRaw=null;}
     inspectFavorites();
     if(changedAccount){
-      Object.keys(views).forEach(function(key){var view=views[key];clearPlan(view);view.loadedAccount=null;view.reverseResults=null;});
+      Object.keys(views).forEach(function(key){var view=views[key];clearPlan(view);view.loadedAccount=null;view.reverseResults=null;view.cancelledTarget=null;});
       if(simulationView){simulationView.bagOpen=false;simulationView.actualRecord=null;simulationView.bagSelection={};simulationView.bagSources={};}
     }
     ['direct','reverse'].forEach(function(child){
@@ -799,16 +1099,17 @@
       if(view.child==='reverse'&&view.reverseResults&&view.commonToken!==root.QinshiAccounts.getItem('qinshi_inscription_common_v1'))renderReverseResults(view);
       // Route data is regenerated from the independently persisted goal, never
       // copied from the other child. Hidden children keep their own DOM/zoom.
-      if(view.mode==='crafting-paths'&&view.locator.generated&&!view.plan&&(changed||force)){
+      if(view.mode==='crafting-paths'&&activeChildren[mode]===child&&view.locator.generated&&!view.plan&&!view.worker&&view.cancelledTarget!==JSON.stringify(targetFor(view))){
         generate(view);
       }
     });
-    if(mode==='crafting-simulator'&&(force||recovery||simulationView.renderedToken!==token||simulationView.renderedAccount!==accountId))renderSimulator(simulationView);
+    if(mode==='crafting-simulator')loadSimulation(account,force);
   }
   document.addEventListener('click',function(event){Object.keys(views).forEach(function(key){var v=views[key];if(!event.target.closest('.craft-search')||!v.el.contains(event.target))hideSuggestions(v);if(!event.target.closest('.craft-attr-picker')||!v.el.contains(event.target))closeAttrPicker(v);});});
   root.addEventListener('inscription-route-favorites-change',function(){
     if(!loaded||currentAccount()!==accountId)return;inspectFavorites();
     Object.keys(views).forEach(function(key){var v=views[key];v.loadedAccount=null;if(!v.el.hidden&&!v.el.closest('#partition-inscription').hidden&&v.plan&&v.planTarget===JSON.stringify(targetFor(v)))renderPlan(v,v.plan);});
   });
-  root.InscriptionCraftingUI={activate:activate,refresh:function(){if(Object.keys(views).length)activate(activeMode,true);if(root.InscriptionRouteFavorites)root.InscriptionRouteFavorites.refresh();}};
+  root.addEventListener('pagehide',cancelBackground);
+  root.InscriptionCraftingUI={activate:activate,cancelPlanning:cancelAllPlanning,cancelBackground:cancelBackground,refresh:function(){if(Object.keys(views).length)activate(activeMode,true);if(root.InscriptionRouteFavorites)root.InscriptionRouteFavorites.refresh();}};
 })(window);

@@ -2,6 +2,26 @@
 const {test}=require('node:test'),assert=require('node:assert/strict');
 const S=require('./inscription-crafting-state.js'),L=require('./inscription-simulation.js');
 function fixture(){const data=new Map();let account='one';const storage={currentAccount:()=>({id:account}),getItem:k=>data.get(account+k)??null,setItem:(k,v)=>data.set(account+k,String(v))};return {storage,data,switchTo:a=>account=a};}
+test('opening saved simulation validates history exactly once and never rewrites the raw snapshot',()=>{
+ const f=fixture(),workbench=S.createWorkbench(f.storage);
+ const state=L.upgrade(workbench.inspect().state);
+ const raw={schemaVersion:1,idSequence:0,actual:[],goals:[],workspaces:{},draft:{simpleWorkbench:state}};
+ const before=JSON.stringify(raw);
+ f.storage.setItem(S.KEY,before);
+ const validate=L.validate;let visits=0;
+ L.validate=function(value){visits++;return validate(value);};
+ try{
+  const result=workbench.inspect();
+  assert.equal(result.valid,true);
+  assert.deepEqual(result.state,state);
+  assert.equal(f.storage.getItem(S.KEY),before);
+  assert.equal(visits,1,'the same saved history must not be traversed twice while opening');
+  raw.draft.simpleWorkbench.lab.lots.push({id:'bad',quantity:1,source:{type:'simulation',recordId:'missing'},material:{prefix:'天府',dun:'地遁',quality:'b2',origin:'wash',terms:[{attr:'防',tier:'H'}]}});
+  const damaged=JSON.stringify(raw);f.storage.setItem(S.KEY,damaged);
+  assert.equal(workbench.inspect().valid,false);
+  assert.equal(f.storage.getItem(S.KEY),damaged);
+ }finally{L.validate=validate;}
+});
 test('path query target persists without reading corrupt simulation and is account isolated',()=>{
  const f=fixture();f.storage.setItem(S.KEY,'not json');const q=S.createQueryStore(f.storage),a=q.inspect();
  assert.equal(a.valid,true);a.target.dun='鬼遁';a.target.attrs=['速','速','速'];q.save(a.target,a.token,'one');

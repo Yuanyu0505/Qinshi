@@ -17,6 +17,9 @@
 #inscription-reference .ins-ref-main-overview { min-width: 1150px; }
 #inscription-reference .ins-ref-matrix { min-width: 420px; }
 #inscription-reference .ins-reference-table td { vertical-align: top; font-variant-numeric: tabular-nums; }
+#inscription-reference .ins-reference-table :is(th, td) {
+  overflow-wrap: anywhere;
+}
 #inscription-reference .ins-ref-matrix td { text-align: center; }
 #inscription-reference .ins-ref-matrix th:first-child { min-width: 90px; }
 #inscription-reference .ins-ref-origin { display: block; font-size: 13px; line-height: 1.5; }

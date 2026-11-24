@@ -3,7 +3,8 @@
   var api = factory(typeof module === "object" && module.exports ? require("./inscription-rules.js") : root.InscriptionRules);
   if (typeof module === "object" && module.exports) module.exports = api;
   if (root) root.InscriptionPaths = api;
-})(typeof window !== "undefined" ? window : null, function (Rules) {
+  if (typeof window !== "undefined" && window.location && window.location.protocol === "file:") window.InscriptionPathsFactory = factory;
+})(typeof window !== "undefined" ? window : typeof self !== "undefined" ? self : null, function (Rules) {
   "use strict";
   var cache = new Map();
   function clone(value) { return JSON.parse(JSON.stringify(value)); }
@@ -148,7 +149,7 @@
   }
   // Presentation planning is separate from exhaustive exact-material planning.
   // Every operation is still accepted only after the existing rule preview.
-  function representative(goal) {
+  function* representativeSteps(goal) {
     goal=goal||{};
     var symbolicX=goal.xTerm==null, notes=new Set();
     function failed(message,xTerm) {
@@ -189,7 +190,7 @@
         notes.add("所选具体 X（"+xTerm.attr+"／"+xTerm.tier+"）不能提供紫二低档＋X的合法洗练或合成来源，已剔除对应路线。");
       return origins.length ? Object.assign(m, {origin:origins[0]}) : null;
     }
-    function routesFor(target) {
+    function* routesFor(target) {
       var sig = Rules.signature(target);
       if (!exactCache.has(sig)) {
         var prev = previous(target.quality), core = prev ? Rules.termsFor(target.dun, prev).filter(function (t) {
@@ -200,7 +201,13 @@
           var allowed=Rules.termsFor(target.dun,prev), pool=unique(core.concat(allowed.some(function(t){return termKey(t)===termKey(xTerm);}) ? [xTerm] : [])), candidates=[];
           var count=Rules.qualities.find(function(q){return q.id===prev;}).count;
           choose(pool,count,false,function(terms){var m=material(prev,terms);if(m)candidates.push(m);});
-          choose(candidates,metadata.count,true,function(inputs){if(!inherited(target,inputs))return;var route=verifiedRoute(target,inputs);if(route)selected.push(route);});
+          var combinations=[];
+          choose(candidates,metadata.count,true,function(inputs){combinations.push(inputs);});
+          for (var inputs of combinations) {
+            yield;
+            if (!inherited(target,inputs)) continue;
+            var route=verifiedRoute(target,inputs);if(route)selected.push(route);
+          }
         }
         // The optional concrete X is one fixed attr+tier at every quality. The
         // default U term is only a symbolic template, never an arbitrary tier.
@@ -219,10 +226,10 @@
       }
       return exactCache.get(sig);
     }
-    function fromRoute(route, mode, variant, pairFamily) {
+    function* fromRoute(route, mode, variant, pairFamily) {
       var children = [];
       for (var i=0;i<route.requirements.length;i++) {
-        var entry = route.requirements[i], child = build(entry.material, mode, false, variant, pairFamily);
+        var entry = route.requirements[i], child = yield* build(entry.material, mode, false, variant, pairFamily);
         if (!child) return null;
         children.push({ quantity:entry.quantity, node:child });
       }
@@ -239,7 +246,7 @@
       if (symbolicX && xIsExtra && containsX(target)) node.xSource=true;
       return node;
     }
-    function build(target, mode, noWash, variant, pairFamily) {
+    function* build(target, mode, noWash, variant, pairFamily) {
       variant=variant||0;
       pairFamily=pairFamily||0;
       var key = Rules.signature(target)+":"+mode+":"+Boolean(noWash)+":"+variant+":"+pairFamily;
@@ -249,7 +256,7 @@
         if (symbolicX && xIsExtra && containsX(target)) base.xSource=true;
         return base;
       }
-      var list = routesFor(target), ordered = list.slice();
+      var list = yield* routesFor(target), ordered = list.slice();
       // This is a material preparation choice, not a locally best-probability
       // search: retain both HM×3 and complementary same-X (2+1) families.
       if (target.quality==="p2" && pairFamily && !containsX(target)) {
@@ -271,7 +278,7 @@
       }
       // Guaranteed operations are preferred in the stable route. If the model
       // necessarily randomizes a blue speed, show it honestly as probability.
-      for (var i=0;i<ordered.length && !tree;i++) tree=fromRoute(ordered[i],mode,variant,pairFamily);
+      for (var i=0;i<ordered.length && !tree;i++) tree=yield* fromRoute(ordered[i],mode,variant,pairFamily);
       if (!tree && !noWash) tree=washed(target,mode);
       treeCache.set(key,tree);
       return tree && clone(tree);
@@ -283,21 +290,24 @@
       if (node.kind==="craft" && node.probability<1 && node.material.quality==="o1") output.push(node);
       node.children.forEach(function (c) { probabilityNodes(c.node,output); });
     }
-    function reuse(tree, target) {
+    function* reuse(tree, target) {
       if (target.quality!=="o2") return [];
       var nodes=[]; probabilityNodes(tree,nodes);
       var seen=new Set(), result=[];
-      nodes.forEach(function (node) {
+      for (var node of nodes) {
         var wanted=Rules.signature(node.material), producerKey=node.sourceKey;
-        if (seen.has(producerKey)) return;
+        if (seen.has(producerKey)) continue;
         seen.add(producerKey);
         var failures=node.outcomes.filter(function(o){return Rules.signature(o.material)!==wanted;}).map(function(o){return o.material;});
         var possible=[];
-        choose(failures,3,true,function(inputs){
-          if (!target.terms.every(function(t){return inputs.some(function(m){return m.terms.some(function(x){return termKey(t)===termKey(x);});});})) return;
+        var combinations=[];
+        choose(failures,3,true,function(inputs){combinations.push(inputs);});
+        for (var inputs of combinations) {
+          yield;
+          if (!target.terms.every(function(t){return inputs.some(function(m){return m.terms.some(function(x){return termKey(t)===termKey(x);});});})) continue;
           var recipe=verifiedRoute(target,inputs);
           if (recipe) possible.push(recipe);
-        });
+        }
         // Prefer a minimal 2+1 example when its candidate pool covers the target;
         // coverage, not a forced one-of-each A/B/C collection, is the condition.
         possible.sort(function(a,b){return b.probability-a.probability || a.requirements.length-b.requirements.length || (a.id<b.id ? -1 : 1);});
@@ -308,33 +318,67 @@
             note:"取三枚合法同品质失败品，同种可重复；去重候选池必须覆盖全部目标词条，缺少目标词条的组合不可达。图中为可行的2＋1示例，不要求A、B、C各一枚。",
             children:route.requirements.map(function(e){return {quantity:e.quantity,node:{kind:"failure",material:clone(e.material),children:[],probability:null,hasChance:false,sourceKey:producerKey}};}) });
         }
-      });
+      }
       return result;
     }
     var targets=best.targets.map(function(terms){return material(goal.quality,terms);}).filter(Boolean), strategies=[], seen=new Set();
-    targets.forEach(function (target) {
+    for (var target of targets) {
       // Two preparation families and a few whole-tree pivots retain useful
       // alternatives without taking a Cartesian product of material subtrees.
       var candidates=[];
-      [0,1].forEach(function(family){
-        candidates.push(build(target,"stable",false,0,family),build(target,"chance",false,0,family));
-        for(var variant=1;variant<4;variant++) candidates.push(build(target,'stable',false,variant,family),build(target,'chance',false,variant,family));
-      });
+      for (var family of [0,1]) {
+        for(var variant=0;variant<4;variant++) {
+          yield;
+          candidates.push(yield* build(target,'stable',false,variant,family),yield* build(target,'chance',false,variant,family));
+        }
+      }
       if (target.quality!=="b2" && sources(target).includes("wash")) candidates.push(washed(target,"stable"));
       // Direct complementary inputs and a single-X pool are distinct ideas,
       // not every permutation of concrete attributes.
       var categories=new Set();
-      routesFor(target).forEach(function(route){
+      for (var route of (yield* routesFor(target))) {
         var category=(route.deterministic ? "exact" : "chance")+":"+route.requirements.map(function(e){return Rules.signature(e.material)+'*'+e.quantity;}).join('|');
-        if (!categories.has(category) && categories.size<4) { categories.add(category); candidates.push(fromRoute(route,"stable",0,0)); }
-      });
-      candidates.filter(Boolean).forEach(function(tree){
-        var identity=shape(tree); if (seen.has(identity)) return; seen.add(identity);
-        strategies.push({ kind:tree.hasChance ? "probability" : "deterministic", tree:tree, reuse:reuse(tree,target),xTerm:clone(xTerm),symbolicX:symbolicX });
-      });
-    });
+        if (!categories.has(category) && categories.size<4) { categories.add(category); candidates.push(yield* fromRoute(route,"stable",0,0)); }
+      }
+      for (var tree of candidates.filter(Boolean)) {
+        var identity=shape(tree); if (seen.has(identity)) continue; seen.add(identity);
+        strategies.push({ kind:tree.hasChance ? "probability" : "deterministic", tree:tree, reuse:yield* reuse(tree,target),xTerm:clone(xTerm),symbolicX:symbolicX });
+      }
+    }
     if (!strategies.length) return Object.assign(failed(symbolicX ? "没有合法的常规材料准备路线" : "所选具体 X 无法提供合法的常规材料准备路线，请查看来源限制",xTerm),{targets:targets});
     return {valid:true,errors:[],targets:targets,strategies:strategies,xAttr:xAttr,xTerm:clone(xTerm),symbolicX:symbolicX,notes:Array.from(notes)};
+  }
+  function representative(goal) {
+    var steps=representativeSteps(goal), next;
+    do { next=steps.next(); } while (!next.done);
+    return next.value;
+  }
+  function serveRouteRequests(port) {
+    var active;
+    return function (event) {
+      var goal=event.data;
+      if (goal.type==='cancel-route') {
+        var interrupted=Boolean(active);
+        active=null;
+        port.postMessage({cancelled:true,interrupted:interrupted});
+        return;
+      }
+      var steps=active=representativeSteps(goal);
+      function run() {
+        if (active!==steps) return;
+        try {
+          var deadline=port.performance.now()+8, next;
+          do { next=steps.next(); } while (!next.done && port.performance.now()<deadline);
+          if (!next.done) { port.setTimeout(run,0); return; }
+          active=null;
+          port.postMessage({result:next.value});
+        } catch(error) {
+          active=null;
+          port.postMessage({error:String(error.message||error)});
+        }
+      }
+      run();
+    };
   }
   // A presentation-only projection: recipes, probabilities and favorite identities
   // stay on the original strategy. Ignore ingredient names/counts, but retain the
@@ -373,5 +417,5 @@
     });
     return groups;
   }
-  return {generate:generate,expand:expand,reuseRecipes:reuseRecipes,representative:representative,groupStrategies:groupStrategies};
+  return {generate:generate,expand:expand,reuseRecipes:reuseRecipes,representative:representative,serveRouteRequests:serveRouteRequests,groupStrategies:groupStrategies};
 });

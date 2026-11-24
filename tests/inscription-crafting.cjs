@@ -40,7 +40,7 @@ async function pageFor(mode = 'paths', width = 1024, address = url) {
   page.on('pageerror', error => scriptErrors.push(error.message));
   await page.route('**/*', route => {
     const requested = new URL(route.request().url());
-    return requested.protocol === 'file:' || requested.protocol === 'data:' || ['127.0.0.1', 'localhost'].includes(requested.hostname)
+    return ['file:', 'data:', 'blob:'].includes(requested.protocol) || ['127.0.0.1', 'localhost'].includes(requested.hostname)
       ? route.continue() : route.abort();
   });
   await openApp(page, address, { waitUntil: 'load' });
@@ -327,6 +327,7 @@ test('失败结果展开收起及缩放保持单张SVG，重绘保留比例', as
   const page = await pageFor(); try {
     const s = await goal(page); await generate(s);
     const body = s.locator('.craft-strategy-body').first();
+    await body.locator('svg').waitFor({state:'visible'});
     assert.equal(await body.locator('svg').count(), 1);
     const closed = await body.locator('svg').textContent();
     await body.locator('[data-craft-action="diagram-in"]').click();
@@ -446,11 +447,338 @@ for (const width of [360, 390, 768, 1024, 1440]) test(width + ' 真实导航、�
   } finally { await page.close(); }
 });
 
+test('complex results keep both default-open graphs but mount them on different frames', async () => {
+  const page=await pageFor('paths',390);
+  try{
+    const s=await goal(page,{dun:'虎遁',attrs:['内力','招架','治疗效果']});
+    await page.evaluate(()=>{
+      const real=InscriptionFlowchart.render;
+      let frame=0;
+      window.diagramFrames=[];
+      function next(){
+        frame++;
+        const viewports=[...document.querySelectorAll('#inscription-crafting-paths .craft-flow-viewport')];
+        window.diagramFrames.push(viewports.map(v=>v.querySelector('svg')?'drawn':v.clientHeight>0?'reserved':'empty').join(','));
+        requestAnimationFrame(next);
+      }
+      requestAnimationFrame(next);
+      window.diagramPasses=[];
+      InscriptionFlowchart.render=function(...args){
+        window.diagramPasses.push({frame,cards:document.querySelectorAll('#inscription-crafting-paths [data-route-card]').length});
+        return real.apply(this,args);
+      };
+    });
+    await s.locator('[data-craft-action="generate"]').press('Enter');
+    await s.locator('[data-flow-viewer]').nth(1).waitFor({state:'visible'});
+    await s.locator('[data-craft-results][aria-busy="false"]').waitFor();
+    assert.equal(await s.locator('[data-route-card]').count(),7);
+    assert.equal(await s.locator('[data-route-card][open]').count(),2);
+    const [first,second]=await page.evaluate(()=>window.diagramPasses);
+    assert.equal(first.cards,7,'all card shells are mounted before the first graph');
+    assert.ok(second.frame>first.frame,'both large graphs must not share the same frame');
+    const frames=await page.evaluate(()=>window.diagramFrames);
+    assert.ok(frames.includes('reserved'),'the first viewport must reserve its height before inserting its SVG');
+    assert.ok(frames.includes('drawn,reserved'),'the second viewport must reserve its height after the first SVG is in place');
+    assert.equal(await s.locator('.craft-flow-viewport[style]').count(),0,'the temporary size constraints are gone before reporting completion');
+    await page.evaluate(()=>{
+      const render=InscriptionFlowchart.render;
+      InscriptionFlowchart.render=function(...args){
+        queueMicrotask(()=>{
+          const dun=document.querySelector('#inscription-crafting-paths [data-craft-field="dun"]');
+          dun.value='云遁';dun.dispatchEvent(new Event('change',{bubbles:true}));
+        });
+        return render.apply(this,args);
+      };
+    });
+    await s.locator('[data-craft-action="generate"]').press('Enter');
+    await page.waitForFunction(()=>document.querySelector('#inscription-crafting-paths [data-craft-field="dun"]').value==='云遁');
+    await page.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(()=>requestAnimationFrame(r)))));
+    assert.equal(await page.evaluate(()=>window.diagramPasses.length),3,'the second old graph is cancelled');
+    assert.equal(await s.locator('[data-route-card]').count(),0);
+  }finally{await page.close();}
+});
+
+test('ordinary results also reserve the first view before attaching SVG', async () => {
+  const page=await pageFor('paths',390);
+  try{
+    const s=await goal(page);
+    await page.evaluate(()=>{
+      window.sawReservedOrdinary=false;
+      const watch=new MutationObserver(()=>{
+        const viewport=document.querySelector('#inscription-crafting-paths .craft-flow-viewport');
+        if(viewport&&!viewport.querySelector('svg')&&viewport.clientHeight>0)window.sawReservedOrdinary=true;
+      });
+      watch.observe(document.querySelector('#inscription-crafting-paths [data-craft-results]'),{childList:true,subtree:true});
+    });
+    await s.locator('[data-craft-action="generate"]').press('Enter');
+    await s.locator('[data-flow-viewer] svg').first().waitFor();
+    await s.locator('[data-craft-results][aria-busy="false"]').waitFor();
+    assert.equal(await s.locator('.craft-strategy[open]').count(),1);
+    assert.equal(await page.evaluate(()=>window.sawReservedOrdinary),true,'ordinary SVG must not force layout in the viewport creation task');
+    assert.equal(await s.locator('.craft-flow-viewport[style]').count(),0);
+  }finally{await page.close();}
+});
+
+test('initial route SVG is only exposed complete and preparation can be cancelled', async () => {
+  const page=await pageFor('paths',390);
+  try{
+    const s=await goal(page);
+    await page.evaluate(()=>{
+      const host=document.querySelector('#inscription-crafting-paths [data-craft-results]');
+      window.routeFrames=[];
+      const check=()=>{
+        const svg=host.querySelector('svg');
+        if(svg)window.routeFrames.push({shown:getComputedStyle(svg).visibility==='visible',labels:svg.querySelectorAll('text').length});
+        requestAnimationFrame(check);
+      };
+      requestAnimationFrame(check);
+    });
+    const generateButton=s.locator('[data-craft-action="generate"]');
+    await generateButton.press('Enter');
+    const svg=s.locator('[data-flow-viewer] svg').first();
+    await svg.waitFor({state:'visible'});
+    await s.locator('[data-craft-results][aria-busy="false"]').waitFor();
+    const drawn=await svg.locator('text').count();
+    const frames=await page.evaluate(()=>window.routeFrames);
+    assert.ok(frames.some(f=>!f.shown&&f.labels<drawn),'prepare text before exposing SVG');
+    assert.ok(frames.filter(f=>f.shown).every(f=>f.labels===drawn),'never expose a half-drawn diagram');
+    await page.evaluate(()=>{
+      const host=document.querySelector('#inscription-crafting-paths [data-craft-results]');
+      const control=document.querySelector('#inscription-crafting-paths [data-craft-action="cancel-plan"]');
+      const old=host.querySelector('svg');
+      const observe=new MutationObserver(()=>{
+        const svg=host.querySelector('svg');
+        if(!svg||svg===old||getComputedStyle(svg).visibility==='visible'||control.hidden)return;
+        observe.disconnect();control.click();
+      });
+      observe.observe(host,{childList:true,subtree:true});
+    });
+    await generateButton.press('Enter');
+    await s.locator('[data-craft-status]').getByText('已取消路线计算').waitFor();
+    assert.equal(await s.locator('[data-flow-viewer]').count(),0);
+    await s.locator('[data-craft-results][aria-busy="false"]').waitFor({state:'attached'});
+  }finally{await page.close();}
+});
+
 test('file协议共享规则和真实入口可以生成完整路线', async () => {
   const page = await pageFor('paths', 1024, 'file:///' + path.resolve(__dirname, '../index.html').replace(/\\/g, '/')); try {
     const s = await goal(page); await generate(s);
     assert.equal(await s.locator('.craft-strategy').count(), 2);
     assert.equal(await s.locator('svg').first().getAttribute('role'), 'img');
+  } finally { await page.close(); }
+});
+
+test('P08/P11 wiring: cancellation/replacement terminates native workers; remaining request uses unchanged representative results', async () => {
+  const page = await pageFor();
+  try {
+    const s = await goal(page);
+    await page.evaluate(() => {
+      const Native = window.Worker;
+      const probes = window.inscriptionWorkerProbes = [];
+      window.Worker = class extends Native {
+        constructor(url) {
+          super(url);
+          this.probe = { terminated: false, accepted: null, result: null, cancelRequested: false };
+          probes.push(this.probe);
+          // Hold the first two submissions only to make the race deterministic.
+          // This is a lifecycle test, not a CPU stop-latency measurement.
+          this.hold = probes.length <= 2;
+          this.addEventListener('message', e => { this.probe.result = e.data.result; this.probe.error = e.data.error; });
+        }
+        postMessage(goal) {
+          if (goal.type === 'cancel-route') {
+            this.probe.cancelRequested = true;
+            return super.postMessage(goal);
+          }
+          this.probe.accepted = goal;
+          if (!this.hold) super.postMessage(goal);
+        }
+        terminate() { this.probe.terminated = true; super.terminate(); }
+      };
+    });
+    const start = s.locator('[data-craft-action="generate"]');
+    const stop = s.locator('[data-craft-action="cancel-plan"]');
+    await start.click();
+    await stop.click();
+    assert.match(await s.locator('[data-craft-status]').innerText(), /已取消/);
+    assert.equal(await start.evaluate(el => el === document.activeElement), true);
+    await field(s, 'search').fill('扶苏');
+    assert.equal(await field(s, 'search').inputValue(), '扶苏');
+    await start.press('Enter');
+    assert.equal(await page.evaluate(() => window.inscriptionWorkerProbes.length), 2, 'second request is pending before changing the target');
+    await field(s, 'quality').selectOption('o1');
+    await field(s, 'quality').selectOption('o2');
+    for (let i = 0; i < 3; i++) await field(s, 'attr').nth(i).selectOption('技能穿透');
+    await start.press('Enter');
+    try { await s.locator('.craft-strategy').first().waitFor({ state: 'visible' }); }
+    catch (error) {
+      const diagnostics = await page.evaluate(() => ({
+        status: document.querySelector('#inscription-crafting-paths [data-craft-status]').textContent,
+        probes: window.inscriptionWorkerProbes.map(p => ({ goal: p.accepted, stopped: p.terminated, error: p.error, valid: p.result?.valid }))
+      }));
+      throw new Error(JSON.stringify(diagnostics), { cause: error });
+    }
+    const details = await page.evaluate(() => {
+      const probes = window.inscriptionWorkerProbes;
+      return {
+        states: probes.map(probe => [probe.terminated, Boolean(probe.result), probe.cancelRequested]),
+        difference: JSON.stringify(probes[2].result) !== JSON.stringify(window.InscriptionPaths.representative(probes[2].accepted))
+      };
+    });
+    assert.deepEqual(details.states, [[true, false, true], [true, false, true], [true, true, false]]);
+    assert.equal(details.difference, false);
+  } finally { await page.close(); }
+});
+
+test('D01/D02/D04–D06: opening personal progress distinguishes empty from unreadable without rewriting the archive', async () => {
+  const page = await pageFor();
+  try {
+    await page.locator('[data-mode="progress"]').click();
+    assert.match(await page.locator('#ins-progress-list').innerText(), /尚未保存弟子铭文/);
+    assert.equal(await getAccountItem(page, PROGRESS_KEY), null);
+    for (const raw of ['{}', '{"incomplete":', 'null', '[]', '13', '']) {
+      await setAccountItem(page, PROGRESS_KEY, raw);
+      await page.reload({ waitUntil: 'load' });
+      await openInscription(page);
+      await page.locator('[data-mode="progress"]').click();
+      assert.equal(await page.locator('#ins-progress-search').isDisabled(), raw !== '{}');
+      assert.equal(await page.locator('#ins-progress-storage-status').isVisible(), raw !== '{}');
+      if (raw !== '{}') assert.doesNotMatch(await page.locator('#ins-progress-list').innerText(), /尚未保存/);
+      assert.equal(await getAccountItem(page, PROGRESS_KEY), raw);
+    }
+  } finally { await page.close(); }
+});
+
+test('large simulation archives validate off the main thread before the bench is usable', async () => {
+  const page = await pageFor();
+  try {
+    const saved = await page.evaluate(() => {
+      const api=window.InscriptionCraftingState, accounts=window.QinshiAccounts;
+      const state=window.InscriptionSimulation.upgrade(api.createWorkbench(accounts).inspect().state);
+      api.createStore(accounts).updateDraft({simpleWorkbench:state,unrelatedArchive:'x'.repeat(160000)});
+      const Native=window.Worker;
+      window.Worker=class extends Native {
+        postMessage(payload) {
+          if(payload?.type==='inspect-workbench'){
+            window.historyReads=(window.historyReads||0)+1;
+            window.finishHistory=()=>super.postMessage(payload);return;
+          }
+          super.postMessage(payload);
+        }
+      };
+      return accounts.getItem(api.KEY);
+    });
+    await page.locator('[data-mode="crafting-simulator"]').press('Enter');
+    const scene=section(page,'simulator').locator('[data-craft-simulator]');
+    assert.equal(await page.evaluate(()=>typeof window.finishHistory),'function');
+    assert.equal(await scene.locator('[data-craft-action="open-bag"]').count(),0);
+    await page.evaluate(()=>window.finishHistory());
+    await scene.locator('[data-craft-action="open-bag"]').waitFor({state:'visible'});
+    assert.equal(await getAccountItem(page,KEY),saved,'read-only validation must preserve exact bytes');
+
+    await page.locator('[data-mode="crafting-paths"]').press('Enter');
+    await page.locator('[data-mode="crafting-simulator"]').press('Enter');
+    const broken = '{"unfinished":"'+'x'.repeat(160000);
+    await setAccountItem(page,KEY,broken);
+    await page.evaluate(()=>window.finishHistory());
+    await page.waitForFunction(()=>window.historyReads===3);
+    assert.equal(await scene.locator('[data-craft-action="open-bag"]').count(),0);
+    await page.evaluate(()=>window.finishHistory());
+    await scene.locator('[data-craft-action="isolate-legacy"]').waitFor({state:'visible'});
+    assert.equal(await scene.locator('[data-craft-action="open-bag"]').count(),0);
+    assert.equal(await getAccountItem(page,KEY),broken);
+  }finally{await page.close();}
+});
+
+test('large simulation writes wait for validation and cannot overwrite an intervening archive change', async () => {
+  const page=await pageFor();
+  try{
+    const key=KEY;
+    const original=await page.evaluate(()=>{
+      const S=InscriptionCraftingState,A=QinshiAccounts;
+      const state=InscriptionSimulation.upgrade(S.createWorkbench(A).inspect().state);
+      S.createStore(A).updateDraft({simpleWorkbench:state,unrelated:'x'.repeat(160000)});
+      const Native=window.Worker;
+      window.Worker=class extends Native{
+        postMessage(payload){
+          if(payload?.type==='prepare-workbench-write'){window.finishWrite=()=>super.postMessage(payload);return;}
+          super.postMessage(payload);
+        }
+      };
+      return A.getItem(S.KEY);
+    });
+    await page.locator('[data-mode="crafting-simulator"]').press('Enter');
+    const s=section(page,'simulator');
+    await s.locator('[data-craft-action="open-bag"]').waitFor({state:'visible'});
+    await field(s,'dun').selectOption('地遁');
+    await s.locator('[data-craft-action="apply-simulation"]').press('Enter');
+    assert.equal(await page.evaluate(()=>typeof window.finishWrite),'function');
+    assert.equal(await getAccountItem(page,key),original);
+    const intervening=JSON.parse(original);
+    intervening.draft.anotherModule='kept';
+    await setAccountItem(page,key,JSON.stringify(intervening));
+    await page.evaluate(()=>window.finishWrite());
+    await s.locator('[data-craft-status]').filter({hasText:'已更新'}).waitFor({state:'visible'});
+    assert.equal(await getAccountItem(page,key),JSON.stringify(intervening));
+    await page.locator('[data-mode="crafting-paths"]').press('Enter');
+    await page.locator('[data-mode="crafting-simulator"]').press('Enter');
+    await s.locator('[data-craft-action="open-bag"]').waitFor({state:'visible'});
+    await page.evaluate(key=>{
+      window.restoreArchiveWrite=QinshiAccounts.setItem;
+      QinshiAccounts.setItem=(k,v)=>k===key?false:window.restoreArchiveWrite(k,v);
+    },key);
+    await s.locator('[data-craft-action="apply-simulation"]').press('Enter');
+    await page.evaluate(()=>window.finishWrite());
+    await s.locator('[data-craft-status]').filter({hasText:'未保存'}).waitFor({state:'visible'});
+    assert.equal(await getAccountItem(page,key),JSON.stringify(intervening));
+    await page.evaluate(()=>{QinshiAccounts.setItem=window.restoreArchiveWrite;});
+    await s.locator('[data-craft-action="apply-simulation"]').press('Enter');
+    await page.evaluate(()=>window.finishWrite());
+    await page.waitForFunction(key=>JSON.parse(QinshiAccounts.getItem(key)).draft.simpleWorkbench.target.dun==='地遁',key);
+    const final=JSON.parse(await getAccountItem(page,key));
+    assert.equal(final.draft.anotherModule,'kept');
+    assert.equal(final.draft.unrelated,intervening.draft.unrelated);
+    assert.deepEqual(final.draft.simpleWorkbench.lab.lots,[]);
+  }finally{await page.close();}
+});
+
+test('Personal-progress storage refusal, quota and read failure keep bytes, draft and focus', async () => {
+  const page = await pageFor();
+  try {
+    const baseline = '{"unknownArchiveField":{"keep":"原值"}}';
+    await setAccountItem(page, PROGRESS_KEY, baseline);
+    await page.reload({ waitUntil: 'load' });
+    await openInscription(page);
+    await page.locator('[data-mode="progress"]').click();
+    await page.locator('#ins-progress-search').fill('神鬼谷盖聂');
+    await page.locator('#ins-progress-suggestions button').first().click();
+    const editor = page.locator('#ins-progress-editor');
+    const quality = editor.locator('.ins-editor-slot[data-tian="天同"] .ins-edit-quality');
+    await quality.selectOption('b1');
+    const save = editor.locator('[data-action="save"]');
+    for (const mode of ['false', 'throw', 'read']) {
+      await page.evaluate(({ key, mode }) => {
+        const accounts = window.QinshiAccounts;
+        if (!window.originalProgressIo) window.originalProgressIo = { read: accounts.getItem, write: accounts.setItem };
+        const { read, write } = window.originalProgressIo;
+        accounts.getItem = logical => {
+          if (logical === key && mode === 'read') throw Error('synthetic read failure');
+          return read(logical);
+        };
+        accounts.setItem = (logical, raw) => {
+          if (logical !== key) return write(logical, raw);
+          if (mode === 'false') return false;
+          throw Error('synthetic quota failure');
+        };
+      }, { key: PROGRESS_KEY, mode });
+      await save.click();
+      assert.match(await page.locator('#ins-common-status').innerText(), /保存失败/);
+      assert.equal(await quality.inputValue(), 'b1');
+      assert.equal(await save.evaluate(el => el === document.activeElement), true);
+      const raw = await page.evaluate(key => window.originalProgressIo.read(key), PROGRESS_KEY);
+      assert.equal(raw, baseline);
+    }
+    assert.equal(await page.locator('#ins-progress-storage-status').isVisible(), true);
   } finally { await page.close(); }
 });
 

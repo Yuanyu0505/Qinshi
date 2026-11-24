@@ -6,7 +6,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
 const { createServer } = require('../serve.js');
 const { openApp, ensureTestAccount, currentAppVersion } = require('./browser-test-helpers.cjs');
 const OLD = 'df997cdf1fc37a099ce965c03225426b991d7563';
-const ASSETS = ['js/inscription-rules.js', 'js/inscription-paths.js', 'js/inscription-crafting-state.js', 'js/inscription-crafting-ui.js', 'css/inscription-crafting.css'];
+const ASSETS = ['js/inscription-rules.js', 'js/inscription-paths.js', 'js/inscription-path-worker.js', 'js/inscription-crafting-state.js', 'js/inscription-crafting-ui.js', 'css/inscription-crafting.css'];
 
 async function openServer() {
   const server = createServer();
@@ -56,7 +56,7 @@ test('crafting PWA restores pending offline and commits once without changing ac
       const cache = await caches.open(names.find(name => name.startsWith('qinshi-site-')));
       return Promise.all(assets.map(async asset => Boolean(await cache.match(new URL(asset, location.href).href))));
     }, ASSETS);
-    assert.deepEqual(cached, [true, true, true, true, true]);
+    assert.deepEqual(cached, ASSETS.map(() => true));
     await context.setOffline(true);
     await page.reload({ waitUntil: 'networkidle' });
     const after = await page.evaluate(id => {
@@ -83,6 +83,16 @@ test('crafting PWA restores pending offline and commits once without changing ac
     assert.equal(after.output.length, 1);
     assert.equal(after.output[0].quantity, 1);
     assert.deepEqual(after.output[0].material.terms.map(term => [term.attr, term.tier]).sort(), [['技能穿透', 'H'], ['技能穿透', 'L'], ['技能穿透', 'M']]);
+    await page.locator('#mobile-more-toggle').click();
+    await page.locator('#mobile-more-layer [data-partition="inscription"]').click();
+    await page.locator('[data-mode="crafting-paths"]').click();
+    const paths = page.locator('#inscription-crafting-paths');
+    await paths.locator('[data-craft-field="quality"]').selectOption('o2');
+    await paths.locator('[data-craft-field="dun"]').selectOption('地遁');
+    for (let index = 0; index < 3; index++) await paths.locator('[data-craft-field="attr"]').nth(index).selectOption('技能穿透');
+    await paths.locator('[data-craft-action="generate"]').click();
+    await paths.locator('.craft-strategy').first().waitFor({ state: 'visible' });
+    assert.equal(await paths.locator('.craft-strategy').count(), 2);
   } catch (error) {
     try {
       if (page && !page.isClosed()) console.error('Crafting offline fixture failure diagnostics', { pageErrors, registration: await page.evaluate(async () => {

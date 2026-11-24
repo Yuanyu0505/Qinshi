@@ -47,6 +47,7 @@ jobs:
           cp js/six-halls.js js/six-halls-ui.js _site/js/
           cp js/pilots.js js/pilots-ui.js _site/js/
           cp js/inscription-simulation.js js/inscription-flow-model.js js/inscription-flow-layout.js js/inscription-flowchart.js js/inscription-terms.js js/inscription-progress-rules.js js/inscription-route-favorites.js _site/js/
+          cp js/inscription-path-worker.js _site/js/
           cp js/inscription-reference.js js/inscription-reverse.js _site/js/
           cp js/cloud-sync-config.js js/cloud-sync-core.js js/cloud-sync-crypto.js js/cloud-sync-storage.js js/cloud-sync-api.js js/cloud-sync.js _site/js/
           cp -R css data images icons _site/

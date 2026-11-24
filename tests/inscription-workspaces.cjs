@@ -12,6 +12,7 @@ test('path children retain independent targets and generated routes on switching
  await direct.locator('[data-craft-field="dun"]').selectOption('人遁');
  for(const [i,a] of ['技能穿透','技能穿透','PVP伤害'].entries())await direct.locator('[data-craft-field="attr"]').nth(i).selectOption(a);
  await direct.locator('[data-craft-action="generate"]').click();await direct.locator('.craft-strategy').first().waitFor();
+ await direct.locator('[data-craft-results][aria-busy="false"]').waitFor();
  const before=await direct.locator('[data-craft-results]').innerText();
  await root.locator('[data-locator-tab="reverse"]').click();const reverse=panel(p,'crafting-paths','reverse');
  await reverse.locator('[data-reverse-attr]').first().selectOption('速');await reverse.locator('[data-craft-action="reverse-search"]').click();
@@ -49,19 +50,40 @@ test('returning to common reverse results refreshes personal classification with
  await p.locator('[data-mode="crafting-paths"]').click();assert.ok(await reverse.locator('[data-reverse-result]').count()>0);
  }finally{await p.close();}
 });
-test('pending path generations render only into their own child and never cross an account switch',async()=>{
+test('worker pending path generations stop when changing child or account and stale replies never render',async()=>{
  const p=await setup();try{await p.locator('[data-mode="crafting-paths"]').click();const root=p.locator('#inscription-crafting-paths'),direct=panel(p,'crafting-paths','direct');
  await direct.locator('[data-craft-field="dun"]').selectOption('云遁');for(const [i,a] of ['护盾','护盾','技免'].entries())await direct.locator('[data-craft-field="attr"]').nth(i).selectOption(a);
- await p.evaluate(()=>{const original=window.setTimeout;window.__pendingPlans=[];window.setTimeout=function(fn,delay,...args){if(delay===0&&String(fn).includes('P.representative')){window.__pendingPlans.push(fn);return 987654;}return original(fn,delay,...args);};});
- await direct.locator('[data-craft-action="generate"]').click();await root.locator('[data-locator-tab="reverse"]').click();const reverse=panel(p,'crafting-paths','reverse');
- for(const control of await reverse.locator('[data-reverse-attr]').all())await control.selectOption('速');await reverse.locator('[data-craft-action="reverse-search"]').click();await reverse.locator('[data-craft-action="reverse-apply"]').first().click();await reverse.locator('[data-craft-action="generate"]').click();
- assert.equal(await p.evaluate(()=>__pendingPlans.length),2);await p.evaluate(()=>__pendingPlans.pop()());assert.ok(await reverse.locator('.craft-strategy').count()>0);assert.equal(await direct.locator('.craft-strategy').count(),0);
- const reverseText=await reverse.locator('[data-craft-results]').innerText();await p.evaluate(()=>__pendingPlans.shift()());assert.ok(await direct.locator('.craft-strategy').count()>0);assert.equal(await reverse.locator('[data-craft-results]').innerText(),reverseText);
- await root.locator('[data-locator-tab="direct"]').click();await direct.locator('[data-craft-action="clear-options"]').click();await direct.locator('[data-craft-field="dun"]').selectOption('云遁');for(const [i,a] of ['护盾','护盾','技免'].entries())await direct.locator('[data-craft-field="attr"]').nth(i).selectOption(a);await direct.locator('[data-craft-action="generate"]').click();
+ await p.evaluate(()=>{
+   const Native=window.Worker;
+   window.__pendingPlans=[];
+   window.Worker=class extends Native{
+     postMessage(goal){
+       if(goal.type==='cancel-route')return super.postMessage(goal);
+       this.entry={goal,reply:this.onmessage,terminated:false};
+       window.__pendingPlans.push(this.entry);
+       if(window.__pendingPlans.length===2)super.postMessage(goal);
+     }
+     terminate(){this.entry.terminated=true;super.terminate();}
+   };
+ });
+ await direct.locator('[data-craft-action="generate"]').press('Enter');await root.locator('[data-locator-tab="reverse"]').click();const reverse=panel(p,'crafting-paths','reverse');
+ for(const control of await reverse.locator('[data-reverse-attr]').all())await control.selectOption('速');await reverse.locator('[data-craft-action="reverse-search"]').click();await reverse.locator('[data-craft-action="reverse-apply"]').first().click();await reverse.locator('[data-craft-action="generate"]').press('Enter');
+ await reverse.locator('.craft-strategy').first().waitFor();
+ await reverse.locator('[data-craft-results][aria-busy="false"]').waitFor();
+ await p.waitForFunction(()=>window.__pendingPlans[0].terminated);
+ assert.deepEqual(await p.evaluate(()=>window.__pendingPlans.map(entry=>entry.terminated)),[true,true]);
+ const reverseText=await reverse.locator('[data-craft-results]').innerText();
+ await p.evaluate(()=>{const first=window.__pendingPlans[0];first.reply({data:{result:InscriptionPaths.representative(first.goal)}});});
+ assert.equal(await direct.locator('.craft-strategy').count(),0);assert.equal(await reverse.locator('[data-craft-results]').innerText(),reverseText);
+ await root.locator('[data-locator-tab="direct"]').click();await direct.locator('[data-craft-action="generate"]').press('Enter');
  // Bind without the normal page reload so the old callback is deliberately
  // still alive, exercising the controller's account guard itself.
  await p.evaluate(()=>{const next=QinshiAccounts.createAccount({name:'Pending generation account',server:'Browser test'});QinshiAccounts.bindAccount(next.id);InscriptionCraftingUI.refresh();});
- const raw=await p.evaluate(()=>QinshiAccounts.getItem('qinshi_inscription_locator_paths_direct_v1'));await p.evaluate(()=>{while(__pendingPlans.length)__pendingPlans.shift()();});assert.equal(await direct.locator('.craft-strategy').count(),0);assert.equal(await p.evaluate(()=>QinshiAccounts.getItem('qinshi_inscription_locator_paths_direct_v1')),raw);
+ const raw=await p.evaluate(()=>QinshiAccounts.getItem('qinshi_inscription_locator_paths_direct_v1'));
+ await p.waitForFunction(()=>window.__pendingPlans[2].terminated);
+ assert.deepEqual(await p.evaluate(()=>window.__pendingPlans.map(entry=>entry.terminated)),[true,true,true]);
+ await p.evaluate(()=>{const old=window.__pendingPlans[2];old.reply({data:{result:InscriptionPaths.representative(old.goal)}});});
+ assert.equal(await direct.locator('.craft-strategy').count(),0);assert.equal(await p.evaluate(()=>QinshiAccounts.getItem('qinshi_inscription_locator_paths_direct_v1')),raw);
  }finally{await p.close();}
 });
 

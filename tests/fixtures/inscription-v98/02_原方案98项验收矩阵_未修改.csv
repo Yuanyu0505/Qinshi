@@ -1,0 +1,99 @@
+﻿编号,优先级,类别,输入或操作,必须满足的期望,验收证据,阻断门槛,源码锚点,执行状态
+D01,P0,个人存储,未存在进度键(null),显示正常空进度，不自动创建数据；允许合法新记录,存储前后对照+页面错误状态+录屏/单测,G2,inscription.js loadProgress/saveProgress/renderEditor,待实施/未验证
+D02,P0,个人存储,进度JSON为{},正常空态，存储原始内容不因阅读变化,存储前后对照+页面错误状态+录屏/单测,G2,inscription.js loadProgress/saveProgress/renderEditor,待实施/未验证
+D03,P0,个人存储,已有合法旧记录和未识别附加字段,完整显示或标注必要异常，其他字段不被重写,存储前后对照+页面错误状态+录屏/单测,G2,inscription.js loadProgress/saveProgress/renderEditor,待实施/未验证
+D04,P0,个人存储,原存储为无效JSON字符串,读取失败提示，不显示普通空档，不执行写入,存储前后对照+页面错误状态+录屏/单测,G2,inscription.js loadProgress/saveProgress/renderEditor,待实施/未验证
+D05,P0,个人存储,JSON内容为数组,读取失败，原值保持不变,存储前后对照+页面错误状态+录屏/单测,G2,inscription.js loadProgress/saveProgress/renderEditor,待实施/未验证
+D06,P0,个人存储,JSON内容为null/数字/字符串,读取失败，不开放以空档为基础的保存,存储前后对照+页面错误状态+录屏/单测,G2,inscription.js loadProgress/saveProgress/renderEditor,待实施/未验证
+D07,P0,个人存储,getItem抛异常,展示读取失败；不臆测为空,存储前后对照+页面错误状态+录屏/单测,G2,inscription.js loadProgress/saveProgress/renderEditor,待实施/未验证
+D08,P0,个人存储,setItem返回false,提示保存失败；旧存储、内存确认状态、输入草稿不丢,存储前后对照+页面错误状态+录屏/单测,G2,inscription.js loadProgress/saveProgress/renderEditor,待实施/未验证
+D09,P0,个人存储,setItem抛错,不假成功，不覆盖旧数据,存储前后对照+页面错误状态+录屏/单测,G2,inscription.js loadProgress/saveProgress/renderEditor,待实施/未验证
+D10,P0,个人存储,只读账号编辑并保存,保留查看，拒绝写入且反馈准确,存储前后对照+页面错误状态+录屏/单测,G2,inscription.js loadProgress/saveProgress/renderEditor,待实施/未验证
+D11,P0,个人存储,编辑一个弟子含历史非标准字段，其余弟子未改,仅该记录明确编辑的范围有改动；其它历史对象值保持不变,存储前后对照+页面错误状态+录屏/单测,G2,inscription.js loadProgress/saveProgress/renderEditor,待实施/未验证
+D12,P0,个人存储,保存中输入法组合、点击取消、品质确认,焦点及未提交草稿不因无关局部更新消失,存储前后对照+页面错误状态+录屏/单测,G2,inscription.js loadProgress/saveProgress/renderEditor,待实施/未验证
+A01,P0,账号隔离,账号A→B→A，两个账号不同的个人进度,只出现当前账号数据、返回A后数据恢复,测试账号+网络/控制台日志+存储对照,G2,inscription.js / account-profiles 当前仓库,待实施/未验证
+A02,P0,账号隔离,账号A→B→A，常用弟子完全不同,常用标签与查询排序不串号,测试账号+网络/控制台日志+存储对照,G2,inscription.js / account-profiles 当前仓库,待实施/未验证
+A03,P0,账号隔离,查询批次尚未结束时切换账号,旧查询回调不得写入新账号结果,测试账号+网络/控制台日志+存储对照,G2,inscription.js / account-profiles 当前仓库,待实施/未验证
+A04,P0,账号隔离,生成代表路线尚未结束时修改目标/切账号,过期结果被取消或忽略，不覆盖当前目标,测试账号+网络/控制台日志+存储对照,G2,inscription.js / account-profiles 当前仓库,待实施/未验证
+A05,P0,账号隔离,收藏保存进行中切账号,旧收藏请求回调不能把A状态写进B,测试账号+网络/控制台日志+存储对照,G2,inscription.js / account-profiles 当前仓库,待实施/未验证
+A06,P0,账号隔离,模拟有未提交操作时切账号,当前草稿和私有状态按原账户规则隔离,测试账号+网络/控制台日志+存储对照,G2,inscription.js / account-profiles 当前仓库,待实施/未验证
+A07,P0,账号隔离,只读账号/租约不属于当前标签,修改被拒绝，必要反馈存在,测试账号+网络/控制台日志+存储对照,G2,inscription.js / account-profiles 当前仓库,待实施/未验证
+A08,P0,账号隔离,两标签同时编辑同一账户收藏/历史,并发与版本token保护不退化,测试账号+网络/控制台日志+存储对照,G2,inscription.js / account-profiles 当前仓库,待实施/未验证
+A09,P0,账号隔离,存储配额不足、浏览器隐私模式,失败不会虚报成功，不覆盖备份,测试账号+网络/控制台日志+存储对照,G2,inscription.js / account-profiles 当前仓库,待实施/未验证
+A10,P0,账号隔离,账号切换实际是整页重载,记录事实；如原有机制正确不新增多余监听器,测试账号+网络/控制台日志+存储对照,G2,inscription.js / account-profiles 当前仓库,待实施/未验证
+C01,P0,计算与概率,2蓝二合法配方升紫一,输入数量品质与晋升产物准确,独立朴素oracle+单测日志+差分报告,G1,inscription-rules.js/inscription-paths.js,待实施/未验证
+C02,P0,计算与概率,3紫一升紫二,输入数量与词条合法性准确,独立朴素oracle+单测日志+差分报告,G1,inscription-rules.js/inscription-paths.js,待实施/未验证
+C03,P0,计算与概率,2紫二升橙一,输入数量与词条合法性准确,独立朴素oracle+单测日志+差分报告,G1,inscription-rules.js/inscription-paths.js,待实施/未验证
+C04,P0,计算与概率,3橙一升橙二,输入数量与词条合法性准确,独立朴素oracle+单测日志+差分报告,G1,inscription-rules.js/inscription-paths.js,待实施/未验证
+C05,P0,计算与概率,前缀不同的材料混用,非法且不给伪造概率,独立朴素oracle+单测日志+差分报告,G1,inscription-rules.js/inscription-paths.js,待实施/未验证
+C06,P0,计算与概率,遁位不匹配混用,非法且不给伪造可达结果,独立朴素oracle+单测日志+差分报告,G1,inscription-rules.js/inscription-paths.js,待实施/未验证
+C07,P0,计算与概率,同属性同档重复,合法性校验拒绝,独立朴素oracle+单测日志+差分报告,G1,inscription-rules.js/inscription-paths.js,待实施/未验证
+C08,P0,计算与概率,一枚词条超过2条高档,拒绝不合法结果,独立朴素oracle+单测日志+差分报告,G1,inscription-rules.js/inscription-paths.js,待实施/未验证
+C09,P0,计算与概率,同属性不同档位、合法品质,按原游戏规则输出可见合法集合,独立朴素oracle+单测日志+差分报告,G1,inscription-rules.js/inscription-paths.js,待实施/未验证
+C10,P0,计算与概率,紫二低档洗练与中档合成来源,来源区分准确，无伪转化,独立朴素oracle+单测日志+差分报告,G1,inscription-rules.js/inscription-paths.js,待实施/未验证
+C11,P0,计算与概率,蓝二速度档位不可辨,不能强制指定H/M或伪造概率,独立朴素oracle+单测日志+差分报告,G1,inscription-rules.js/inscription-paths.js,待实施/未验证
+C12,P0,计算与概率,指定具体X且多阶段继承,全链相同X属性档位，不偷换,独立朴素oracle+单测日志+差分报告,G1,inscription-rules.js/inscription-paths.js,待实施/未验证
+C13,P0,计算与概率,符号X未指定具体属性,保持符号语义，不宣称必有指定X,独立朴素oracle+单测日志+差分报告,G1,inscription-rules.js/inscription-paths.js,待实施/未验证
+C14,P0,计算与概率,Rules.preview多个可见结果,每个结果有效、唯一，概率和误差≤1e-9,独立朴素oracle+单测日志+差分报告,G1,inscription-rules.js/inscription-paths.js,待实施/未验证
+C15,P0,计算与概率,同材料投入顺序置换,适用无序模型下合法可见结果及概率不变,独立朴素oracle+单测日志+差分报告,G1,inscription-rules.js/inscription-paths.js,待实施/未验证
+C16,P0,计算与概率,Rules.sample随机边界0/接近1,样本属于预览集合，非法random被拒,独立朴素oracle+单测日志+差分报告,G1,inscription-rules.js/inscription-paths.js,待实施/未验证
+C17,P0,计算与概率,多目标Pareto筛选,只宣称数值非劣，不冒充最低洗练/最低总材料成本,独立朴素oracle+单测日志+差分报告,G1,inscription-rules.js/inscription-paths.js,待实施/未验证
+C18,P0,计算与概率,天府/地遁/橙二/三技能穿透,基线直接193、代表2；职责差异保留；版本资料变更须注明,独立朴素oracle+单测日志+差分报告,G1,inscription-rules.js/inscription-paths.js,待实施/未验证
+C19,P0,计算与概率,完整代表路线逐节点校验,每步经Rules.preview验证且来源/数量相符,独立朴素oracle+单测日志+差分报告,G1,inscription-rules.js/inscription-paths.js,待实施/未验证
+C20,P0,计算与概率,目标不可生成合法代表路线,明确不可达或暂无代表路线，不拼接非法步骤,独立朴素oracle+单测日志+差分报告,G1,inscription-rules.js/inscription-paths.js,待实施/未验证
+I01,P0,模拟库存守恒,一个背包批次仅有1件，两个槽位重复选择,禁止超额预占，不变成两件,操作前后JSON差分+状态序列测试,G1,inscription-simulation.js/inscription-crafting-state.js,待实施/未验证
+I02,P0,模拟库存守恒,同签名来自两个不同模拟记录的批次,保持来源记录ID，补量不误归属,操作前后JSON差分+状态序列测试,G1,inscription-simulation.js/inscription-crafting-state.js,待实施/未验证
+I03,P0,模拟库存守恒,同名同属性失败品复用,仅允许合法失败品，有明确来源,操作前后JSON差分+状态序列测试,G1,inscription-simulation.js/inscription-crafting-state.js,待实施/未验证
+I04,P0,模拟库存守恒,AA+B材料组合、失败品混入,配方和可见结果符合基线模型,操作前后JSON差分+状态序列测试,G1,inscription-simulation.js/inscription-crafting-state.js,待实施/未验证
+I05,P0,模拟库存守恒,AAA不同来源组合,不以同属性覆盖所有差异,操作前后JSON差分+状态序列测试,G1,inscription-simulation.js/inscription-crafting-state.js,待实施/未验证
+I06,P0,模拟库存守恒,来源记录引用不存在的ID,严格拒绝，不静默修复,操作前后JSON差分+状态序列测试,G1,inscription-simulation.js/inscription-crafting-state.js,待实施/未验证
+I07,P0,模拟库存守恒,来源引用循环或指向未来记录,严格拒绝且不写回,操作前后JSON差分+状态序列测试,G1,inscription-simulation.js/inscription-crafting-state.js,待实施/未验证
+I08,P0,模拟库存守恒,重复recordID,严格拒绝，不因缓存误判有效,操作前后JSON差分+状态序列测试,G1,inscription-simulation.js/inscription-crafting-state.js,待实施/未验证
+I09,P0,模拟库存守恒,同recordID内容被人为改写,不因缓存命中跳过新的合法性检查,操作前后JSON差分+状态序列测试,G1,inscription-simulation.js/inscription-crafting-state.js,待实施/未验证
+I10,P0,模拟库存守恒,模型概率字段被修改,与Rules.preview不一致时拒绝,操作前后JSON差分+状态序列测试,G1,inscription-simulation.js/inscription-crafting-state.js,待实施/未验证
+I11,P0,模拟库存守恒,模拟完成，自动入包开启,产物数量与creditedLot一致，不能重复领取,操作前后JSON差分+状态序列测试,G1,inscription-simulation.js/inscription-crafting-state.js,待实施/未验证
+I12,P0,模拟库存守恒,模拟完成，自动入包关闭,按原逻辑保留pending状态，不能擅自入包,操作前后JSON差分+状态序列测试,G1,inscription-simulation.js/inscription-crafting-state.js,待实施/未验证
+I13,P0,模拟库存守恒,撤销一步已消费材料,恢复数量与来源记录，undo与revision一致,操作前后JSON差分+状态序列测试,G1,inscription-simulation.js/inscription-crafting-state.js,待实施/未验证
+I14,P0,模拟库存守恒,重试/重复当前阶段,历史和背包不双重消耗,操作前后JSON差分+状态序列测试,G1,inscription-simulation.js/inscription-crafting-state.js,待实施/未验证
+I15,P0,模拟库存守恒,手工补量与模拟补量混合,来源归属和数量限制严格保留,操作前后JSON差分+状态序列测试,G1,inscription-simulation.js/inscription-crafting-state.js,待实施/未验证
+I16,P0,模拟库存守恒,历史异常/旧现场、存储失败后重开,异常不被自动清除，合法记录原样回放,操作前后JSON差分+状态序列测试,G2,inscription-simulation.js/inscription-crafting-state.js,待实施/未验证
+F01,P1,收藏及跨页面,收藏存在合法当前规则路线,可打开，依现行规则重新校验,测试档+截图+回写前后对照,G1,inscription-route-favorites.js,待实施/未验证
+F02,P1,收藏及跨页面,收藏来自旧规则失效,保留记录但标记无效，不自动删除,测试档+截图+回写前后对照,G2,inscription-route-favorites.js,待实施/未验证
+F03,P1,收藏及跨页面,收藏同时保存与取消,按实际token/并发规则不会丢写,测试档+截图+回写前后对照,G2,inscription-route-favorites.js,待实施/未验证
+F04,P1,收藏及跨页面,只读账号收藏按钮,不允许保存且显示真实只读,测试档+截图+回写前后对照,G2,inscription-route-favorites.js,待实施/未验证
+F05,P1,收藏及跨页面,收藏数据损坏或读取失败,不当空收藏覆盖原始数据,测试档+截图+回写前后对照,G2,inscription-route-favorites.js,待实施/未验证
+F06,P1,收藏及跨页面,保存收藏时跨账户切换,不会把旧账户回调提交到当前账户,测试档+截图+回写前后对照,G2,inscription-route-favorites.js,待实施/未验证
+F07,P1,收藏及跨页面,路线分组/收藏切换后回到已选目标,上下文和筛选保持合理恢复,测试档+截图+回写前后对照,G5,inscription-route-favorites.js,待实施/未验证
+F08,P1,收藏及跨页面,离线收藏读取与保存,符合现有本地账户语义，不虚报成功,测试档+截图+回写前后对照,G6,inscription-route-favorites.js,待实施/未验证
+P01,P1,性能与响应,历史50条，冷/热validate各10轮,结果相同，记录p50/P95/内存,相同设备数据p50/P95+LongTask+heap+差分,-,inscription-simulation.js/inscription-crafting-ui.js,待实施/未验证
+P02,P1,性能与响应,历史256条，冷/热validate,不改变合法性，记录p50/P95,相同设备数据p50/P95+LongTask+heap+差分,-,inscription-simulation.js/inscription-crafting-ui.js,待实施/未验证
+P03,P1,性能与响应,历史257条，跨缓存边界,不出现异常抖动导致长时间卡顿,相同设备数据p50/P95+LongTask+heap+差分,-,inscription-simulation.js/inscription-crafting-ui.js,待实施/未验证
+P04,P1,性能与响应,历史337条，连续打开/模拟/撤销,与基线相同输出，优化有可复现证据,相同设备数据p50/P95+LongTask+heap+差分,-,inscription-simulation.js/inscription-crafting-ui.js,待实施/未验证
+P05,P1,性能与响应,历史1000条，混合来源,无不可恢复卡顿/内存异常，完整校验不跳过,相同设备数据p50/P95+LongTask+heap+差分,G7,inscription-simulation.js/inscription-crafting-ui.js,待实施/未验证
+P06,P1,性能与响应,同ID内容变化/不同ID相同配方,缓存键安全，不复用错误校验结果,相同设备数据p50/P95+LongTask+heap+差分,G1,inscription-simulation.js/inscription-crafting-ui.js,待实施/未验证
+P07,P1,性能与响应,常见路径9遁位/品质组合,记录规划p50/P95、页面长任务，结构与路线结果不变,相同设备数据p50/P95+LongTask+heap+差分,-,inscription-simulation.js/inscription-crafting-ui.js,待实施/未验证
+P08,P1,性能与响应,快速修改目标/取消/切账号,过期规划结果不回填，不丢输入焦点,相同设备数据p50/P95+LongTask+heap+差分,G2,inscription-simulation.js/inscription-crafting-ui.js,待实施/未验证
+P09,P1,性能与响应,用户重复打开/关闭模拟及收藏,历史DOM和内存不会异常单向增长,相同设备数据p50/P95+LongTask+heap+差分,-,inscription-simulation.js/inscription-crafting-ui.js,待实施/未验证
+P10,P1,性能与响应,低性能手机CPU降速,关键操作非持续卡死，失败能回显；不能伪造异步,相同设备数据p50/P95+LongTask+heap+差分,G5,inscription-simulation.js/inscription-crafting-ui.js,待实施/未验证
+U01,P1,六子页图外UI,320px六子页入口,6入口均可见/可滚动访问，操作不因折行遮挡,5视口实际截图+键盘/IME录屏,G5,context/index.inscription.txt / CSS / ui.js,待实施/未验证
+U02,P1,六子页图外UI,390px移动端搜索输入中文IME,组合期间不触发破坏焦点的整块重绘,5视口实际截图+键盘/IME录屏,G5,context/index.inscription.txt / CSS / ui.js,待实施/未验证
+U03,P1,六子页图外UI,820px平板资料图表,表头/数值/单位对齐，局部滚动而非9px缩字,5视口实际截图+键盘/IME录屏,G5,context/index.inscription.txt / CSS / ui.js,待实施/未验证
+U04,P1,六子页图外UI,1366px查询及个人进度,层级清晰，所有槽位/标签/反查/操作可用,5视口实际截图+键盘/IME录屏,G5,context/index.inscription.txt / CSS / ui.js,待实施/未验证
+U05,P1,六子页图外UI,1920px资料/模拟/收藏,不过度拉伸成难读长行，无重复技术卡片,5视口实际截图+键盘/IME录屏,G5,context/index.inscription.txt / CSS / ui.js,待实施/未验证
+U06,P1,六子页图外UI,五视口各子页页面级横滚,无非设计要求的整页横滚；宽表只局部滚动,5视口实际截图+键盘/IME录屏,G5,context/index.inscription.txt / CSS / ui.js,待实施/未验证
+U07,P1,六子页图外UI,触摸全部关键按钮及选择器,可触区域合理，建议≥44px（不损害图内）,5视口实际截图+键盘/IME录屏,G5,context/index.inscription.txt / CSS / ui.js,待实施/未验证
+U08,P1,六子页图外UI,键盘Tab/Shift+Tab/Enter/Space,按钮和展开内容可达，focus-visible,5视口实际截图+键盘/IME录屏,G5,context/index.inscription.txt / CSS / ui.js,待实施/未验证
+U09,P1,六子页图外UI,关闭弹层/选择候选,焦点返回触发位置或合理后继节点,5视口实际截图+键盘/IME录屏,G5,context/index.inscription.txt / CSS / ui.js,待实施/未验证
+U10,P1,六子页图外UI,错误提示与动态加载,必要aria-live/alert可感知，未隐藏状态,5视口实际截图+键盘/IME录屏,G5,context/index.inscription.txt / CSS / ui.js,待实施/未验证
+U11,P1,六子页图外UI,查询筛选批次与收藏切换,不丢当前筛选/进度编辑草稿,5视口实际截图+键盘/IME录屏,G5,context/index.inscription.txt / CSS / ui.js,待实施/未验证
+U12,P1,六子页图外UI,长名称、具体X、历史未知值,不截断业务含义，不用占位假数字,5视口实际截图+键盘/IME录屏,G5,context/index.inscription.txt / CSS / ui.js,待实施/未验证
+G01,P0,流程图冻结,合成路径查询图内：320/390/820/1366/1920,与实际基线同条件节点、线、文字、缩放及交互不变,当前仓库实施前后同条件截图+源码diff,G3,inscription-flowchart/layout/model; .craft-flow-*,待实施/未验证
+G02,P0,流程图冻结,合成模拟图内：320/390/820/1366/1920,图内布局/控件/视觉不变，外围可以改,当前仓库实施前后同条件截图+源码diff,G3,inscription-flowchart/layout/model; .craft-flow-*,待实施/未验证
+G03,P0,流程图冻结,冻结的三份图形源码、.craft-flow CSS及祖先继承,git diff和实际截图均无越界改动,当前仓库实施前后同条件截图+源码diff,G3,inscription-flowchart/layout/model; .craft-flow-*,待实施/未验证
+R01,P1,上线及PWA,新增资源进入index且Pages复制路径正确,构建产物中全部引用可找到,构建文件清单+网络/离线日志+签字表,G6,index.html / pages.yml / service-worker.js,待实施/未验证
+R02,P1,上线及PWA,Service Worker缓存版本与文件清单,在线升级及离线重开均使用一致资源,构建文件清单+网络/离线日志+签字表,G6,index.html / pages.yml / service-worker.js,待实施/未验证
+R03,P1,上线及PWA,旧PWA缓存升级到新版本,无404/缓存错配；旧个人记录未动,构建文件清单+网络/离线日志+签字表,G6,index.html / pages.yml / service-worker.js,待实施/未验证
+R04,P1,上线及PWA,在线首次打开六子页,控制台无阻断异常/未处理Promise,构建文件清单+网络/离线日志+签字表,G6,index.html / pages.yml / service-worker.js,待实施/未验证
+R05,P1,上线及PWA,测试环境离线浏览/模拟/收藏,符合原离线语义，失败明确反馈,构建文件清单+网络/离线日志+签字表,G6,index.html / pages.yml / service-worker.js,待实施/未验证
+R06,P1,上线及PWA,版本回滚到上一发布提交,回滚不修改/删除真实个人存储,构建文件清单+网络/离线日志+签字表,G6,index.html / pages.yml / service-worker.js,待实施/未验证
+R07,P1,上线及PWA,P0缺陷清单与发布签字,P0=0、总分≥95且G1-G7全通过，用户批准后才发布,构建文件清单+网络/离线日志+签字表,G7,index.html / pages.yml / service-worker.js,待实施/未验证

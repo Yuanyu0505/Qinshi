@@ -3,7 +3,8 @@
   var api = factory();
   if (typeof module === "object" && module.exports) module.exports = api;
   if (root) root.InscriptionRules = api;
-})(typeof window !== "undefined" ? window : null, function () {
+  if (typeof window !== "undefined" && window.location && window.location.protocol === "file:") window.InscriptionRulesFactory = factory;
+})(typeof window !== "undefined" ? window : typeof self !== "undefined" ? self : null, function () {
   "use strict";
 
   // Values are displayed percentage points, not fractions. b1 is reference only.
@@ -96,21 +97,33 @@
     });
     return result;
   }
+  // These memberships depend exclusively on the frozen rules tables. Limit
+  // keys to recognized contexts; rejected inputs cannot grow the index.
+  var termMembership = new Map();
+  var noTerms = new Set();
+  function allowedTerms(dun, quality, origin) {
+    if (!dun || !quality || (origin !== "wash" && origin !== "crafted")) return noTerms;
+    var identity = dun.id + "/" + quality.id + "/" + origin;
+    if (!termMembership.has(identity)) {
+      termMembership.set(identity, new Set(termsFor(dun.id, quality.id, origin).map(key)));
+    }
+    return termMembership.get(identity);
+  }
   function validate(material) {
     var errors = [];
     if (!material || typeof material !== "object" || Array.isArray(material)) return { valid: false, errors: ["铭文材料格式无效"] };
-    var info = qualityInfo(material.quality), dun = normalizeDun(material.dun);
+    var info = qualityInfo(material.quality), dun = normalizeDun(material.dun), dunRules = dunInfo(dun);
     if (prefixes.indexOf(material.prefix) < 0) errors.push("未知或缺失前缀");
-    if (!dunInfo(dun)) errors.push("未知或缺失遁位");
+    if (!dunRules) errors.push("未知或缺失遁位");
     if (!info) errors.push("未知或缺失品质");
     if (material.origin !== "wash" && material.origin !== "crafted") errors.push("来源必须为wash或crafted");
     var terms = Array.isArray(material.terms) ? material.terms : [];
     if (!Array.isArray(material.terms) || !info || terms.length !== info.count) errors.push("词条数量必须符合品质要求");
-    var allowed = termsFor(dun, material.quality, material.origin).map(key), seen = new Set(), highCount = 0;
+    var allowed = allowedTerms(dunRules, info, material.origin), seen = new Set(), highCount = 0;
     Array.from(terms).forEach(function (t) {
       if (!t || typeof t !== "object" || Array.isArray(t) || !attrInfo(t.attr) || typeof t.tier !== "string") { errors.push("未知或缺失属性/档位"); return; }
       var normalized = makeTerm(t.attr, t.tier), identity = key(normalized);
-      if (allowed.indexOf(identity) < 0) errors.push("属性/档位不支持此遁位、品质或来源：" + identity);
+      if (!allowed.has(identity)) errors.push("属性/档位不支持此遁位、品质或来源：" + identity);
       if (seen.has(identity)) errors.push("同属性同档位不得重复：" + identity);
       seen.add(identity);
       if (t.tier === "H") highCount++;

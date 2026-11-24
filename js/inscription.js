@@ -24,6 +24,7 @@
     SUBS[dun.id] = dun.attrs.concat(COMMON_SUBS).map(function (name) { return { n:name, x:dun.high.indexOf(name) !== -1, common:COMMON_SUBS.indexOf(name) !== -1 }; });
   });
 
+  var progressReadError = false;
   var progress = loadProgress();
   var editingKey = "";
   var el = {};
@@ -44,6 +45,7 @@
     el.suggestions = document.getElementById("ins-progress-suggestions");
     el.editor = document.getElementById("ins-progress-editor");
     el.progressList = document.getElementById("ins-progress-list");
+    el.progressStatus = document.getElementById("ins-progress-storage-status");
     el.quality = document.getElementById("ins-quality");
     el.tian = document.getElementById("ins-tian");
     el.shield = document.getElementById("ins-shield");
@@ -57,7 +59,7 @@
 
     el.modes.addEventListener("click", switchMode);
     document.getElementById("partition-inscription").addEventListener("click", handleCommonAction);
-    el.progressSearch.addEventListener("input", renderSuggestions);
+    listenSearch(el.progressSearch, renderSuggestions);
     el.suggestions.addEventListener("click", selectSuggestion);
     el.editor.addEventListener("click", handleEditorClick);
     el.editor.addEventListener("change", handleEditorChange);
@@ -79,7 +81,7 @@
     [el.quality, el.tian, el.shield, el.discipleGroup].filter(Boolean).forEach(function (control) {
       control.addEventListener("change", function () { renderCoordinator.invalidate("query"); });
     });
-    el.search.addEventListener("input", function () { renderCoordinator.scheduleQuery(); });
+    listenSearch(el.search, function () { renderCoordinator.scheduleQuery(); });
     queryBatches = PERFORMANCE.createQueryBatchRenderer({
       batchSize: 4,
       isCurrent: function () {
@@ -102,6 +104,7 @@
     function activatePartition(event) {
       if (event && (!event.detail || event.detail.name !== "inscription")) {
         renderCoordinator.cancelPendingQuery();
+        window.InscriptionCraftingUI.cancelBackground();
         return;
       }
       var activeButton = el.modes.querySelector("button.active[data-mode]");
@@ -112,6 +115,12 @@
   }
 
   function keyOf(item) { return item.quality + "\u0000" + item.name; }
+  function listenSearch(input, onSearch) {
+    var composing = false;
+    input.addEventListener("compositionstart", function () { composing = true; });
+    input.addEventListener("compositionend", function () { composing = false; onSearch(); });
+    input.addEventListener("input", function (event) { if (!composing && !event.isComposing) onSearch(); });
+  }
   function encodedKey(item) { return encodeURIComponent(keyOf(item)); }
   function itemByKey(key) { return DATA.items.find(function (item) { return keyOf(item) === key; }); }
   function escapeHtml(value) {
@@ -119,13 +128,16 @@
       return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch];
     });
   }
+  function readProgress() {
+    var raw = ACCOUNT_STORAGE.getItem(STORE_KEY);
+    if (raw === null) return {};
+    var parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) throw new Error("Invalid inscription progress data");
+    return parsed;
+  }
   function loadProgress() {
-    try {
-      var parsed = JSON.parse(ACCOUNT_STORAGE.getItem(STORE_KEY) || "{}");
-      if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return {};
-      // Keep raw history intact. Normalize only at display/validation boundaries.
-      return parsed;
-    } catch (error) { return {}; }
+    try { return readProgress(); }
+    catch (error) { progressReadError = true; return {}; }
   }
   function normalizeDunName(value) {
     return PROGRESS_RULES.normalizeDun(value);
@@ -139,14 +151,21 @@
     withoutThree = RULES.normalizeAttr(withoutThree);
     return attrs.some(function (attr) { return attr.n === withoutThree; }) ? withoutThree : normalized;
   }
-  function saveProgress(key, record) {
+  function saveProgress(key, record, expected) {
     // Only the explicitly edited disciple changes. Historical aliases/text in other
     // records stay byte-equivalent JSON values, not this display-normalized copy.
-    var latest = JSON.parse(ACCOUNT_STORAGE.getItem(STORE_KEY) || "{}");
-    if (!latest || typeof latest !== "object" || Array.isArray(latest)) throw new Error("Invalid inscription progress data");
+    var latest;
+    try { latest = readProgress(); }
+    catch (error) {
+      progressReadError = true;
+      renderProgressList();
+      throw new Error("无法读取原记录，未写入");
+    }
+    latest = Object.assign(Object.create(null), latest);
+    if (JSON.stringify(latest[key]) !== JSON.stringify(expected)) throw new Error("此弟子的记录已在别处变更，未覆盖原记录");
     if (record === undefined) delete latest[key]; else latest[key] = record;
     if (ACCOUNT_STORAGE.setItem(STORE_KEY, JSON.stringify(latest)) === false) throw new Error("Inscription progress was not saved");
-    progress = loadProgress();
+    progress = latest;
   }
 
   function commonStatus(message) {
@@ -260,9 +279,14 @@
   function switchMode(event) {
     var button = event.target.closest("button[data-mode]");
     if (!button) return;
+    if (button.dataset.mode !== "crafting-paths") window.InscriptionCraftingUI.cancelPlanning();
+    if (button.dataset.mode !== "crafting-simulator" && button.dataset.mode !== "crafting-paths") window.InscriptionCraftingUI.cancelBackground();
     var rendered = renderCoordinator.activate(button.dataset.mode);
     if (!rendered && button.dataset.mode.indexOf("crafting-") === 0) window.InscriptionCraftingUI.activate(button.dataset.mode);
-    el.modes.querySelectorAll("button").forEach(function (item) { item.classList.toggle("active", item === button); });
+    el.modes.querySelectorAll("button").forEach(function (item) {
+      item.classList.toggle("active", item === button);
+      item.setAttribute("aria-pressed", String(item === button));
+    });
     ["progress", "query", "reference", "crafting-paths", "crafting-favorites", "crafting-simulator"].forEach(function (mode) {
       var panel = document.getElementById("inscription-" + mode);
       if (panel) panel.hidden = mode !== button.dataset.mode;
@@ -270,6 +294,7 @@
   }
 
   function renderSuggestions() {
+    if (progressReadError) return;
     var query = el.progressSearch.value.trim().toLowerCase();
     if (!query) { el.suggestions.innerHTML = ""; el.suggestions.hidden = true; return; }
     var matches = DATA.items.filter(function (item) { return item.name.toLowerCase().indexOf(query) !== -1; }).slice(0, 20);
@@ -279,6 +304,7 @@
     el.suggestions.hidden = false;
   }
   function selectSuggestion(event) {
+    if (progressReadError) return;
     var button = event.target.closest("button[data-key]");
     if (!button) return;
     editingKey = decodeURIComponent(button.dataset.key);
@@ -382,10 +408,10 @@
       row._insLegacyEntries = [];
       row.querySelector(".ins-editor-controls").innerHTML = [0, 1, 2].map(function (index) { return subEditorHtml(row.dataset.shield, next, null, index); }).join("");
     }
-    refreshEditorMain();
+    refreshEditorMain(row);
   }
-  function refreshEditorMain() {
-    el.editor.querySelectorAll(".ins-editor-slot").forEach(function (row) {
+  function refreshEditorMain(changedRow) {
+    (changedRow ? [changedRow] : Array.from(el.editor.querySelectorAll(".ins-editor-slot"))).forEach(function (row) {
       var quality = row.querySelector(".ins-edit-quality").value, info = PROGRESS_RULES.qualityInfo(quality);
       var main = mainText(row.dataset.tian, quality);
       row.querySelector(".ins-main-preview").innerHTML = main ? '主属性：' + mainStackHtml(main, quality) : "主属性：暂无此品质的已知数值";
@@ -409,10 +435,11 @@
     var button = event.target.closest("button[data-action]");
     if (!button) return;
     if (button.dataset.action === "cancel") { editingKey = ""; el.editor.innerHTML = ""; return; }
+    if (progressReadError) return;
     var item = itemByKey(editingKey);
     if (!item) return;
     var original = progress[editingKey];
-    if (original && !Array.isArray(original.slots)) { commonStatus("铭文未保存：历史记录结构异常，已保留原始内容，请先备份并修正该记录。"); return; }
+    if (original !== undefined && (!original || !Array.isArray(original.slots))) { commonStatus("铭文未保存：历史记录结构异常，已保留原始内容，请先备份并修正该记录。"); return; }
     var rows = Array.from(el.editor.querySelectorAll(".ins-editor-slot"));
     var edited = rows.map(function (row) { return { row: row, slot: editorSlot(row) }; });
     var invalid = edited.filter(function (entry) {
@@ -433,7 +460,7 @@
       return replacement;
     }) : [];
     replacements.forEach(function (slot) { slots.push(slot); });
-    try { saveProgress(editingKey, Object.assign({}, original || {}, {name:item.name,quality:item.quality,slots:slots})); }
+    try { saveProgress(editingKey, Object.assign({}, original || {}, {name:item.name,quality:item.quality,slots:slots}), original); }
     catch(error){commonStatus("铭文保存失败："+error.message);return;}
     commonStatus("");
     editingKey = "";
@@ -443,11 +470,19 @@
   }
 
   function renderProgressList() {
+    if (progressReadError) {
+      el.progressStatus.textContent = "铭文进度读取失败；原记录未修改，暂不可保存。";
+      el.progressStatus.hidden = false;
+      el.progressSearch.disabled = true;
+      el.suggestions.hidden = true;
+      el.progressList.innerHTML = "";
+      return;
+    }
     var entries = Object.keys(progress).map(function (key) { return { key: key, saved: progress[key], item: itemByKey(key) }; }).filter(function (entry) { return entry.item; });
     el.progressList.innerHTML = entries.length ? entries.map(function (entry) {
       var savedSlots = entry.saved && Array.isArray(entry.saved.slots) ? entry.saved.slots.map(savedSlotHtml).join("") : '<div class="craft-legacy-warning">历史记录结构异常，原始内容已保留；请先备份再修正。</div>';
       return '<article class="ins-progress-card"><div class="ins-card-head"><div><span class="ins-quality ' + (entry.item.quality === "红色神将" ? "red" : "orange") + '">' + entry.item.quality + '</span><b>' + escapeHtml(entry.item.name) + '</b>' + commonButtonHtml(entry.item) + '</div><div class="ins-progress-actions"><button type="button" class="seg" data-edit-key="' + encodeURIComponent(entry.key) + '">编辑</button><button type="button" class="seg danger" data-delete-key="' + encodeURIComponent(entry.key) + '">删除</button></div></div><div class="ins-saved-slots">' + savedSlots + '</div></article>';
-    }).join("") : '<div class="empty ins-empty"><p>尚未保存弟子铭文</p></div>';
+    }).join("") : '<div class="empty ins-empty"><p>' + (Object.keys(progress).length ? "没有可显示的弟子记录；原有记录已保留。" : "尚未保存弟子铭文") + '</p></div>';
   }
   function savedSlotHtml(slot) {
     if (!slot || typeof slot !== "object" || Array.isArray(slot)) return '<div class="craft-legacy-warning">历史位置结构异常，原始内容已保留。</div>';
@@ -476,13 +511,14 @@
   }
   function mainStackHtml(main, quality) { return TERMS.mainHtml(main,quality); }
   function handleProgressAction(event) {
+    if (progressReadError) return;
     var button = event.target.closest("button[data-edit-key],button[data-delete-key]");
     if (!button) return;
     if (button.dataset.deleteKey) {
       var deleteKey = decodeURIComponent(button.dataset.deleteKey);
       var item = itemByKey(deleteKey);
       if (!item || !window.confirm("确定删除“" + item.name + "”的铭文个人进度吗？")) return;
-      try { saveProgress(deleteKey); } catch(error) { commonStatus("铭文删除未保存："+error.message);return; }
+      try { saveProgress(deleteKey, undefined, progress[deleteKey]); } catch(error) { commonStatus("铭文删除未保存："+error.message);return; }
       if (editingKey === deleteKey) { editingKey = ""; el.editor.innerHTML = ""; }
       renderCoordinator.invalidate("progress");
       renderCoordinator.markDirty("query");

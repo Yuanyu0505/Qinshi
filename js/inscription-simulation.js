@@ -3,7 +3,8 @@
   var api=factory(typeof module==='object'&&module.exports?require('./inscription-rules.js'):root.InscriptionRules);
   if(typeof module==='object'&&module.exports)module.exports=api;
   if(root)root.InscriptionSimulation=api;
-})(typeof window!=='undefined'?window:null,function(R){
+  if(typeof window!=='undefined'&&window.location&&window.location.protocol==='file:')window.InscriptionSimulationFactory=factory;
+})(typeof window!=='undefined'?window:typeof self!=='undefined'?self:null,function(R){
   'use strict';
   // Immutable recipe records are checked on load/save; cache only that pure
   // rule calculation so long-lived backpacks do not rerun every old lottery.

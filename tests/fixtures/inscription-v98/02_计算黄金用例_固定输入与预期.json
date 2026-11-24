@@ -1,0 +1,922 @@
+{
+  "name": "Qin铭文公开版黄金参考用例",
+  "baseline": {
+    "version": "1.1.58",
+    "commit": "41d76ad",
+    "reference": "js/inscription-rules.js + js/inscription-rules.test.js"
+  },
+  "scope": "16组固定输入及严格预期；G05/G06/G07完整结果签名+逐项概率，G08–G11/G15错误原因，G16归一化及入参不变性。非服务器实测概率。",
+  "rulesVersionPolicy": "若当前仓库已获授权修改游戏规则/资料，先做版本差异报告并取得用户确认，不可直接更新expected适配失败。",
+  "cases": [
+    {
+      "id": "G01",
+      "api": "preview",
+      "input": [
+        {
+          "prefix": "天同",
+          "dun": "地遁",
+          "quality": "b2",
+          "origin": "wash",
+          "terms": [
+            {
+              "attr": "防",
+              "tier": "H"
+            }
+          ]
+        },
+        {
+          "prefix": "天同",
+          "dun": "地遁",
+          "quality": "b2",
+          "origin": "wash",
+          "terms": [
+            {
+              "attr": "闪避",
+              "tier": "U"
+            }
+          ]
+        }
+      ],
+      "expected": {
+        "valid": true,
+        "quality": "p1",
+        "promotion": "初级",
+        "outcomes": [
+          {
+            "terms": [
+              "防:H",
+              "闪避:U"
+            ],
+            "probability": 1
+          }
+        ],
+        "inputUnchanged": true
+      },
+      "ruleReason": "2蓝二晋紫一，保留两条唯一词条",
+      "snapshotEvidence": "inscription-rules.test.js: all four recipes",
+      "status": "未执行"
+    },
+    {
+      "id": "G02",
+      "api": "preview",
+      "input": [
+        {
+          "prefix": "天同",
+          "dun": "地遁",
+          "quality": "p1",
+          "origin": "crafted",
+          "terms": [
+            {
+              "attr": "防",
+              "tier": "H"
+            },
+            {
+              "attr": "闪避",
+              "tier": "U"
+            }
+          ]
+        },
+        {
+          "prefix": "天同",
+          "dun": "地遁",
+          "quality": "p1",
+          "origin": "crafted",
+          "terms": [
+            {
+              "attr": "防",
+              "tier": "H"
+            },
+            {
+              "attr": "闪避",
+              "tier": "U"
+            }
+          ]
+        },
+        {
+          "prefix": "天同",
+          "dun": "地遁",
+          "quality": "p1",
+          "origin": "crafted",
+          "terms": [
+            {
+              "attr": "防",
+              "tier": "H"
+            },
+            {
+              "attr": "闪避",
+              "tier": "U"
+            }
+          ]
+        }
+      ],
+      "expected": {
+        "valid": true,
+        "quality": "p2",
+        "promotion": null,
+        "outcomes": [
+          {
+            "terms": [
+              "防:H",
+              "闪避:U"
+            ],
+            "probability": 1
+          }
+        ],
+        "inputUnchanged": true
+      },
+      "ruleReason": "3紫一晋紫二，不新增词条",
+      "snapshotEvidence": "inscription-rules.test.js: all four recipes",
+      "status": "未执行"
+    },
+    {
+      "id": "G03",
+      "api": "preview",
+      "input": [
+        {
+          "prefix": "天同",
+          "dun": "地遁",
+          "quality": "p2",
+          "origin": "wash",
+          "terms": [
+            {
+              "attr": "技能穿透",
+              "tier": "L"
+            },
+            {
+              "attr": "技能穿透",
+              "tier": "H"
+            }
+          ]
+        },
+        {
+          "prefix": "天同",
+          "dun": "地遁",
+          "quality": "p2",
+          "origin": "crafted",
+          "terms": [
+            {
+              "attr": "技能穿透",
+              "tier": "M"
+            },
+            {
+              "attr": "技能穿透",
+              "tier": "H"
+            }
+          ]
+        }
+      ],
+      "expected": {
+        "valid": true,
+        "quality": "o1",
+        "promotion": "中级",
+        "outcomes": [
+          {
+            "terms": [
+              "技能穿透:H",
+              "技能穿透:L",
+              "技能穿透:M"
+            ],
+            "probability": 1
+          }
+        ],
+        "inputUnchanged": true
+      },
+      "ruleReason": "2紫二晋橙一；洗练L与合成M分清来源",
+      "snapshotEvidence": "inscription-rules.test.js: all four recipes",
+      "status": "未执行"
+    },
+    {
+      "id": "G04",
+      "api": "preview",
+      "input": [
+        {
+          "prefix": "天同",
+          "dun": "地遁",
+          "quality": "o1",
+          "origin": "crafted",
+          "terms": [
+            {
+              "attr": "技能穿透",
+              "tier": "L"
+            },
+            {
+              "attr": "技能穿透",
+              "tier": "M"
+            },
+            {
+              "attr": "技能穿透",
+              "tier": "H"
+            }
+          ]
+        },
+        {
+          "prefix": "天同",
+          "dun": "地遁",
+          "quality": "o1",
+          "origin": "crafted",
+          "terms": [
+            {
+              "attr": "技能穿透",
+              "tier": "L"
+            },
+            {
+              "attr": "技能穿透",
+              "tier": "M"
+            },
+            {
+              "attr": "技能穿透",
+              "tier": "H"
+            }
+          ]
+        },
+        {
+          "prefix": "天同",
+          "dun": "地遁",
+          "quality": "o1",
+          "origin": "crafted",
+          "terms": [
+            {
+              "attr": "技能穿透",
+              "tier": "L"
+            },
+            {
+              "attr": "技能穿透",
+              "tier": "M"
+            },
+            {
+              "attr": "技能穿透",
+              "tier": "H"
+            }
+          ]
+        }
+      ],
+      "expected": {
+        "valid": true,
+        "quality": "o2",
+        "promotion": null,
+        "outcomes": [
+          {
+            "terms": [
+              "技能穿透:H",
+              "技能穿透:L",
+              "技能穿透:M"
+            ],
+            "probability": 1
+          }
+        ],
+        "inputUnchanged": true
+      },
+      "ruleReason": "3橙一晋橙二",
+      "snapshotEvidence": "inscription-rules.test.js: all four recipes",
+      "status": "未执行"
+    },
+    {
+      "id": "G05",
+      "api": "preview",
+      "input": [
+        {
+          "prefix": "天同",
+          "dun": "地遁",
+          "quality": "p2",
+          "origin": "wash",
+          "terms": [
+            {
+              "attr": "技能穿透",
+              "tier": "L"
+            },
+            {
+              "attr": "治疗效果",
+              "tier": "U"
+            }
+          ]
+        },
+        {
+          "prefix": "天同",
+          "dun": "地遁",
+          "quality": "p2",
+          "origin": "crafted",
+          "terms": [
+            {
+              "attr": "技能穿透",
+              "tier": "M"
+            },
+            {
+              "attr": "技能穿透",
+              "tier": "H"
+            }
+          ]
+        }
+      ],
+      "expected": {
+        "valid": true,
+        "quality": "o1",
+        "promotion": "中级",
+        "outcomeCount": 4,
+        "outcomes": [
+          {
+            "terms": [
+              "技能穿透:H",
+              "技能穿透:L",
+              "技能穿透:M"
+            ],
+            "probability": 0.25
+          },
+          {
+            "terms": [
+              "技能穿透:H",
+              "技能穿透:L",
+              "治疗效果:U"
+            ],
+            "probability": 0.25
+          },
+          {
+            "terms": [
+              "技能穿透:H",
+              "技能穿透:M",
+              "治疗效果:U"
+            ],
+            "probability": 0.25
+          },
+          {
+            "terms": [
+              "技能穿透:L",
+              "技能穿透:M",
+              "治疗效果:U"
+            ],
+            "probability": 0.25
+          }
+        ],
+        "inputUnchanged": true
+      },
+      "ruleReason": "4个不同合法词条中取3个，组合数4，每个25%",
+      "snapshotEvidence": "inscription-rules.test.js: four distinct inherited terms",
+      "status": "未执行"
+    },
+    {
+      "id": "G06",
+      "api": "preview",
+      "input": [
+        {
+          "prefix": "天同",
+          "dun": "地遁",
+          "quality": "b2",
+          "origin": "wash",
+          "terms": [
+            {
+              "attr": "防",
+              "tier": "H"
+            }
+          ]
+        },
+        {
+          "prefix": "天同",
+          "dun": "地遁",
+          "quality": "b2",
+          "origin": "wash",
+          "terms": [
+            {
+              "attr": "防",
+              "tier": "H"
+            }
+          ]
+        }
+      ],
+      "expected": {
+        "valid": true,
+        "quality": "p1",
+        "promotion": "初级",
+        "outcomeCount": 9,
+        "equalProbability": 0.1111111111111111,
+        "mustContain": [
+          "防:H"
+        ],
+        "noTier": [
+          "L"
+        ],
+        "outcomes": [
+          {
+            "terms": [
+              "PVP速:M",
+              "防:H"
+            ],
+            "probability": 0.1111111111111111
+          },
+          {
+            "terms": [
+              "暴击:M",
+              "防:H"
+            ],
+            "probability": 0.1111111111111111
+          },
+          {
+            "terms": [
+              "PVP免伤:M",
+              "防:H"
+            ],
+            "probability": 0.1111111111111111
+          },
+          {
+            "terms": [
+              "技能穿透:H",
+              "防:H"
+            ],
+            "probability": 0.1111111111111111
+          },
+          {
+            "terms": [
+              "技能穿透:M",
+              "防:H"
+            ],
+            "probability": 0.1111111111111111
+          },
+          {
+            "terms": [
+              "防:H",
+              "防:M"
+            ],
+            "probability": 0.1111111111111111
+          },
+          {
+            "terms": [
+              "闪避:U",
+              "防:H"
+            ],
+            "probability": 0.1111111111111111
+          },
+          {
+            "terms": [
+              "招架:U",
+              "防:H"
+            ],
+            "probability": 0.1111111111111111
+          },
+          {
+            "terms": [
+              "治疗效果:U",
+              "防:H"
+            ],
+            "probability": 0.1111111111111111
+          }
+        ],
+        "inputUnchanged": true
+      },
+      "ruleReason": "输入不足2个不同词条，合法补齐；9个可见结果均等",
+      "snapshotEvidence": "inscription-rules.test.js: shortage adds only legal H/M/U",
+      "status": "未执行",
+      "oracleBasis": "地遁p1 crafted合法补齐池除防:H外恰有9项；1个锚点+每项各1种，穷举9个完整结果签名"
+    },
+    {
+      "id": "G07",
+      "api": "preview",
+      "input": [
+        {
+          "prefix": "天同",
+          "dun": "鬼遁",
+          "quality": "b2",
+          "origin": "wash",
+          "terms": [
+            {
+              "attr": "速",
+              "tier": "?"
+            }
+          ]
+        },
+        {
+          "prefix": "天同",
+          "dun": "鬼遁",
+          "quality": "b2",
+          "origin": "wash",
+          "terms": [
+            {
+              "attr": "速",
+              "tier": "?"
+            }
+          ]
+        }
+      ],
+      "expected": {
+        "valid": true,
+        "quality": "p1",
+        "promotion": "初级",
+        "outcomeCount": 17,
+        "equalProbability": 0.058823529411764705,
+        "mustContainAttr": "速",
+        "outcomes": [
+          {
+            "terms": [
+              "速:H",
+              "速:M"
+            ],
+            "probability": 0.058823529411764705
+          },
+          {
+            "terms": [
+              "血:M",
+              "速:H"
+            ],
+            "probability": 0.058823529411764705
+          },
+          {
+            "terms": [
+              "护盾:M",
+              "速:H"
+            ],
+            "probability": 0.058823529411764705
+          },
+          {
+            "terms": [
+              "暴击伤害:M",
+              "速:H"
+            ],
+            "probability": 0.058823529411764705
+          },
+          {
+            "terms": [
+              "速:H",
+              "防:H"
+            ],
+            "probability": 0.058823529411764705
+          },
+          {
+            "terms": [
+              "速:H",
+              "防:M"
+            ],
+            "probability": 0.058823529411764705
+          },
+          {
+            "terms": [
+              "速:H",
+              "闪避:U"
+            ],
+            "probability": 0.058823529411764705
+          },
+          {
+            "terms": [
+              "招架:U",
+              "速:H"
+            ],
+            "probability": 0.058823529411764705
+          },
+          {
+            "terms": [
+              "治疗效果:U",
+              "速:H"
+            ],
+            "probability": 0.058823529411764705
+          },
+          {
+            "terms": [
+              "血:M",
+              "速:M"
+            ],
+            "probability": 0.058823529411764705
+          },
+          {
+            "terms": [
+              "护盾:M",
+              "速:M"
+            ],
+            "probability": 0.058823529411764705
+          },
+          {
+            "terms": [
+              "暴击伤害:M",
+              "速:M"
+            ],
+            "probability": 0.058823529411764705
+          },
+          {
+            "terms": [
+              "速:M",
+              "防:H"
+            ],
+            "probability": 0.058823529411764705
+          },
+          {
+            "terms": [
+              "速:M",
+              "防:M"
+            ],
+            "probability": 0.058823529411764705
+          },
+          {
+            "terms": [
+              "速:M",
+              "闪避:U"
+            ],
+            "probability": 0.058823529411764705
+          },
+          {
+            "terms": [
+              "招架:U",
+              "速:M"
+            ],
+            "probability": 0.058823529411764705
+          },
+          {
+            "terms": [
+              "治疗效果:U",
+              "速:M"
+            ],
+            "probability": 0.058823529411764705
+          }
+        ],
+        "inputUnchanged": true
+      },
+      "ruleReason": "蓝二速度未知档不可硬写H或M；可见去重后17种结果",
+      "snapshotEvidence": "inscription-rules.test.js: two blue speeds expand hidden",
+      "status": "未执行",
+      "oracleBasis": "鬼遁p1 crafted候选10项，速:H或M各扩展9项，其交集{速:H,速:M}去重，9+9−1=17；各1/17非隐藏服务器权重"
+    },
+    {
+      "id": "G08",
+      "api": "validate",
+      "input": {
+        "prefix": "天同",
+        "dun": "地遁",
+        "quality": "p2",
+        "origin": "crafted",
+        "terms": [
+          {
+            "attr": "技能穿透",
+            "tier": "H"
+          },
+          {
+            "attr": "技能穿透",
+            "tier": "L"
+          }
+        ]
+      },
+      "expected": {
+        "valid": false,
+        "errorsContain": [
+          "属性/档位不支持此遁位、品质或来源：技能穿透:L"
+        ],
+        "errorCount": 1,
+        "inputUnchanged": true
+      },
+      "ruleReason": "紫二L仅洗练，不允许将该来源伪造为crafted",
+      "snapshotEvidence": "inscription-rules.test.js: illegal sources",
+      "status": "未执行"
+    },
+    {
+      "id": "G09",
+      "api": "validate",
+      "input": {
+        "prefix": "天同",
+        "dun": "地遁",
+        "quality": "p2",
+        "origin": "wash",
+        "terms": [
+          {
+            "attr": "技能穿透",
+            "tier": "H"
+          },
+          {
+            "attr": "技能穿透",
+            "tier": "H"
+          }
+        ]
+      },
+      "expected": {
+        "valid": false,
+        "errorsContain": [
+          "同属性同档位不得重复：技能穿透:H"
+        ],
+        "errorCount": 1,
+        "inputUnchanged": true
+      },
+      "ruleReason": "同属性同档不可重复",
+      "snapshotEvidence": "inscription-rules.test.js: duplicate",
+      "status": "未执行"
+    },
+    {
+      "id": "G10",
+      "api": "validate",
+      "input": {
+        "prefix": "天同",
+        "dun": "神遁",
+        "quality": "o2",
+        "origin": "crafted",
+        "terms": [
+          {
+            "attr": "攻",
+            "tier": "H"
+          },
+          {
+            "attr": "PVP伤害",
+            "tier": "H"
+          },
+          {
+            "attr": "内力",
+            "tier": "H"
+          }
+        ]
+      },
+      "expected": {
+        "valid": false,
+        "errorsContain": [
+          "属性/档位不支持此遁位、品质或来源：内力:H",
+          "每枚最多两条高档"
+        ],
+        "errorCount": 2,
+        "inputUnchanged": true
+      },
+      "ruleReason": "不得出现3条高档，且遵守各遁位词条表；该输入还会触发内力H不支持，需同时断言两个拒绝原因，不能只检查invalid",
+      "snapshotEvidence": "inscription-rules.test.js: high-count",
+      "status": "未执行"
+    },
+    {
+      "id": "G11",
+      "api": "validate",
+      "input": {
+        "prefix": "天同",
+        "dun": "鬼遁",
+        "quality": "b2",
+        "origin": "wash",
+        "terms": [
+          {
+            "attr": "速",
+            "tier": "H"
+          }
+        ]
+      },
+      "expected": {
+        "valid": false,
+        "errorsContain": [
+          "属性/档位不支持此遁位、品质或来源：速:H"
+        ],
+        "errorCount": 1,
+        "inputUnchanged": true
+      },
+      "ruleReason": "蓝二速度H/M隐藏，只能存?",
+      "snapshotEvidence": "inscription-rules.test.js: blue speed",
+      "status": "未执行"
+    },
+    {
+      "id": "G12",
+      "api": "bestTargets",
+      "input": {
+        "dun": "地遁",
+        "quality": "o2",
+        "attrs": [
+          "技能穿透",
+          "技能穿透",
+          "技能穿透"
+        ]
+      },
+      "expected": {
+        "targets": [
+          [
+            "技能穿透:H",
+            "技能穿透:L",
+            "技能穿透:M"
+          ]
+        ]
+      },
+      "ruleReason": "三条穿透必须来自不同档位H/M/L",
+      "snapshotEvidence": "inscription-rules.test.js: bestTargets",
+      "status": "未执行"
+    },
+    {
+      "id": "G13",
+      "api": "bestTargets",
+      "input": {
+        "dun": "人遁",
+        "quality": "o2",
+        "attrs": [
+          "技能穿透",
+          "技能穿透",
+          "技能穿透"
+        ]
+      },
+      "expected": {
+        "targets": [],
+        "reasonNonEmpty": true
+      },
+      "ruleReason": "人遁不支持三条穿透合法来源",
+      "snapshotEvidence": "inscription-rules.test.js: bestTargets invalid",
+      "status": "未执行"
+    },
+    {
+      "id": "G14",
+      "api": "bestTargets",
+      "input": {
+        "dun": "天遁",
+        "quality": "o2",
+        "attrs": [
+          "攻",
+          "攻",
+          "暴击伤害"
+        ]
+      },
+      "expected": {
+        "targets": [
+          [
+            "攻:H",
+            "攻:M",
+            "暴击伤害:H"
+          ]
+        ]
+      },
+      "ruleReason": "跨属性选择及重复属性Pareto筛选",
+      "snapshotEvidence": "inscription-rules.test.js: bestTargets",
+      "status": "未执行"
+    },
+    {
+      "id": "G15",
+      "api": "preview",
+      "input": [
+        {
+          "prefix": "天同",
+          "dun": "地遁",
+          "quality": "b2",
+          "origin": "wash",
+          "terms": [
+            {
+              "attr": "防",
+              "tier": "H"
+            }
+          ]
+        },
+        {
+          "prefix": "天府",
+          "dun": "地遁",
+          "quality": "b2",
+          "origin": "wash",
+          "terms": [
+            {
+              "attr": "闪避",
+              "tier": "U"
+            }
+          ]
+        }
+      ],
+      "expected": {
+        "valid": false,
+        "errorsContain": [
+          "合成材料必须同前缀、遁位和品质"
+        ],
+        "errorCount": 1,
+        "inputUnchanged": true
+      },
+      "ruleReason": "同前缀、同遁位、同品质材料限制",
+      "snapshotEvidence": "inscription-rules.test.js: recipe validation",
+      "status": "未执行"
+    },
+    {
+      "id": "G16",
+      "api": "validate",
+      "input": {
+        "prefix": "天同",
+        "dun": "云盾",
+        "quality": "o2",
+        "origin": "crafted",
+        "terms": [
+          {
+            "attr": "闪避",
+            "tier": "U"
+          },
+          {
+            "attr": "技能减免",
+            "tier": "M"
+          },
+          {
+            "attr": "防御",
+            "tier": "M"
+          }
+        ]
+      },
+      "expected": {
+        "valid": true,
+        "inputUnchanged": true,
+        "normalized": {
+          "prefix": "天同",
+          "dun": "云遁",
+          "quality": "o2",
+          "origin": "crafted",
+          "terms": [
+            "技免:M",
+            "闪避:U",
+            "防:M"
+          ]
+        }
+      },
+      "ruleReason": "历史别名防御→防、云盾→云遁合法且不改入参",
+      "snapshotEvidence": "inscription-rules.test.js: normalizes legacy aliases",
+      "status": "未执行"
+    }
+  ],
+  "notOracle": [
+    {
+      "id": "OBS-193-2",
+      "description": "天府/地遁/o2/三技能穿透：历史审查193直接配方与2代表路线是不同API集合；仅作快照参考，需核对当前完整目标参数，不能视为全局最优证明。"
+    },
+    {
+      "id": "SIM-CHAIN",
+      "description": "模拟历史、批次预占、失败品复用与撤销须建独立事件序列夹具，不得凭最后数量单点断言。"
+    }
+  ],
+  "strictRevision": "2026-11-23 v98; expected只允许凭已确认规则证据更新，不可从本次被测实际输出刷新。"
+}

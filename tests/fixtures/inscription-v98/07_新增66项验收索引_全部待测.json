@@ -1,0 +1,776 @@
+{
+  "schemaVersion": 1,
+  "source": "Qin 1.1.58 97分增强执行方案",
+  "baselineOriginal98": "02_原方案98项验收矩阵_未修改.csv",
+  "addedCount": 66,
+  "totalCount": 164,
+  "allStates": "未执行",
+  "items": [
+    {
+      "id": "G01",
+      "type": "黄金计算契约",
+      "priority": "P0",
+      "expected": {
+        "valid": true,
+        "quality": "p1",
+        "promotion": "初级",
+        "outcomes": [
+          {
+            "terms": [
+              "防:H",
+              "闪避:U"
+            ],
+            "probability": 1
+          }
+        ]
+      },
+      "gate": "G1/G4",
+      "evidence": "expected.json + actual.json + diff.txt + 测试日志",
+      "status": "未执行/未验证"
+    },
+    {
+      "id": "G02",
+      "type": "黄金计算契约",
+      "priority": "P0",
+      "expected": {
+        "valid": true,
+        "quality": "p2",
+        "promotion": null,
+        "outcomes": [
+          {
+            "terms": [
+              "防:H",
+              "闪避:U"
+            ],
+            "probability": 1
+          }
+        ]
+      },
+      "gate": "G1/G4",
+      "evidence": "expected.json + actual.json + diff.txt + 测试日志",
+      "status": "未执行/未验证"
+    },
+    {
+      "id": "G03",
+      "type": "黄金计算契约",
+      "priority": "P0",
+      "expected": {
+        "valid": true,
+        "quality": "o1",
+        "promotion": "中级",
+        "outcomes": [
+          {
+            "terms": [
+              "技能穿透:H",
+              "技能穿透:L",
+              "技能穿透:M"
+            ],
+            "probability": 1
+          }
+        ]
+      },
+      "gate": "G1/G4",
+      "evidence": "expected.json + actual.json + diff.txt + 测试日志",
+      "status": "未执行/未验证"
+    },
+    {
+      "id": "G04",
+      "type": "黄金计算契约",
+      "priority": "P0",
+      "expected": {
+        "valid": true,
+        "quality": "o2",
+        "promotion": null,
+        "outcomes": [
+          {
+            "terms": [
+              "技能穿透:H",
+              "技能穿透:L",
+              "技能穿透:M"
+            ],
+            "probability": 1
+          }
+        ]
+      },
+      "gate": "G1/G4",
+      "evidence": "expected.json + actual.json + diff.txt + 测试日志",
+      "status": "未执行/未验证"
+    },
+    {
+      "id": "G05",
+      "type": "黄金计算契约",
+      "priority": "P0",
+      "expected": {
+        "valid": true,
+        "quality": "o1",
+        "promotion": "中级",
+        "outcomes": [
+          {
+            "terms": [
+              "技能穿透:H",
+              "技能穿透:L",
+              "技能穿透:M"
+            ],
+            "probability": 0.25
+          },
+          {
+            "terms": [
+              "技能穿透:H",
+              "技能穿透:L",
+              "治疗效果:U"
+            ],
+            "probability": 0.25
+          },
+          {
+            "terms": [
+              "技能穿透:H",
+              "技能穿透:M",
+              "治疗效果:U"
+            ],
+            "probability": 0.25
+          },
+          {
+            "terms": [
+              "技能穿透:L",
+              "技能穿透:M",
+              "治疗效果:U"
+            ],
+            "probability": 0.25
+          }
+        ]
+      },
+      "gate": "G1/G4",
+      "evidence": "expected.json + actual.json + diff.txt + 测试日志",
+      "status": "未执行/未验证"
+    },
+    {
+      "id": "G06",
+      "type": "黄金计算契约",
+      "priority": "P0",
+      "expected": {
+        "valid": true,
+        "quality": "p1",
+        "promotion": "初级",
+        "outcomeCount": 9,
+        "equalProbability": 0.1111111111111111,
+        "mustContain": [
+          "防:H"
+        ],
+        "noTier": [
+          "L"
+        ]
+      },
+      "gate": "G1/G4",
+      "evidence": "expected.json + actual.json + diff.txt + 测试日志",
+      "status": "未执行/未验证"
+    },
+    {
+      "id": "G07",
+      "type": "黄金计算契约",
+      "priority": "P0",
+      "expected": {
+        "valid": true,
+        "quality": "p1",
+        "promotion": "初级",
+        "outcomeCount": 17,
+        "equalProbability": 0.058823529411764705,
+        "mustContainAttr": "速"
+      },
+      "gate": "G1/G4",
+      "evidence": "expected.json + actual.json + diff.txt + 测试日志",
+      "status": "未执行/未验证"
+    },
+    {
+      "id": "G08",
+      "type": "黄金计算契约",
+      "priority": "P0",
+      "expected": {
+        "valid": false
+      },
+      "gate": "G1/G4",
+      "evidence": "expected.json + actual.json + diff.txt + 测试日志",
+      "status": "未执行/未验证"
+    },
+    {
+      "id": "G09",
+      "type": "黄金计算契约",
+      "priority": "P0",
+      "expected": {
+        "valid": false
+      },
+      "gate": "G1/G4",
+      "evidence": "expected.json + actual.json + diff.txt + 测试日志",
+      "status": "未执行/未验证"
+    },
+    {
+      "id": "G10",
+      "type": "黄金计算契约",
+      "priority": "P0",
+      "expected": {
+        "valid": false
+      },
+      "gate": "G1/G4",
+      "evidence": "expected.json + actual.json + diff.txt + 测试日志",
+      "status": "未执行/未验证"
+    },
+    {
+      "id": "G11",
+      "type": "黄金计算契约",
+      "priority": "P0",
+      "expected": {
+        "valid": false
+      },
+      "gate": "G1/G4",
+      "evidence": "expected.json + actual.json + diff.txt + 测试日志",
+      "status": "未执行/未验证"
+    },
+    {
+      "id": "G12",
+      "type": "黄金计算契约",
+      "priority": "P0",
+      "expected": {
+        "targets": [
+          [
+            "技能穿透:H",
+            "技能穿透:L",
+            "技能穿透:M"
+          ]
+        ]
+      },
+      "gate": "G1/G4",
+      "evidence": "expected.json + actual.json + diff.txt + 测试日志",
+      "status": "未执行/未验证"
+    },
+    {
+      "id": "G13",
+      "type": "黄金计算契约",
+      "priority": "P0",
+      "expected": {
+        "targets": [],
+        "reasonNonEmpty": true
+      },
+      "gate": "G1/G4",
+      "evidence": "expected.json + actual.json + diff.txt + 测试日志",
+      "status": "未执行/未验证"
+    },
+    {
+      "id": "G14",
+      "type": "黄金计算契约",
+      "priority": "P0",
+      "expected": {
+        "targets": [
+          [
+            "攻:H",
+            "攻:M",
+            "暴击伤害:H"
+          ]
+        ]
+      },
+      "gate": "G1/G4",
+      "evidence": "expected.json + actual.json + diff.txt + 测试日志",
+      "status": "未执行/未验证"
+    },
+    {
+      "id": "G15",
+      "type": "黄金计算契约",
+      "priority": "P0",
+      "expected": {
+        "valid": false
+      },
+      "gate": "G1/G4",
+      "evidence": "expected.json + actual.json + diff.txt + 测试日志",
+      "status": "未执行/未验证"
+    },
+    {
+      "id": "G16",
+      "type": "黄金计算契约",
+      "priority": "P0",
+      "expected": {
+        "valid": true
+      },
+      "gate": "G1/G4",
+      "evidence": "expected.json + actual.json + diff.txt + 测试日志",
+      "status": "未执行/未验证"
+    },
+    {
+      "id": "H01",
+      "type": "综合事件黄金场景",
+      "priority": "P0",
+      "expected": "失败品复用同款×2异款×1：逐事件断言详见04_黄金用例扩展与独立Oracle规范.md",
+      "gate": "G1/G2/G4",
+      "evidence": "input+expected+source-oracle+actual+diff",
+      "status": "待构建/未验证"
+    },
+    {
+      "id": "H02",
+      "type": "综合事件黄金场景",
+      "priority": "P0",
+      "expected": "同签名不同批次及手动补量：逐事件断言详见04_黄金用例扩展与独立Oracle规范.md",
+      "gate": "G1/G2/G4",
+      "evidence": "input+expected+source-oracle+actual+diff",
+      "status": "待构建/未验证"
+    },
+    {
+      "id": "H03",
+      "type": "综合事件黄金场景",
+      "priority": "P0",
+      "expected": "预占与撤销的完整事件链：逐事件断言详见04_黄金用例扩展与独立Oracle规范.md",
+      "gate": "G1/G2/G4",
+      "evidence": "input+expected+source-oracle+actual+diff",
+      "status": "待构建/未验证"
+    },
+    {
+      "id": "H04",
+      "type": "综合事件黄金场景",
+      "priority": "P0",
+      "expected": "具体X与收藏失效：逐事件断言详见04_黄金用例扩展与独立Oracle规范.md",
+      "gate": "G1/G2/G4",
+      "evidence": "input+expected+source-oracle+actual+diff",
+      "status": "待构建/未验证"
+    },
+    {
+      "id": "H05",
+      "type": "综合事件黄金场景",
+      "priority": "P0",
+      "expected": "A-B-A切号与草稿：逐事件断言详见04_黄金用例扩展与独立Oracle规范.md",
+      "gate": "G1/G2/G4",
+      "evidence": "input+expected+source-oracle+actual+diff",
+      "status": "待构建/未验证"
+    },
+    {
+      "id": "H06",
+      "type": "综合事件黄金场景",
+      "priority": "P0",
+      "expected": "损坏JSON与只读：逐事件断言详见04_黄金用例扩展与独立Oracle规范.md",
+      "gate": "G1/G2/G4",
+      "evidence": "input+expected+source-oracle+actual+diff",
+      "status": "待构建/未验证"
+    },
+    {
+      "id": "H07",
+      "type": "综合事件黄金场景",
+      "priority": "P1",
+      "expected": "193直配与2代表历史职责：逐事件断言详见04_黄金用例扩展与独立Oracle规范.md",
+      "gate": "G1/G2/G4",
+      "evidence": "input+expected+source-oracle+actual+diff",
+      "status": "待构建/未验证"
+    },
+    {
+      "id": "H08",
+      "type": "综合事件黄金场景",
+      "priority": "P1",
+      "expected": "256/257/337/1000历史合法性：逐事件断言详见04_黄金用例扩展与独立Oracle规范.md",
+      "gate": "G1/G2/G4",
+      "evidence": "input+expected+source-oracle+actual+diff",
+      "status": "待构建/未验证"
+    },
+    {
+      "id": "P01",
+      "type": "性能指标",
+      "priority": "P0",
+      "expected": "见05_性能预算_观测协议与失败判定.md中P01具体预算",
+      "gate": "G4/G5",
+      "evidence": "浏览器trace+测量JSON+采样环境+旧新版对照",
+      "status": "未实测"
+    },
+    {
+      "id": "P02",
+      "type": "性能指标",
+      "priority": "P0",
+      "expected": "见05_性能预算_观测协议与失败判定.md中P02具体预算",
+      "gate": "G4/G5",
+      "evidence": "浏览器trace+测量JSON+采样环境+旧新版对照",
+      "status": "未实测"
+    },
+    {
+      "id": "P03",
+      "type": "性能指标",
+      "priority": "P0",
+      "expected": "见05_性能预算_观测协议与失败判定.md中P03具体预算",
+      "gate": "G4/G5",
+      "evidence": "浏览器trace+测量JSON+采样环境+旧新版对照",
+      "status": "未实测"
+    },
+    {
+      "id": "P04",
+      "type": "性能指标",
+      "priority": "P0",
+      "expected": "见05_性能预算_观测协议与失败判定.md中P04具体预算",
+      "gate": "G4/G5",
+      "evidence": "浏览器trace+测量JSON+采样环境+旧新版对照",
+      "status": "未实测"
+    },
+    {
+      "id": "P05",
+      "type": "性能指标",
+      "priority": "P1",
+      "expected": "见05_性能预算_观测协议与失败判定.md中P05具体预算",
+      "gate": "G4/G5",
+      "evidence": "浏览器trace+测量JSON+采样环境+旧新版对照",
+      "status": "未实测"
+    },
+    {
+      "id": "P06",
+      "type": "性能指标",
+      "priority": "P1",
+      "expected": "见05_性能预算_观测协议与失败判定.md中P06具体预算",
+      "gate": "G4/G5",
+      "evidence": "浏览器trace+测量JSON+采样环境+旧新版对照",
+      "status": "未实测"
+    },
+    {
+      "id": "P07",
+      "type": "性能指标",
+      "priority": "P1",
+      "expected": "见05_性能预算_观测协议与失败判定.md中P07具体预算",
+      "gate": "G4/G5",
+      "evidence": "浏览器trace+测量JSON+采样环境+旧新版对照",
+      "status": "未实测"
+    },
+    {
+      "id": "P08",
+      "type": "性能指标",
+      "priority": "P1",
+      "expected": "见05_性能预算_观测协议与失败判定.md中P08具体预算",
+      "gate": "G4/G5",
+      "evidence": "浏览器trace+测量JSON+采样环境+旧新版对照",
+      "status": "未实测"
+    },
+    {
+      "id": "P09",
+      "type": "性能指标",
+      "priority": "P0",
+      "expected": "见05_性能预算_观测协议与失败判定.md中P09具体预算",
+      "gate": "G4/G5",
+      "evidence": "浏览器trace+测量JSON+采样环境+旧新版对照",
+      "status": "未实测"
+    },
+    {
+      "id": "P10",
+      "type": "性能指标",
+      "priority": "P1",
+      "expected": "见05_性能预算_观测协议与失败判定.md中P10具体预算",
+      "gate": "G4/G5",
+      "evidence": "浏览器trace+测量JSON+采样环境+旧新版对照",
+      "status": "未实测"
+    },
+    {
+      "id": "P11",
+      "type": "性能指标",
+      "priority": "P0",
+      "expected": "见05_性能预算_观测协议与失败判定.md中P11具体预算",
+      "gate": "G4/G5",
+      "evidence": "浏览器trace+测量JSON+采样环境+旧新版对照",
+      "status": "未实测"
+    },
+    {
+      "id": "P12",
+      "type": "性能指标",
+      "priority": "P1",
+      "expected": "见05_性能预算_观测协议与失败判定.md中P12具体预算",
+      "gate": "G4/G5",
+      "evidence": "浏览器trace+测量JSON+采样环境+旧新版对照",
+      "status": "未实测"
+    },
+    {
+      "id": "UX01",
+      "type": "六子页响应式",
+      "priority": "P1",
+      "input": "个人进度, viewport 320px，含真实内容、IME/键盘/只读场景",
+      "expected": "全部关键操作可达、长名不截断、输入焦点与草稿不丢失；两处图内UI完全冻结（若适用）",
+      "gate": "G3/G5",
+      "evidence": "同条件before+after截图、录屏/交互日志、差异说明",
+      "status": "未实测"
+    },
+    {
+      "id": "UX02",
+      "type": "六子页响应式",
+      "priority": "P1",
+      "input": "个人进度, viewport 390px，含真实内容、IME/键盘/只读场景",
+      "expected": "全部关键操作可达、长名不截断、输入焦点与草稿不丢失；两处图内UI完全冻结（若适用）",
+      "gate": "G3/G5",
+      "evidence": "同条件before+after截图、录屏/交互日志、差异说明",
+      "status": "未实测"
+    },
+    {
+      "id": "UX03",
+      "type": "六子页响应式",
+      "priority": "P1",
+      "input": "个人进度, viewport 820px，含真实内容、IME/键盘/只读场景",
+      "expected": "全部关键操作可达、长名不截断、输入焦点与草稿不丢失；两处图内UI完全冻结（若适用）",
+      "gate": "G3/G5",
+      "evidence": "同条件before+after截图、录屏/交互日志、差异说明",
+      "status": "未实测"
+    },
+    {
+      "id": "UX04",
+      "type": "六子页响应式",
+      "priority": "P1",
+      "input": "个人进度, viewport 1366px，含真实内容、IME/键盘/只读场景",
+      "expected": "全部关键操作可达、长名不截断、输入焦点与草稿不丢失；两处图内UI完全冻结（若适用）",
+      "gate": "G3/G5",
+      "evidence": "同条件before+after截图、录屏/交互日志、差异说明",
+      "status": "未实测"
+    },
+    {
+      "id": "UX05",
+      "type": "六子页响应式",
+      "priority": "P1",
+      "input": "个人进度, viewport 1920px，含真实内容、IME/键盘/只读场景",
+      "expected": "全部关键操作可达、长名不截断、输入焦点与草稿不丢失；两处图内UI完全冻结（若适用）",
+      "gate": "G3/G5",
+      "evidence": "同条件before+after截图、录屏/交互日志、差异说明",
+      "status": "未实测"
+    },
+    {
+      "id": "UX06",
+      "type": "六子页响应式",
+      "priority": "P1",
+      "input": "查询筛选, viewport 320px，含真实内容、IME/键盘/只读场景",
+      "expected": "全部关键操作可达、长名不截断、输入焦点与草稿不丢失；两处图内UI完全冻结（若适用）",
+      "gate": "G3/G5",
+      "evidence": "同条件before+after截图、录屏/交互日志、差异说明",
+      "status": "未实测"
+    },
+    {
+      "id": "UX07",
+      "type": "六子页响应式",
+      "priority": "P1",
+      "input": "查询筛选, viewport 390px，含真实内容、IME/键盘/只读场景",
+      "expected": "全部关键操作可达、长名不截断、输入焦点与草稿不丢失；两处图内UI完全冻结（若适用）",
+      "gate": "G3/G5",
+      "evidence": "同条件before+after截图、录屏/交互日志、差异说明",
+      "status": "未实测"
+    },
+    {
+      "id": "UX08",
+      "type": "六子页响应式",
+      "priority": "P1",
+      "input": "查询筛选, viewport 820px，含真实内容、IME/键盘/只读场景",
+      "expected": "全部关键操作可达、长名不截断、输入焦点与草稿不丢失；两处图内UI完全冻结（若适用）",
+      "gate": "G3/G5",
+      "evidence": "同条件before+after截图、录屏/交互日志、差异说明",
+      "status": "未实测"
+    },
+    {
+      "id": "UX09",
+      "type": "六子页响应式",
+      "priority": "P1",
+      "input": "查询筛选, viewport 1366px，含真实内容、IME/键盘/只读场景",
+      "expected": "全部关键操作可达、长名不截断、输入焦点与草稿不丢失；两处图内UI完全冻结（若适用）",
+      "gate": "G3/G5",
+      "evidence": "同条件before+after截图、录屏/交互日志、差异说明",
+      "status": "未实测"
+    },
+    {
+      "id": "UX10",
+      "type": "六子页响应式",
+      "priority": "P1",
+      "input": "查询筛选, viewport 1920px，含真实内容、IME/键盘/只读场景",
+      "expected": "全部关键操作可达、长名不截断、输入焦点与草稿不丢失；两处图内UI完全冻结（若适用）",
+      "gate": "G3/G5",
+      "evidence": "同条件before+after截图、录屏/交互日志、差异说明",
+      "status": "未实测"
+    },
+    {
+      "id": "UX11",
+      "type": "六子页响应式",
+      "priority": "P1",
+      "input": "资料图表, viewport 320px，含真实内容、IME/键盘/只读场景",
+      "expected": "全部关键操作可达、长名不截断、输入焦点与草稿不丢失；两处图内UI完全冻结（若适用）",
+      "gate": "G3/G5",
+      "evidence": "同条件before+after截图、录屏/交互日志、差异说明",
+      "status": "未实测"
+    },
+    {
+      "id": "UX12",
+      "type": "六子页响应式",
+      "priority": "P1",
+      "input": "资料图表, viewport 390px，含真实内容、IME/键盘/只读场景",
+      "expected": "全部关键操作可达、长名不截断、输入焦点与草稿不丢失；两处图内UI完全冻结（若适用）",
+      "gate": "G3/G5",
+      "evidence": "同条件before+after截图、录屏/交互日志、差异说明",
+      "status": "未实测"
+    },
+    {
+      "id": "UX13",
+      "type": "六子页响应式",
+      "priority": "P1",
+      "input": "资料图表, viewport 820px，含真实内容、IME/键盘/只读场景",
+      "expected": "全部关键操作可达、长名不截断、输入焦点与草稿不丢失；两处图内UI完全冻结（若适用）",
+      "gate": "G3/G5",
+      "evidence": "同条件before+after截图、录屏/交互日志、差异说明",
+      "status": "未实测"
+    },
+    {
+      "id": "UX14",
+      "type": "六子页响应式",
+      "priority": "P1",
+      "input": "资料图表, viewport 1366px，含真实内容、IME/键盘/只读场景",
+      "expected": "全部关键操作可达、长名不截断、输入焦点与草稿不丢失；两处图内UI完全冻结（若适用）",
+      "gate": "G3/G5",
+      "evidence": "同条件before+after截图、录屏/交互日志、差异说明",
+      "status": "未实测"
+    },
+    {
+      "id": "UX15",
+      "type": "六子页响应式",
+      "priority": "P1",
+      "input": "资料图表, viewport 1920px，含真实内容、IME/键盘/只读场景",
+      "expected": "全部关键操作可达、长名不截断、输入焦点与草稿不丢失；两处图内UI完全冻结（若适用）",
+      "gate": "G3/G5",
+      "evidence": "同条件before+after截图、录屏/交互日志、差异说明",
+      "status": "未实测"
+    },
+    {
+      "id": "UX16",
+      "type": "六子页响应式",
+      "priority": "P0",
+      "input": "合成路径查询_仅图外, viewport 320px，含真实内容、IME/键盘/只读场景",
+      "expected": "全部关键操作可达、长名不截断、输入焦点与草稿不丢失；两处图内UI完全冻结（若适用）",
+      "gate": "G3/G5",
+      "evidence": "同条件before+after截图、录屏/交互日志、差异说明",
+      "status": "未实测"
+    },
+    {
+      "id": "UX17",
+      "type": "六子页响应式",
+      "priority": "P0",
+      "input": "合成路径查询_仅图外, viewport 390px，含真实内容、IME/键盘/只读场景",
+      "expected": "全部关键操作可达、长名不截断、输入焦点与草稿不丢失；两处图内UI完全冻结（若适用）",
+      "gate": "G3/G5",
+      "evidence": "同条件before+after截图、录屏/交互日志、差异说明",
+      "status": "未实测"
+    },
+    {
+      "id": "UX18",
+      "type": "六子页响应式",
+      "priority": "P1",
+      "input": "合成路径查询_仅图外, viewport 820px，含真实内容、IME/键盘/只读场景",
+      "expected": "全部关键操作可达、长名不截断、输入焦点与草稿不丢失；两处图内UI完全冻结（若适用）",
+      "gate": "G3/G5",
+      "evidence": "同条件before+after截图、录屏/交互日志、差异说明",
+      "status": "未实测"
+    },
+    {
+      "id": "UX19",
+      "type": "六子页响应式",
+      "priority": "P1",
+      "input": "合成路径查询_仅图外, viewport 1366px，含真实内容、IME/键盘/只读场景",
+      "expected": "全部关键操作可达、长名不截断、输入焦点与草稿不丢失；两处图内UI完全冻结（若适用）",
+      "gate": "G3/G5",
+      "evidence": "同条件before+after截图、录屏/交互日志、差异说明",
+      "status": "未实测"
+    },
+    {
+      "id": "UX20",
+      "type": "六子页响应式",
+      "priority": "P1",
+      "input": "合成路径查询_仅图外, viewport 1920px，含真实内容、IME/键盘/只读场景",
+      "expected": "全部关键操作可达、长名不截断、输入焦点与草稿不丢失；两处图内UI完全冻结（若适用）",
+      "gate": "G3/G5",
+      "evidence": "同条件before+after截图、录屏/交互日志、差异说明",
+      "status": "未实测"
+    },
+    {
+      "id": "UX21",
+      "type": "六子页响应式",
+      "priority": "P0",
+      "input": "合成模拟_仅图外, viewport 320px，含真实内容、IME/键盘/只读场景",
+      "expected": "全部关键操作可达、长名不截断、输入焦点与草稿不丢失；两处图内UI完全冻结（若适用）",
+      "gate": "G3/G5",
+      "evidence": "同条件before+after截图、录屏/交互日志、差异说明",
+      "status": "未实测"
+    },
+    {
+      "id": "UX22",
+      "type": "六子页响应式",
+      "priority": "P0",
+      "input": "合成模拟_仅图外, viewport 390px，含真实内容、IME/键盘/只读场景",
+      "expected": "全部关键操作可达、长名不截断、输入焦点与草稿不丢失；两处图内UI完全冻结（若适用）",
+      "gate": "G3/G5",
+      "evidence": "同条件before+after截图、录屏/交互日志、差异说明",
+      "status": "未实测"
+    },
+    {
+      "id": "UX23",
+      "type": "六子页响应式",
+      "priority": "P1",
+      "input": "合成模拟_仅图外, viewport 820px，含真实内容、IME/键盘/只读场景",
+      "expected": "全部关键操作可达、长名不截断、输入焦点与草稿不丢失；两处图内UI完全冻结（若适用）",
+      "gate": "G3/G5",
+      "evidence": "同条件before+after截图、录屏/交互日志、差异说明",
+      "status": "未实测"
+    },
+    {
+      "id": "UX24",
+      "type": "六子页响应式",
+      "priority": "P1",
+      "input": "合成模拟_仅图外, viewport 1366px，含真实内容、IME/键盘/只读场景",
+      "expected": "全部关键操作可达、长名不截断、输入焦点与草稿不丢失；两处图内UI完全冻结（若适用）",
+      "gate": "G3/G5",
+      "evidence": "同条件before+after截图、录屏/交互日志、差异说明",
+      "status": "未实测"
+    },
+    {
+      "id": "UX25",
+      "type": "六子页响应式",
+      "priority": "P1",
+      "input": "合成模拟_仅图外, viewport 1920px，含真实内容、IME/键盘/只读场景",
+      "expected": "全部关键操作可达、长名不截断、输入焦点与草稿不丢失；两处图内UI完全冻结（若适用）",
+      "gate": "G3/G5",
+      "evidence": "同条件before+after截图、录屏/交互日志、差异说明",
+      "status": "未实测"
+    },
+    {
+      "id": "UX26",
+      "type": "六子页响应式",
+      "priority": "P1",
+      "input": "收藏合成路径, viewport 320px，含真实内容、IME/键盘/只读场景",
+      "expected": "全部关键操作可达、长名不截断、输入焦点与草稿不丢失；两处图内UI完全冻结（若适用）",
+      "gate": "G3/G5",
+      "evidence": "同条件before+after截图、录屏/交互日志、差异说明",
+      "status": "未实测"
+    },
+    {
+      "id": "UX27",
+      "type": "六子页响应式",
+      "priority": "P1",
+      "input": "收藏合成路径, viewport 390px，含真实内容、IME/键盘/只读场景",
+      "expected": "全部关键操作可达、长名不截断、输入焦点与草稿不丢失；两处图内UI完全冻结（若适用）",
+      "gate": "G3/G5",
+      "evidence": "同条件before+after截图、录屏/交互日志、差异说明",
+      "status": "未实测"
+    },
+    {
+      "id": "UX28",
+      "type": "六子页响应式",
+      "priority": "P1",
+      "input": "收藏合成路径, viewport 820px，含真实内容、IME/键盘/只读场景",
+      "expected": "全部关键操作可达、长名不截断、输入焦点与草稿不丢失；两处图内UI完全冻结（若适用）",
+      "gate": "G3/G5",
+      "evidence": "同条件before+after截图、录屏/交互日志、差异说明",
+      "status": "未实测"
+    },
+    {
+      "id": "UX29",
+      "type": "六子页响应式",
+      "priority": "P1",
+      "input": "收藏合成路径, viewport 1366px，含真实内容、IME/键盘/只读场景",
+      "expected": "全部关键操作可达、长名不截断、输入焦点与草稿不丢失；两处图内UI完全冻结（若适用）",
+      "gate": "G3/G5",
+      "evidence": "同条件before+after截图、录屏/交互日志、差异说明",
+      "status": "未实测"
+    },
+    {
+      "id": "UX30",
+      "type": "六子页响应式",
+      "priority": "P1",
+      "input": "收藏合成路径, viewport 1920px，含真实内容、IME/键盘/只读场景",
+      "expected": "全部关键操作可达、长名不截断、输入焦点与草稿不丢失；两处图内UI完全冻结（若适用）",
+      "gate": "G3/G5",
+      "evidence": "同条件before+after截图、录屏/交互日志、差异说明",
+      "status": "未实测"
+    }
+  ]
+}

@@ -4,6 +4,11 @@
   var sectionOpeners=new WeakMap();
   var NUMBER_FORMAT=(typeof globalThis!=='undefined'&&globalThis.QinshiNumberFormat)||(typeof require==='function'?require('./number-format.js'):null);
   var ORDER_KEY='qinshi_reference_section_order_v1';
+  function directorySections(root){
+    var sections=root.OTHER_REFERENCE_DATA.sections.slice(),ids=new Set(sections.map(function(s){return s.id;}));
+    ((root.REFERENCE_EXPANSION_DATA||{}).sections||[]).forEach(function(section){if(!ids.has(section.id)){sections.push(section);ids.add(section.id);}});
+    return sections;
+  }
   function normalizeSectionOrder(sections,saved){
     var ids=sections.map(function(s){return s.id;}),order=[];
     (Array.isArray(saved)?saved:[]).concat(ids).forEach(function(id){if(ids.includes(id)&&!order.includes(id))order.push(id);});
@@ -125,7 +130,7 @@
     var host=root.document.getElementById('partition-other-reference');
     if(!host||host.dataset.refReady)return;
     host.dataset.refReady='true';
-    var data=root.OTHER_REFERENCE_DATA,tables=tablesFor(root),states={},sectionId='',homeScroll=0,restoreButton=null,zoom=1,fitWidth=0,pointers=new Map(),pinch=0;
+    var data=Object.assign({},root.OTHER_REFERENCE_DATA,{sections:directorySections(root)}),tables=tablesFor(root),states={},sectionId='',homeScroll=0,restoreButton=null,zoom=1,fitWidth=0,pointers=new Map(),pinch=0;
     var directoryQuery='',sorting=false,sortSelection='',orderError='',savedOrder=null;
     try{savedOrder=JSON.parse(root.localStorage.getItem(ORDER_KEY));}catch(error){/* A directory preference never blocks access to settings. */}
     var sectionOrder=normalizeSectionOrder(data.sections,savedOrder);
@@ -205,6 +210,7 @@
     function controls(){
       if(sectionId==='six-halls'){showSixHalls();return;}
       parkSixHalls();
+      if(root.REFERENCE_EXPANSION_UI&&root.REFERENCE_EXPANSION_UI.hasSection(sectionId)){root.REFERENCE_EXPANSION_UI.mount(root,body,sectionId);return;}
       if(sectionId==='limited-events'){body.innerHTML=limitedEventsHtml(data.limitedEvents);return;}
       var s=state(),section=data.sections.find(function(x){return x.id===sectionId;}),list=sectionTables(),table=currentTable();
       if(table)s.table=table.id;
@@ -280,7 +286,7 @@
       return '<div class="ref-table-scroll" tabindex="0" role="region" aria-label="'+esc(titleFor(table))+'对照表"><table data-ref-table-id="'+esc(table.id)+'" class="ref-table'+(table.section==='cards'?' ref-card-stats':'')+(isMapping(table)?' ref-element-mappings':'')+(table.section==='origins'?' ref-origin-table':'')+(table.section==='treasure'?' ref-treasure-table':'')+'"><caption class="ref-visually-hidden">'+esc(titleFor(table))+'</caption>'+colgroup+'<thead><tr>'+table.columns.map(function(c){return '<th scope="col">'+esc(columnLabel(table,c))+'</th>';}).join('')+'</tr></thead><tbody>'+rows.map(function(row){return '<tr>'+row.map(function(v,i){var quality=table.columns[i]==='品质'&&/^[蓝紫橙红]$/.test(v);return i===0&&table.id!=='spirits-combinations'?'<th scope="row">'+esc(v)+'</th>':'<td'+(String(v).length>20?' class="ref-long-text"':'')+'>'+(quality?'<span class="ref-quality ref-quality-'+({'蓝':'blue','紫':'purple','橙':'orange','红':'red'}[v])+'">'+esc(v)+'</span>':cellHtml(table,table.columns[i],v))+'</td>';}).join('')+'</tr>';}).join('')+'</tbody></table></div>';
     }
     function results(){
-      if(sectionId==='six-halls'||sectionId==='limited-events')return;
+      if(sectionId==='six-halls'||sectionId==='limited-events'||root.REFERENCE_EXPANSION_UI&&root.REFERENCE_EXPANSION_UI.hasSection(sectionId))return;
       var table=displayTable(currentTable()),s=state(),html='';
       updateViewOptions(table);
       if(table){
@@ -352,5 +358,5 @@
     var narrow=host.getBoundingClientRect().width<760,resizePending=false;
     if(root.ResizeObserver)new root.ResizeObserver(function(){var next=host.getBoundingClientRect().width<760;if(next===narrow||host.hidden)return;narrow=next;if(!sectionId||resizePending)return;resizePending=true;root.requestAnimationFrame(function(){resizePending=false;if(sectionId&&!host.hidden)results();});}).observe(host);
   }
-  return {init:init,openSection:openSection,normalizeSectionOrder:normalizeSectionOrder,swapSectionOrder:swapSectionOrder,filterSections:filterSections,filterRows:filterRows,tablesFor:tablesFor,matchesLevelBand:matchesLevelBand,guideText:guideText,hasRecommendedView:hasRecommendedView};
+  return {init:init,openSection:openSection,directorySections:directorySections,normalizeSectionOrder:normalizeSectionOrder,swapSectionOrder:swapSectionOrder,filterSections:filterSections,filterRows:filterRows,tablesFor:tablesFor,matchesLevelBand:matchesLevelBand,guideText:guideText,hasRecommendedView:hasRecommendedView};
 });

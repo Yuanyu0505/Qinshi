@@ -53,6 +53,52 @@
     return NUMBER_FORMAT.format(value || 0);
   }
 
+  // This reference never enters CORE, saved progress, or recommendation inputs.
+  function maxReferenceRows(filters) {
+    filters = filters || {};
+    var reference = root.FORMATION_MAX_REFERENCE_DATA;
+    var query = String(filters.query || '').replace(/[\s·]/g, '').toLocaleLowerCase();
+    var rows = [];
+    (reference && reference.formations || []).forEach(function (formation) {
+      if (filters.formation && filters.formation !== formation.name) return;
+      formation.members.forEach(function (member) {
+        var searchable = (formation.name + member.name).replace(/[\s·]/g, '').toLocaleLowerCase();
+        if (!query || searchable.includes(query)) rows.push(Object.assign({ formation: formation.name, stones: formation.stones }, member));
+      });
+    });
+    if (['attack', 'defense', 'hp'].includes(filters.sort)) rows.sort(function (a, b) { return b[filters.sort] - a[filters.sort]; });
+    return rows;
+  }
+
+  function mountMaxReference() {
+    var reference = root.FORMATION_MAX_REFERENCE_DATA;
+    if (!reference || !el.workspace || document.getElementById('formation-max-reference')) return;
+    var panel = document.createElement('details');
+    panel.id = 'formation-max-reference';
+    panel.className = 'panel formation-max-reference';
+    panel.innerHTML = '<summary>合阵弟子极限属性</summary><p class="formation-max-condition">' + escapeHtml(reference.meta.conditions) + '</p>' +
+      '<div class="formation-max-controls"><label>合阵<select data-max-formation aria-label="极限属性合阵"><option value="">全部合阵</option>' +
+      reference.formations.map(function (formation) { return '<option value="' + escapeHtml(formation.name) + '">' + escapeHtml(formation.name) + '</option>'; }).join('') +
+      '</select></label><label>排序<select data-max-sort aria-label="极限属性排序"><option value="source">资料顺序</option><option value="attack">攻击降序</option><option value="defense">防御降序</option><option value="hp">血量降序</option></select></label>' +
+      '<label class="formation-max-query">搜索<input type="search" data-max-query aria-label="搜索极限属性" placeholder="合阵或弟子名称" autocomplete="off"></label></div><div data-max-results aria-live="polite"></div>';
+    el.workspace.parentNode.insertBefore(panel, el.workspace);
+    function refresh() {
+      var rows = maxReferenceRows({formation: panel.querySelector('[data-max-formation]').value, query: panel.querySelector('[data-max-query]').value, sort: panel.querySelector('[data-max-sort]').value});
+      var results = panel.querySelector('[data-max-results]');
+      if (!rows.length) { results.innerHTML = '<p role="status">未找到匹配资料。</p>'; return; }
+      function position(row) { return row.position == null ? '—' : String(row.position); }
+      results.innerHTML = '<div class="formation-max-table" tabindex="0" role="region" aria-label="合阵弟子极限属性，可横向滚动"><table><thead><tr>' +
+        ['阵眼石','合阵','弟子','攻','防','血','建议位置','培养属性','提升属性'].map(function (label) { return '<th scope="col">' + label + '</th>'; }).join('') +
+        '</tr></thead><tbody>' + rows.map(function (row) { return '<tr><td>' + row.stones + '</td><td>' + escapeHtml(row.formation) + '</td><th scope="row">' + escapeHtml(row.name) + '</th><td>' +
+          formatNumber(row.attack) + '</td><td>' + formatNumber(row.defense) + '</td><td>' + formatNumber(row.hp) + '</td><td>' + position(row) + '</td><td>' + escapeHtml(row.trainAttribute || '—') + '</td><td>' + escapeHtml(row.gainAttribute || '—') + '</td></tr>'; }).join('') +
+        '</tbody></table></div><div class="formation-max-cards">' + rows.map(function (row) { return '<article><h3>' + escapeHtml(row.name) + '</h3><p>' + escapeHtml(row.formation) + ' · 阵眼石 ' + row.stones + '</p><dl>' +
+          [['攻',formatNumber(row.attack)],['防',formatNumber(row.defense)],['血',formatNumber(row.hp)],['建议位置',position(row)],['培养属性',row.trainAttribute || '—'],['提升属性',row.gainAttribute || '—']].map(function (entry) { return '<div><dt>' + entry[0] + '</dt><dd>' + escapeHtml(entry[1]) + '</dd></div>'; }).join('') + '</dl></article>'; }).join('') + '</div>';
+    }
+    panel.addEventListener('input', function (event) { if (event.target.matches('[data-max-query]')) refresh(); });
+    panel.addEventListener('change', function (event) { if (event.target.matches('[data-max-formation],[data-max-sort]')) refresh(); });
+    refresh();
+  }
+
   function percentText(value) {
     return Number(value) + "%";
   }
@@ -595,7 +641,8 @@
       renderSearchResults();
     }
     renderSelector();
+    mountMaxReference();
   }
 
-  root.FORMATIONS_UI = { init: init, storeKey: STORE_KEY };
+  root.FORMATIONS_UI = { init: init, storeKey: STORE_KEY, maxReferenceRows: maxReferenceRows };
 })(typeof window !== "undefined" ? window : globalThis);

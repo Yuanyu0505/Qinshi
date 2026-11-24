@@ -936,9 +936,9 @@ test("首页提供合阵工作台及其数据、核心和界面脚本", async ()
     assert.match(page.body, /id="formation-selector"/);
     assert.match(page.body, /id="formation-workspace"/);
     assert.match(page.body, versionedScriptPattern("data/formations.js"));
-    assert.deepStrictEqual(await loadedPartition('formations', 'FORMATIONS_UI'), ['js/formations.js', 'js/formations-ui.js'].map(asset => asset + '?v=' + APP_VERSION));
+    assert.deepStrictEqual(await loadedPartition('formations', 'FORMATIONS_UI'), ['data/formation-max-reference.js', 'js/formations.js', 'js/formations-ui.js'].map(asset => asset + '?v=' + APP_VERSION));
 
-    for (const resource of ["/data/formations.js", "/js/formations.js", "/js/formations-ui.js"]) {
+    for (const resource of ["/data/formations.js", "/data/formation-max-reference.js", "/js/formations.js", "/js/formations-ui.js"]) {
       const response = await get(port, resource);
       assert.strictEqual(response.status, 200, resource);
       assert.match(response.headers["content-type"], /javascript/, resource);
@@ -1031,7 +1031,7 @@ test("机关兽三个页面提供搜索、流派切换、命中高亮和移动�
   assert.match(ui, /schoolSwitcher\("reference-beasts"/);
   assert.match(ui, /schoolSwitcher\("reference-stages"/);
   assert.match(ui, /machine-search-match/);
-  assert.match(ui, /renderReference\(\)[\s\S]*?beastReference\(\)\s*\+\s*schoolReference\(\)\s*\+\s*materialReference\(\)\s*\+\s*blueprintGuideReference\(\)\s*\+\s*breakthroughGuideReference\(\)\s*\+\s*thresholdReference\(\)\s*\+\s*researchReference\(\)/);
+  assert.match(ui, /renderReference\(\)[\s\S]*?beastReference\(\)\s*\+\s*schoolReference\(\)\s*\+\s*talentReference\(\)\s*\+\s*materialReference\(\)\s*\+\s*blueprintGuideReference\(\)\s*\+\s*breakthroughGuideReference\(\)\s*\+\s*thresholdReference\(\)\s*\+\s*researchReference\(\)/);
   assert.match(css, /#partition-machine-beasts \.machine-search-bar/);
   assert.match(css, /#partition-machine-beasts \.machine-search-match/);
   assert.match(css, /@container machine-beasts \(max-width: 640px\)[\s\S]*?#partition-machine-beasts \.machine-search-bar/);

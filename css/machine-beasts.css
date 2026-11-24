@@ -551,6 +551,7 @@
 #partition-machine-beasts .machine-talent-scroll td { overflow-wrap: anywhere; }
 #partition-machine-beasts .machine-talent-scroll th,
 #partition-machine-beasts .machine-talent-scroll td { text-align: left; }
+#partition-machine-beasts .machine-talent-scroll thead th { text-align: center; }
 @media (max-width: 600px) {
   #partition-machine-beasts .machine-talent-scroll th,
   #partition-machine-beasts .machine-talent-scroll td { padding: 8px 5px; }

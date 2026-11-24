@@ -16,11 +16,11 @@ async function open(width=1440,height=900,extra={}){
  await p.locator('#partition-other-reference [data-ref-section]').first().waitFor();
  return {context,p,errors};
 }
-test('sixteen sections, Chinese filter focus, independent state and source viewer are read-only',async()=>{
+test('twenty-three sections, Chinese filter focus, independent state and source viewer are read-only',async()=>{
  const {context,p,errors}=await open();
  try{
  const before=await p.evaluate(()=>JSON.stringify({...localStorage}));
- assert.equal(await p.locator('.ref-index [data-ref-section]').count(),16);
+ assert.equal(await p.locator('.ref-index [data-ref-section]').count(),23);
  for(const id of ['cards','elements','origins','treasure','speed','guardians','levels','spirits','disciples']){
   await p.locator('.ref-index [data-ref-section="'+id+'"]').click();
   assert.ok(await p.locator('#partition-other-reference h2').innerText());
@@ -33,7 +33,9 @@ test('sixteen sections, Chinese filter focus, independent state and source viewe
  assert.match(await p.locator('.ref-table').innerText(),/300/);
  await p.locator('[data-ref-home]').click();await p.locator('.ref-index [data-ref-section="cards"]').click();
  assert.equal(await p.locator('[data-ref-search]').inputValue(),'');
- assert.equal(await p.locator('[data-ref-results] [data-ref-image]').count(),0);
+ const sourceButtons=p.locator('[data-ref-results] [data-ref-image]');
+ assert.ok(await sourceButtons.count()>0);
+ assert.ok(await sourceButtons.evaluateAll(nodes=>nodes.every(node=>window.OTHER_REFERENCE_DATA.images.some(image=>image.path===node.dataset.refImage))));
  await p.locator('[data-ref-home]').click();await p.locator('.ref-index [data-ref-section="elements"]').click();
  await p.locator('[data-ref-image]').first().click();
  const viewer=p.locator('.ref-viewer');assert.equal(await viewer.isVisible(),true);

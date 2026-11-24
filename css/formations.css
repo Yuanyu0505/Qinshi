@@ -1,0 +1,27 @@
+#partition-formations .formation-max-reference { margin-block: 16px; min-width: 0; }
+#partition-formations .formation-max-reference > summary { color: var(--gold); cursor: pointer; font-size: 1.15em; font-weight: 700; }
+#partition-formations .formation-max-condition { margin-block: 8px 12px; color: var(--muted); }
+#partition-formations .formation-max-controls { display: flex; flex-wrap: wrap; gap: 12px; align-items: end; margin-bottom: 12px; }
+#partition-formations .formation-max-controls label { display: grid; gap: 6px; min-width: 0; }
+#partition-formations .formation-max-query { flex: 1 1 220px; }
+#partition-formations .formation-max-table { max-width: 100%; overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; }
+#partition-formations .formation-max-table table { width: 100%; min-width: 850px; border-collapse: collapse; }
+#partition-formations .formation-max-table th,
+#partition-formations .formation-max-table td { padding: 9px 10px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: middle; }
+#partition-formations .formation-max-table thead th { color: var(--gold); text-align: center; }
+#partition-formations .formation-max-cards { display: none; }
+@media (max-width: 759px) {
+  #partition-formations .formation-max-controls { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); }
+  #partition-formations .formation-max-controls select,
+  #partition-formations .formation-max-controls input { width: 100%; min-width: 0; }
+  #partition-formations .formation-max-query { grid-column: 1 / -1; }
+  #partition-formations .formation-max-table { display: none; }
+  #partition-formations .formation-max-cards { display: grid; grid-template-columns: repeat(auto-fit,minmax(min(100%,250px),1fr)); gap: 10px; }
+  #partition-formations .formation-max-cards article { min-width: 0; padding: 12px; border: 1px solid var(--line); border-radius: 8px; }
+  #partition-formations .formation-max-cards h3 { margin: 0 0 6px; color: var(--gold); }
+  #partition-formations .formation-max-cards p { margin: 0 0 8px; }
+  #partition-formations .formation-max-cards dl { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 8px; margin: 0; }
+  #partition-formations .formation-max-cards dl div { min-width: 0; }
+  #partition-formations .formation-max-cards dt { color: var(--muted); font-size: .85em; }
+  #partition-formations .formation-max-cards dd { margin: 3px 0 0; overflow-wrap: anywhere; }
+}

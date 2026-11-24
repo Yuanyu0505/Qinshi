@@ -1,0 +1,39 @@
+/* Scoped workbook additions, preserving existing reference styles. */
+#partition-other-reference .ref-expansion { min-width:0; }
+#partition-other-reference .ref-exp-controls,
+#partition-other-reference .ref-exp-form { display:flex;flex-wrap:wrap;align-items:end;gap:12px;margin:18px 0; }
+#partition-other-reference .ref-exp-controls > label,
+#partition-other-reference .ref-exp-form > label { display:grid;gap:6px;flex:1 1 155px;min-width:0;font-size:14px; }
+#partition-other-reference .ref-exp-controls .ref-exp-search { flex:2 1 240px; }
+#partition-other-reference .ref-exp-controls input,
+#partition-other-reference .ref-exp-controls select,
+#partition-other-reference .ref-exp-form input,
+#partition-other-reference .ref-exp-form select { box-sizing:border-box;width:100%;min-width:0;max-width:100%; }
+#partition-other-reference .ref-exp-check { display:inline-flex !important;align-items:center;gap:8px; }
+#partition-other-reference .ref-exp-check input { width:20px;min-height:20px;height:20px;flex:none; }
+#partition-other-reference .ref-exp-table-scroll { max-width:100%;overflow:auto;border:1px solid var(--line,#5b4522);border-radius:6px; }
+#partition-other-reference .ref-exp-table-scroll table { border-collapse:collapse;width:100%;min-width:0;font-size:14px; }
+#partition-other-reference .ref-exp-table-scroll caption { text-align:left;padding:10px;color:var(--gold,#dfb64c);font-weight:600; }
+#partition-other-reference .ref-exp-table-scroll th,
+#partition-other-reference .ref-exp-table-scroll td { padding:10px 12px;text-align:left;vertical-align:middle;border-bottom:1px solid var(--line,#5b4522);white-space:pre-line;min-width:64px;line-height:1.6; }
+#partition-other-reference .ref-exp-table-scroll th { color:var(--gold,#dfb64c);white-space:nowrap; }
+#partition-other-reference .ref-exp-cards { display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr));gap:12px; }
+#partition-other-reference .ref-exp-cards > article { min-width:0;padding:12px;border:1px solid var(--line,#5b4522);border-radius:6px; }
+#partition-other-reference .ref-exp-cards h3 { margin:0 0 10px; }
+#partition-other-reference .ref-exp-cards dl { margin:0; }
+#partition-other-reference .ref-exp-cards dl > div { display:grid;grid-template-columns:minmax(72px,.7fr) minmax(0,1fr);gap:10px;padding:5px 0; }
+#partition-other-reference .ref-exp-cards dt { color:var(--gold-dim,#bba064); }
+#partition-other-reference .ref-exp-cards dd { margin:0;white-space:pre-line;overflow-wrap:anywhere; }
+#partition-other-reference .ref-exp-calculator,
+#partition-other-reference .ref-exp-result { margin:18px 0;padding:14px;border:1px solid var(--line,#5b4522);border-radius:6px;min-width:0; }
+#partition-other-reference .ref-exp-calculator > h3,
+#partition-other-reference .ref-exp-result > h3 { margin:0 0 10px; }
+#partition-other-reference [data-exp-calculation]:not(:empty) { margin-top:12px; }
+#partition-other-reference .ref-exp-error { color:#ffaaa0;line-height:1.6; }
+@media(max-width:600px){
+ #partition-other-reference .ref-exp-controls > label,
+ #partition-other-reference .ref-exp-form > label { flex-basis:calc(50% - 12px); }
+ #partition-other-reference .ref-exp-controls .ref-exp-search { flex-basis:100%; }
+ #partition-other-reference .ref-exp-calculator,
+ #partition-other-reference .ref-exp-result { padding:10px; }
+}

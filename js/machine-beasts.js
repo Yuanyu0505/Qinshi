@@ -584,9 +584,187 @@
     return {pool:pool,types:types};
   }
 
-  // Reserve original inputs first, then fund all processed inputs from the SAME
-  // remaining original stock. Allocation is deterministic, not another solution.
-  function allocateConvertedInventory(data, beast, pool, rawItems) {
+  // Match a fixed demand vector. The residual edges allow a later match to
+  // replace an earlier one, rather than locking in a source greedily.
+  function matchInventoryRanks(supply, targets, restricted, needed) {
+    if(!needed)return {operations:0,rankDistance:0,assignments:[]};
+    var end=1+supply.length+targets.length,graph=Array.from({length:end+1},function(){return [];});
+    var distanceWeight=needed+1,opWeight=7*needed*distanceWeight+needed+1,edges=[];
+    function edge(from,to,count,cost){
+      var forward={to:to,count:count,cost:cost,reverse:graph[to].length};
+      graph[to].push({to:from,count:0,cost:-cost,reverse:graph[from].length});
+      graph[from].push(forward);return forward;
+    }
+    supply.forEach(function(s,i){
+      var from=1+i;edge(0,from,s.count,0);
+      targets.forEach(function(t,j){
+        var rank=Math.min(7,t.rank),distance=Math.abs(rank-s.rank);
+        if(restricted&&rank>s.rank)return;
+        // A low original already selected for a core refund has paid for
+        // its one processing action, including a rank change if assigned.
+        var op=!s.opened&&(distance||s.modified)?1:0;
+        // Use already opened stock for otherwise equal paths, preserving
+        // untouched originals and leaving fewer spare components.
+        var fresh=s.opened||s.origin===-1?0:1;
+        edges.push({source:i,target:j,edge:edge(from,1+supply.length+j,Math.min(s.count,t.bodies),op*opWeight+distance*distanceWeight+fresh),op:op,distance:distance});
+      });
+    });
+    targets.forEach(function(t,j){edge(1+supply.length+j,end,t.bodies,0);});
+    var left=needed;
+    while(left){
+      var distance=graph.map(function(){return Infinity;}),parent=[],queued=[],queue=[0];distance[0]=0;queued[0]=true;
+      for(var q=0;q<queue.length;q++){
+        var from=queue[q];queued[from]=false;
+        graph[from].forEach(function(e){
+          if(!e.count||distance[e.to]<=distance[from]+e.cost)return;
+          distance[e.to]=distance[from]+e.cost;parent[e.to]={from:from,edge:e};
+          if(!queued[e.to]){queued[e.to]=true;queue.push(e.to);}
+        });
+      }
+      if(!parent[end])return null;
+      var count=left,step;
+      for(var to=end;to!==0;to=step.from){step=parent[to];count=Math.min(count,step.edge.count);}
+      for(var to=end;to!==0;to=step.from){step=parent[to];step.edge.count-=count;graph[to][step.edge.reverse].count+=count;}
+      left-=count;
+    }
+    var operations=0,rankDistance=0,assignments=[];
+    edges.forEach(function(match){
+      var count=graph[match.edge.to][match.edge.reverse].count;
+      if(!count)return;
+      operations+=count*match.op;rankDistance+=count*match.distance;
+      assignments.push({source:match.source,target:match.target,count:count});
+    });
+    return {operations:operations,rankDistance:rankDistance,assignments:assignments};
+  }
+
+  // High originals each open directly to 2/4/8 rank-7 bodies. Cores are
+  // returned once per opened original, independently of its body yield.
+  function matchConvertedSources(origins, targets, pool, needed, coreNeeded) {
+    var opened=origins.map(function(){return 0;}),high=[],donors=[],best=null,donorGroups=new Map();
+    if(pool.rankConstrained){
+      // Check the nested rank thresholds independently of the core ledger.
+      for(var rank=7;rank>0;rank--){
+        var demand=targets.reduce(function(n,t){return n+(t.rank>=rank?t.bodies:0);},0);
+        if(demand>inventoryRankCapacity(origins,rank))throw Error('仅0阶：库存阶数不足，不能使用未核实的返料升阶');
+      }
+    }
+    origins.forEach(function(o,i){
+      if(!o.count)return;
+      if(o.rank>7)high.push(i);
+      else if(o.cores&&coreNeeded){
+        if(!donorGroups.has(o.rank))donorGroups.set(o.rank,[]);
+        donorGroups.get(o.rank).push(i);
+      }
+    });
+    if(!needed&&!coreNeeded)return {opened:opened,bodyTargets:origins.map(function(){return [];}),operations:0,rankDistance:0};
+    // Equivalent high-stock profiles share the same effective rank and
+    // spendable cores. Only the fewest splits per profile can be optimal.
+    var profiles=new Map([['0/0',{bodies:0,cores:0,splits:0,choices:[]}]]);
+    high.forEach(function(i){
+      var o=origins[i],next=new Map();
+      profiles.forEach(function(prior){
+        var max=Math.min(o.count,Math.max(Math.ceil(Math.max(0,needed-prior.bodies)/o.weight),o.cores?Math.ceil(Math.max(0,coreNeeded-prior.cores)/o.cores):0));
+        for(var count=0;count<=max;count++){
+          var capacity=prior.bodies+count*o.weight,cores=Math.min(coreNeeded,prior.cores+count*o.cores),splits=prior.splits+count;
+          var key=Math.min(needed,capacity)+'/'+cores,old=next.get(key);
+          if(!old||splits<old.splits||splits===old.splits&&capacity<old.bodies)next.set(key,{bodies:capacity,cores:cores,splits:splits,choices:prior.choices.concat(count)});
+        }
+      });
+      profiles=next;
+    });
+    // At a fixed rank, all after-reset forms have the same matching edges.
+    // For k forced openings, k highest refunds dominate lower refunds.
+    donorGroups.forEach(function(indices){
+      indices.sort(function(a,b){return origins[b].cores-origins[a].cores||a-b;});
+      var credit=indices.reduce(function(n,i){return Math.min(coreNeeded,n+origins[i].cores*origins[i].count);},0);
+      donors.push({indices:indices,maximumCredit:credit,largest:origins[indices[0]].cores});
+    });
+    donors.sort(function(a,b){return b.largest-a.largest||a.indices[0]-b.indices[0];});
+    var remainingCredits=[0],largestRefund=[0];
+    for(var i=donors.length-1;i>=0;i--){
+      remainingCredits[i]=Math.min(coreNeeded,(remainingCredits[i+1]||0)+donors[i].maximumCredit);
+      largestRefund[i]=donors[i].largest;
+    }
+    function evaluate(profile,cores,resets,unconstrained){
+      var supply=[];
+      origins.forEach(function(o,i){
+        if(o.rank>7||!o.count)return;
+        if(opened[i])supply.push({origin:i,rank:o.rank,count:opened[i],opened:true});
+        // Unopened modified units can be used once their additional cores
+        // are immaterial; otherwise they belong in an explicit donor choice.
+        if(o.count>opened[i]&&(unconstrained||!o.cores||cores>=coreNeeded))supply.push({origin:i,rank:o.rank,count:o.count-opened[i],modified:!!o.cores});
+      });
+      if(profile.bodies)supply.push({origin:-1,rank:7,count:profile.bodies});
+      if(supply.reduce(function(sum,s){return sum+s.count;},0)<needed)return null;
+      var match=matchInventoryRanks(supply,targets,pool.rankConstrained,needed);
+      if(!match)return null;
+      var funded=match.assignments.reduce(function(n,a){var s=supply[a.source];return n+(s.modified?a.count*origins[s.origin].cores:0);},cores);
+      var deficit=Math.max(0,coreNeeded-funded);
+      if(deficit&&!pool.allowExternalCores)return deficit;
+      var operations=profile.splits+resets+match.operations;
+      var highUsed=match.assignments.reduce(function(sum,a){return sum+(supply[a.source].origin===-1?a.count:0);},0);
+      var score=[deficit,operations,match.rankDistance,profile.splits,profile.bodies-highUsed];
+      if(best){
+        var first=score.findIndex(function(value,j){return value!==best.score[j];});
+        if(first===-1||score[first]>best.score[first])return deficit;
+      }
+      var chosen=opened.slice(),bodyTargets=origins.map(function(){return [];});
+      high.forEach(function(i,j){chosen[i]=profile.choices[j];});
+      var cursor=0,highLeft=high.length?chosen[high[0]]*origins[high[0]].weight:0;
+      function record(i,target,count){
+        var rows=bodyTargets[i],t=targets[target],existing=rows.find(function(row){return row.rank===t.rank&&row.modificationId===t.modificationId;});
+        if(existing)existing.bodies+=count;else rows.push({rank:t.rank,modificationId:t.modificationId,bodies:count});
+      }
+      match.assignments.forEach(function(a){
+        var s=supply[a.source];
+        if(s.origin!==-1){record(s.origin,a.target,a.count);if(!s.opened)chosen[s.origin]+=a.count;return;}
+        var left=a.count;
+        while(left){
+          while(!highLeft){cursor++;var i=high[cursor];highLeft=chosen[i]*origins[i].weight;}
+          var count=Math.min(left,highLeft);record(high[cursor],a.target,count);left-=count;highLeft-=count;
+        }
+      });
+      best={score:score,opened:chosen,bodyTargets:bodyTargets,operations:operations,rankDistance:match.rankDistance};
+      return deficit;
+    }
+    profiles.forEach(function(profile){
+      // First solve the relaxed rank assignment. If its actual refund is
+      // sufficient (or the maximum possible), no donor search can improve it.
+      var lowerDeficit=Math.max(0,coreNeeded-profile.cores-(remainingCredits[0]||0));
+      if(lowerDeficit&&!pool.allowExternalCores)return;
+      var actualDeficit=evaluate(profile,profile.cores,0,true);
+      if(actualDeficit===null||actualDeficit===lowerDeficit)return;
+      function search(at,cores,resets){
+        var bound=Math.max(0,coreNeeded-cores-(remainingCredits[at]||0));
+        if(bound>0&&!pool.allowExternalCores)return;
+        if(best&&(bound>best.score[0]||bound===best.score[0]&&profile.splits+resets>best.score[1]))return;
+        if(best&&bound===best.score[0]&&at<donors.length){
+          var minimumResets=Math.ceil(Math.max(0,coreNeeded-cores-best.score[0])/largestRefund[at]);
+          if(profile.splits+resets+minimumResets>best.score[1])return;
+        }
+        if(at===donors.length||cores>=coreNeeded){evaluate(profile,cores,resets);return;}
+        var group=donors[at].indices,total=0,credit=0;
+        search(at+1,cores,resets);
+        group.some(function(i){
+          var o=origins[i];
+          for(var count=1;count<=o.count;count++){
+            opened[i]=count;total++;credit+=o.cores;
+            search(at+1,cores+credit,resets+total);
+            if(cores+credit>=coreNeeded)return true;
+          }
+          return false;
+        });
+        group.forEach(function(i){opened[i]=0;});
+      }
+      search(0,profile.cores,0);
+    });
+    if(best)return best;
+    if(coreNeeded)throw Error('同名机关兽神核不足');
+    throw Error('库存本体分配不足');
+  }
+
+  // Reserve direct inputs, then choose the sources for the fixed final vector.
+  function allocateConvertedInventory(data, beast, pool, rawItems, deferSources) {
     if(pool.beastId&&pool.beastId!==beast.id)throw Error('不同机关兽不能共享神核或本体');
     rawItems.forEach(function(i){if(!conversionFormSupported(data,beast,i.rank,i.modificationId)||!Number.isSafeInteger(i.count)||i.count<0)throw Error('机关兽投入形态或数量不合法');});
     var remaining=pool.origins.map(function(o){return Object.assign({},o);}),items=[],sources=[],unused=(pool.excluded||[]).map(function(o){return Object.assign({},o);}),remainingBase=0;
@@ -637,96 +815,43 @@
       if(!pool.rankConstrained)rankShares.set(i.rank,share-owned*weight-mixed);
       if(left)items.push(Object.assign({},i,{source:'new',count:left}));
     });
-    var spent=processing.reduce(function(n,i){return n+i.count*modificationCoreNeed(data,i.modificationId);},0),loose=pool.looseCores||0,needed=usedProcessed,coreNeeded=Math.max(0,spent-loose),returned=0;
-    // Reclaim mandatory cores first: the same dismantled stock also supplies
-    // bodies. Selecting them independently would needlessly reprocess plain stock.
-    var usedBySource=remaining.map(function(){return 0;});
-    var reclaim=remaining.map(function(){return 0;});
-    var targetsBySource=remaining.map(function(){return [];});
+    var total=rawItems.reduce(function(n,i){return n+i.count*baseBodies(i.rank);},0),added=Math.max(0,total-pool.baseCount);
+    var allocatedNew=items.reduce(function(n,i){return n+(i.source==='owned'?0:i.newBaseBodies===undefined?i.count*baseBodies(i.rank):i.newBaseBodies);},0);
+    if(allocatedNew!==added)throw Error('库存转换本体分配不守恒');
+    if(pool.inventoryOnly&&added)throw Error('蓝紫机关兽仅可使用库存本体');
+    if(deferSources)return {invested:total,newCount:added,owned:total-added,items:items,_conversionPool:pool};
+    var spent=processing.reduce(function(n,i){return n+i.count*modificationCoreNeed(data,i.modificationId);},0),loose=pool.looseCores||0,returned=0;
     var targets=items.filter(function(i){return i.converted;}).map(function(i){
       return {rank:i.rank,modificationId:i.modificationId,bodies:i.source==='owned'?i.count*baseBodies(i.rank):i.ownedBaseBodies};
     });
-    // Restricted high targets require a nested supply threshold; free
-    // targets and rank zero can receive any remaining eligible body.
-    var rankDemands=pool.rankConstrained?targets.filter(function(t){return t.rank>0;}):[];
-    rankDemands.sort(function(a,b){return b.rank-a.rank;}).forEach(function(demand){
-      var left=demand.bodies;
-      function assign(o,index,maximum){
-        if(!left||o.rank<Math.min(7,demand.rank))return;
-        var used=Math.min(left,maximum,o.count*o.weight-usedBySource[index]);
-        usedBySource[index]+=used;
-        var count=Math.ceil(usedBySource[index]/o.weight)-reclaim[index];
-        reclaim[index]+=count;
-        coreNeeded=Math.max(0,coreNeeded-count*o.cores);
-        if(used)targetsBySource[index].push({rank:demand.rank,modificationId:demand.modificationId,bodies:used});
-        left-=used;needed-=used;
-      }
-      // Reuse already split bodies, then favor a source which also supplies
-      // necessary cores rather than dismantling one extra beast for the cores.
-      remaining.forEach(function(o,index){assign(o,index,reclaim[index]*o.weight-usedBySource[index]);});
-      remaining.forEach(function(o,index){
-        if(o.cores&&coreNeeded)assign(o,index,Math.ceil(coreNeeded/o.cores)*o.weight);
-      });
-      remaining.forEach(function(o,index){assign(o,index,Infinity);});
-      if(left)throw Error('仅0阶：库存阶数不足，不能使用未核实的返料升阶');
-    });
-    var unassignedTargets=targets.filter(function(t){return !pool.rankConstrained||t.rank===0;});
-    var targetIndex=0,targetUsed=0;
+    var match=matchConvertedSources(remaining,targets,pool,usedProcessed,Math.max(0,spent-loose));
     remaining.forEach(function(o,index){
-      var count=o.cores?Math.min(o.count-reclaim[index],Math.ceil(coreNeeded/o.cores)):0;
-      coreNeeded=Math.max(0,coreNeeded-count*o.cores);
-      reclaim[index]+=count;
-      var used=Math.min(needed,reclaim[index]*o.weight-usedBySource[index]);
-      usedBySource[index]+=used;needed-=used;
-    });
-    remaining.forEach(function(o,index){
-      var additional=Math.min(o.count-reclaim[index],Math.ceil(needed/o.weight));
-      var used=Math.min(needed,additional*o.weight);
-      reclaim[index]+=additional;
-      usedBySource[index]+=used;
-      needed-=used;
-    });
-    remaining.forEach(function(o,index){
-      var count=reclaim[index];
+      var count=match.opened[index];
       if(count){
-        var supplied=count*o.weight,used=usedBySource[index],refund=count*o.cores,left=supplied-used;returned+=refund;remainingBase+=left;
+        var bodyTargets=match.bodyTargets[index],supplied=count*o.weight,used=bodyTargets.reduce(function(n,t){return n+t.bodies;},0),refund=count*o.cores,left=supplied-used;returned+=refund;remainingBase+=left;
         var source=Object.assign({},o,{count:count,baseBodies:supplied,sevenRankEquivalent:o.weight,returnedCores:refund,usedBaseBodies:used,remainingBaseBodies:left});
         source.originId=beast.id+'/'+o.rank+'/'+o.modificationId;
-        source.bodyTargets=targetsBySource[index];
-        var unmatched=used-source.bodyTargets.reduce(function(sum,target){return sum+target.bodies;},0);
-        while(unmatched){
-          var target=unassignedTargets[targetIndex];
-          if(!target)throw Error('库存加工去向不守恒');
-          var assigned=Math.min(unmatched,target.bodies-targetUsed);
-          source.bodyTargets.push({rank:target.rank,modificationId:target.modificationId,bodies:assigned});
-          unmatched-=assigned;targetUsed+=assigned;
-          if(targetUsed===target.bodies){targetIndex++;targetUsed=0;}
-        }
+        source.bodyTargets=bodyTargets;
         sources.push(source);o.count-=count;
         if(left){var rank=o.rank>7?7:o.rank;unused.push({rank:rank,modificationId:'none',count:left,researchEach:researchFor(data,beast,rank,'none'),converted:true});}
       }
       if(o.count)unused.push({rank:o.rank,modificationId:o.modificationId,count:o.count,researchEach:o.researchEach});
     });
-    if(needed)throw Error('库存本体分配不足');
     var deficit=Math.max(0,spent-loose-returned);
     if(deficit&&!pool.allowExternalCores)throw Error('同名机关兽神核不足，缺少'+deficit+'个');
-    var total=rawItems.reduce(function(n,i){return n+i.count*baseBodies(i.rank);},0),added=Math.max(0,total-pool.baseCount);
-    var allocatedNew=items.reduce(function(n,i){return n+(i.source==='owned'?0:i.newBaseBodies===undefined?i.count*baseBodies(i.rank):i.newBaseBodies);},0);
-    if(allocatedNew!==added)throw Error('库存转换本体分配不守恒');
-    if(pool.inventoryOnly&&added)throw Error('蓝紫机关兽仅可使用库存本体');
     var ledger={beastId:beast.id,looseOwned:loose,returned:returned,spent:spent,reused:Math.min(loose+returned,spent),externalDeficit:deficit,remaining:Math.max(0,loose+returned-spent),estimatedBoxes:deficit*(data.modificationCoreRules&&data.modificationCoreRules.estimatedBoxesPerCore||5),unpriced:deficit>0};
     return {items:items,unused:unused,invested:total,newCount:added,owned:total-added,
       ownedPhysical:items.filter(function(i){return i.source==='owned';}).reduce(function(n,i){return n+i.count;},0),
       newPhysical:items.filter(function(i){return i.source!=='owned';}).reduce(function(n,i){return n+i.count;},0),
       ownedModified:items.reduce(function(n,i){return n+(i.modificationId==='none'?0:i.source==='owned'?i.count*baseBodies(i.rank):i.ownedBaseBodies||0);},0),
       newModified:items.reduce(function(n,i){return n+(i.modificationId==='none'||i.source==='owned'?0:i.newBaseBodies===undefined?i.count*baseBodies(i.rank):i.newBaseBodies);},0),
-      modificationCores:ledger,inventoryConversion:Object.assign({sources:sources,usedBaseBodies:usedProcessed,remainingBaseBodies:remainingBase,availableBaseBodies:pool.baseCount,remainingItems:unused,modificationCores:ledger},pool.rankConstrained?{rankMaterialsUnverified:pool.origins.some(function(o){return o.rank>0;})}:{})};
+      modificationCores:ledger,inventoryConversion:Object.assign({sources:sources,usedBaseBodies:usedProcessed,remainingBaseBodies:remainingBase,availableBaseBodies:pool.baseCount,remainingItems:unused,modificationCores:ledger,operations:match.operations,rankDistance:match.rankDistance,processingMaterialsUnverified:match.rankDistance>0},pool.rankConstrained?{rankMaterialsUnverified:pool.origins.some(function(o){return o.rank>0;})}:{})};
   }
 
   // Sparse exact-research frontiers: both original inputs and processing use
   // base-body budget n. Per-origin bounded processing prevents double spending;
   // componentwise dominance is safe for every remaining type and shared fee.
-  function conversionCandidates(data, beast, progress, config, gap, terminalAllowed, singleMinimumCount, deferAllocation) {
+  function conversionCandidates(data, beast, progress, config, gap, terminalAllowed, singleMinimumCount, deferAllocation, deferSources) {
     var diagnostic=typeof config.onDiagnostic==='function'?config.onDiagnostic:null,started=diagnostic?Date.now():0,metrics=null;
     var domain=conversionMaterials(data,beast,progress,config),types=domain.types,pool=domain.pool;
     if(!gap||!types.length)return [];
@@ -841,10 +966,10 @@
       if(metrics)metrics.decodedVectors++;
       var counts=unpackCounts(s.counts),order=stable(counts);
       var rawItems=[];counts.forEach(function(count,index){if(count){var t=types[index];rawItems.push({source:t.source,rank:t.rank,modificationId:t.modificationId,count:count,researchEach:t.researchEach,sevenRankEquivalent:t.weight});}});
-      // Feasibility was proved in the frontier. Materialize only surviving
-      // school candidates, not thousands of discarded source/ledger objects.
-      var allocation=deferAllocation?{invested:s.n,newCount:Math.max(0,s.n-pool.baseCount),owned:Math.min(s.n,pool.baseCount),items:[],_conversionPool:pool}:allocateConvertedInventory(data,beast,pool,rawItems);
-      if(metrics&&!deferAllocation)metrics.allocations++;
+      // The single-beast comparator still uses the original item shape for
+      // deterministic ties. Only materialize its winner's processing ledger.
+      var allocation=deferAllocation?{invested:s.n,newCount:Math.max(0,s.n-pool.baseCount),owned:Math.min(s.n,pool.baseCount),items:[],_conversionPool:pool}:allocateConvertedInventory(data,beast,pool,rawItems,deferSources);
+      if(metrics&&!deferAllocation&&!deferSources)metrics.allocations++;
       compact.set(key,Object.assign(allocation,{endLevel:level,research:research,blueprints:s.b,pieces:s.p,modified:s.m,stable:order,rawItems:rawItems}));
       compactCounts.set(key,s.counts);
     });});
@@ -855,7 +980,7 @@
   function conversionInvestmentPlan(data,beast,progress,config,targetLevel) {
     var target=thresholdForLevel(targetLevel,data.researchThresholds),current=levelForResearch(progress.research,data.researchThresholds,beast.maxLevel),gap=Math.max(0,target-progress.research);
     if(!gap)return emptyPlan(data,beast,progress,current,targetLevel,target);
-    var candidates=conversionCandidates(data,beast,progress,Object.assign({},config,{bluePurpleInventoryOnly:false}),gap,true,true),best=null;
+    var candidates=conversionCandidates(data,beast,progress,Object.assign({},config,{bluePurpleInventoryOnly:false}),gap,true,true,false,true),best=null;
     candidates.forEach(function(r){
       if(r.research<gap)return;
       var state={items:r.items,newCount:r.newCount,newInvestedCount:r.newCount,research:r.research,awakeningBlueprints:r.blueprints,organPieces:r.pieces};
@@ -864,7 +989,7 @@
       if(betterPlan(candidate,best,true,config.useOwnedInventory!==false))best=candidate;
     });
     if(!best)return {valid:false,errors:['当前条件下无法生成库存转换方案']};
-    var r=best.raw,missing=best.metrics.missingFragments,contribution=beast.contributionPerFragment===null?null:missing*beast.contributionPerFragment;
+    var r=Object.assign({},best.raw,allocateConvertedInventory(data,beast,best.raw._conversionPool,best.raw.rawItems)),missing=best.metrics.missingFragments,contribution=beast.contributionPerFragment===null?null:missing*beast.contributionPerFragment;
     return {valid:true,errors:[],current:{level:current,research:progress.research},target:{level:targetLevel,research:target,deficit:gap},
       selected:{ownedItems:r.items.filter(function(i){return i.source==='owned';}),newItems:r.items.filter(function(i){return i.source!=='owned';})},unused:r.unused,inventoryConversion:r.inventoryConversion,modificationCores:r.modificationCores,
       totals:{investedCount:r.invested,newInvestedCount:r.newCount,research:r.research,overflow:r.research-gap,awakeningBlueprints:r.blueprints,organPieces:r.pieces,projectedLevel:r.endLevel},

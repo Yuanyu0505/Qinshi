@@ -67,6 +67,7 @@ async function calculateFixedSingle(page) {
   await page.evaluate(() => {
     const view = window.MACHINE_BEAST_UI.captureView();
     Object.assign(view.calcDraft, { research: 750000, fragments: 13 });
+    view.singleUseFragments = true;
     view.calcTargetLevel = 20;
     view.singleNewRankMode = 'zero';
     view.singleInventoryPolicy.useOwnedInventory = false;
@@ -93,9 +94,10 @@ async function calculateFixedSchool(page) {
     for (const [id, fragments] of [['mechanical-white-tiger', 13], ['mechanical-vermilion-bird', 8]]) {
       Object.assign(draft.progressByBeast[id], { research: 750000, fragments });
       draft.participating[id] = true;
+      draft.useFragmentsByBeast[id] = true;
     }
     draft.progressByBeast['mechanical-bronze-man'].research = 168800;
-    Object.assign(draft, { targetStage: 1, useOwnedInventory: false, newRankMode: 'zero' });
+    Object.assign(draft, { targetStage: 1, useFragments: true, useOwnedInventory: false, newRankMode: 'zero' });
     view.schoolResult = null;
     window.MACHINE_BEAST_UI.restoreView(view);
   });

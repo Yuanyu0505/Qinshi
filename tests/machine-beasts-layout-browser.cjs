@@ -5,6 +5,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
 const { createServer } = require('../serve.js');
 const { openApp, getAccountItem } = require('./browser-test-helpers.cjs');
 let browser, server, origin;
+const formatFourDigits = value => String(value).replace(/\B(?=(\d{4})+(?!\d))/g, ',');
 before(async () => {
   server = createServer();
   await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
@@ -64,7 +65,7 @@ for (const width of [320,1280]) test(`alignment: ${width}px reference return but
     for(const t of tables.filter(t=>t.quality!=='orange')){
       assert.equal(t.cells.length,7);assert.equal(t.empty,5);
       for(let i=0;i<7;i++)assert.ok(Math.abs(t.cells[i].left-orange.cells[i].left)<=1&&Math.abs(t.cells[i].right-orange.cells[i].right)<=1);
-      assert.equal(t.cells[1].text,t.quality==='blue'?'1,000':'12,000');
+      assert.equal(t.cells[1].text,t.quality==='blue'?'1000':'1,2000');
       assert.ok(t.cells.slice(2).every(c=>c.text===''));
     }
   } else {
@@ -78,6 +79,13 @@ test('round2: excluded card stays compact, expanded fields and participation pre
   await page.locator('[data-machine-calculator-mode="school"]').click();
   const id = await page.locator('[data-school-card]').first().getAttribute('data-school-card');
   const card = page.locator('[data-school-card="' + id + '"]');
+  const globalFragments = page.locator('[data-school-option="useFragments"]');
+  assert.equal(await globalFragments.isChecked(), false);
+  assert.equal(await card.locator('[data-use-calc-fragments]').count(), 0);
+  await globalFragments.check();
+  await card.locator('.machine-temporary-inventory > summary').click();
+  assert.equal(await card.locator('[data-use-calc-fragments]').isChecked(), false);
+  await card.locator('[data-use-calc-fragments]').check();
   await card.locator('[data-school-field="fragments"]').fill('37');
   await card.locator('[data-school-participant]').uncheck();
   assert.equal(await card.locator('[data-school-field="fragments"]').isVisible(), false);
@@ -87,12 +95,16 @@ test('round2: excluded card stays compact, expanded fields and participation pre
   assert.match(await card.locator('.machine-excluded-summary').textContent(), /当前 1\//);
   await card.locator('[data-school-participant]').check();
   assert.equal(await card.locator('[data-school-field="fragments"]').inputValue(), '37');
+  await globalFragments.uncheck();
+  assert.equal(await card.locator('[data-use-calc-fragments]').count(), 0);
+  await globalFragments.check();
+  assert.equal(await card.locator('[data-school-field="fragments"]').inputValue(), '37');
 }));
 test('round2: single action follows material policy and price settings, without duplicates', async () => scenario(async page => {
   assert.equal(await page.locator('[data-machine-action="calculate"]').count(), 1);
   assert.equal(await page.evaluate(() => {
     const action = document.querySelector('[data-machine-action="calculate"]');
-    return ['[data-calc-field="fragments"]','[data-owned-global]','[data-new-rank-mode-scope="single"]','#machine-price-settings'].every(selector =>
+    return ['[data-use-calc-fragments]','[data-owned-global]','[data-new-rank-mode-scope="single"]','#machine-price-settings'].every(selector =>
       Boolean(document.querySelector(selector).compareDocumentPosition(action) & Node.DOCUMENT_POSITION_FOLLOWING));
   }), true);
 }));
@@ -126,7 +138,7 @@ test('round2: quality and rank quick lookup reads actual DATA and keeps full mat
   await page.locator('[data-research-quality]').selectOption('orange');
   await page.locator('[data-research-rank]').selectOption('7');
   const expected = await page.evaluate(() => window.MACHINE_BEAST_DATA.modifications.map(m => [m.name,window.MACHINE_BEAST_DATA.researchValues.orange[7][m.id]]));
-  for (const [name, value] of expected) assert.match(await page.locator('[data-research-quick-result]').textContent(), new RegExp(name + '[\\s\\S]*' + value.toLocaleString('zh-CN')));
+  for (const [name, value] of expected) assert.match(await page.locator('[data-research-quick-result]').textContent(), new RegExp(name + '[\\s\\S]*' + formatFourDigits(value)));
   assert.equal(await page.locator('.machine-research-matrix-scroll tbody tr').count(), matrixRows);
   assert.equal(await getAccountItem(page, 'qinshi_machine_beasts_progress_v1'), before);
   for (const quality of ['orange','purple','blue']) {
@@ -135,7 +147,8 @@ test('round2: quality and rank quick lookup reads actual DATA and keeps full mat
     assert.deepEqual(await page.locator('[data-research-rank] option').evaluateAll(nodes => nodes.map(n => n.value)), ranks);
     for (const rank of ranks) {
       await page.locator('[data-research-rank]').selectOption(rank);
-      const expected = await page.evaluate(({quality,rank}) => Object.values(window.MACHINE_BEAST_DATA.researchValues[quality][rank]).map(v => v == null ? '—' : v.toLocaleString('zh-CN')), {quality,rank});
+      const values = await page.evaluate(({quality,rank}) => Object.values(window.MACHINE_BEAST_DATA.researchValues[quality][rank]), {quality,rank});
+      const expected = values.map(v => v == null ? '—' : formatFourDigits(v));
       assert.deepEqual(await page.locator('[data-research-quick-result] dd').allTextContents(), expected);
     }
   }
@@ -162,29 +175,36 @@ test('school actions scroll away instead of overlapping research and inventory f
   await page.locator('[data-machine-action="edit-progress"]').first().click();
   assert.equal(await page.locator('.machine-editor-actions').evaluate(node => getComputedStyle(node).position), 'static');
 }));
-test('inventory flags retain open state and identity; radio restoration distinguishes both values', async () => scenario(async page => {
+test('single inventory stays visible and retains focus when flags changed', async () => scenario(async page => {
   const inventory = page.locator('.machine-temporary-inventory');
-  await inventory.locator('summary').click();
+  assert.equal(await inventory.locator('summary').count(), 0);
+  assert.equal(await inventory.locator('[data-calc-inventory]').first().isVisible(), true);
   await page.locator('[data-calc-flag="showHighRanks"]').check();
-  assert.equal(await inventory.evaluate(node => node.open), true);
+  assert.equal(await inventory.locator('[data-calc-inventory][data-rank="10"]').first().isVisible(), true);
   await page.locator('[data-calc-flag="showMods"]').check();
-  assert.equal(await inventory.evaluate(node => node.open), true);
+  assert.equal(await inventory.locator('[data-calc-inventory][data-mod="initial"]').first().isVisible(), true);
   assert.equal(await page.evaluate(() => document.activeElement.dataset.calcFlag), 'showMods');
   await page.locator('[data-new-rank-mode-scope="single"][value="zero"]').check();
   await page.locator('[data-new-rank-mode-scope="single"][value="zeroToSeven"]').check();
   assert.equal(await page.evaluate(() => document.activeElement.value), 'zeroToSeven');
 }));
-test('return restores hidden calculator disclosure state without rereading stale hidden DOM', async () => scenario(async page => {
+test('return restores temporary fragments opt-in and draft without saving to inventory', async () => scenario(async page => {
   const inventory = page.locator('.machine-temporary-inventory');
-  await inventory.locator('summary').click();
+  const fragmentToggle = inventory.locator('[data-use-calc-fragments]');
+  assert.equal(await fragmentToggle.isChecked(), false);
+  const before = await getAccountItem(page, 'qinshi_machine_beasts_progress_v1');
+  await fragmentToggle.check();
+  await inventory.locator('[data-calc-field="fragments"]').fill('27');
   await page.locator('[data-machine-beast-mode="progress"]').click();
   await page.evaluate(() => { window.__savedLayoutView = window.MACHINE_BEAST_UI.captureView(); });
   await page.locator('[data-machine-beast-mode="calculator"]').click();
-  await inventory.locator('summary').click();
-  assert.equal(await inventory.evaluate(node => node.open), false);
+  await fragmentToggle.uncheck();
+  assert.equal(await inventory.locator('[data-calc-field="fragments"]').count(), 0);
   await page.evaluate(() => window.MACHINE_BEAST_UI.restoreView(window.__savedLayoutView));
   await page.locator('[data-machine-beast-mode="calculator"]').click();
-  assert.equal(await inventory.evaluate(node => node.open), true);
+  assert.equal(await fragmentToggle.isChecked(), true);
+  assert.equal(await inventory.locator('[data-calc-field="fragments"]').inputValue(), '27');
+  assert.equal(await getAccountItem(page, 'qinshi_machine_beasts_progress_v1'), before);
 }));
 test('same-object search retains real busy Worker and disabled button; switching object invalidates result', async () => scenario(async page => {
   let release, requested;

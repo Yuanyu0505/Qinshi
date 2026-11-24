@@ -13,7 +13,7 @@ for (const file of ['data/machine-beasts.js', 'js/machine-beasts.js', 'js/number
 }
 const source = fs.readFileSync(path.join(root, 'js/machine-beasts-ui.js'), 'utf8');
 vm.runInContext(source.replace('window.MACHINE_BEAST_UI = {',
-  'window.testUI = { calcTargetOptions, calcTargetPicker, calculatorInventorySelector, conversionSummary, investmentLists, itemList, researchReference, formatNumber, newRankModeSelector, rankMaterialsNote, planBeastOrder, investmentInventoryLimits, renderEquivalentAlternatives }; window.MACHINE_BEAST_UI = {'), context);
+  'window.testUI = { calcTargetOptions, calcTargetPicker, calculatorInventorySelector, calculatorFragmentControl, calculationProgress, conversionSummary, investmentLists, itemList, researchReference, formatNumber, newRankModeSelector, rankMaterialsNote, planBeastOrder, investmentInventoryLimits, schoolCombination }; window.MACHINE_BEAST_UI = {'), context);
 const ui = context.window.testUI;
 
 test('UI number formatting preserves BigInt precision and uses four-digit groups', () => {
@@ -41,6 +41,20 @@ test('inventory row keeps usage cap and disabled state together', () => {
   assert.match(html, /class="machine-owned-stock"/);
 });
 
+test('fragment inputs appear only after opting in and keep the draft quantity', () => {
+  for (const beastId of [undefined, 'war-demon']) {
+    const off = ui.calculatorFragmentControl(37, false, beastId);
+    assert.doesNotMatch(off, /checked|type="number"/);
+    const on = ui.calculatorFragmentControl(37, true, beastId);
+    assert.match(on, /checked[\s\S]*?type="number"[^>]+value="37"/);
+  }
+  const draft = Object.freeze({ fragments:37, research:2024, inventory:{} });
+  assert.equal(ui.calculationProgress(draft, false).fragments, 0);
+  assert.equal(ui.calculationProgress(draft, true).fragments, 37);
+  assert.equal(ui.calculationProgress(draft, false).research, 2024);
+  assert.equal(draft.fragments, 37);
+});
+
 test('plan rendering sorts by quality, rank and modification, without changing input order', () => {
   const item = (rank, modificationId = 'none') => ({rank,modificationId,count:1,source:'owned',researchEach:48000});
   const row = (beastId, items) => ({beastId,beastName:beastId,items,startLevel:0,endLevel:1,resources:{}});
@@ -53,7 +67,9 @@ test('plan rendering sorts by quality, rank and modification, without changing i
   assert.equal(stock[3].items[0].rank,0);
   const list = ui.itemList([item(6,'fullDivine'),item(7),item(7,'heaven'),item(0)],'','owned');
   assert.match(list,/（天改）7阶×1[\s\S]*?（0改）7阶×1[\s\S]*?（神改）6阶×1[\s\S]*?（0改）0阶×1/);
-  const alternativeHtml = ui.renderEquivalentAlternatives([{beasts:stock,totals:{},stableKey:'k'}], 'school', 0);
+  const alternativeHtml = ui.schoolCombination({beasts:stock,totals:{},stableKey:'k'}, 'school', 2, 'materials');
+  assert.match(alternativeHtml, /<details[^>]+><summary>组合2 · mechanical-yueliao1级、mechanical-bear1级/);
+  assert.doesNotMatch(alternativeHtml, /<details[^>]+\sopen[\s>]/);
   assert.deepEqual(Array.from(alternativeHtml.matchAll(/<article class="machine-school-plan-beast"><header><strong>([^<]+)<\/strong>/g), match=>match[1]),expected);
 });
 
@@ -62,14 +78,20 @@ test('zero mode states the material verification boundary and lists only real ra
   assert.match(ui.newRankModeSelector('single','zeroToSeven'),/可新增0–7阶[\s\S]*自由升降/);
   assert.match(ui.rankMaterialsNote(true),/材料可行性无法确认[\s\S]*仅比较无需库存升阶的方案/);
   assert.equal(ui.rankMaterialsNote(false),'');
-  const flow = ui.conversionSummary({sources:[{rank:9, modificationId:'fullDivine', count:1, baseBodies:4, bodyTargets:[{rank:5,bodies:1},{rank:7,bodies:1}], remainingBaseBodies:2}]},null,'test',
-    [{rank:5,count:1,modificationId:'none',source:'owned',converted:true},{rank:7,count:1,modificationId:'none',source:'owned',converted:true}]);
-  assert.match(flow, /神改）9阶×1[\s\S]*?7阶0改×4[\s\S]*?供7阶投入×1[\s\S]*?供5阶投入×1[\s\S]*?剩余7阶0改×2/);
-  assert.doesNotMatch(flow,/升阶材料返还|NaN|undefined/);
+  const flow = ui.conversionSummary({sources:[{rank:9, modificationId:'fullDivine', count:1, baseBodies:4, bodyTargets:[{rank:5,bodies:1},{rank:7,bodies:1}], remainingBaseBodies:2}]},null,'test');
+  assert.match(flow, /（神改）9阶×1 → （0改）7阶×4 → （0改）7阶×1、（0改）5阶×1、剩余（0改）7阶×2/);
+  assert.doesNotMatch(flow,/加工前|加工投入|升阶材料返还|NaN|undefined/);
   const caps = ui.investmentInventoryLimits('test',{id:'war-demon'},{inventory:{none:{7:4},initial:{7:1}}},{limits:{none:{7:2}}},true);
   assert.match(caps,/（升神）7阶：库存 1只／最多使用 1只[\s\S]*?（0改）7阶：库存 4只／最多使用 2只/);
   const disabled = ui.investmentInventoryLimits('test',{id:'war-demon'},{inventory:{none:{7:4}}},{limits:{}},false);
   assert.match(disabled,/（0改）7阶：库存 4只／最多使用 0只/);
+});
+
+test('8–10 inventory splits show the complete rank-7 yield once when directly invested', () => {
+  for (const [rank, count] of [[8, 2], [9, 4], [10, 8]]) {
+    const flow = ui.conversionSummary({sources:[{rank, modificationId:'none', count:1, baseBodies:count, bodyTargets:[{rank:7, modificationId:'none', bodies:count}], remainingBaseBodies:0}]},null,'test');
+    assert.ok(flow.includes('<li>（0改）' + rank + '阶×1 → （0改）7阶×' + count + '</li>'));
+  }
 });
 
 test('conversion disclosure shows original source and separate unpriced core deficit', () => {
@@ -96,9 +118,9 @@ test('Yueliao single plan groups final forms and shows actual conversion endpoin
   const list=ui.itemList(items,'','owned');
   assert.match(list,/7阶×6/);
   assert.equal((list.match(/7阶×/g)||[]).length,1);
-  const conversion=ui.conversionSummary(result.inventoryConversion,result.modificationCores,'sample',items);
-  for(const text of ['加工前','加工投入','2阶×1','5阶×1','7阶×5','供7阶投入×1']) assert.ok(conversion.includes(text),text);
-  assert.doesNotMatch(conversion,/返还神核|machine-core-ledger|0阶×2/);
+  const conversion=ui.conversionSummary(result.inventoryConversion,result.modificationCores,'sample');
+  for(const rank of [6, 5, 4, 3, 2]) assert.ok(conversion.includes('（0改）' + rank + '阶×1 → （0改）7阶×1'));
+  assert.doesNotMatch(conversion,/加工前|加工投入|返还神核|machine-core-ledger|0阶×2/);
 });
 
 test('new investment combines equal output shapes without hiding mixed body sources', () => {

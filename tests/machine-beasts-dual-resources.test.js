@@ -55,11 +55,31 @@ test('zero mode can downgrade one body but cannot assume that it funds another u
   assert.deepEqual(plan.inventoryConversion.sources.map(s=>[s.rank,s.bodyTargets]),[[7,[{rank:6,bodies:1,modificationId:'none'}]]]);
 });
 
-test('rank matching reuses the same source for eligible bodies and required cores',()=>{
+test('buying external cores cannot make a zero-mode upgrade legal',()=>{
+  const d=domain({none:{5:1}},{allowNewModifications:true});
+  assert.throws(()=>CORE.allocateConvertedInventory(DATA,beast,d.pool,[item(7,'initial',1)]),/返料升阶/);
+});
+
+test('prefer real core savings over a shorter path and count a donor rank change once',()=>{
+  const d=domain({none:{6:1},initial:{7:1}},{allowNewModifications:true});
+  const plan=CORE.allocateConvertedInventory(DATA,beast,d.pool,[item(6,'heaven',1)]);
+  assert.equal(plan.modificationCores.externalDeficit,15);
+  assert.equal(plan.modificationCores.returned,40);
+  assert.equal(plan.inventoryConversion.operations,1);
+  assert.equal(plan.inventoryConversion.rankDistance,0);
+  assert.deepEqual(Object.fromEntries(plan.inventoryConversion.sources.map(s=>[s.rank,s.usedBaseBodies])),{6:1,7:0});
+  const donorOnly=domain({initial:{7:1}},{allowNewModifications:true});
+  const moved=CORE.allocateConvertedInventory(DATA,beast,donorOnly.pool,[item(6,'heaven',1)]);
+  assert.equal(moved.inventoryConversion.operations,1);
+  assert.equal(moved.inventoryConversion.rankDistance,1);
+});
+
+test('a core-only split can coexist with a same-rank body instead of downgrading a split output',()=>{
   const d=domain({none:{6:1},initial:{10:1}});
   const plan=CORE.allocateConvertedInventory(DATA,beast,d.pool,[item(6,'initial',1)]);
-  assert.deepEqual(plan.inventoryConversion.sources.map(s=>[s.rank,s.returnedCores,s.bodyTargets]),[[10,40,[{rank:6,bodies:1,modificationId:'initial'}]]]);
-  assert.ok(plan.unused.some(s=>s.rank===6&&s.modificationId==='none'&&!s.converted));
+  assert.deepEqual(plan.inventoryConversion.sources.map(s=>[s.rank,s.returnedCores,s.bodyTargets]),[[6,0,[{rank:6,bodies:1,modificationId:'initial'}]],[10,40,[]]]);
+  assert.equal(plan.inventoryConversion.operations,1);
+  assert.ok(plan.unused.some(s=>s.rank===7&&s.modificationId==='none'&&s.converted&&s.count===8));
 });
 
 test('zero-mode high assembly uses only 7+ components with its own switch',()=>{

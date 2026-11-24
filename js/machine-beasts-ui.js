@@ -18,6 +18,7 @@
     calcTargetLevel: null,
     calcResult: null,
     singleInventoryPolicy: null,
+    singleUseFragments: false,
     singleNewRankMode: "zeroToSeven",
     schoolDraft: null,
     schoolResult: null,
@@ -73,11 +74,11 @@
       var page = equivalentPages[key];
       page.sequence = calculationSequence;
       page.busy = false;
-      var button = page.container && page.container.querySelector('[data-machine-action="more-equivalents"]');
-      if (button) {
+      (page.containers || []).forEach(function (container) {
+        var button = container.querySelector('[data-machine-action="more-equivalents"]');
         button.removeAttribute('aria-busy');
         button.setAttribute('aria-disabled', String(!page.hasMore));
-      }
+      });
     });
     Object.keys(calculationRunners).forEach(function (key) { calculationRunners[key].cancel(); });
     if (calculating && el.calculatorResult) el.calculatorResult.hidden = true;
@@ -165,9 +166,8 @@
   }
 
   function restorePresentation(container, focused) {
-    container.querySelectorAll('details[data-detail-key]').forEach(function (node) {
-      if (Object.prototype.hasOwnProperty.call(presentation.disclosures, node.dataset.detailKey)) node.open = presentation.disclosures[node.dataset.detailKey];
-    });
+    if (container.matches('details[data-detail-key]')) restoreDisclosure(container);
+    container.querySelectorAll('details[data-detail-key]').forEach(restoreDisclosure);
     if (!focused) return;
     var replacement = Array.from(container.querySelectorAll('input,select,textarea,button,a,summary')).find(function (node) { return controlIdentity(node) === focused.identity; });
     if (!replacement || replacement.disabled || !replacement.getClientRects().length) return;
@@ -175,6 +175,10 @@
     try { if (focused.start != null) replacement.setSelectionRange(focused.start, focused.end); } catch (_) { /* Native control does not support text selection. */ }
     var delta = replacement.getBoundingClientRect().top - focused.top;
     if (Math.abs(delta) > 1) window.scrollBy({ top: delta, behavior: "auto" });
+  }
+
+  function restoreDisclosure(node) {
+    if (Object.prototype.hasOwnProperty.call(presentation.disclosures, node.dataset.detailKey)) node.open = presentation.disclosures[node.dataset.detailKey];
   }
 
   function disclosure(key, title, body, className) {
@@ -650,6 +654,7 @@
     state.calcBeastId = beast.id;
     state.calcDraft = clone(getProgress(beast));
     state.singleInventoryPolicy = inventoryPolicy(state.calcDraft);
+    state.singleUseFragments = false;
     var currentLevel = CORE.levelForResearch(state.calcDraft.research, DATA.researchThresholds, beast.maxLevel);
     state.calcTargetLevel = CORE.nextEffectLevel(beast, currentLevel);
     state.calcResult = null;
@@ -673,6 +678,8 @@
       progressByBeast: progressByBeast,
       participating: participating,
       useOwnedInventory: true,
+      useFragments: false,
+      useFragmentsByBeast: {},
       ownedPoliciesByBeast: ownedPoliciesByBeast,
       newRankMode: "zeroToSeven",
       allowNewHighRanks: false,
@@ -720,8 +727,9 @@
       '<label class="machine-current-level-field"><span>当前研发等级</span><strong data-calc-current-level>' + currentLevel + '级</strong></label>' +
       calcTargetPicker(beast, state.calcTargetLevel, currentLevel) +
       '</div><p class="machine-beast-source">获取来源：' + escapeHtml(sourceText(beast)) + '</p></section>' +
-      '<section class="panel machine-calculator-panel"><h2>材料与库存范围</h2><label class="machine-fragment-field"><span>当前机关兽碎片</span><input type="number" min="0" step="1" inputmode="numeric" value="' + state.calcDraft.fragments + '" data-calc-field="fragments"></label>' +
-      '<details class="machine-temporary-inventory" data-detail-key="inventory:single:' + beast.id + '"><summary>临时调整当前库存</summary>' + inventoryEditor(beast, state.calcDraft, "calculator") + '</details>' +
+      '<section class="panel machine-calculator-panel"><h2>材料与库存范围</h2>' +
+      '<section class="machine-temporary-inventory"><h3>临时调整当前库存</h3>' + inventoryEditor(beast, state.calcDraft, "calculator") +
+      calculatorFragmentControl(state.calcDraft.fragments, state.singleUseFragments) + '</section>' +
       calculatorInventorySelector(beast, state.calcDraft, state.singleInventoryPolicy, "single", true) + newRankModeSelector("single", state.singleNewRankMode) + '</section><div data-machine-cost-slot></div>' +
       '<div class="machine-calculator-actions machine-calc-actionbar"><button type="button" class="seg" data-machine-action="reload-calculator">从个人进度重新读取</button><button type="button" class="seg active" data-machine-action="calculate">计算方案</button><button type="button" class="seg" data-machine-action="cancel-calculation" hidden disabled>取消计算</button><a href="#machine-beast-calculator-result" data-machine-jump data-machine-result-link hidden>查看计算结果</a><span role="status" data-machine-calculating-status hidden></span></div>';
   }
@@ -732,15 +740,27 @@
     }).join("");
   }
 
+  function calculatorFragmentControl(fragments, enabled, beastId) {
+    var attributes = beastId ? 'data-school-field="fragments" data-beast-id="' + beastId + '"' : 'data-calc-field="fragments"';
+    return '<div class="machine-fragment-field"><label class="machine-fragment-toggle"><input type="checkbox" data-use-calc-fragments' + (beastId ? ' data-beast-id="' + beastId + '"' : '') +
+      (enabled ? ' checked' : '') + '>使用机关兽碎片</label>' +
+      (enabled ? '<input type="number" min="0" step="1" inputmode="numeric" aria-label="机关兽碎片数量" value="' + fragments + '" ' + attributes + '>' : '') + '</div>';
+  }
+
+  function calculationProgress(progress, useFragments) {
+    return Object.assign({}, progress, { fragments: useFragments ? progress.fragments : 0 });
+  }
+
   function renderSchoolBeastControl(beast, draft, matched) {
     var progress = draft.progressByBeast[beast.id];
     var policy = Object.assign({}, draft.ownedPoliciesByBeast[beast.id], { useOwnedInventory: draft.useOwnedInventory });
     var level = CORE.levelForResearch(progress.research, DATA.researchThresholds, beast.maxLevel);
     var participating = draft.participating[beast.id];
     var fields = '<div class="machine-school-beast-fields"><label><span>当前累计研发度</span><input type="number" min="0" step="1" value="' + progress.research + '" data-school-field="research" data-beast-id="' + beast.id + '"></label>' +
-      '<label><span>当前等级</span><b data-school-level>' + level + '/' + beast.maxLevel + '级</b></label>' +
-      '<label><span>机关兽碎片</span><input type="number" min="0" step="1" value="' + progress.fragments + '" data-school-field="fragments" data-beast-id="' + beast.id + '"></label></div>' +
-      '<details class="machine-temporary-inventory" data-detail-key="inventory:school:' + beast.id + '"><summary>临时库存与本次使用</summary><p class="machine-beast-source">获取来源：' + escapeHtml(sourceText(beast)) + '</p>' + inventoryEditor(beast, progress, "school") + calculatorInventorySelector(beast, progress, policy, "school", false) + '</details>';
+      '<label><span>当前等级</span><b data-school-level>' + level + '/' + beast.maxLevel + '级</b></label></div>' +
+      '<details class="machine-temporary-inventory" data-detail-key="inventory:school:' + beast.id + '"><summary>临时库存与本次使用</summary><p class="machine-beast-source">获取来源：' + escapeHtml(sourceText(beast)) + '</p>' + inventoryEditor(beast, progress, "school") +
+      (draft.useFragments ? calculatorFragmentControl(progress.fragments, Boolean(draft.useFragmentsByBeast[beast.id]), beast.id) : '') +
+      calculatorInventorySelector(beast, progress, policy, "school", false) + '</details>';
     return '<article class="machine-school-beast-control ' + (participating ? '' : 'is-excluded') + (matched ? ' machine-search-match' : '') + '" data-school-card="' + beast.id + '"><header><div><span class="machine-quality-badge ' + qualityClass(beast) + '">' + escapeHtml(beast.tier) + '</span><strong>' + escapeHtml(beast.name) + '</strong></div><label><input type="checkbox" data-school-participant data-beast-id="' + beast.id + '"' + (participating ? ' checked' : '') + '>参与后续培养</label></header>' +
       (participating ? fields : '<p class="machine-excluded-summary">当前 <span data-school-level>' + level + '/' + beast.maxLevel + '级</span> · 本次不继续培养，原等级仍计入累计</p>' + disclosure('school:' + beast.id + ':excluded', '查看或调整当前进度与库存', fields)) + '</article>';
   }
@@ -798,11 +818,12 @@
       '<div><span>当前累计觉醒等级</span><b data-school-current>' + snapshot.totalLevel + '</b></div><div><span>距离目标</span><b data-school-remaining>' + Math.max(0, targetTotal - snapshot.totalLevel) + '级</b></div></div>' +
       '</section><section class="panel machine-school-strategy"><h2>策略与价格</h2>' +
       '<div class="machine-school-options"><label><input type="checkbox" data-school-option="useOwnedInventory"' + (draft.useOwnedInventory ? ' checked' : '') + '>使用已有库存</label>' +
+      '<label><input type="checkbox" data-school-option="useFragments"' + (draft.useFragments ? ' checked' : '') + '>碎片加入计算</label>' +
       '<label><input type="checkbox" data-reference-cost-field="bluePurpleInventoryOnly"' + (state.referenceCostDraft.bluePurpleInventoryOnly !== false ? ' checked' : '') + '>蓝紫本体仅使用库存</label>' +
       '<label><input type="checkbox" data-school-option="allowNewHighRanks"' + (draft.allowNewHighRanks ? ' checked' : '') + '>' + (draft.newRankMode === "zero" ? '允许库存重组8–10阶' : '允许加工及新增8–10阶') + '</label>' +
       '<label><input type="checkbox" data-school-option="allowNewModifications"' + (draft.allowNewModifications ? ' checked' : '') + '>允许额外改造神核（未计价）</label></div>' +
       newRankModeSelector("school", draft.newRankMode) +
-      disclosure('school:rules', '查看库存限制、比较规则与完整说明', '<p class="muted-tip">蓝紫限制开启后，只允许使用已保存的完整蓝紫库存及指定阶数使用上限，不会通过碎片补出新本体；关闭使用已有库存时，蓝紫不能新增投入。蓝紫本体获取成本未计入，神图等其他消耗正常计价。</p><p class="muted-tip">两套方案都必须精确达到目标累计等级，不得超额培养；已达到或超过目标则不再投入。投入最小方案：已计价元宝最少 → 新增效果节点最多 → 等级内研发度溢出最少 → 神图总消耗最少。最多效果档位方案：新增效果节点最多 → 已计价元宝最少 → 溢出最少 → 神图总消耗最少。允许改造参与时，两套目标均先比较改造本体折算投入数量（已有与新增均计入），再按上述顺序比较；实质指标完全相同时保留全部同等最优组合，稳定键仅决定主展示顺序，其他组合在培养材料中查看。新增节点按实际effects统计；高档替换低档，最终仅生效最高已解锁档位。</p>') +
+      disclosure('school:rules', '查看库存限制、比较规则与完整说明', '<p class="muted-tip">蓝紫限制开启后，只允许使用已保存的完整蓝紫库存及指定阶数使用上限，不会通过碎片补出新本体；关闭使用已有库存时，蓝紫不能新增投入。蓝紫本体获取成本未计入，神图等其他消耗正常计价。</p><p class="muted-tip">两套方案都必须精确达到目标累计等级，不得超额培养；已达到或超过目标则不再投入。投入最小方案：已计价元宝最少 → 新增效果节点最多 → 等级内研发度溢出最少 → 神图总消耗最少。最多效果档位方案：新增效果节点最多 → 已计价元宝最少 → 溢出最少 → 神图总消耗最少。允许改造参与时，两套目标均先比较改造本体折算投入数量（已有与新增均计入），再按上述顺序比较；实质指标完全相同时保留全部同等组合，可分别在培养材料和最终生效效果中查看。新增节点按实际效果统计；高档替换低档，最终仅生效最高已解锁档位。</p>') +
       '<div data-machine-cost-slot></div></section><div class="machine-calculator-actions machine-calc-actionbar"><button type="button" class="seg" data-machine-action="reload-school-calculator">从个人进度重新读取</button><button type="button" class="seg active" data-machine-action="calculate-school">计算流派方案</button><button type="button" class="seg" data-machine-action="cancel-calculation" hidden disabled>取消计算</button><a href="#machine-school-participants" data-machine-jump>参与兽与临时库存</a><a href="#machine-beast-calculator-result" data-machine-jump data-machine-result-link hidden>查看结果</a><span role="status" data-machine-calculating-status hidden></span></div>' +
       '<section class="panel" id="machine-school-participants"><h2>参与兽与临时库存 <small>已选 <span data-school-participant-count>' + school.beastIds.filter(function (id) { return draft.participating[id]; }).length + '</span>／' + school.beastIds.length + '</small></h2><p class="muted-tip">未参与者的现有等级仍计入累计。</p><div class="machine-school-beast-controls">' + orderedBeastIds.map(function (beastId) {
         var beast = beastById(beastId);
@@ -900,52 +921,35 @@
       '</article><article' + attributes + '><h3>' + (mixed ? '含新增本体的投入' : '新增投入') + '</h3>' + itemList(newItems, '无需新增机关兽', true) + '</article>';
   }
 
-  function conversionSummary(conversion, cores, key, items) {
+  function conversionSummary(conversion, cores, key) {
     var sources = conversion && conversion.sources || [];
     var hasCores = cores && (cores.looseOwned || cores.returned || cores.spent || cores.externalDeficit || cores.remaining);
     if (!sources.length && !hasCores) return '';
-    function forms(list) {
-      return list.map(function (form) {
-        var mod = form.modificationId === 'none' ? '' : '（' + modificationName(form.modificationId) + '）';
-        var mixed = form.mixedCount ? '（' + formatNumber(form.mixedCount) + '只含新增本体）' : '';
-        return '<span>' + escapeHtml(mod) + form.rank + '阶×' + formatNumber(form.count) + mixed + '</span>';
-      }).join('');
+    function formLabel(rank, mod, count) {
+      return combinedRankLabel(modificationName(mod || 'none'), rank) + '×' + formatNumber(count);
     }
     function line(label, content) {
       return '<div><dt>' + label + '</dt><dd>' + content + '</dd></div>';
     }
     var body = '';
     if (sources.length) {
-      var inputs = sources.map(function (source) {
-        return { rank: source.originRank == null ? source.rank : source.originRank, modificationId: source.originModificationId || source.modificationId, count: source.originCount == null ? source.count : source.originCount };
-      });
-      var outputs = groupInvestmentItems((items || []).filter(function (item) { return item.converted && (item.source === 'owned' || item.ownedBaseBodies); }));
-      var remaining = sources.filter(function (source) { return source.remainingBaseBodies > 0; }).map(function (source) {
-        return { rank: Math.min(source.rank, 7), modificationId: 'none', count: source.remainingBaseBodies };
-      });
-      body = '<dl class="machine-conversion-flow">' + line('加工前', forms(groupInvestmentItems(inputs))) +
-        line('加工投入', outputs.length ? forms(outputs) : '无') +
-        (remaining.length ? line('加工剩余', forms(groupInvestmentItems(remaining))) : '') + '</dl>';
-      var paths = sources.map(function (source, index) {
-        return { origin: inputs[index], source: source, targets: source.bodyTargets };
-      }).filter(function (path) { return path.targets; }).sort(function (left, right) {
-        return comparePlanForms(left.origin, right.origin);
-      });
-      if (paths.length) body += '<dl class="machine-conversion-flow">' +
-        paths.map(function (path) {
-          var s = path.source, base = Math.min(path.origin.rank, 7);
-          var steps = '<span>→ ' + base + '阶0改×' + formatNumber(s.baseBodies) +
-            (s.returnedCores ? '（返还' + formatNumber(s.returnedCores) + '神核）' : '') + '</span>';
-          var branches = path.targets.slice().sort(comparePlanForms).map(function (target) {
-            var mod = target.modificationId && target.modificationId !== 'none' ? '（' + modificationName(target.modificationId) + '）' : '';
-            var targetLabel = target.rank > 7 ? '供' + target.rank + '阶重组投入 · ' + formatNumber(target.bodies) + '份折算本体' :
-              '供' + target.rank + '阶投入×' + formatNumber(target.bodies);
-            return escapeHtml(targetLabel + mod);
-          });
-          if(s.remainingBaseBodies)branches.push('剩余' + base + '阶0改×' + formatNumber(s.remainingBaseBodies));
-          if(branches.length)steps += '<span>→ ' + branches.join(' ＋ ') + '</span>';
-          return line(forms([path.origin]), steps);
-        }).join('') + '</dl>';
+      body = '<ul class="machine-conversion-flow">' + sources.slice().sort(comparePlanForms).map(function (source) {
+        var originRank = source.rank, baseRank = Math.min(originRank, 7), targets = source.bodyTargets || [];
+        var split = originRank > 7;
+        var steps = [formLabel(originRank, source.modificationId, source.count)];
+        if (split) steps.push(formLabel(7, 'none', source.baseBodies));
+        var directSplit = split && !source.remainingBaseBodies && targets.length === 1 && targets[0].rank === 7 && targets[0].modificationId === 'none';
+        var branches = targets.slice().sort(comparePlanForms).map(function (target) {
+          return target.rank > 7
+            ? formLabel(7, 'none', target.bodies) + '（用于' + combinedRankLabel(modificationName(target.modificationId || 'none'), target.rank) + '重组）'
+            : formLabel(target.rank, target.modificationId, target.bodies);
+        });
+        if (source.remainingBaseBodies) branches.push('剩余' + formLabel(baseRank, 'none', source.remainingBaseBodies));
+        if (!directSplit && branches.length) steps.push(branches.join('、'));
+        var refund = source.returnedCores ? '；返还神核×' + formatNumber(source.returnedCores) : '';
+        return '<li>' + escapeHtml(steps.join(' → ') + refund) + '</li>';
+      }).join('') + '</ul>';
+      if (conversion.processingMaterialsUnverified && !conversion.rankMaterialsUnverified) body += '<p class="muted-tip">库存升降阶的实际返料和消耗未核实，未纳入参考成本。</p>';
     }
     if (hasCores) {
       body += '<dl class="machine-core-ledger">' + [
@@ -985,7 +989,7 @@
       '<div><span>溢出研发度</span><b>' + formatNumber(result.totals.overflow) + '</b></div><div><span>预计达到</span><b>' + result.totals.projectedLevel + '级</b></div></div>' +
       '<div class="machine-result-metrics machine-resource-metrics"><div><span>觉醒神图</span><b>' + formatNumber(result.totals.awakeningBlueprints) + '</b></div><div><span>机关破片</span><b>' + formatNumber(result.totals.organPieces) + '</b></div>' +
       '<div><span>本体缺口</span><b>' + result.shortage.bodyEquivalent + '本体</b></div><div><span>机关兽碎片缺口</span><b>' + formatNumber(result.shortage.fragments) + '</b></div>' + exchange + '</div>') +
-      '<div class="machine-result-columns">' + investmentLists(result.selected.ownedItems, result.selected.newItems, result.inventoryConversion, false) + '</div>' + conversionSummary(result.inventoryConversion, result.modificationCores, detailKey, result.selected.ownedItems.concat(result.selected.newItems)) +
+      '<div class="machine-result-columns">' + investmentLists(result.selected.ownedItems, result.selected.newItems, result.inventoryConversion, false) + '</div>' + conversionSummary(result.inventoryConversion, result.modificationCores, detailKey) +
       investmentInventoryLimits(detailKey, beastById(state.calcBeastId), state.calcDraft, state.singleInventoryPolicy, state.singleInventoryPolicy && state.singleInventoryPolicy.useOwnedInventory) +
       '<p class="machine-final-effect">最终最高生效效果：' + (finalEffect ? finalEffect.level + '级档位 · ' + escapeHtml(finalEffect.text) : '尚未解锁效果') + '</p>' +
       disclosure(detailKey + ':cost', '参考成本明细', costSlot("single", requirements)) +
@@ -1022,7 +1026,7 @@
       ? investmentInventoryLimits(detailKey, beastById(detail.beastId), draft.progressByBeast[detail.beastId], draft.ownedPoliciesByBeast[detail.beastId], draft.useOwnedInventory, detail.inventoryConversion && detail.inventoryConversion.remainingItems) : '';
     return '<article class="machine-school-plan-beast"><header><strong>' + escapeHtml(detail.beastName) + '</strong><b>' + detail.startLevel + '级 → ' + detail.endLevel + '级</b></header>' +
       '<div class="machine-card-primary machine-plan-primary" tabindex="0" role="region" aria-label="效果节点与已有新增投入，可横向滚动"><span>新增效果节点 <b>' + formatNumber(detail.unlockedEffects) + '</b></span><span class="machine-owned-investment">' + (detail.inventoryConversion ? '库存折算' : '已有投入') + ' <b>' + formatNumber(detail.inventoryConversion ? detail.ownedInvestedCount : ownedItems.reduce(function (sum, item) { return sum + item.count; }, 0)) + '只</b></span><span class="machine-investment-demand">' + (detail.inventoryConversion ? '新增折算' : '新增投入') + ' <b>' + formatNumber(detail.inventoryConversion ? detail.newInvestedCount : newItems.reduce(function (sum, item) { return sum + item.count; }, 0)) + '只</b></span></div>' +
-      investmentLists(ownedItems, newItems, detail.inventoryConversion, true, inventoryDetails) + conversionSummary(detail.inventoryConversion, detail.modificationCores, detailKey, detail.items) +
+      investmentLists(ownedItems, newItems, detail.inventoryConversion, true, inventoryDetails) + conversionSummary(detail.inventoryConversion, detail.modificationCores, detailKey) +
       '<div class="machine-school-plan-beast-metrics" tabindex="0" role="region" aria-label="研发度增长与溢出，可横向滚动"><span>研发度 ' + formatNumber(detail.startResearch) + ' → ' + formatNumber(detail.endResearch) + '</span><span>增加 ' + formatNumber(detail.addedResearch) + '</span><span>溢出 ' + formatNumber(detail.overflowResearch) + '</span></div>' +
       '<div class="machine-school-plan-resources"><span>折算投入 <b>' + detail.investedCount + '只</b></span><span>新增效果节点 <b>' + formatNumber(detail.unlockedEffects) + '</b></span><span>最终生效档位 <b>' + (detail.finalEffect ? detail.finalEffect.level + '级' : '尚未解锁') + '</b></span><span>机关兽碎片缺口 <b>' + formatNumber(detail.resources.fragments) + '</b></span><span>神图总消耗 <b>' + formatNumber(detail.resources.awakeningBlueprints) + '</b></span><span>机关破片 <b>' + formatNumber(detail.resources.organPieces) + '</b></span><span>改造本体折算投入 <b>' + formatNumber(detail.modifiedInvestedCount) + '</b>（已有 ' + formatNumber(detail.ownedModifiedInvestedCount) + '／新增 ' + formatNumber(detail.newModifiedInvestedCount) + '）</span></div></article>';
   }
@@ -1082,10 +1086,21 @@
     return '<div class="machine-summary-priority"><div><span>推荐最终等级／目标等级</span><b>' + plan.totals.projectedTotalLevel + '／' + result.target.totalLevel + '</b></div><div><span>已计价参考元宝</span><b class="machine-money">' + formatNumber(plan.totals.pricedYuan) + '</b></div><div><span>新增效果节点</span><b>' + plan.totals.unlockedEffects + '</b></div></div><p class="machine-material-summary">主要材料：' + schoolMaterialSummary(plan) + '</p>';
   }
 
-  function schoolFinalEffects(plan, index) {
-    return '<details class="machine-school-final-effects machine-disclosure" id="machine-school-final-effects-' + index + '" data-detail-key="' + schoolPlanAnchor(plan) + ':' + state.schoolDraft.schoolId + ':' + state.schoolDraft.targetStage + ':effects"><summary>' + (plan.equivalents && BigInt(plan.equivalents.count)>1n ? '主展示组合 · ' : '') + '最终生效效果 · 全部机关兽最高档位</summary><div class="machine-disclosure-body"><dl>' + planBeastOrder(plan.finalEffects || [], plan.beasts).map(function (row) {
+  function schoolFinalEffectRows(plan) {
+    return '<dl>' + planBeastOrder(plan.finalEffects || [], plan.beasts).map(function (row) {
       return '<div data-final-beast="' + escapeHtml(row.beastId) + '"><dt>' + escapeHtml(row.beastName) + ' · ' + row.level + '级' + (row.changed ? '' : '<small>原等级不变</small>') + '</dt><dd data-active-effect>' + (row.effect ? '<b>' + row.effect.level + '级档位</b> ' + escapeHtml(row.effect.text) : '尚未解锁效果') + '</dd></div>';
-    }).join("") + '</dl></div></details>';
+    }).join("") + '</dl>';
+  }
+
+  function schoolMaterialRows(plan) {
+    var beasts = planBeastOrder(plan.beasts);
+    return beasts.length
+      ? '<div class="machine-school-plan-beasts">' + beasts.map(renderSchoolBeastPlan).join('') + '</div>'
+      : '<p class="machine-school-complete">目标已达成，无需新增投入。</p>';
+  }
+
+  function schoolFinalEffects(plan, index, detailKey) {
+    return '<details class="machine-school-final-effects machine-disclosure" id="machine-school-final-effects-' + index + '" data-detail-key="' + escapeHtml(detailKey + ':effects') + '"><summary>最终生效效果 · 全部机关兽最高档位</summary><div class="machine-disclosure-body">' + equivalentGroup(plan, index, 'effects') + '</div></details>';
   }
 
   function renderSchoolPlan(plan, result, index) {
@@ -1103,86 +1118,100 @@
       '<div><span>机关破片</span><b>' + formatNumber(totals.organPieces) + '</b></div><div><span>机关兽碎片缺口</span><b>' + formatNumber(totals.fragments) + '</b></div><div><span>已计价参考元宝' + (plan.cost && !plan.cost.complete ? '（已知小计）' : '') + '</span><b>' + formatNumber(plan.cost ? plan.cost.knownYuan : totals.pricedYuan) + '</b></div>' +
       '<div><span>改造本体折算投入</span><b>' + formatNumber(totals.modifiedInvestedCount) + '</b><span>已有 ' + formatNumber(totals.ownedModifiedInvestedCount) + '／新增 ' + formatNumber(totals.newModifiedInvestedCount) + '</span></div></div>') +
       disclosure(detailKey + ':cost', '费用明细 · 神图需求 ' + formatNumber(totals.awakeningBlueprints), costSlot("school-" + index, { awakeningBlueprints: totals.awakeningBlueprints, beasts: orderedBeasts.map(function (detail) { return { beastId: detail.beastId, fragments: detail.resources.fragments }; }) })) +
-      disclosure(detailKey + ':materials', '培养材料' + (plan.equivalents && BigInt(plan.equivalents.count) > 1n ? (unverified ? ' · 同等组合共' : ' · 同等最优共') + formatNumber(BigInt(plan.equivalents.count)) + '套' : ''), '<div class="machine-cultivation-layout">' + (orderedBeasts.length ? '<div class="machine-school-plan-beasts">' + orderedBeasts.map(renderSchoolBeastPlan).join("") + '</div>' : '<p class="machine-school-complete">目标已达成，无需新增投入。</p>') + equivalentMaterials(plan, index) + '</div>') + schoolFinalEffects(plan, index) + '</section>';
+      disclosure(detailKey + ':materials', '培养材料' + (plan.equivalents && BigInt(plan.equivalents.count) > 1n ? (unverified ? ' · 同等组合共' : ' · 同等最优共') + formatNumber(BigInt(plan.equivalents.count)) + '套' : ''), '<div class="machine-cultivation-layout">' + equivalentGroup(plan, index, 'materials') + '</div>') + schoolFinalEffects(plan, index, detailKey) + '</section>';
   }
 
   function equivalentPageKey(plan) {
     return schoolPlanAnchor(plan) + ':' + state.schoolDraft.schoolId + ':' + state.schoolDraft.targetStage + ':' + plan.stableKey + ':' + [plan.totals.pricedYuan,plan.totals.awakeningBlueprints,plan.totals.overflowResearch,plan.equivalents.count].join('/');
   }
 
-  function equivalentMaterials(plan, index) {
-    if (!plan.equivalents || BigInt(plan.equivalents.count) <= 1n) return '';
+  function schoolCombination(plan, key, position, pane) {
+    var levels = planBeastOrder(plan.beasts).map(function (beast) { return beast.beastName + beast.endLevel + '级'; });
+    var title = '组合' + formatNumber(position) + (levels.length ? ' · ' + levels.join('、') : '');
+    var body = pane === 'materials' ? schoolMaterialRows(plan) : schoolFinalEffectRows(plan);
+    return disclosure(key + ':' + pane + ':combination:' + plan.stableKey, escapeHtml(title), body, 'machine-equivalent-combination');
+  }
+
+  function equivalentGroup(plan, index, pane) {
+    if (!plan.equivalents || BigInt(plan.equivalents.count) <= 1n) return pane === 'materials' ? schoolMaterialRows(plan) : schoolFinalEffectRows(plan);
     var key = equivalentPageKey(plan), pages = equivalentPages;
     var account = ACCOUNT_STORAGE.currentAccount && ACCOUNT_STORAGE.currentAccount(), accountId = account && account.id;
     var page = pages[key];
     if (!page || page.plan !== plan || page.result !== state.schoolResult || page.accountId !== accountId || page.sequence !== calculationSequence) {
       page = pages[key] = { plan: plan, result: state.schoolResult, accountId: accountId, sequence: calculationSequence,
-        nextOffset: '0', hasMore: true, count: 0, busy: false, batches: [], container: null };
+        nextOffset: '0', hasMore: true, count: 0, busy: false, batches: { materials: [], effects: [] }, containers: [] };
     }
-    var title = schoolRankMaterialsUnverified(state.schoolResult) ? '其他同等组合' : '其他同等最优组合';
-    return '<section class="machine-equivalent-materials" data-equivalent-index="' + index + '"><h3>' + title + ' · 另' + formatNumber(BigInt(plan.equivalents.count)-1n) + '套</h3><p class="muted-tip">各组合互相替代，请勿叠加投入。</p><div data-equivalent-items>' + page.batches.join('') + '</div><p class="muted-tip" data-equivalent-count>' + equivalentCountText(page) + '</p><button type="button" class="seg" data-machine-action="more-equivalents" data-plan-index="' + index + '"' + (page.hasMore ? '' : ' hidden') + '>' + (page.count ? '继续显示其他组合（每次10套）' : '加载首批其他组合') + '</button></section>';
+    var marker = pane === 'materials' ? 'data-equivalent-index' : 'data-equivalent-effects-index';
+    return '<section class="machine-equivalent-group" ' + marker + '="' + index + '">' +
+      (pane === 'materials' ? '<p class="muted-tip">各组合互相替代，请勿叠加投入。</p>' : '') +
+      '<div class="machine-equivalent-list" data-equivalent-items>' + schoolCombination(plan, key, 1, pane) + page.batches[pane].join('') + '</div>' +
+      '<p class="muted-tip" data-equivalent-count>' + equivalentCountText(page) + '</p><button type="button" class="seg" data-machine-action="more-equivalents" data-equivalent-pane="' + pane + '" data-plan-index="' + index + '"' +
+      (page.hasMore ? '' : ' hidden') + '>' + (page.count ? '查看更多组合（每次10套）' : '加载更多组合') + '</button></section>';
   }
 
   function equivalentCountText(page) {
-    return '已列出其他组合 ' + formatNumber(page.count) + '／' + formatNumber(BigInt(page.plan.equivalents.count)-1n);
-  }
-
-  function renderEquivalentAlternatives(alternatives, key, start) {
-    return alternatives.map(function (alternative, position) {
-      var orderedBeasts = planBeastOrder(alternative.beasts);
-      var title = '其他组合 ' + (start+position+1) + ' · ' + orderedBeasts.map(function (b) { return b.beastName + ' ' + b.startLevel + '→' + b.endLevel + '级'; }).join('、');
-      var effects = '<dl class="machine-equivalent-effects">' + orderedBeasts.map(function (b) { return '<div><dt>' + escapeHtml(b.beastName) + '最终最高生效效果</dt><dd>' + (b.finalEffect ? b.finalEffect.level + '级 · ' + escapeHtml(b.finalEffect.text) : '尚未解锁') + '</dd></div>'; }).join('') + '</dl>';
-      return disclosure(key + ':alternative:' + alternative.stableKey, escapeHtml(title), '<p>' + schoolMaterialSummary(alternative) + '</p><div class="machine-school-plan-beasts">' + orderedBeasts.map(renderSchoolBeastPlan).join('') + '</div>' + effects, 'machine-equivalent-combination');
-    }).join('');
+    return '已列出组合 ' + formatNumber(page.count + 1) + '／' + formatNumber(BigInt(page.plan.equivalents.count));
   }
 
   function showMoreEquivalentMaterials(index) {
     var plan = state.schoolResult && state.schoolResult.plans && state.schoolResult.plans[index];
     if (!plan || !plan.equivalents || calculating) return;
-    var old = el.calculatorResult.querySelector('[data-equivalent-index="' + index + '"]');
-    if (!old) return;
+    var groups = ['data-equivalent-index', 'data-equivalent-effects-index'].map(function (attribute) {
+      return el.calculatorResult.querySelector('[' + attribute + '="' + index + '"]');
+    });
+    if (groups.some(function (group) { return !group; })) return;
     var key = equivalentPageKey(plan), page = equivalentPages[key];
     if (!page || page.busy || !page.hasMore) return;
-    var button = old.querySelector('[data-machine-action="more-equivalents"]');
-    var items = old.querySelector('[data-equivalent-items]');
+    var buttons = groups.map(function (group) { return group.querySelector('[data-machine-action="more-equivalents"]'); });
     var sequence = calculationSequence;
-    page.container = old;
+    page.containers = groups;
     function current() {
       var account = ACCOUNT_STORAGE.currentAccount && ACCOUNT_STORAGE.currentAccount();
       return equivalentPages[key] === page &&
         page.plan === plan && page.result === state.schoolResult && sequence === calculationSequence && page.sequence === sequence &&
-        (account && account.id) === page.accountId && old.isConnected &&
-        el.calculatorResult.querySelector('[data-equivalent-index="' + index + '"]') === old;
+        (account && account.id) === page.accountId && groups.every(function (group) { return el.calculatorResult.contains(group); });
     }
     if (!current()) return;
     page.busy = true;
-    button.setAttribute('aria-disabled', 'true');
-    button.setAttribute('aria-busy', 'true');
-    var nextOffset = page.nextOffset, hasMore = page.hasMore, parts = [];
+    buttons.forEach(function (button) { button.setAttribute('aria-disabled', 'true'); button.setAttribute('aria-busy', 'true'); });
+    function clearButtons() {
+      buttons.forEach(function (button) { button.removeAttribute('aria-disabled'); button.removeAttribute('aria-busy'); });
+    }
+    var nextOffset = page.nextOffset, hasMore = page.hasMore, alternatives = [];
     // One exact alternative per task: yield between graph decodes and allow cancellation.
     function decodeNext() {
       if (!current()) {
         // A newer task may already own this same DOM after a navigation round trip.
-        if (page.sequence === sequence) { page.busy = false; button.removeAttribute('aria-disabled'); button.removeAttribute('aria-busy'); }
+        if (page.sequence === sequence) { page.busy = false; clearButtons(); }
         return;
       }
       try {
         var next = PLANNER.equivalentPlansPage(DATA, plan, nextOffset, 1);
         nextOffset = next.nextOffset; hasMore = next.hasMore;
-        if(next.plans.length)parts.push(renderEquivalentAlternatives(next.plans, key, page.count + parts.length));
-        if (hasMore && parts.length < 10) { setTimeout(decodeNext, 0); return; }
-        var html = parts.join('');
-        items.insertAdjacentHTML('beforeend', html);
-        page.batches.push(html); page.count += parts.length; page.nextOffset = nextOffset; page.hasMore = hasMore;
-        old.querySelector('[data-equivalent-count]').textContent = equivalentCountText(page);
-        // Keep the final focused button in the DOM rather than removing its focus target.
-        button.hidden = !hasMore && document.activeElement !== button;
-        button.setAttribute('aria-disabled', String(!hasMore));
-        button.textContent = hasMore ? '继续显示其他组合（每次10套）' : '已显示全部其他组合';
-        button.removeAttribute('aria-busy');
+        if (next.plans.length) {
+          var alternative = next.plans[0], position = page.count + alternatives.length + 2;
+          alternatives.push({ materials: schoolCombination(alternative, key, position, 'materials'), effects: schoolCombination(alternative, key, position, 'effects') });
+        }
+        if (hasMore && alternatives.length < 10) { setTimeout(decodeNext, 0); return; }
+        page.count += alternatives.length; page.nextOffset = nextOffset; page.hasMore = hasMore;
+        groups.forEach(function (group, groupIndex) {
+          var button = buttons[groupIndex], pane = button.dataset.equivalentPane;
+          var html = alternatives.map(function (entry) { return entry[pane]; }).join('');
+          var target = group.querySelector('[data-equivalent-items]');
+          var previous = target.lastElementChild;
+          target.insertAdjacentHTML('beforeend', html);
+          for (var added = previous.nextElementSibling; added; added = added.nextElementSibling) restorePresentation(added, null);
+          page.batches[pane].push(html);
+          group.querySelector('[data-equivalent-count]').textContent = equivalentCountText(page);
+          // Keep the final focused button in the DOM rather than removing its focus target.
+          button.hidden = !hasMore && document.activeElement !== button;
+          button.setAttribute('aria-disabled', String(!hasMore));
+          button.textContent = hasMore ? '查看更多组合（每次10套）' : '已显示全部组合';
+          button.removeAttribute('aria-busy');
+        });
         page.busy = false;
       } catch (error) {
-        page.busy = false; button.removeAttribute('aria-disabled'); button.removeAttribute('aria-busy');
+        page.busy = false; clearButtons();
         showError(error.message || '同等方案加载失败，请重新计算。', error);
       }
     }
@@ -1395,6 +1424,7 @@
       calcResult: clone(state.calcResult),
       singleInventoryPolicy: clone(state.singleInventoryPolicy),
       singleNewRankMode: state.singleNewRankMode,
+      singleUseFragments: state.singleUseFragments,
       schoolDraft: clone(state.schoolDraft),
       schoolResult: clone(state.schoolResult),
       schoolReferenceCostKey: JSON.stringify(state.referenceCostDraft)
@@ -1418,7 +1448,8 @@
     state.calcResult = saved.calcResult == null ? null : clone(saved.calcResult);
     if (saved.singleInventoryPolicy) state.singleInventoryPolicy = clone(saved.singleInventoryPolicy);
     state.singleNewRankMode = saved.singleNewRankMode || state.singleNewRankMode;
-    if (saved.schoolDraft) state.schoolDraft = clone(saved.schoolDraft);
+    state.singleUseFragments = saved.singleUseFragments === true;
+    if (saved.schoolDraft) state.schoolDraft = Object.assign({ useFragments: false, useFragmentsByBeast: {} }, clone(saved.schoolDraft));
     state.schoolResult = saved.schoolResult == null || (saved.schoolReferenceCostKey != null && saved.schoolReferenceCostKey !== JSON.stringify(state.referenceCostDraft)) ? null : clone(saved.schoolResult);
     // Hidden regions are rendered lazily too. Remove their stale DOM now so
     // a later tab switch cannot snapshot old open states over this view.
@@ -1615,7 +1646,8 @@
       el.calculatorResult.hidden = true;
       renderCalculatorControls();
     } else if (action === "calculate") {
-      runCalculation("beast-single", { beastId: beast.id, progress: state.calcDraft, options: {
+      var singleProgress = calculationProgress(state.calcDraft, state.singleUseFragments);
+      runCalculation("beast-single", { beastId: beast.id, progress: singleProgress, options: {
         targetLevel: state.calcTargetLevel,
         includeHighRanks: state.calcDraft.showHighRanks,
         includeMods: state.calcDraft.showMods,
@@ -1634,11 +1666,15 @@
     } else if (action === "calculate-school") {
       var draft = state.schoolDraft;
       var school = DATA.schools.find(function (item) { return item.id === draft.schoolId; });
+      var progressByBeast = {};
+      school.beastIds.forEach(function (beastId) {
+        progressByBeast[beastId] = calculationProgress(draft.progressByBeast[beastId], draft.useFragments && draft.useFragmentsByBeast[beastId]);
+      });
       var target = school.stages.find(function (stage) { return stage.stage === draft.targetStage; });
-      if (target && CORE.schoolSnapshot(school, draft.progressByBeast, DATA).totalLevel >= target.requiredTotalLevel) {
+      if (target && CORE.schoolSnapshot(school, progressByBeast, DATA).totalLevel >= target.requiredTotalLevel) {
         cancelCalculation(false);
         clearError();
-        state.schoolResult = PLANNER.calculateSchoolPlans(DATA, school, draft.progressByBeast, { targetStage: draft.targetStage });
+        state.schoolResult = PLANNER.calculateSchoolPlans(DATA, school, progressByBeast, { targetStage: draft.targetStage });
         renderSchoolCalculatorResult(state.schoolResult);
         return;
       }
@@ -1653,7 +1689,7 @@
       var participatingIds = school.beastIds.filter(function (beastId) { return draft.participating[beastId]; });
       var limits = {};
       school.beastIds.forEach(function (beastId) { limits[beastId] = draft.ownedPoliciesByBeast[beastId].limits; });
-      runCalculation("beast-school", { schoolId: school.id, progressByBeast: draft.progressByBeast, options: {
+      runCalculation("beast-school", { schoolId: school.id, progressByBeast: progressByBeast, options: {
         targetStage: draft.targetStage,
         participatingBeastIds: participatingIds,
         useOwnedInventory: draft.useOwnedInventory,
@@ -1733,6 +1769,14 @@
     } else if (target.matches("[data-calc-flag]")) {
       state.calcDraft[target.dataset.calcFlag] = target.checked;
       renderCalculatorControls();
+    } else if (target.matches("[data-use-calc-fragments]")) {
+      if (target.dataset.beastId) {
+        state.schoolDraft.useFragmentsByBeast[target.dataset.beastId] = target.checked;
+        refreshSchoolCard(target.dataset.beastId);
+      } else {
+        state.singleUseFragments = target.checked;
+        renderCalculatorControls();
+      }
     } else if (target.matches("[data-owned-global]")) {
       if (target.dataset.ownedScope === "single") state.singleInventoryPolicy.useOwnedInventory = target.checked;
       else state.schoolDraft.useOwnedInventory = target.checked;

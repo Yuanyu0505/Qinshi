@@ -33,13 +33,13 @@ test('mode navigation retains loaded DOM and resumes pagination after canceling 
   const context=await browser.newContext({viewport:{width:390,height:1000},serviceWorkers:'block'});
   await context.route('**/*',route=>new URL(route.request().url()).origin===origin?route.continue():route.abort());
   const source=fs.readFileSync(require.resolve('../js/machine-beasts-ui.js'),'utf8');
-  await context.route('**/js/machine-beasts-ui.js*',route=>route.fulfill({contentType:'application/javascript',body:source.replace('window.MACHINE_BEAST_UI = {','window.paginationTest={state,el,equivalentMaterials};window.MACHINE_BEAST_UI = {')}));
+  await context.route('**/js/machine-beasts-ui.js*',route=>route.fulfill({contentType:'application/javascript',body:source.replace('window.MACHINE_BEAST_UI = {','window.paginationTest={state,el,equivalentGroup};window.MACHINE_BEAST_UI = {')}));
   const page=await context.newPage();
   try{
     await openApp(page,origin+'/#machine-beasts');await page.locator('[data-machine-beast-mode="calculator"]').click();
     const summary=await page.evaluate(async result=>{
       const ui=window.paginationTest;ui.state.schoolDraft={schoolId:'hegemonic',targetStage:5};ui.state.schoolResult=result;
-      ui.el.calculatorResult.hidden=false;ui.el.calculatorResult.innerHTML=ui.equivalentMaterials(result.plans[1],1);
+      ui.el.calculatorResult.hidden=false;ui.el.calculatorResult.innerHTML=ui.equivalentGroup(result.plans[1],1,'materials')+ui.equivalentGroup(result.plans[1],1,'effects');
       const section=ui.el.calculatorResult.firstElementChild;
       const button=section.querySelector('[data-machine-action="more-equivalents"]');
       button.click();while(button.hasAttribute('aria-busy'))await new Promise(resolve=>setTimeout(resolve,1));
@@ -54,9 +54,9 @@ test('mode navigation retains loaded DOM and resumes pagination after canceling 
       button.click(); // Queued old task must not append after this navigation.
       for(const mode of ['progress','calculator'])document.querySelector('[data-machine-beast-mode="'+mode+'"]').click();
       button.click();await finish();
-      return {loaded,final:section.querySelectorAll('.machine-equivalent-combination').length,identity:first.isConnected&&first.open&&ui.el.calculatorResult.firstElementChild===section,offsets};
+      return {loaded,final:section.querySelectorAll('.machine-equivalent-combination').length,effects:ui.el.calculatorResult.querySelector('[data-equivalent-effects-index]').querySelectorAll('.machine-equivalent-combination').length,identity:first.isConnected&&first.open&&ui.el.calculatorResult.firstElementChild===section,offsets};
     },result);
-    assert.equal(summary.loaded,30);assert.equal(summary.final,40);assert.equal(summary.identity,true);
+    assert.equal(summary.loaded,31);assert.equal(summary.final,41);assert.equal(summary.effects,41);assert.equal(summary.identity,true);
     assert.equal(summary.offsets.length,30);assert.equal(new Set(summary.offsets).size,30);assert.ok(summary.offsets.every(offset=>BigInt(offset)>=10n));
   }finally{await context.close();}
 });
@@ -65,7 +65,8 @@ for(const width of (process.env.PAGINATION_WIDTHS||'320,390,820,1366,1920').spli
   await context.route('**/*',route=>new URL(route.request().url()).origin===origin?route.continue():route.abort());
   const root=require('node:path').resolve(__dirname,'..');
   const source=baseline?require('node:child_process').execFileSync('git',['-c','safe.directory='+root,'show',baseline+':js/machine-beasts-ui.js'],{cwd:root,encoding:'utf8'}):fs.readFileSync(require.resolve('../js/machine-beasts-ui.js'),'utf8');
-  await context.route('**/js/machine-beasts-ui.js*',route=>route.fulfill({contentType:'application/javascript',body:source.replace('window.MACHINE_BEAST_UI = {','window.paginationTest={state,el,presentation,equivalentMaterials,showMoreEquivalentMaterials,cancelCalculation};window.MACHINE_BEAST_UI = {')}));
+  const markupRenderer=baseline?'equivalentMaterials':'equivalentGroup';
+  await context.route('**/js/machine-beasts-ui.js*',route=>route.fulfill({contentType:'application/javascript',body:source.replace('window.MACHINE_BEAST_UI = {','window.paginationTest={state,el,presentation,showMoreEquivalentMaterials,cancelCalculation,renderGroup:'+markupRenderer+'};window.MACHINE_BEAST_UI = {')}));
   const page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));
   page.on('console',message=>{if(message.text().startsWith('PAGINATION_PROGRESS '))console.log(message.text());});
   try{
@@ -73,12 +74,12 @@ for(const width of (process.env.PAGINATION_WIDTHS||'320,390,820,1366,1920').spli
     await page.evaluate(async ({result,baseline})=>{
       const ui=window.paginationTest;ui.state.schoolDraft={schoolId:'hegemonic',targetStage:5};ui.state.schoolResult=result;
       const start=performance.now();
-      ui.el.calculatorResult.hidden=false;ui.el.calculatorResult.innerHTML=ui.equivalentMaterials(result.plans[1],1);
+      ui.el.calculatorResult.hidden=false;ui.el.calculatorResult.innerHTML=ui.renderGroup(result.plans[1],1,'materials')+(baseline?'':ui.renderGroup(result.plans[1],1,'effects'));
       const mainMarkupMs=performance.now()-start;
       window.paginationLongTasks=[];new PerformanceObserver(list=>window.paginationLongTasks.push(...list.getEntries().map(e=>({start:e.startTime,duration:e.duration})))).observe({type:'longtask',buffered:false});
       if(!baseline){
         const button=ui.el.calculatorResult.querySelector('[data-machine-action="more-equivalents"]');
-        if(ui.el.calculatorResult.querySelector('.machine-equivalent-combination'))throw Error('first page decoded during main markup');
+        if(ui.el.calculatorResult.querySelectorAll('[data-equivalent-index] .machine-equivalent-combination').length!==1)throw Error('alternatives decoded during main markup');
         button.click();
         while(button.hasAttribute('aria-busy'))await new Promise(resolve=>setTimeout(resolve,1));
       }
@@ -90,7 +91,7 @@ for(const width of (process.env.PAGINATION_WIDTHS||'320,390,820,1366,1920').spli
       window.paginationFirst=node.querySelector('.machine-equivalent-combination');window.paginationFirst.open=true;
       window.paginationFirstSummary=window.paginationFirst.querySelector('summary');
     });
-    await section.locator('h3').first().scrollIntoViewIfNeeded();
+    await section.locator(baseline?'h3':'.machine-equivalent-combination > summary').first().scrollIntoViewIfNeeded();
     const stats=await page.evaluate(async({baseline,clicks})=>{
       const ui=window.paginationTest,plan=ui.state.schoolResult.plans[1],section=ui.el.calculatorResult.querySelector('[data-equivalent-index="1"]');
       const button=section.querySelector('[data-machine-action="more-equivalents"]');
@@ -111,7 +112,7 @@ for(const width of (process.env.PAGINATION_WIDTHS||'320,390,820,1366,1920').spli
       await new Promise(resolve=>setTimeout(resolve,0));
       const current=ui.el.calculatorResult.querySelector('[data-equivalent-index="1"]');
       return {times,wallMs:performance.now()-wallStart,scrollChanges,calls,decoded,count:(current.querySelector('[data-equivalent-count]')||Array.from(current.querySelectorAll('p')).find(n=>n.textContent.startsWith('已列出'))).textContent,
-        keys:Array.from(current.querySelectorAll('.machine-equivalent-combination'),node=>node.dataset.detailKey.split(':alternative:')[1]),
+        keys:Array.from(current.querySelectorAll('.machine-equivalent-combination')).slice(baseline?0:1).map(node=>node.dataset.detailKey.split(baseline?':alternative:':':combination:')[1]),
         nodeIdentity:window.paginationFirst.isConnected,focus:document.activeElement===button,
         longTasks:window.paginationLongTasks,overflow:document.documentElement.scrollWidth>innerWidth};
     },{baseline,clicks});

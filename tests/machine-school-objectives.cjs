@@ -216,6 +216,13 @@ for (const width of [1280,1440]) test(width+'px equal optimum combinations start
     const different=labels[0].slots.map((slot,index)=>slot.text!==labels[1].slots[index]?.text);
     assert.ok(different.some(Boolean),'fixture includes combination differences');
     for (const {slots} of labels) assert.deepEqual(slots.map(slot=>slot.marked),slots.map((_,index)=>different[index]??true));
+    const separators=await pane.locator('.machine-combination-separator').evaluateAll(nodes=>nodes.map(node=>({
+      text:node.textContent,
+      blue:getComputedStyle(node).color==='rgb(169, 217, 255)',
+      between:node.previousElementSibling.classList.contains('is-different')&&node.nextElementSibling.classList.contains('is-different')
+    })));
+    assert.ok(separators.length>0);
+    for(const separator of separators){assert.equal(separator.text,'、');assert.equal(separator.blue,separator.between);}
   }
   for (let n=0;n<2;n++) assert.equal(await combinations.nth(n).locator('summary').first().textContent(),await effectCombinations.nth(n).locator('summary').textContent());
   await effectCombinations.nth(1).locator('summary').click();

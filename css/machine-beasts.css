@@ -405,6 +405,7 @@
 #partition-machine-beasts .machine-equivalent-combination { border-inline: 0; border-radius: 0; }
 #partition-machine-beasts .machine-equivalent-combination > summary { padding-inline: 0; }
 #partition-machine-beasts .machine-equivalent-combination > summary .is-different { color: #a9d9ff; }
+#partition-machine-beasts .machine-equivalent-combination > summary .is-different + .machine-combination-separator:has(+ .is-different) { color: #a9d9ff; }
 #partition-machine-beasts .machine-equivalent-combination > .machine-disclosure-body { padding-inline: 0; }
 #partition-machine-beasts .machine-school-plan-resources,
 #partition-machine-beasts .machine-school-plan-beast-metrics { display: grid; grid-template-columns: minmax(0, 1.8fr) minmax(0, 1fr) minmax(0, .8fr); column-gap: 4px; align-content: start; }
@@ -544,6 +545,15 @@
 #partition-machine-beasts .machine-core-table-scroll td { padding: 10px; text-align: center; vertical-align: middle; border-bottom: 1px solid var(--line); }
 #partition-machine-beasts .machine-core-table-scroll th:first-child { white-space: nowrap; }
 #partition-machine-beasts .machine-modification-core-reference h3 { margin: 0 0 8px; }
+#partition-machine-beasts .machine-talent-scroll { border: 1px solid var(--line); border-radius: 8px; }
+#partition-machine-beasts .machine-talent-scroll .machine-talent-element th { text-align: left; color: var(--gold); background: var(--bg2); }
+#partition-machine-beasts .machine-talent-scroll .machine-talent-common { background: var(--bg2); }
+#partition-machine-beasts .machine-talent-scroll td { overflow-wrap: anywhere; }
+@media (max-width: 600px) {
+  #partition-machine-beasts .machine-talent-scroll th,
+  #partition-machine-beasts .machine-talent-scroll td { padding: 8px 5px; }
+  #partition-machine-beasts .machine-talent-scroll th:first-child { white-space: normal; }
+}
 
 #partition-machine-beasts .machine-reference-beast-prices { margin-top: 12px; }
 

@@ -241,7 +241,12 @@ test('reference search preserves unrelated sections and independent stage school
   await page.waitForFunction(() => window.MACHINE_BEAST_UI.captureView().searches.reference === '赤练王蛇');
   assert.equal(await page.evaluate(() => window.__referenceMaterials === document.getElementById('machine-reference-materials')), true);
   assert.equal(await page.evaluate(() => window.MACHINE_BEAST_UI.captureView().referenceStageSchoolId), 'nonAttack');
-  assert.equal(await page.locator('.machine-reference-index a').count(), 7);
+  assert.equal(await page.locator('.machine-reference-index a').count(), 8);
+  await page.locator('a[href="#machine-reference-talents"]').first().click();
+  assert.equal(await page.evaluate(() => document.activeElement.id), 'machine-reference-talents');
+  const talents = page.locator('#machine-reference-talents');
+  assert.equal(await talents.locator('[data-talent-beast="zero-white-tiger"]').count(), 2);
+  assert.equal(await talents.locator('[data-talent-beast="mechanical-white-tiger"]').count(), 2);
   await page.locator('a[href="#machine-reference-values"]').first().click();
   assert.equal(await page.evaluate(() => document.activeElement.id), 'machine-reference-values');
 }));
@@ -257,11 +262,11 @@ test('presentation filters do not save inventory and explicit navigation can rev
   assert.equal(await getAccountItem(page, 'qinshi_machine_beasts_progress_v1'), before);
 }));
 for (const width of [320, 375, 390, 430, 600, 768, 820, 1024, 1280, 1366, 1440, 1920]) {
-  test(`${width}px module containers keep full controls and seven references without whole-page horizontal overflow`, async () => scenario(async page => {
+  test(`${width}px module containers keep full controls and eight references without whole-page horizontal overflow`, async () => scenario(async page => {
     for (const mode of ['progress', 'calculator', 'reference']) {
       await page.locator('[data-machine-beast-mode="' + mode + '"]').click();
       if (mode === 'reference') {
-        assert.equal(await page.locator('#machine-beast-reference-content > section.panel').count(), 7);
+        assert.equal(await page.locator('#machine-beast-reference-content > section.panel').count(), 8);
         for (const href of await page.locator('.machine-reference-index a').evaluateAll(nodes => nodes.map(node => node.getAttribute('href')))) assert.equal(await page.locator(href).count(), 1);
       }
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth), true, `${width} ${mode}`);

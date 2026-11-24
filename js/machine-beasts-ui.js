@@ -1135,7 +1135,7 @@
     var labels = levels.map(function (beast, slot) {
       return '<span data-combination-slot="' + slot + '"' + (differentSlots && differentSlots.has(slot) ? ' class="is-different"' : '') + '>' + escapeHtml(beast.name + beast.level + '级') + '</span>';
     });
-    var title = '组合' + formatNumber(position) + (labels.length ? ' ：' + labels.join('、') : '');
+    var title = '组合' + formatNumber(position) + (labels.length ? ' ：' + labels.join('<span class="machine-combination-separator">、</span>') : '');
     return disclosure(key + ':' + pane + ':combination:' + stableKey, title, body, 'machine-equivalent-combination');
   }
 
@@ -1288,8 +1288,13 @@
 
   function researchReference() {
     var coreRules = DATA.modificationCoreRules;
-    var coreMaterials = coreRules ? '<section class="machine-modification-core-reference"><h3>改造神核材料</h3><div class="machine-core-table-scroll"><table><thead><tr><th scope="col">改造阶段</th><th scope="col">本阶段所需神核</th><th scope="col">累计神核</th><th scope="col">所需神核箱子预估（按10出2计算）</th></tr></thead><tbody>' + DATA.modifications.filter(function (mod) { return mod.id !== 'none'; }).map(function (mod) {
-      return '<tr><th scope="row">' + escapeHtml(mod.name) + '</th><td>' + formatNumber(coreRules.incremental[mod.id]) + '</td><td>' + formatNumber(coreRules.cumulative[mod.id]) + '</td><td aria-label="约' + coreRules.incremental[mod.id] * coreRules.estimatedBoxesPerCore + '箱，经验估计，非保底">' + formatNumber(coreRules.incremental[mod.id] * coreRules.estimatedBoxesPerCore) + '</td></tr>';
+    function boxCell(cores) {
+      var boxes = formatNumber(cores * coreRules.estimatedBoxesPerCore);
+      return '<td aria-label="约' + boxes + '箱，经验估计，非保底">' + boxes + '</td>';
+    }
+    var coreMaterials = coreRules ? '<section class="machine-modification-core-reference"><h3>改造神核材料（按照神核箱子10出2计算）</h3><div class="machine-core-table-scroll"><table><thead><tr><th scope="col">改造阶段</th><th scope="col">本阶段所需神核</th><th scope="col">累计神核</th><th scope="col">所需神核箱子预估</th><th scope="col">累计神核箱子</th></tr></thead><tbody>' + DATA.modifications.filter(function (mod) { return mod.id !== 'none'; }).map(function (mod) {
+      var incremental = coreRules.incremental[mod.id], cumulative = coreRules.cumulative[mod.id];
+      return '<tr><th scope="row">' + escapeHtml(mod.name) + '</th><td>' + formatNumber(incremental) + '</td><td>' + formatNumber(cumulative) + '</td>' + boxCell(incremental) + boxCell(cumulative) + '</tr>';
     }).join('') + '</tbody></table></div></section>' : '';
     function qualityCards(quality, title, includeModifications) {
       var cards = Object.keys(DATA.researchValues[quality]).sort(function (a, b) { return Number(a) - Number(b); }).map(function (rank) {
@@ -1392,10 +1397,38 @@
       }).join('') + '</tbody></table></div></section>';
   }
 
+  function talentReference() {
+    var guide = DATA.talentGuide;
+    if (!guide) return '';
+    function table(title, headers, values, shared) {
+      var columns = headers.length + 1;
+      function cells(values) {
+        return values.map(function (value) { return '<td>' + escapeHtml(value) + '</td>'; }).join('');
+      }
+      return '<section class="machine-reference-group"><h3>' + title + '</h3><div class="machine-core-table-scroll machine-talent-scroll" tabindex="0" role="region" aria-label="' + title + '"><table><thead><tr><th scope="col">机关兽</th>' +
+        headers.map(function (name) { return '<th scope="col">' + escapeHtml(name) + '</th>'; }).join('') + '</tr></thead>' +
+        guide.groups.map(function (group) {
+          var rows = group.rows.map(function (row) {
+            var beast = beastById(row.id);
+            return '<tr data-talent-beast="' + escapeHtml(row.id) + '"><th scope="row">' + escapeHtml(beast ? beast.name : row.id) + '</th>' + cells(values(row)) + '</tr>';
+          }).join('');
+          return '<tbody><tr class="machine-talent-element"><th scope="rowgroup" colspan="' + columns + '">' + escapeHtml(group.element) + '</th></tr>' + rows + '</tbody>';
+        }).join('') +
+        '<tbody><tr class="machine-talent-common"><th scope="row">五行通用</th>' + cells(shared) + '</tr></tbody></table></div></section>';
+    }
+    var stageNames = guide.modificationStages.map(function (id) {
+      return DATA.modifications.find(function (mod) { return mod.id === id; }).name;
+    });
+    return '<section class="panel" id="machine-reference-talents"><h2>橙色机关兽突破天赋与改造效果</h2>' +
+      table('突破天赋', ['8阶', '9阶', '10阶'], function (row) { return [row.rank8, guide.rank9, row.rank10]; }, guide.fiveElements.breakthrough) +
+      table('改造效果', stageNames, function (row) { return row.modification; }, guide.fiveElements.modification) +
+      '<p class="muted-tip">资料：' + escapeHtml(guide.source) + '。资料表未列升神效果。</p></section>';
+  }
+
   function renderReference() {
     var focused = rememberPresentation(el.referenceContent);
-    var groups = [['机关兽与流派', [['effects','归属与效果'],['schools','流派效果']]], ['材料与突破', [['materials','材料来源'],['blueprints','研发材料'],['breakthrough','突破材料']]], ['等级与研发数值', [['thresholds','等级门槛'],['values','阶数与改造']]]];
-    el.referenceContent.innerHTML = '<nav class="machine-reference-index" id="machine-reference-index" aria-label="机关兽资料目录">' + groups.map(function (group) { return '<div class="machine-reference-index-group"><b>' + group[0] + '</b><div>' + group[1].map(function (entry) { return '<a href="#machine-reference-' + entry[0] + '" data-machine-jump>' + entry[1] + '</a>'; }).join('') + '</div></div>'; }).join('') + '</nav>' + beastReference() + schoolReference() + materialReference() + blueprintGuideReference() + breakthroughGuideReference() + thresholdReference() + researchReference();
+    var groups = [['机关兽与流派', [['effects','归属与效果'],['schools','流派效果'],['talents','突破天赋与改造效果']]], ['材料与突破', [['materials','材料来源'],['blueprints','研发材料'],['breakthrough','突破材料']]], ['等级与研发数值', [['thresholds','等级门槛'],['values','阶数与改造']]]];
+    el.referenceContent.innerHTML = '<nav class="machine-reference-index" id="machine-reference-index" aria-label="机关兽资料目录">' + groups.map(function (group) { return '<div class="machine-reference-index-group"><b>' + group[0] + '</b><div>' + group[1].map(function (entry) { return '<a href="#machine-reference-' + entry[0] + '" data-machine-jump>' + entry[1] + '</a>'; }).join('') + '</div></div>'; }).join('') + '</nav>' + beastReference() + schoolReference() + talentReference() + materialReference() + blueprintGuideReference() + breakthroughGuideReference() + thresholdReference() + researchReference();
     updateResearchQuickLookup();
     el.referenceContent.querySelectorAll(':scope > section.panel').forEach(addReferenceReturn);
     rendered.reference = true;

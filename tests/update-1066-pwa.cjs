@@ -180,8 +180,8 @@ async function offlineFeatures(page, beforeCount) {
   await page.locator('[data-research-quality]').selectOption('orange');
   await page.locator('[data-research-rank]').selectOption('7');
   assert.deepEqual(await page.locator('[data-research-quick-result] dd').allTextContents(),
-    await page.evaluate(() => MACHINE_BEAST_DATA.modifications.map(mod => MACHINE_BEAST_DATA.researchValues.orange[7][mod.id].toLocaleString('zh-CN'))));
-  assert.equal(await page.locator('.machine-reference-index a').count(), 7);
+    await page.evaluate(() => MACHINE_BEAST_DATA.modifications.map(mod => String(MACHINE_BEAST_DATA.researchValues.orange[7][mod.id]).replace(/\B(?=(\d{4})+(?!\d))/g, ','))));
+  assert.equal(await page.locator('.machine-reference-index a').count(), 8);
   return page.evaluate(key => window.QinshiAccounts.getItem(key), FAVORITES);
 }
 

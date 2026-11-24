@@ -13,7 +13,7 @@ for (const file of ['data/machine-beasts.js', 'js/machine-beasts.js', 'js/number
 }
 const source = fs.readFileSync(path.join(root, 'js/machine-beasts-ui.js'), 'utf8');
 vm.runInContext(source.replace('window.MACHINE_BEAST_UI = {',
-  'window.testUI = { calcTargetOptions, calcTargetPicker, calculatorInventorySelector, calculatorFragmentControl, calculationProgress, conversionSummary, investmentLists, itemList, researchReference, formatNumber, newRankModeSelector, rankMaterialsNote, planBeastOrder, investmentInventoryLimits, schoolCombination }; window.MACHINE_BEAST_UI = {'), context);
+  'window.testUI = { calcTargetOptions, calcTargetPicker, calculatorInventorySelector, calculatorFragmentControl, calculationProgress, conversionSummary, investmentLists, itemList, researchReference, talentReference, formatNumber, newRankModeSelector, rankMaterialsNote, planBeastOrder, investmentInventoryLimits, schoolCombination }; window.MACHINE_BEAST_UI = {'), context);
 const ui = context.window.testUI;
 
 test('UI number formatting preserves BigInt precision and uses four-digit groups', () => {
@@ -68,7 +68,7 @@ test('plan rendering sorts by quality, rank and modification, without changing i
   const list = ui.itemList([item(6,'fullDivine'),item(7),item(7,'heaven'),item(0)],'','owned');
   assert.match(list,/（天改）7阶×1[\s\S]*?（0改）7阶×1[\s\S]*?（神改）6阶×1[\s\S]*?（0改）0阶×1/);
   const alternativeHtml = ui.schoolCombination({beasts:stock,totals:{},stableKey:'k'}, 'school', 2, 'materials');
-  assert.match(alternativeHtml, /<details[^>]+><summary>组合2 ：<span[^>]+>mechanical-yueliao1级<\/span>、<span[^>]+>mechanical-bear1级<\/span>/);
+  assert.match(alternativeHtml, /<details[^>]+><summary>组合2 ：<span[^>]+>mechanical-yueliao1级<\/span><span class="machine-combination-separator">、<\/span><span[^>]+>mechanical-bear1级<\/span>/);
   assert.doesNotMatch(alternativeHtml, /<details[^>]+\sopen[\s>]/);
   assert.deepEqual(Array.from(alternativeHtml.matchAll(/<article class="machine-school-plan-beast"><header><strong>([^<]+)<\/strong>/g), match=>match[1]),expected);
 });
@@ -138,8 +138,22 @@ test('new investment combines equal output shapes without hiding mixed body sour
 test('research reference estimates boxes from each stage without changing core requirements', () => {
   const html = ui.researchReference();
   const table = html.match(/<table>[\s\S]*?<\/table>/)[0];
-  assert.deepEqual(Array.from(table.matchAll(/<tr><th scope="row">([^<]+)<\/th><td>(\d+)<\/td><td>(\d+)<\/td><td[^>]*>(\d+)<\/td><\/tr>/g), match => match.slice(1)), [
-    ['升神', '40', '40', '200'], ['天改', '15', '55', '75'], ['仙改', '20', '75', '100'], ['圣改', '30', '105', '150'], ['神改', '40', '145', '200']
+  assert.deepEqual(Array.from(table.matchAll(/<tr><th scope="row">([^<]+)<\/th><td>(\d+)<\/td><td>(\d+)<\/td><td[^>]*>(\d+)<\/td><td[^>]*>(\d+)<\/td><\/tr>/g), match => match.slice(1)), [
+    ['升神', '40', '40', '200', '200'], ['天改', '15', '55', '75', '275'], ['仙改', '20', '75', '100', '375'], ['圣改', '30', '105', '150', '525'], ['神改', '40', '145', '200', '725']
   ]);
-  for (const text of ['改造阶段', '本阶段所需神核', '所需神核箱子预估（按10出2计算）']) assert.ok(table.includes(text), text);
+  assert.match(html,/改造神核材料（按照神核箱子10出2计算）/);
+  for (const text of ['改造阶段', '本阶段所需神核', '所需神核箱子预估', '累计神核箱子']) assert.ok(table.includes(text), text);
+});
+
+test('orange talent tables show each documented beast once in each table', () => {
+  const [breakthrough, modification] = ui.talentReference().match(/<table>[\s\S]*?<\/table>/g);
+  for(const table of [breakthrough,modification]){
+    const ids=Array.from(table.matchAll(/data-talent-beast="([^"]+)"/g),match=>match[1]);
+    assert.equal(ids.length,20);
+    assert.equal(new Set(ids).size,20);
+  }
+  assert.match(breakthrough,/机关熊罴<\/th><td>开场使所有敌人据守/);
+  assert.match(breakthrough,/守护弟子内力增加40%/);
+  assert.match(modification,/机关神龙<\/th><td>血量\+8%<\/td><td>技能穿透\+8%/);
+  assert.match(modification,/全体护盾\+80%/);
 });

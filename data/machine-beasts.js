@@ -224,6 +224,59 @@
     beast("mechanical-kunpeng", "机关鲲鹏", "nonAttack", "橙五", effects("机关兽行动后，回复全体弟子8%神将护盾", "机关兽行动后，回复全体弟子15%神将护盾", "机关兽行动后，回复全体弟子24%神将护盾", "机关兽行动后，回复全体弟子33%神将护盾"))
   ];
 
+  // The two user-provided charts are versions of the same reference table.
+  // Keep breakthrough/改造 effects separate from the calculator's research effects.
+  function talent(id, rank8, rank10, modification){
+    return { id: id, rank8: rank8, rank10: rank10, modification: modification };
+  }
+  var rank10SpeedCrit = "守护弟子速度+35、暴击+5%";
+  var rank10Speed = "守护弟子速度+35";
+  var noCounter = "攻击不触发反击类技能";
+  var topTalentMods = ["血量+10%", "技伤减免+10%", "暴击+10%", "技能穿透+10%"];
+  var standardTalentMods = ["血量+8%", "技伤减免+8%", "暴击+8%", "技能穿透+10%"];
+  var penetrationTalentMods = ["血量+8%", "技伤减免+8%", "技能穿透+8%", "暴击+8%"];
+  var talentGuide = {
+    source: "秦时明月手游频道·机关兽突破天赋及神改效果一览",
+    rank9: "守护弟子内力增加40%",
+    modificationStages: ["heaven", "immortal", "saint", "fullDivine"],
+    fiveElements: {
+      breakthrough: ["五行加成：血量+30%", "五行加成：血量、防御+40%", "五行加成：血量、防御、攻击+50%"],
+      modification: ["五行加成+5%、全体护盾+20%", "五行加成+10%、全体护盾+40%", "五行加成+15%、全体护盾+60%", "五行加成+20%、全体护盾+80%"]
+    },
+    groups: [
+      { element: "金", rows: [
+        talent("mechanical-bear", "开场使所有敌人据守（20%攻击转防御，非负面），持续2回合", rank10SpeedCrit, topTalentMods),
+        talent("mechanical-divine-dragon", "弟子行动时有几率发动神龙", "守护弟子速度+25、穿透+5%", ["血量+8%", "技能穿透+8%", "暴击+8%", "技伤减免+10%"]),
+        talent("zero-white-tiger", noCounter, "守护弟子暴击、穿透各+5%", ["血量+8%", "技伤减免+8%", "暴击+8%", "速度+30"]),
+        talent("potu-sanlang", "对前排目标的伤害增加50%", "守护弟子抗暴击+8%", penetrationTalentMods)
+      ] },
+      { element: "木", rows: [
+        talent("mechanical-qingluan", "攻击时以相同威力为我方全体恢复神将护盾", rank10SpeedCrit, topTalentMods),
+        talent("mechanical-azure-dragon", "目标防御下降20%，持续1回合", "守护弟子速度+30", standardTalentMods),
+        talent("mechanical-yuan-beast", noCounter, "守护弟子速度+25、暴击+5%", standardTalentMods)
+      ] },
+      { element: "水", rows: [
+        talent("mechanical-kunpeng", "在场时敌方全体暴击下降25%", rank10SpeedCrit, topTalentMods),
+        talent("mirage-tower", noCounter, rank10Speed, standardTalentMods),
+        talent("mechanical-black-tortoise", "链式治疗折损率降低至10%", "守护弟子治疗效果+10%", penetrationTalentMods),
+        talent("red-serpent", "链式伤害折损率降低至10%", "守护弟子闪避+7%", penetrationTalentMods)
+      ] },
+      { element: "火", rows: [
+        talent("mechanical-flame-puppet", "攻击不触发目标损血被动特效，且崩溃无法被免疫和清除", rank10SpeedCrit, topTalentMods),
+        talent("mechanical-year-beast", "攻击目标增加1人", rank10Speed, standardTalentMods),
+        talent("war-demon", "目标治疗量下降50%，持续1回合", "守护弟子技能穿透+10%", ["血量+8%", "技伤减免+8%", "暴击+8%", "速度+30"]),
+        talent("mechanical-vermilion-bird", "必定攻击人数较多的一排", "守护弟子暴击伤害+5%", ["血量+8%", "技伤减免+8%", "技能穿透+8%", "速度+25"])
+      ] },
+      { element: "土", rows: [
+        talent("mechanical-yueliao", "攻击不触发目标损血被动特效，且残废无法被免疫和清除", rank10SpeedCrit, topTalentMods),
+        talent("pumpkin-monster", "技能伤害提升25%", rank10Speed, standardTalentMods),
+        talent("nine-headed-jade", noCounter, "守护弟子暴击+10%", ["血量+8%", "技伤减免+8%", "技能穿透+8%", "速度+30"]),
+        talent("mechanical-white-tiger", "攻击的目标增加1人", "守护弟子暴击+8%", ["血量+8%", "技伤减免+8%", "技能穿透+8%", "速度+25"]),
+        talent("mechanical-bronze-man", "攻击的眩晕概率提升至必然", "守护弟子招架+7%", penetrationTalentMods)
+      ] }
+    ]
+  };
+
   var schools = [
     {
       id: "hegemonic",
@@ -261,6 +314,7 @@
     referenceCostRules: referenceCostRules,
     blueprintGuide: blueprintGuide,
     breakthroughGuide: breakthroughGuide,
+    talentGuide: talentGuide,
     materialSources: materialSources,
     effectLevels: [10, 15, 20, 25],
     beasts: beasts,

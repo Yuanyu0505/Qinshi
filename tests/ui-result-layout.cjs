@@ -86,14 +86,17 @@ for (const width of [390, 900, 1440]) {
     const page = await openPage('formations', width);
     try {
       await page.locator('#formation-selector [data-formation-id]').first().click();
-      await page.locator('[data-scope="calculator"][data-role="owned"]').first().check();
+      await page.locator('[data-action="edit-progress"]').click();
+      await page.locator('[data-scope="progress"][data-role="owned"]').first().check();
+      await page.locator('[data-action="save-progress"]').first().click();
       const results = page.locator('.formation-calculator');
       assert.ok(await results.isVisible());
       assert.ok(await page.evaluate(() => {
         const personal = document.querySelector('.formation-personal').getBoundingClientRect();
         const result = document.querySelector('.formation-calculator').getBoundingClientRect();
         const official = document.querySelector('.formation-official').getBoundingClientRect();
-        return official.bottom <= personal.top && personal.bottom <= result.top;
+        const recommendation = document.querySelector('.formation-recommendation').getBoundingClientRect();
+        return personal.bottom <= recommendation.top && recommendation.bottom <= result.top && result.bottom <= official.top;
       }));
       if (width > 1024) {
         await results.locator('[data-action="sort-position"]').first().click();
@@ -104,9 +107,10 @@ for (const width of [390, 900, 1440]) {
         assert.ok((await results.locator('[data-action="mobile-position"]').nth(1).getAttribute('class')).includes('active'));
         assert.ok(await results.locator('.formation-ranking-list article').count() > 0);
       }
-      await page.locator('[data-action="generate-recommendation"]').click();
-      assert.ok(await page.evaluate(() => document.querySelector('.formation-calculator').getBoundingClientRect().bottom <=
-        document.querySelector('.formation-recommendation').getBoundingClientRect().top));
+      await page.locator('[data-personal-settings] button[type="submit"]').click();
+      await page.locator('[data-personal-output] .formation-benefits').first().waitFor();
+      assert.ok(await page.evaluate(() => document.querySelector('.formation-recommendation').getBoundingClientRect().bottom <=
+        document.querySelector('.formation-calculator').getBoundingClientRect().top));
     } finally { await page.close(); }
   });
 }

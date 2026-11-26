@@ -936,7 +936,7 @@ test("首页提供合阵工作台及其数据、核心和界面脚本", async ()
     assert.match(page.body, /id="formation-selector"/);
     assert.match(page.body, /id="formation-workspace"/);
     assert.match(page.body, versionedScriptPattern("data/formations.js"));
-    assert.deepStrictEqual(await loadedPartition('formations', 'FORMATIONS_UI'), ['data/formation-max-reference.js', 'js/formations.js', 'js/formations-ui.js'].map(asset => asset + '?v=' + APP_VERSION));
+    assert.deepStrictEqual(await loadedPartition('formations', 'FORMATIONS_UI'), ['data/formation-max-reference.js', 'js/formations.js', 'js/formation-progress-store.js', 'js/formation-limit-adapter.js', 'js/formation-recommendation-ui.js', 'js/formations-ui.js'].map(asset => asset + '?v=' + APP_VERSION));
 
     for (const resource of ["/data/formations.js", "/data/formation-max-reference.js", "/js/formations.js", "/js/formations-ui.js"]) {
       const response = await get(port, resource);

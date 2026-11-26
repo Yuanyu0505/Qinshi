@@ -7,18 +7,24 @@
   var ACCOUNT_STORAGE = root.QinshiAccounts;
   var STORE_KEY = "qinshi_formation_progress_v1";
   var initialized = false;
+  var progressStore;
+  var appliedOptions;
+  var recommendationRevision = 0;
+  var limitRevision = 0;
+  var limitResult = null;
+  var limitContext = null;
   var el = {};
   var state = {
     selectedId: null,
     stored: {},
     editing: false,
     draft: null,
-    calculator: null,
     progressError: "",
     storageError: "",
     sortPosition: null,
     mobilePosition: 1,
     recommendation: null,
+    view: "main",
   };
 
   function escapeHtml(value) {
@@ -53,7 +59,7 @@
     return NUMBER_FORMAT.format(value || 0);
   }
 
-  // This reference never enters CORE, saved progress, or recommendation inputs.
+  // Reference inputs use a separate virtual progress object and never enter saved progress.
   function maxReferenceRows(filters) {
     filters = filters || {};
     var reference = root.FORMATION_MAX_REFERENCE_DATA;
@@ -73,14 +79,15 @@
   function mountMaxReference() {
     var reference = root.FORMATION_MAX_REFERENCE_DATA;
     if (!reference || !el.workspace || document.getElementById('formation-max-reference')) return;
-    var panel = document.createElement('details');
+    var panel = document.createElement('section');
     panel.id = 'formation-max-reference';
     panel.className = 'panel formation-max-reference';
-    panel.innerHTML = '<summary>合阵弟子极限属性</summary><p class="formation-max-condition">' + escapeHtml(reference.meta.conditions) + '</p>' +
-      '<div class="formation-max-controls"><label>合阵<select data-max-formation aria-label="极限属性合阵"><option value="">全部合阵</option>' +
+    panel.hidden = true;
+    panel.innerHTML = '<h2>合阵弟子极限属性</h2><p class="formation-max-condition">' + escapeHtml(reference.meta.conditions) + '</p>' +
+      '<div class="formation-max-controls"><select data-max-formation aria-label="极限属性合阵"><option value="">全部合阵</option>' +
       reference.formations.map(function (formation) { return '<option value="' + escapeHtml(formation.name) + '">' + escapeHtml(formation.name) + '</option>'; }).join('') +
-      '</select></label><label>排序<select data-max-sort aria-label="极限属性排序"><option value="source">资料顺序</option><option value="attack">攻击降序</option><option value="defense">防御降序</option><option value="hp">血量降序</option></select></label>' +
-      '<label class="formation-max-query">搜索<input type="search" data-max-query aria-label="搜索极限属性" placeholder="合阵或弟子名称" autocomplete="off"></label></div><div data-max-results aria-live="polite"></div>';
+      '</select><select data-max-sort aria-label="极限属性排序"><option value="source">资料顺序</option><option value="attack">攻击降序</option><option value="defense">防御降序</option><option value="hp">血量降序</option></select>' +
+      '<input class="formation-max-query" type="search" data-max-query aria-label="搜索极限属性" placeholder="搜索合阵或弟子名称" autocomplete="off"></div><div data-limit-recommendation></div><div data-max-results aria-live="polite"></div>';
     el.workspace.parentNode.insertBefore(panel, el.workspace);
     function refresh() {
       var rows = maxReferenceRows({formation: panel.querySelector('[data-max-formation]').value, query: panel.querySelector('[data-max-query]').value, sort: panel.querySelector('[data-max-sort]').value});
@@ -95,8 +102,71 @@
           [['攻',formatNumber(row.attack)],['防',formatNumber(row.defense)],['血',formatNumber(row.hp)],['建议位置',position(row)],['培养属性',row.trainAttribute || '—'],['提升属性',row.gainAttribute || '—']].map(function (entry) { return '<div><dt>' + entry[0] + '</dt><dd>' + escapeHtml(entry[1]) + '</dd></div>'; }).join('') + '</dl></article>'; }).join('') + '</div>';
     }
     panel.addEventListener('input', function (event) { if (event.target.matches('[data-max-query]')) refresh(); });
-    panel.addEventListener('change', function (event) { if (event.target.matches('[data-max-formation],[data-max-sort]')) refresh(); });
+    panel.addEventListener('change', function (event) { if (event.target.matches('[data-max-formation],[data-max-sort]')) refresh(); if(event.target.matches('[data-max-formation]'))mountLimitRecommendation(); });
     refresh();
+    mountLimitRecommendation();
+  }
+
+  function cancelRecommendations() {
+    recommendationRevision += 1; limitRevision += 1;
+    root.FORMATION_RECOMMENDATION_UI.cancel('personal');
+    root.FORMATION_RECOMMENDATION_UI.cancel('limit');
+  }
+
+  function mountLimitRecommendation() {
+    var host=document.querySelector('[data-limit-recommendation]');
+    if(!host)return;
+    limitRevision+=1; root.FORMATION_RECOMMENDATION_UI.cancel('limit'); limitResult=null;limitContext=null;
+    var name=document.querySelector('[data-max-formation]').value;
+    if(!name){host.innerHTML='<div class="formation-limit-overview">'+formations().map(function(f){return '<button type="button" class="seg" data-limit-select="'+escapeHtml(f.name)+'">'+escapeHtml(f.name)+' · '+f.candidates.length+'名弟子</button>';}).join('')+'</div>';return;}
+    try {
+      var matches=formations().filter(function(f){return f.name===name;});
+      if(matches.length!==1)throw new Error('合阵映射不是唯一，无法推荐。');
+      var formation=matches[0];
+      var reference=root.FORMATION_MAX_REFERENCE_DATA.formations.find(function(r){return r.name===name;});
+      var adapted=root.FORMATION_LIMIT_ADAPTER.buildLimitProgress(formation,reference);
+      limitContext={formation:formation,adapted:adapted};
+      host.innerHTML='<div data-limit-settings></div><div data-limit-output aria-live="polite"></div>';
+      bindLimitSettings();
+      generateLimit();
+    } catch(error){host.textContent=error.message;}
+  }
+
+  function applyOptions(next) {
+    cancelRecommendations();appliedOptions=clone(next);state.recommendation=null;limitResult=null;
+    var output=document.querySelector('[data-limit-output]');if(output)output.textContent='参数已更新，请重新生成。';
+    renderWorkspace(true);
+    bindLimitSettings();
+  }
+
+  function bindLimitSettings(){
+    var host=document.querySelector('[data-limit-settings]');if(!host||!limitContext)return;
+    root.FORMATION_RECOMMENDATION_UI.bindSettings(host,appliedOptions,limitContext.formation,function(next){applyOptions(next);generateLimit();},function(){limitRevision+=1;root.FORMATION_RECOMMENDATION_UI.cancel('limit');var output=document.querySelector('[data-limit-output]');if(output)output.textContent='计算已取消';});
+  }
+
+  function originalComparison(formation,adapted,result) {
+    var totals=CORE.summarizeTargets(adapted.originalAssignments);
+    var differences=root.FORMATION_RECOMMENDATION_UI.targets.map(function(t){var delta=(result.totals[t]||0)-(totals[t]||0);return '<span>'+escapeHtml(t)+'：原 '+formatNumber(totals[t]||0)+' → '+formatNumber(result.totals[t]||0)+'（'+(delta>0?'+':'')+formatNumber(delta)+'）</span>';}).join('');
+    var originalScore=CORE.scoreTotals(formation,totals,appliedOptions);
+    var equal=appliedOptions.mode!=='legacy'&&appliedOptions.mode!=='target'&&String(originalScore.exactScore)===String(result.exactScore);
+    return '<details open><summary>原资料方案对照</summary><div class="formation-comparison">'+differences+'</div><p>原资料评分（非战力）：'+escapeHtml(originalScore.exactScore)+' / '+escapeHtml(originalScore.scoreDenominator)+'</p>'+(equal?'<p>当前权重下原资料已最优'+(BigInt(result.tieCount)>1n?'，存在并列方案':'')+'。</p>':'')+'<p>'+escapeHtml(adapted.originalAssignments.map(function(a){return '助阵'+a.position+' '+a.name;}).join('、'))+'</p></details>'+(adapted.conflicts.length?'<p class="formation-warning">'+escapeHtml(adapted.conflicts.map(function(c){return '助阵'+c.position+' 原资料“'+c.rawGainAttribute+'”，基础规则“'+c.targetAttribute+'”，待核实（保留原文）。';}).join('；'))+'</p>':'');
+  }
+
+  function generateLimit(offset) {
+    if(!limitContext)return;
+    var context=limitContext,revision=++limitRevision,account=ACCOUNT_STORAGE.currentAccount&&ACCOUNT_STORAGE.currentAccount();
+    var output=document.querySelector('[data-limit-output]');output.textContent='精确计算中…';
+    var options=Object.assign({},appliedOptions,{offset:offset||'0',limit:20});
+    root.FORMATION_RECOMMENDATION_UI.run('limit',context.formation,context.adapted.progress,options).then(function(result){
+      if(revision!==limitRevision||context!==limitContext||!progressStore.isCurrent()||JSON.stringify(account)!==JSON.stringify(ACCOUNT_STORAGE.currentAccount&&ACCOUNT_STORAGE.currentAccount()))return;
+      result.offset=options.offset;limitResult=result;
+      output.innerHTML=root.FORMATION_RECOMMENDATION_UI.resultHtml(context.formation,result)+originalComparison(context.formation,context.adapted,result)+tieNavigation(result,'limit');
+    }).catch(function(error){if(revision===limitRevision&&progressStore.isCurrent()){var current=document.querySelector('[data-limit-output]');if(current)current.textContent=error.message;}});
+  }
+
+  function tieNavigation(result,scope){
+    var offset=BigInt(result.offset||0),count=BigInt(result.tieCount||0);
+    return '<div class="formation-actions">'+(offset>0n?'<button type="button" class="seg" data-tie-scope="'+scope+'" data-tie-offset="'+(offset>20n?offset-20n:0n)+'">上一页并列</button>':'')+(offset+20n<count?'<button type="button" class="seg" data-tie-scope="'+scope+'" data-tie-offset="'+(offset+20n)+'">下一页并列</button>':'')+'</div>';
   }
 
   function percentText(value) {
@@ -104,34 +174,11 @@
   }
 
   function loadStored() {
-    var parsed = {};
-    try {
-      parsed = JSON.parse(ACCOUNT_STORAGE.getItem(STORE_KEY) || "{}");
-    } catch (error) {
-      parsed = {};
-    }
-    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) parsed = {};
-    formations().forEach(function (formation) {
-      var normalized = CORE.normalizeProgress(formation, parsed[formation.id]);
-      if (Object.keys(normalized.members).length || normalized.mainId) state.stored[formation.id] = normalized;
-    });
-  }
-
-  function saveStored() {
-    var cleaned = {};
-    formations().forEach(function (formation) {
-      var progress = CORE.normalizeProgress(formation, state.stored[formation.id]);
-      if (Object.keys(progress.members).length || progress.mainId) cleaned[formation.id] = progress;
-    });
-    try {
-      ACCOUNT_STORAGE.setItem(STORE_KEY, JSON.stringify(cleaned));
-      state.stored = cleaned;
-      state.storageError = "";
-      return true;
-    } catch (error) {
-      state.storageError = "保存合阵个人进度失败，请检查浏览器存储权限。";
-      return false;
-    }
+    progressStore=root.FORMATION_PROGRESS_STORE.create(ACCOUNT_STORAGE,formations(),CORE);
+    var loaded=progressStore.read();
+    state.stored=loaded.stored||{};
+    state.storageError=loaded.error||'';
+    state.storageStatus=loaded.status;
   }
 
   function savedProgress(formation) {
@@ -140,7 +187,6 @@
 
   function resetCalculator() {
     var formation = selectedFormation();
-    state.calculator = formation ? clone(savedProgress(formation)) : null;
     state.sortPosition = null;
     state.mobilePosition = formation && formation.slots.length ? formation.slots[0].position : 1;
     state.recommendation = null;
@@ -386,7 +432,7 @@
         item.position + '">助阵' + item.position + '</button>';
     }).join("") + '</div><div class="formation-mobile-rule">' + escapeHtml(percentText(slot.ratePercent) + slot.sourceAttribute + "→" + slot.targetAttribute) +
       '</div><div class="formation-ranking-list">' + (ranking.length ? ranking.map(function (item, index) {
-        return '<article class="' + (item.rankClass ? "is-" + item.rankClass : "") + '"><span>' + (index + 1) + '</span><strong>' +
+        return '<article class="' + (item.rankClass ? "is-" + item.rankClass : "") + '"><span>' + item.rank + '</span><strong>' +
           escapeHtml(item.name) + '</strong><b>' + formatNumber(item.value) + '</b></article>';
       }).join("") : '<p class="muted-tip">暂无数据完整且可参与的弟子。</p>') + '</div></div>';
   }
@@ -400,43 +446,20 @@
   }
 
   function calculatorHtml(formation) {
-    var progress = state.calculator || savedProgress(formation);
-    var matrix = CORE.buildMatrix(formation, progress);
+    var matrix = CORE.buildMatrix(formation, savedProgress(formation));
     return '<section class="panel formation-calculator"><div class="formation-section-head"><div><span class="panel-title">自由计算</span><h2>位置转换排行榜</h2></div>' +
-      '<div class="formation-actions"><button type="button" class="seg" data-action="restore-calculator">恢复为个人进度</button><button type="button" class="seg active" data-action="generate-recommendation">生成推荐方案</button></div></div>' +
-      '<details class="formation-calculator-inputs" open><summary>临时参与弟子与属性</summary>' + memberEditorHtml(formation, progress, "calculator") + '</details>' +
+      '</div>' +
       excludedHtml(matrix) + matrixHtml(formation, matrix) + mobileRankingHtml(formation, matrix) + '</section>';
   }
 
   function recommendationHtml(formation) {
     var result = state.recommendation;
-    if (!result) {
-      return '<section class="panel formation-recommendation"><div class="formation-section-head"><div><span class="panel-title">自动推荐</span><h2>主将与助阵方案</h2></div></div>' +
-        '<div class="empty formation-empty"><p>点击“生成推荐方案”后，按攻、血、追加伤害、全体护盾、内力、防的优先级展示安排。</p></div></section>';
-    }
-    var assignments = formation.slots.map(function (slot) {
-      var assignment = result.assignments.find(function (item) { return item.position === slot.position; });
-      if (!assignment) return '<article class="formation-recommend-card is-missing"><b>助阵' + slot.position + '</b><strong>缺少可用弟子</strong></article>';
-      return '<article class="formation-recommend-card"><b>助阵' + assignment.position + '</b><strong>' + escapeHtml(assignment.name) +
-        '</strong><span>' + escapeHtml(formatNumber(assignment.sourceValue) + " × " + percentText(assignment.ratePercent)) + '</span><em>向下取整 = ' +
-        formatNumber(assignment.value) + ' ' + escapeHtml(assignment.targetAttribute) + '</em>' + (assignment.official ? '<small>官方推荐位置</small>' : "") + '</article>';
-    }).join("");
-    var totalOrder = ["全体攻", "全体血", "全体防", "全体内力", "全体护盾", "追加伤害"];
-    var totals = totalOrder.filter(function (key) { return Object.prototype.hasOwnProperty.call(result.totals, key); }).map(function (key) {
-      return '<span><b>' + escapeHtml(key) + '</b>' + formatNumber(result.totals[key]) + '</span>';
-    }).join("");
-    var warnings = [];
-    if (result.missingPositions) warnings.push("当前可用弟子不足，还缺" + result.missingPositions + "个助阵位置");
-    if (result.referenceCount) warnings.push("方案中有" + result.referenceCount + "名弟子使用1级参考值");
-    if (result.excluded.length) warnings.push("有" + result.excluded.length + "名弟子因数据不完整未参与");
-    return '<section class="panel formation-recommendation"><div class="formation-section-head"><div><span class="panel-title">自动推荐</span><h2>主将与助阵方案</h2></div></div>' +
-      '<div class="formation-main-result"><span>推荐主将</span><strong>' + escapeHtml(result.mainName || "暂无") + '</strong><em>' +
-      (result.manualMain ? "使用玩家指定主将" : "按助阵机会成本联合推荐") + '</em></div><div class="formation-recommend-grid">' + assignments +
-      '</div>' + (totals ? '<div class="formation-total-grid">' + totals + '</div>' : "") + (warnings.length ? '<div class="formation-warning">' +
-        warnings.map(function (warning) { return '<span>' + escapeHtml(warning) + '</span>'; }).join("") + '</div>' : "") + '</section>';
+    var header='<section class="panel formation-recommendation"><h2>主将与助阵方案</h2><div data-personal-settings></div><div data-personal-output aria-live="polite">';
+    if(result)return header+root.FORMATION_RECOMMENDATION_UI.resultHtml(formation,result)+tieNavigation(result,'personal')+'</div></section>';
+    return header+'<p>读取已保存的个人进度。</p></div></section>';
   }
 
-  function renderWorkspace() {
+  function renderWorkspace(preserveEditor) {
     var formation = selectedFormation();
     if (!el.workspace) return;
     el.workspace.hidden = !formation;
@@ -444,37 +467,36 @@
       el.workspace.innerHTML = "";
       return;
     }
-    el.workspace.innerHTML = officialHtml(formation) + personalHtml(formation) + calculatorHtml(formation) + recommendationHtml(formation);
+    var editor=preserveEditor&&state.editing?el.workspace.querySelector('.formation-personal'):null;
+    var content=recommendationHtml(formation) + calculatorHtml(formation) + officialHtml(formation);
+    if(editor){
+      Array.from(el.workspace.children).forEach(function(child){if(child!==editor)child.remove();});
+      editor.insertAdjacentHTML('afterend',content);
+    }else el.workspace.innerHTML=personalHtml(formation)+content;
+    root.FORMATION_RECOMMENDATION_UI.bindSettings(el.workspace.querySelector('[data-personal-settings]'),appliedOptions,formation,function(next){applyOptions(next);generatePersonal();},function(){recommendationRevision+=1;root.FORMATION_RECOMMENDATION_UI.cancel('personal');el.workspace.querySelector('[data-personal-output]').textContent='计算已取消';});
+    if(state.view==='reference')el.workspace.hidden=true;
   }
 
-  function progressFingerprint(formation, progress) {
-    progress = progress || {};
-    var members = progress.members || {};
-    return JSON.stringify({
-      mainId: progress.mainId || null,
-      members: formation.candidates.filter(function (candidate) {
-        return members[candidate.id] && members[candidate.id].owned;
-      }).map(function (candidate) {
-        var member = members[candidate.id];
-        return [candidate.id, member.usesReference === true].concat(["level", "attack", "health", "defense"].map(function (field) {
-          var parsed = CORE.parseIntegerInput(member[field], field === "level" ? 1 : 0);
-          return parsed.valid ? parsed.value : (parsed.missing ? null : "invalid:" + String(member[field]));
-        }));
-      }),
-    });
+  function generatePersonal(offset){
+    var formation=selectedFormation();if(!formation||!progressStore.isCurrent())return;
+    if(state.storageStatus==='invalid'||state.storageStatus==='read-error'){state.storageError='存档读取异常，不能生成可靠的个人推荐。';renderWorkspace(true);return;}
+    var revision=++recommendationRevision,options=Object.assign({},appliedOptions,{offset:offset||'0',limit:20});
+    var output=el.workspace.querySelector('[data-personal-output]');output.textContent='精确计算中…';
+    root.FORMATION_RECOMMENDATION_UI.run('personal',formation,savedProgress(formation),options).then(function(result){
+      if(revision!==recommendationRevision||formation!==selectedFormation()||!progressStore.isCurrent())return;
+      result.offset=options.offset;state.recommendation=result;renderWorkspace(true);
+    }).catch(function(error){if(revision===recommendationRevision&&progressStore.isCurrent()){var current=el.workspace.querySelector('[data-personal-output]');if(current)current.textContent=error.message;}});
   }
 
   function hasUnsavedChanges() {
-    if (state.editing || state.draft) return true;
-    var formation = selectedFormation();
-    return Boolean(formation && state.calculator &&
-      progressFingerprint(formation, state.calculator) !== progressFingerprint(formation, savedProgress(formation)));
+    return Boolean(state.editing || state.draft);
   }
 
   function selectFormation(id) {
     if (!formations().some(function (formation) { return formation.id === id; })) return false;
     if (id === state.selectedId) return true;
-    if (hasUnsavedChanges() && !root.confirm("当前合阵有未保存的个人进度或自由计算内容。切换后将放弃这些内容，是否继续？")) return false;
+    if (hasUnsavedChanges() && !root.confirm("当前合阵有未保存的个人进度。切换后将放弃这些内容，是否继续？")) return false;
+    recommendationRevision+=1;root.FORMATION_RECOMMENDATION_UI.cancel('personal');
     state.selectedId = id;
     state.editing = false;
     state.draft = null;
@@ -487,7 +509,7 @@
   }
 
   function progressForScope(scope) {
-    return scope === "progress" ? state.draft : state.calculator;
+    return scope === "progress" ? state.draft : null;
   }
 
   function setOwned(scope, candidateId, owned) {
@@ -500,7 +522,6 @@
       delete progress.members[candidateId];
       if (progress.mainId === candidateId) progress.mainId = null;
     }
-    if (scope === "calculator") state.recommendation = null;
     renderWorkspace();
   }
 
@@ -510,7 +531,6 @@
     var candidate = formation && candidateById(formation, candidateId);
     if (!formation || !progress || !candidate || !progress.members[candidateId]) return;
     progress.members[candidateId] = CORE.referenceMember(candidate);
-    if (scope === "calculator") state.recommendation = null;
     renderWorkspace();
   }
 
@@ -528,11 +548,14 @@
       renderWorkspace();
       return;
     }
-    state.stored[formation.id] = CORE.normalizeProgress(formation, state.draft);
-    if (!saveStored()) {
+    var saved=progressStore.save(formation.id,CORE.normalizeProgress(formation,state.draft));
+    if (!saved.ok) {
+      state.storageError=saved.error;
       renderWorkspace();
       return;
     }
+    state.stored=saved.stored;state.storageError='';state.storageStatus='valid';
+    recommendationRevision+=1;root.FORMATION_RECOMMENDATION_UI.cancel('personal');
     state.editing = false;
     state.draft = null;
     state.progressError = "";
@@ -574,19 +597,14 @@
       saveProgress();
     } else if (action === "restore-reference") {
       restoreReference(button.dataset.scope, button.dataset.candidateId);
-    } else if (action === "restore-calculator") {
-      resetCalculator();
-      renderWorkspace();
     } else if (action === "generate-recommendation") {
-      var selected = selectedFormation();
-      state.recommendation = CORE.recommendFormation(selected, state.calculator);
-      renderWorkspace();
+      generatePersonal();
     } else if (action === "sort-position") {
       state.sortPosition = Number(button.dataset.position);
-      renderWorkspace();
+      renderWorkspace(true);
     } else if (action === "mobile-position") {
       state.mobilePosition = Number(button.dataset.position);
-      renderWorkspace();
+      renderWorkspace(true);
     }
   }
 
@@ -602,16 +620,14 @@
     }
     if (target.dataset.role === "main") {
       progress.mainId = target.value || null;
-      if (scope === "calculator") state.recommendation = null;
-      renderWorkspace();
       return;
     }
     if (target.dataset.memberField && progress.members[target.dataset.candidateId]) {
       var member = progress.members[target.dataset.candidateId];
       member[target.dataset.memberField] = target.value;
       if (target.dataset.memberField !== "level") member.usesReference = false;
-      if (scope === "calculator") state.recommendation = null;
-      renderWorkspace();
+      var card=target.closest('.formation-member-editor');
+      if(card){var badge=card.querySelector('.formation-reference-badge');if(badge&&target.dataset.memberField!=='level'){badge.className='formation-actual-badge';badge.textContent='个人实际数据';}}
     }
   }
 
@@ -622,11 +638,13 @@
     el.workspace = document.getElementById("formation-workspace");
     el.search = document.getElementById("formation-search");
     el.searchResults = document.getElementById("formation-search-results");
+    el.partition = document.getElementById("partition-formations");
     if (!el.selector || !el.workspace) return;
     if (!DATA || !CORE) {
       el.selector.innerHTML = '<div class="error">合阵数据加载失败。</div>';
       return;
     }
+    appliedOptions=root.FORMATION_RECOMMENDATION_UI.defaults();
     loadStored();
     el.selector.addEventListener("click", handleClick);
     el.workspace.addEventListener("click", handleClick);
@@ -642,6 +660,24 @@
     }
     renderSelector();
     mountMaxReference();
+    el.partition.addEventListener("click", function (event) {
+      var limitSelect=event.target.closest('[data-limit-select]');
+      if(limitSelect){var select=el.partition.querySelector('[data-max-formation]');select.value=limitSelect.dataset.limitSelect;select.dispatchEvent(new Event('change',{bubbles:true}));return;}
+      var tie=event.target.closest('[data-tie-offset]');
+      if(tie){if(tie.dataset.tieScope==='limit')generateLimit(tie.dataset.tieOffset);else generatePersonal(tie.dataset.tieOffset);return;}
+      var tab = event.target.closest("[data-formation-view]");
+      if (!tab || !el.partition.contains(tab)) return;
+      state.view = tab.dataset.formationView;
+      el.partition.querySelectorAll("[data-formation-view]").forEach(function (item) {
+        var active = item === tab;
+        item.classList.toggle("active", active);
+        item.setAttribute("aria-pressed", String(active));
+      });
+      el.partition.querySelector(".formation-selector-panel").hidden = state.view === "reference";
+      el.partition.querySelector("#formation-max-reference").hidden = state.view !== "reference";
+      if (state.view === "reference") el.workspace.hidden = true;
+      else renderWorkspace(true);
+    });
   }
 
   root.FORMATIONS_UI = { init: init, storeKey: STORE_KEY, maxReferenceRows: maxReferenceRows };

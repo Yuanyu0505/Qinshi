@@ -99,22 +99,19 @@ for (const width of [390, 900]) test(width + '：键盘选择合阵，取消切�
   } finally { await page.close(); }
 });
 
-test('原合阵按钮同样保护自由计算，点当前合阵不重置临时值', async () => {
+test('自由计算只读取个人进度，切换合阵不再提示临时计算内容', async () => {
   const page = await openFormations();
   try {
     const before = await getAccountItem(page, STORE_KEY);
     await page.locator('#formation-selector [data-formation-id="search-a"]').click();
-    await page.locator('#formation-workspace [data-scope="calculator"][data-role="owned"]').check();
-    await page.locator('#formation-workspace [data-scope="calculator"][data-member-field="attack"]').fill('invalid-draft');
+    assert.equal(await page.locator('#formation-workspace [data-scope="calculator"]').count(), 0);
+    assert.equal(await page.locator('#formation-workspace [data-action="restore-calculator"]').count(), 0);
     await page.locator('#formation-selector [data-formation-id="search-a"]').click();
-    assert.equal(await page.locator('#formation-workspace [data-scope="calculator"][data-member-field="attack"]').inputValue(), 'invalid-draft');
-    page.once('dialog', dialog => dialog.dismiss());
-    await page.locator('#formation-selector [data-formation-id="search-b"]').click();
-    assert.equal(await page.locator('.formation-official h2').innerText(), '同门甲阵');
-    assert.equal(await page.locator('#formation-workspace [data-scope="calculator"][data-member-field="attack"]').inputValue(), 'invalid-draft');
-    page.once('dialog', dialog => dialog.accept());
+    let unexpectedDialogs = 0;
+    page.once('dialog', dialog => { unexpectedDialogs += 1; return dialog.dismiss(); });
     await page.locator('#formation-selector [data-formation-id="search-b"]').click();
     assert.equal(await page.locator('.formation-official h2').innerText(), '同门乙阵');
+    assert.equal(unexpectedDialogs, 0);
     assert.equal(await getAccountItem(page, STORE_KEY), before);
   } finally { await page.close(); }
 });

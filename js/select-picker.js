@@ -116,6 +116,7 @@
     var popup = document.createElement('div');
     popup.id = 'qin-select-options';
     popup.className = 'qin-select-popover';
+    if (select.closest('#formation-max-reference')) popup.classList.add('formation-max-popover');
     popup.tabIndex = -1;
     popup.setAttribute('role', 'listbox');
     labelList(popup, select);

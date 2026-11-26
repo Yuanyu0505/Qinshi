@@ -2121,8 +2121,7 @@ figcaption { color: var(--muted); font-size: 13px; margin-top: 8px; }
 #partition-formations .formation-slot-card b { color: var(--gold); }
 #partition-formations .formation-slot-card span { color: var(--text); font-weight: 700; }
 #partition-formations .formation-slot-card > strong { display: block; margin-top: 5px; color: var(--muted); font-size: 13px; font-weight: 500; }
-#partition-formations .formation-reference,
-#partition-formations .formation-calculator-inputs { margin-top: 12px; }
+#partition-formations .formation-reference { margin-top: 12px; }
 #partition-formations summary { color: var(--gold-dim); cursor: pointer; font-weight: 700; }
 #partition-formations .formation-reference-table {
   margin-top: 9px;
@@ -2216,8 +2215,6 @@ figcaption { color: var(--muted); font-size: 13px; margin-top: 8px; }
 #partition-formations .formation-member-fields label { display: grid; gap: 4px; color: var(--muted); font-size: 11px; }
 #partition-formations .formation-member-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 7px; margin-top: 9px; }
 #partition-formations .formation-member-actions .link-btn { margin: 0 0 0 auto; }
-#partition-formations .formation-calculator-inputs { padding: 10px 12px; background: rgba(25, 22, 17, .42); border: 1px solid var(--line); border-radius: 8px; }
-#partition-formations .formation-calculator-inputs > summary { margin-bottom: 10px; }
 #partition-formations .formation-excluded,
 #partition-formations .formation-warning { display: flex; flex-wrap: wrap; gap: 6px 12px; margin-top: 10px; color: #ffd447; font-size: 12px; }
 #partition-formations .formation-desktop-matrix { margin-top: 12px; max-width: 100%; overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; }

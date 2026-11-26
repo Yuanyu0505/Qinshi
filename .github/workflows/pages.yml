@@ -40,6 +40,7 @@ jobs:
           cp js/number-format.js _site/js/
           cp js/responsive-ux.js _site/js/
           cp js/select-picker.js _site/js/
+          cp js/formation-progress-store.js js/formation-limit-adapter.js js/formation-recommendation-ui.js js/formation-worker.js _site/js/
           cp js/other-reference-ui.js _site/js/
           cp js/reference-calculators.js js/reference-expansion-ui.js _site/js/
           cp js/soul-shop.js js/soul-shop-ui.js _site/js/

@@ -1,13 +1,13 @@
 (function (root) {
   "use strict";
   // Static paths also work when index.html is opened directly (file:).
-  var version = "1.1.64";
+  var version = "1.1.65";
   var registry = {
     "other-reference": { scripts: ["data/other-reference-data.js", "data/other-reference-tables-a.js", "data/other-reference-tables-b.js", "data/other-reference-tables-c.js", "data/reference-expansion.js", "js/reference-calculators.js", "js/reference-expansion-ui.js", "js/other-reference-ui.js"], api: "OTHER_REFERENCE_UI", rootArgument: true },
     pilots: { scripts: ["data/pilots.js", "js/pilots.js", "js/pilots-ui.js"], api: "PILOTS_UI" },
     "secret-realm": { scripts: ["data/secret-realm.js", "js/secret-realm-core.js", "js/secret-realm-planner.js", "js/secret-realm-ui.js"], api: "SECRET_REALM_UI", rootArgument: true },
     tactics: { scripts: ["js/tactics.js", "js/tactics-ui.js"], api: "TACTICS_UI" },
-    formations: { scripts: ["data/formation-max-reference.js", "js/formations.js", "js/formations-ui.js"], api: "FORMATIONS_UI" },
+    formations: { scripts: ["data/formation-max-reference.js", "js/formations.js", "js/formation-progress-store.js", "js/formation-limit-adapter.js", "js/formation-recommendation-ui.js", "js/formations-ui.js"], api: "FORMATIONS_UI" },
     "six-halls": { scripts: ["data/six-halls-reference.js", "js/six-halls.js", "js/six-halls-ui.js"], api: "SIX_HALLS_UI", rootArgument: true },
     "machine-beasts": { scripts: ["js/machine-beasts.js", "js/machine-beast-equivalents.js", "js/machine-beast-school-planner.js", "js/machine-beasts-ui.js"], api: "MACHINE_BEAST_UI" },
     "battle-box-pill-pouch": { scripts: ["js/battle-box-pill-pouch.js", "js/battle-box-pill-pouch-ui.js"], api: "BATTLE_BOX_PILL_POUCH_UI" },

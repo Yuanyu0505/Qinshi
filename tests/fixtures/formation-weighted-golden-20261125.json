@@ -1,0 +1,2677 @@
+{
+  "source": "Qin_合阵_UI布局计算逻辑_20261124.zip: data/formations.js; data/formation-max-reference.js",
+  "conditions": "300级满进化、突破、培养、觉醒，未计算天赋和铭文；每阵独立、全候选可用、主将不提供助阵转换属性且不能重复占位；以基础位置转换规则为准；每个位置向下取整后汇总。",
+  "attributes": [
+    "全体攻",
+    "全体血",
+    "全体护盾",
+    "追加伤害",
+    "全体内力",
+    "全体防"
+  ],
+  "weights": [
+    12,
+    10,
+    5,
+    4,
+    3,
+    1
+  ],
+  "scales": [
+    1,
+    8,
+    6,
+    1.5,
+    2,
+    1
+  ],
+  "integerCoefficients": [
+    144,
+    15,
+    10,
+    32,
+    18,
+    12
+  ],
+  "scoreMultiplier": 12,
+  "enumeratedAssignments": 871440,
+  "improved": 13,
+  "equal": 6,
+  "results": [
+    {
+      "name": "妙法阴阳",
+      "count": 2520,
+      "score": 3194369,
+      "original_score": 3194369,
+      "delta": 0,
+      "original": {
+        "names": [
+          "湘夫人",
+          "焱妃",
+          "湘君",
+          "东皇太一",
+          "星魂"
+        ],
+        "main": [
+          "月神",
+          "云中君"
+        ],
+        "vector": [
+          10102,
+          60585,
+          0,
+          16114,
+          11877,
+          8456
+        ],
+        "positions": [
+          {
+            "position": 1,
+            "name": "湘夫人",
+            "rule": "6%血→全体血",
+            "sourceValue": 1009761,
+            "gain": 60585
+          },
+          {
+            "position": 2,
+            "name": "焱妃",
+            "rule": "6%攻→全体攻",
+            "sourceValue": 168382,
+            "gain": 10102
+          },
+          {
+            "position": 3,
+            "name": "湘君",
+            "rule": "8%防→全体防",
+            "sourceValue": 105705,
+            "gain": 8456
+          },
+          {
+            "position": 4,
+            "name": "东皇太一",
+            "rule": "10%防→全体内力",
+            "sourceValue": 118774,
+            "gain": 11877
+          },
+          {
+            "position": 5,
+            "name": "星魂",
+            "rule": "10%攻→追加伤害",
+            "sourceValue": 161147,
+            "gain": 16114
+          }
+        ]
+      },
+      "ties": [
+        {
+          "names": [
+            "湘夫人",
+            "焱妃",
+            "湘君",
+            "东皇太一",
+            "星魂"
+          ],
+          "main": [
+            "月神",
+            "云中君"
+          ],
+          "vector": [
+            10102,
+            60585,
+            0,
+            16114,
+            11877,
+            8456
+          ],
+          "positions": [
+            {
+              "position": 1,
+              "name": "湘夫人",
+              "rule": "6%血→全体血",
+              "sourceValue": 1009761,
+              "gain": 60585
+            },
+            {
+              "position": 2,
+              "name": "焱妃",
+              "rule": "6%攻→全体攻",
+              "sourceValue": 168382,
+              "gain": 10102
+            },
+            {
+              "position": 3,
+              "name": "湘君",
+              "rule": "8%防→全体防",
+              "sourceValue": 105705,
+              "gain": 8456
+            },
+            {
+              "position": 4,
+              "name": "东皇太一",
+              "rule": "10%防→全体内力",
+              "sourceValue": 118774,
+              "gain": 11877
+            },
+            {
+              "position": 5,
+              "name": "星魂",
+              "rule": "10%攻→追加伤害",
+              "sourceValue": 161147,
+              "gain": 16114
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "帝国霸业",
+      "count": 720,
+      "score": 3061454,
+      "original_score": 3057896,
+      "delta": 3558,
+      "original": {
+        "names": [
+          "胡亥",
+          "戎装嬴政",
+          "王翦",
+          "章邯",
+          "赵高"
+        ],
+        "main": [
+          "残虹盖聂"
+        ],
+        "vector": [
+          9733,
+          57456,
+          0,
+          14977,
+          11840,
+          8510
+        ],
+        "positions": [
+          {
+            "position": 1,
+            "name": "胡亥",
+            "rule": "6%血→全体血",
+            "sourceValue": 957615,
+            "gain": 57456
+          },
+          {
+            "position": 2,
+            "name": "戎装嬴政",
+            "rule": "6%攻→全体攻",
+            "sourceValue": 162227,
+            "gain": 9733
+          },
+          {
+            "position": 3,
+            "name": "王翦",
+            "rule": "8%防→全体防",
+            "sourceValue": 106381,
+            "gain": 8510
+          },
+          {
+            "position": 4,
+            "name": "章邯",
+            "rule": "10%防→全体内力",
+            "sourceValue": 118408,
+            "gain": 11840
+          },
+          {
+            "position": 5,
+            "name": "赵高",
+            "rule": "10%攻→追加伤害",
+            "sourceValue": 149777,
+            "gain": 14977
+          }
+        ]
+      },
+      "ties": [
+        {
+          "names": [
+            "戎装嬴政",
+            "胡亥",
+            "王翦",
+            "章邯",
+            "赵高"
+          ],
+          "main": [
+            "残虹盖聂"
+          ],
+          "vector": [
+            9340,
+            61466,
+            0,
+            14977,
+            11840,
+            8510
+          ],
+          "positions": [
+            {
+              "position": 1,
+              "name": "戎装嬴政",
+              "rule": "6%血→全体血",
+              "sourceValue": 1024448,
+              "gain": 61466
+            },
+            {
+              "position": 2,
+              "name": "胡亥",
+              "rule": "6%攻→全体攻",
+              "sourceValue": 155675,
+              "gain": 9340
+            },
+            {
+              "position": 3,
+              "name": "王翦",
+              "rule": "8%防→全体防",
+              "sourceValue": 106381,
+              "gain": 8510
+            },
+            {
+              "position": 4,
+              "name": "章邯",
+              "rule": "10%防→全体内力",
+              "sourceValue": 118408,
+              "gain": 11840
+            },
+            {
+              "position": 5,
+              "name": "赵高",
+              "rule": "10%攻→追加伤害",
+              "sourceValue": 149777,
+              "gain": 14977
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "兵临城下",
+      "count": 720,
+      "score": 4126590,
+      "original_score": 4111694,
+      "delta": 14896,
+      "original": {
+        "names": [
+          "虞子期",
+          "范增",
+          "项羽",
+          "季布",
+          "英布"
+        ],
+        "main": [
+          "钟离昧"
+        ],
+        "vector": [
+          12951,
+          83102,
+          0,
+          19243,
+          14572,
+          10179
+        ],
+        "positions": [
+          {
+            "position": 1,
+            "name": "虞子期",
+            "rule": "8%血→全体血",
+            "sourceValue": 1038786,
+            "gain": 83102
+          },
+          {
+            "position": 2,
+            "name": "范增",
+            "rule": "8%攻→全体攻",
+            "sourceValue": 161890,
+            "gain": 12951
+          },
+          {
+            "position": 3,
+            "name": "项羽",
+            "rule": "10%防→全体防",
+            "sourceValue": 101791,
+            "gain": 10179
+          },
+          {
+            "position": 4,
+            "name": "季布",
+            "rule": "12%防→全体内力",
+            "sourceValue": 121436,
+            "gain": 14572
+          },
+          {
+            "position": 5,
+            "name": "英布",
+            "rule": "12%攻→追加伤害",
+            "sourceValue": 160362,
+            "gain": 19243
+          }
+        ]
+      },
+      "ties": [
+        {
+          "names": [
+            "虞子期",
+            "英布",
+            "季布",
+            "范增",
+            "项羽"
+          ],
+          "main": [
+            "钟离昧"
+          ],
+          "vector": [
+            12828,
+            83102,
+            0,
+            19170,
+            15204,
+            12143
+          ],
+          "positions": [
+            {
+              "position": 1,
+              "name": "虞子期",
+              "rule": "8%血→全体血",
+              "sourceValue": 1038786,
+              "gain": 83102
+            },
+            {
+              "position": 2,
+              "name": "英布",
+              "rule": "8%攻→全体攻",
+              "sourceValue": 160362,
+              "gain": 12828
+            },
+            {
+              "position": 3,
+              "name": "季布",
+              "rule": "10%防→全体防",
+              "sourceValue": 121436,
+              "gain": 12143
+            },
+            {
+              "position": 4,
+              "name": "范增",
+              "rule": "12%防→全体内力",
+              "sourceValue": 126708,
+              "gain": 15204
+            },
+            {
+              "position": 5,
+              "name": "项羽",
+              "rule": "12%攻→追加伤害",
+              "sourceValue": 159754,
+              "gain": 19170
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "兼爱平生",
+      "count": 720,
+      "score": 1938961,
+      "original_score": 1922982,
+      "delta": 15979,
+      "original": {
+        "names": [
+          "燕丹",
+          "黑衣张良",
+          "医仙端木蓉",
+          "乐师雪女",
+          "木剑盖聂"
+        ],
+        "main": [
+          "琴师高渐离"
+        ],
+        "vector": [
+          6174,
+          36892,
+          0,
+          9042,
+          7123,
+          5249
+        ],
+        "positions": [
+          {
+            "position": 1,
+            "name": "燕丹",
+            "rule": "4%血→全体血",
+            "sourceValue": 922304,
+            "gain": 36892
+          },
+          {
+            "position": 2,
+            "name": "黑衣张良",
+            "rule": "4%攻→全体攻",
+            "sourceValue": 154374,
+            "gain": 6174
+          },
+          {
+            "position": 3,
+            "name": "医仙端木蓉",
+            "rule": "5%防→全体防",
+            "sourceValue": 104991,
+            "gain": 5249
+          },
+          {
+            "position": 4,
+            "name": "乐师雪女",
+            "rule": "6%防→全体内力",
+            "sourceValue": 118728,
+            "gain": 7123
+          },
+          {
+            "position": 5,
+            "name": "木剑盖聂",
+            "rule": "6%攻→追加伤害",
+            "sourceValue": 150706,
+            "gain": 9042
+          }
+        ]
+      },
+      "ties": [
+        {
+          "names": [
+            "乐师雪女",
+            "黑衣张良",
+            "燕丹",
+            "木剑盖聂",
+            "琴师高渐离"
+          ],
+          "main": [
+            "医仙端木蓉"
+          ],
+          "vector": [
+            6174,
+            37831,
+            0,
+            8885,
+            7104,
+            5854
+          ],
+          "positions": [
+            {
+              "position": 1,
+              "name": "乐师雪女",
+              "rule": "4%血→全体血",
+              "sourceValue": 945799,
+              "gain": 37831
+            },
+            {
+              "position": 2,
+              "name": "黑衣张良",
+              "rule": "4%攻→全体攻",
+              "sourceValue": 154374,
+              "gain": 6174
+            },
+            {
+              "position": 3,
+              "name": "燕丹",
+              "rule": "5%防→全体防",
+              "sourceValue": 117089,
+              "gain": 5854
+            },
+            {
+              "position": 4,
+              "name": "木剑盖聂",
+              "rule": "6%防→全体内力",
+              "sourceValue": 118408,
+              "gain": 7104
+            },
+            {
+              "position": 5,
+              "name": "琴师高渐离",
+              "rule": "6%攻→追加伤害",
+              "sourceValue": 148096,
+              "gain": 8885
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "以剑论道",
+      "count": 720,
+      "score": 3070500,
+      "original_score": 3070500,
+      "delta": 0,
+      "original": {
+        "names": [
+          "伏念",
+          "晓梦大师",
+          "胜七",
+          "颜路",
+          "扶苏"
+        ],
+        "main": [
+          "张良"
+        ],
+        "vector": [
+          9619,
+          59868,
+          0,
+          14634,
+          12148,
+          8366
+        ],
+        "positions": [
+          {
+            "position": 1,
+            "name": "伏念",
+            "rule": "6%血→全体血",
+            "sourceValue": 997809,
+            "gain": 59868
+          },
+          {
+            "position": 2,
+            "name": "晓梦大师",
+            "rule": "6%攻→全体攻",
+            "sourceValue": 160324,
+            "gain": 9619
+          },
+          {
+            "position": 3,
+            "name": "胜七",
+            "rule": "8%防→全体防",
+            "sourceValue": 104587,
+            "gain": 8366
+          },
+          {
+            "position": 4,
+            "name": "颜路",
+            "rule": "10%防→全体内力",
+            "sourceValue": 121489,
+            "gain": 12148
+          },
+          {
+            "position": 5,
+            "name": "扶苏",
+            "rule": "10%攻→追加伤害",
+            "sourceValue": 146348,
+            "gain": 14634
+          }
+        ]
+      },
+      "ties": [
+        {
+          "names": [
+            "伏念",
+            "晓梦大师",
+            "胜七",
+            "颜路",
+            "扶苏"
+          ],
+          "main": [
+            "张良"
+          ],
+          "vector": [
+            9619,
+            59868,
+            0,
+            14634,
+            12148,
+            8366
+          ],
+          "positions": [
+            {
+              "position": 1,
+              "name": "伏念",
+              "rule": "6%血→全体血",
+              "sourceValue": 997809,
+              "gain": 59868
+            },
+            {
+              "position": 2,
+              "name": "晓梦大师",
+              "rule": "6%攻→全体攻",
+              "sourceValue": 160324,
+              "gain": 9619
+            },
+            {
+              "position": 3,
+              "name": "胜七",
+              "rule": "8%防→全体防",
+              "sourceValue": 104587,
+              "gain": 8366
+            },
+            {
+              "position": 4,
+              "name": "颜路",
+              "rule": "10%防→全体内力",
+              "sourceValue": 121489,
+              "gain": 12148
+            },
+            {
+              "position": 5,
+              "name": "扶苏",
+              "rule": "10%攻→追加伤害",
+              "sourceValue": 146348,
+              "gain": 14634
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "纵横捭阖",
+      "count": 2520,
+      "score": 3109494,
+      "original_score": 3109494,
+      "delta": 0,
+      "original": {
+        "names": [
+          "鬼谷子",
+          "盖聂",
+          "魔化卫庄",
+          "卫庄",
+          "紫女"
+        ],
+        "main": [
+          "白凤凰",
+          "红莲"
+        ],
+        "vector": [
+          9946,
+          58058,
+          0,
+          16275,
+          10670,
+          7795
+        ],
+        "positions": [
+          {
+            "position": 1,
+            "name": "鬼谷子",
+            "rule": "6%血→全体血",
+            "sourceValue": 967643,
+            "gain": 58058
+          },
+          {
+            "position": 2,
+            "name": "盖聂",
+            "rule": "6%攻→全体攻",
+            "sourceValue": 165779,
+            "gain": 9946
+          },
+          {
+            "position": 3,
+            "name": "魔化卫庄",
+            "rule": "8%防→全体防",
+            "sourceValue": 97447,
+            "gain": 7795
+          },
+          {
+            "position": 4,
+            "name": "卫庄",
+            "rule": "10%防→全体内力",
+            "sourceValue": 106701,
+            "gain": 10670
+          },
+          {
+            "position": 5,
+            "name": "紫女",
+            "rule": "10%攻→追加伤害",
+            "sourceValue": 162754,
+            "gain": 16275
+          }
+        ]
+      },
+      "ties": [
+        {
+          "names": [
+            "鬼谷子",
+            "盖聂",
+            "魔化卫庄",
+            "卫庄",
+            "紫女"
+          ],
+          "main": [
+            "白凤凰",
+            "红莲"
+          ],
+          "vector": [
+            9946,
+            58058,
+            0,
+            16275,
+            10670,
+            7795
+          ],
+          "positions": [
+            {
+              "position": 1,
+              "name": "鬼谷子",
+              "rule": "6%血→全体血",
+              "sourceValue": 967643,
+              "gain": 58058
+            },
+            {
+              "position": 2,
+              "name": "盖聂",
+              "rule": "6%攻→全体攻",
+              "sourceValue": 165779,
+              "gain": 9946
+            },
+            {
+              "position": 3,
+              "name": "魔化卫庄",
+              "rule": "8%防→全体防",
+              "sourceValue": 97447,
+              "gain": 7795
+            },
+            {
+              "position": 4,
+              "name": "卫庄",
+              "rule": "10%防→全体内力",
+              "sourceValue": 106701,
+              "gain": 10670
+            },
+            {
+              "position": 5,
+              "name": "紫女",
+              "rule": "10%攻→追加伤害",
+              "sourceValue": 162754,
+              "gain": 16275
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "意气奋发",
+      "count": 6720,
+      "score": 1996485,
+      "original_score": 1996485,
+      "delta": 0,
+      "original": {
+        "names": [
+          "小灵",
+          "少司命",
+          "少年卫庄",
+          "少年白凤",
+          "墨鸦"
+        ],
+        "main": [
+          "少年盖聂",
+          "弄玉",
+          "小黎"
+        ],
+        "vector": [
+          6417,
+          39293,
+          0,
+          9213,
+          7047,
+          5115
+        ],
+        "positions": [
+          {
+            "position": 1,
+            "name": "小灵",
+            "rule": "4%血→全体血",
+            "sourceValue": 982330,
+            "gain": 39293
+          },
+          {
+            "position": 2,
+            "name": "少司命",
+            "rule": "4%攻→全体攻",
+            "sourceValue": 160447,
+            "gain": 6417
+          },
+          {
+            "position": 3,
+            "name": "少年卫庄",
+            "rule": "5%防→全体防",
+            "sourceValue": 102318,
+            "gain": 5115
+          },
+          {
+            "position": 4,
+            "name": "少年白凤",
+            "rule": "6%防→全体内力",
+            "sourceValue": 117452,
+            "gain": 7047
+          },
+          {
+            "position": 5,
+            "name": "墨鸦",
+            "rule": "6%攻→追加伤害",
+            "sourceValue": 153557,
+            "gain": 9213
+          }
+        ]
+      },
+      "ties": [
+        {
+          "names": [
+            "小灵",
+            "少司命",
+            "少年卫庄",
+            "少年白凤",
+            "墨鸦"
+          ],
+          "main": [
+            "少年盖聂",
+            "弄玉",
+            "小黎"
+          ],
+          "vector": [
+            6417,
+            39293,
+            0,
+            9213,
+            7047,
+            5115
+          ],
+          "positions": [
+            {
+              "position": 1,
+              "name": "小灵",
+              "rule": "4%血→全体血",
+              "sourceValue": 982330,
+              "gain": 39293
+            },
+            {
+              "position": 2,
+              "name": "少司命",
+              "rule": "4%攻→全体攻",
+              "sourceValue": 160447,
+              "gain": 6417
+            },
+            {
+              "position": 3,
+              "name": "少年卫庄",
+              "rule": "5%防→全体防",
+              "sourceValue": 102318,
+              "gain": 5115
+            },
+            {
+              "position": 4,
+              "name": "少年白凤",
+              "rule": "6%防→全体内力",
+              "sourceValue": 117452,
+              "gain": 7047
+            },
+            {
+              "position": 5,
+              "name": "墨鸦",
+              "rule": "6%攻→追加伤害",
+              "sourceValue": 153557,
+              "gain": 9213
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "地泽二十四",
+      "count": 665280,
+      "score": 5345260,
+      "original_score": 5345260,
+      "delta": 0,
+      "original": {
+        "names": [
+          "典庆",
+          "刘邦",
+          "朱家",
+          "军神韩信",
+          "黑剑士胜七",
+          "田仲"
+        ],
+        "main": [
+          "田虎",
+          "田言",
+          "田蜜",
+          "司徒万里",
+          "金先生",
+          "田赐"
+        ],
+        "vector": [
+          12830,
+          167288,
+          0,
+          19022,
+          14000,
+          10643
+        ],
+        "positions": [
+          {
+            "position": 1,
+            "name": "典庆",
+            "rule": "8%血→全体血",
+            "sourceValue": 1083264,
+            "gain": 86661
+          },
+          {
+            "position": 2,
+            "name": "刘邦",
+            "rule": "8%攻→全体攻",
+            "sourceValue": 160377,
+            "gain": 12830
+          },
+          {
+            "position": 3,
+            "name": "朱家",
+            "rule": "10%防→全体防",
+            "sourceValue": 106430,
+            "gain": 10643
+          },
+          {
+            "position": 4,
+            "name": "军神韩信",
+            "rule": "12%防→全体内力",
+            "sourceValue": 116671,
+            "gain": 14000
+          },
+          {
+            "position": 5,
+            "name": "黑剑士胜七",
+            "rule": "12%攻→追加伤害",
+            "sourceValue": 158523,
+            "gain": 19022
+          },
+          {
+            "position": 6,
+            "name": "田仲",
+            "rule": "8%血→全体血",
+            "sourceValue": 1007845,
+            "gain": 80627
+          }
+        ]
+      },
+      "ties": [
+        {
+          "names": [
+            "典庆",
+            "刘邦",
+            "朱家",
+            "军神韩信",
+            "黑剑士胜七",
+            "田仲"
+          ],
+          "main": [
+            "田虎",
+            "田言",
+            "田蜜",
+            "司徒万里",
+            "金先生",
+            "田赐"
+          ],
+          "vector": [
+            12830,
+            167288,
+            0,
+            19022,
+            14000,
+            10643
+          ],
+          "positions": [
+            {
+              "position": 1,
+              "name": "典庆",
+              "rule": "8%血→全体血",
+              "sourceValue": 1083264,
+              "gain": 86661
+            },
+            {
+              "position": 2,
+              "name": "刘邦",
+              "rule": "8%攻→全体攻",
+              "sourceValue": 160377,
+              "gain": 12830
+            },
+            {
+              "position": 3,
+              "name": "朱家",
+              "rule": "10%防→全体防",
+              "sourceValue": 106430,
+              "gain": 10643
+            },
+            {
+              "position": 4,
+              "name": "军神韩信",
+              "rule": "12%防→全体内力",
+              "sourceValue": 116671,
+              "gain": 14000
+            },
+            {
+              "position": 5,
+              "name": "黑剑士胜七",
+              "rule": "12%攻→追加伤害",
+              "sourceValue": 158523,
+              "gain": 19022
+            },
+            {
+              "position": 6,
+              "name": "田仲",
+              "rule": "8%血→全体血",
+              "sourceValue": 1007845,
+              "gain": 80627
+            }
+          ]
+        },
+        {
+          "names": [
+            "田仲",
+            "刘邦",
+            "朱家",
+            "军神韩信",
+            "黑剑士胜七",
+            "典庆"
+          ],
+          "main": [
+            "田虎",
+            "田言",
+            "田蜜",
+            "司徒万里",
+            "金先生",
+            "田赐"
+          ],
+          "vector": [
+            12830,
+            167288,
+            0,
+            19022,
+            14000,
+            10643
+          ],
+          "positions": [
+            {
+              "position": 1,
+              "name": "田仲",
+              "rule": "8%血→全体血",
+              "sourceValue": 1007845,
+              "gain": 80627
+            },
+            {
+              "position": 2,
+              "name": "刘邦",
+              "rule": "8%攻→全体攻",
+              "sourceValue": 160377,
+              "gain": 12830
+            },
+            {
+              "position": 3,
+              "name": "朱家",
+              "rule": "10%防→全体防",
+              "sourceValue": 106430,
+              "gain": 10643
+            },
+            {
+              "position": 4,
+              "name": "军神韩信",
+              "rule": "12%防→全体内力",
+              "sourceValue": 116671,
+              "gain": 14000
+            },
+            {
+              "position": 5,
+              "name": "黑剑士胜七",
+              "rule": "12%攻→追加伤害",
+              "sourceValue": 158523,
+              "gain": 19022
+            },
+            {
+              "position": 6,
+              "name": "典庆",
+              "rule": "8%血→全体血",
+              "sourceValue": 1083264,
+              "gain": 86661
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "旗开得胜",
+      "count": 20160,
+      "score": 8097158,
+      "original_score": 7902500,
+      "delta": 194658,
+      "original": {
+        "names": [
+          "神·蚩魔卫庄",
+          "神·湘夫人",
+          "神·寒蝉吴旷",
+          "神·王翦",
+          "神·燕丹",
+          "神·星魂"
+        ],
+        "main": [
+          "神·胜七",
+          "神·少司命"
+        ],
+        "vector": [
+          27818,
+          148856,
+          0,
+          31312,
+          23912,
+          19289
+        ],
+        "positions": [
+          {
+            "position": 1,
+            "name": "神·蚩魔卫庄",
+            "rule": "6%攻→全体防",
+            "sourceValue": 321484,
+            "gain": 19289
+          },
+          {
+            "position": 2,
+            "name": "神·湘夫人",
+            "rule": "6%防→全体内力",
+            "sourceValue": 155142,
+            "gain": 9308
+          },
+          {
+            "position": 3,
+            "name": "神·寒蝉吴旷",
+            "rule": "8%攻→全体攻",
+            "sourceValue": 347729,
+            "gain": 27818
+          },
+          {
+            "position": 4,
+            "name": "神·王翦",
+            "rule": "1%血→全体内力",
+            "sourceValue": 1460431,
+            "gain": 14604
+          },
+          {
+            "position": 5,
+            "name": "神·燕丹",
+            "rule": "10%血→全体血",
+            "sourceValue": 1488568,
+            "gain": 148856
+          },
+          {
+            "position": 6,
+            "name": "神·星魂",
+            "rule": "12%攻→追加伤害",
+            "sourceValue": 260936,
+            "gain": 31312
+          }
+        ]
+      },
+      "ties": [
+        {
+          "names": [
+            "神·星魂",
+            "神·王翦",
+            "神·寒蝉吴旷",
+            "神·湘夫人",
+            "神·燕丹",
+            "神·蚩魔卫庄"
+          ],
+          "main": [
+            "神·胜七",
+            "神·少司命"
+          ],
+          "vector": [
+            27818,
+            148856,
+            0,
+            38578,
+            24231,
+            15656
+          ],
+          "positions": [
+            {
+              "position": 1,
+              "name": "神·星魂",
+              "rule": "6%攻→全体防",
+              "sourceValue": 260936,
+              "gain": 15656
+            },
+            {
+              "position": 2,
+              "name": "神·王翦",
+              "rule": "6%防→全体内力",
+              "sourceValue": 161259,
+              "gain": 9675
+            },
+            {
+              "position": 3,
+              "name": "神·寒蝉吴旷",
+              "rule": "8%攻→全体攻",
+              "sourceValue": 347729,
+              "gain": 27818
+            },
+            {
+              "position": 4,
+              "name": "神·湘夫人",
+              "rule": "1%血→全体内力",
+              "sourceValue": 1455655,
+              "gain": 14556
+            },
+            {
+              "position": 5,
+              "name": "神·燕丹",
+              "rule": "10%血→全体血",
+              "sourceValue": 1488568,
+              "gain": 148856
+            },
+            {
+              "position": 6,
+              "name": "神·蚩魔卫庄",
+              "rule": "12%攻→追加伤害",
+              "sourceValue": 321484,
+              "gain": 38578
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "胜友如云",
+      "count": 20160,
+      "score": 7836540,
+      "original_score": 7824132,
+      "delta": 12408,
+      "original": {
+        "names": [
+          "神·田光",
+          "神·月神",
+          "神·蒙恬",
+          "神·朱家",
+          "神·大铁锤",
+          "神·湘君"
+        ],
+        "main": [
+          "神·扶苏",
+          "神·大司命"
+        ],
+        "vector": [
+          26021,
+          163714,
+          0,
+          31266,
+          23913,
+          15871
+        ],
+        "positions": [
+          {
+            "position": 1,
+            "name": "神·田光",
+            "rule": "6%攻→全体防",
+            "sourceValue": 264533,
+            "gain": 15871
+          },
+          {
+            "position": 2,
+            "name": "神·月神",
+            "rule": "6%防→全体内力",
+            "sourceValue": 158191,
+            "gain": 9491
+          },
+          {
+            "position": 3,
+            "name": "神·蒙恬",
+            "rule": "8%攻→全体攻",
+            "sourceValue": 325265,
+            "gain": 26021
+          },
+          {
+            "position": 4,
+            "name": "神·朱家",
+            "rule": "1%血→全体内力",
+            "sourceValue": 1442235,
+            "gain": 14422
+          },
+          {
+            "position": 5,
+            "name": "神·大铁锤",
+            "rule": "10%血→全体血",
+            "sourceValue": 1637143,
+            "gain": 163714
+          },
+          {
+            "position": 6,
+            "name": "神·湘君",
+            "rule": "12%攻→追加伤害",
+            "sourceValue": 260556,
+            "gain": 31266
+          }
+        ]
+      },
+      "ties": [
+        {
+          "names": [
+            "神·湘君",
+            "神·月神",
+            "神·蒙恬",
+            "神·朱家",
+            "神·大铁锤",
+            "神·田光"
+          ],
+          "main": [
+            "神·扶苏",
+            "神·大司命"
+          ],
+          "vector": [
+            26021,
+            163714,
+            0,
+            31743,
+            23913,
+            15633
+          ],
+          "positions": [
+            {
+              "position": 1,
+              "name": "神·湘君",
+              "rule": "6%攻→全体防",
+              "sourceValue": 260556,
+              "gain": 15633
+            },
+            {
+              "position": 2,
+              "name": "神·月神",
+              "rule": "6%防→全体内力",
+              "sourceValue": 158191,
+              "gain": 9491
+            },
+            {
+              "position": 3,
+              "name": "神·蒙恬",
+              "rule": "8%攻→全体攻",
+              "sourceValue": 325265,
+              "gain": 26021
+            },
+            {
+              "position": 4,
+              "name": "神·朱家",
+              "rule": "1%血→全体内力",
+              "sourceValue": 1442235,
+              "gain": 14422
+            },
+            {
+              "position": 5,
+              "name": "神·大铁锤",
+              "rule": "10%血→全体血",
+              "sourceValue": 1637143,
+              "gain": 163714
+            },
+            {
+              "position": 6,
+              "name": "神·田光",
+              "rule": "12%攻→追加伤害",
+              "sourceValue": 264533,
+              "gain": 31743
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "云布雨施",
+      "count": 20160,
+      "score": 10966439,
+      "original_score": 10833435,
+      "delta": 133004,
+      "original": {
+        "names": [
+          "神·天宗晓梦",
+          "神·高渐离",
+          "神·诺敏",
+          "神·丽姬",
+          "神·镜仙端木蓉",
+          "神·晓梦"
+        ],
+        "main": [
+          "神·惊鲵",
+          "神·赤练"
+        ],
+        "vector": [
+          31511,
+          188945,
+          175549,
+          37108,
+          12667,
+          24227
+        ],
+        "positions": [
+          {
+            "position": 1,
+            "name": "神·天宗晓梦",
+            "rule": "8%攻→全体防",
+            "sourceValue": 302845,
+            "gain": 24227
+          },
+          {
+            "position": 2,
+            "name": "神·高渐离",
+            "rule": "8%防→全体内力",
+            "sourceValue": 158338,
+            "gain": 12667
+          },
+          {
+            "position": 3,
+            "name": "神·诺敏",
+            "rule": "10%攻→全体攻",
+            "sourceValue": 315119,
+            "gain": 31511
+          },
+          {
+            "position": 4,
+            "name": "神·丽姬",
+            "rule": "12%血→全体护盾",
+            "sourceValue": 1462916,
+            "gain": 175549
+          },
+          {
+            "position": 5,
+            "name": "神·镜仙端木蓉",
+            "rule": "12%血→全体血",
+            "sourceValue": 1574544,
+            "gain": 188945
+          },
+          {
+            "position": 6,
+            "name": "神·晓梦",
+            "rule": "14%攻→追加伤害",
+            "sourceValue": 265059,
+            "gain": 37108
+          }
+        ]
+      },
+      "ties": [
+        {
+          "names": [
+            "神·晓梦",
+            "神·高渐离",
+            "神·诺敏",
+            "神·丽姬",
+            "神·镜仙端木蓉",
+            "神·天宗晓梦"
+          ],
+          "main": [
+            "神·惊鲵",
+            "神·赤练"
+          ],
+          "vector": [
+            31511,
+            188945,
+            175549,
+            42398,
+            12667,
+            21204
+          ],
+          "positions": [
+            {
+              "position": 1,
+              "name": "神·晓梦",
+              "rule": "8%攻→全体防",
+              "sourceValue": 265059,
+              "gain": 21204
+            },
+            {
+              "position": 2,
+              "name": "神·高渐离",
+              "rule": "8%防→全体内力",
+              "sourceValue": 158338,
+              "gain": 12667
+            },
+            {
+              "position": 3,
+              "name": "神·诺敏",
+              "rule": "10%攻→全体攻",
+              "sourceValue": 315119,
+              "gain": 31511
+            },
+            {
+              "position": 4,
+              "name": "神·丽姬",
+              "rule": "12%血→全体护盾",
+              "sourceValue": 1462916,
+              "gain": 175549
+            },
+            {
+              "position": 5,
+              "name": "神·镜仙端木蓉",
+              "rule": "12%血→全体血",
+              "sourceValue": 1574544,
+              "gain": 188945
+            },
+            {
+              "position": 6,
+              "name": "神·天宗晓梦",
+              "rule": "14%攻→追加伤害",
+              "sourceValue": 302845,
+              "gain": 42398
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "施号发令",
+      "count": 20160,
+      "score": 11143059,
+      "original_score": 10985475,
+      "delta": 157584,
+      "original": {
+        "names": [
+          "神·虞姬",
+          "神·李斯",
+          "神·高月",
+          "神·田赐",
+          "神·真刚",
+          "神·雪女"
+        ],
+        "main": [
+          "神·王离",
+          "神·章邯"
+        ],
+        "vector": [
+          32493,
+          195551,
+          174358,
+          34909,
+          13049,
+          23139
+        ],
+        "positions": [
+          {
+            "position": 1,
+            "name": "神·虞姬",
+            "rule": "8%攻→全体防",
+            "sourceValue": 289246,
+            "gain": 23139
+          },
+          {
+            "position": 2,
+            "name": "神·李斯",
+            "rule": "8%防→全体内力",
+            "sourceValue": 163115,
+            "gain": 13049
+          },
+          {
+            "position": 3,
+            "name": "神·高月",
+            "rule": "10%攻→全体攻",
+            "sourceValue": 324938,
+            "gain": 32493
+          },
+          {
+            "position": 4,
+            "name": "神·田赐",
+            "rule": "12%血→全体护盾",
+            "sourceValue": 1452991,
+            "gain": 174358
+          },
+          {
+            "position": 5,
+            "name": "神·真刚",
+            "rule": "12%血→全体血",
+            "sourceValue": 1629595,
+            "gain": 195551
+          },
+          {
+            "position": 6,
+            "name": "神·雪女",
+            "rule": "14%攻→追加伤害",
+            "sourceValue": 249351,
+            "gain": 34909
+          }
+        ]
+      },
+      "ties": [
+        {
+          "names": [
+            "神·雪女",
+            "神·章邯",
+            "神·高月",
+            "神·李斯",
+            "神·真刚",
+            "神·虞姬"
+          ],
+          "main": [
+            "神·田赐",
+            "神·王离"
+          ],
+          "vector": [
+            32493,
+            195551,
+            176862,
+            40494,
+            12611,
+            19948
+          ],
+          "positions": [
+            {
+              "position": 1,
+              "name": "神·雪女",
+              "rule": "8%攻→全体防",
+              "sourceValue": 249351,
+              "gain": 19948
+            },
+            {
+              "position": 2,
+              "name": "神·章邯",
+              "rule": "8%防→全体内力",
+              "sourceValue": 157638,
+              "gain": 12611
+            },
+            {
+              "position": 3,
+              "name": "神·高月",
+              "rule": "10%攻→全体攻",
+              "sourceValue": 324938,
+              "gain": 32493
+            },
+            {
+              "position": 4,
+              "name": "神·李斯",
+              "rule": "12%血→全体护盾",
+              "sourceValue": 1473851,
+              "gain": 176862
+            },
+            {
+              "position": 5,
+              "name": "神·真刚",
+              "rule": "12%血→全体血",
+              "sourceValue": 1629595,
+              "gain": 195551
+            },
+            {
+              "position": 6,
+              "name": "神·虞姬",
+              "rule": "14%攻→追加伤害",
+              "sourceValue": 289246,
+              "gain": 40494
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "令不虚行",
+      "count": 5040,
+      "score": 12844310,
+      "original_score": 12820974,
+      "delta": 23336,
+      "original": {
+        "names": [
+          "神·盖聂",
+          "神·龙且",
+          "神·项羽",
+          "神·典庆",
+          "神·东皇太一",
+          "神·嬴政"
+        ],
+        "main": [
+          "神·颜路"
+        ],
+        "vector": [
+          39244,
+          209350,
+          208166,
+          41585,
+          16566,
+          26585
+        ],
+        "positions": [
+          {
+            "position": 1,
+            "name": "神·盖聂",
+            "rule": "10%攻→全体防",
+            "sourceValue": 265858,
+            "gain": 26585
+          },
+          {
+            "position": 2,
+            "name": "神·龙且",
+            "rule": "10%防→全体内力",
+            "sourceValue": 165669,
+            "gain": 16566
+          },
+          {
+            "position": 3,
+            "name": "神·项羽",
+            "rule": "12%攻→全体攻",
+            "sourceValue": 327034,
+            "gain": 39244
+          },
+          {
+            "position": 4,
+            "name": "神·典庆",
+            "rule": "14%血→全体护盾",
+            "sourceValue": 1486904,
+            "gain": 208166
+          },
+          {
+            "position": 5,
+            "name": "神·东皇太一",
+            "rule": "14%血→全体血",
+            "sourceValue": 1495360,
+            "gain": 209350
+          },
+          {
+            "position": 6,
+            "name": "神·嬴政",
+            "rule": "16%攻→追加伤害",
+            "sourceValue": 259911,
+            "gain": 41585
+          }
+        ]
+      },
+      "ties": [
+        {
+          "names": [
+            "神·嬴政",
+            "神·龙且",
+            "神·项羽",
+            "神·典庆",
+            "神·东皇太一",
+            "神·盖聂"
+          ],
+          "main": [
+            "神·颜路"
+          ],
+          "vector": [
+            39244,
+            209350,
+            208166,
+            42537,
+            16566,
+            25991
+          ],
+          "positions": [
+            {
+              "position": 1,
+              "name": "神·嬴政",
+              "rule": "10%攻→全体防",
+              "sourceValue": 259911,
+              "gain": 25991
+            },
+            {
+              "position": 2,
+              "name": "神·龙且",
+              "rule": "10%防→全体内力",
+              "sourceValue": 165669,
+              "gain": 16566
+            },
+            {
+              "position": 3,
+              "name": "神·项羽",
+              "rule": "12%攻→全体攻",
+              "sourceValue": 327034,
+              "gain": 39244
+            },
+            {
+              "position": 4,
+              "name": "神·典庆",
+              "rule": "14%血→全体护盾",
+              "sourceValue": 1486904,
+              "gain": 208166
+            },
+            {
+              "position": 5,
+              "name": "神·东皇太一",
+              "rule": "14%血→全体血",
+              "sourceValue": 1495360,
+              "gain": 209350
+            },
+            {
+              "position": 6,
+              "name": "神·盖聂",
+              "rule": "16%攻→追加伤害",
+              "sourceValue": 265858,
+              "gain": 42537
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "行侠好义",
+      "count": 20160,
+      "score": 12551462,
+      "original_score": 12425312,
+      "delta": 126150,
+      "original": {
+        "names": [
+          "神·胡姬",
+          "神·卫庄",
+          "神·荆天明",
+          "神·田言",
+          "神·小黎",
+          "神·伏念"
+        ],
+        "main": [
+          "神·焱妃",
+          "神·钟离昧"
+        ],
+        "vector": [
+          36038,
+          216496,
+          199159,
+          42962,
+          15839,
+          28077
+        ],
+        "positions": [
+          {
+            "position": 1,
+            "name": "神·胡姬",
+            "rule": "10%攻→全体防",
+            "sourceValue": 280774,
+            "gain": 28077
+          },
+          {
+            "position": 2,
+            "name": "神·卫庄",
+            "rule": "10%防→全体内力",
+            "sourceValue": 158394,
+            "gain": 15839
+          },
+          {
+            "position": 3,
+            "name": "神·荆天明",
+            "rule": "12%攻→全体攻",
+            "sourceValue": 300317,
+            "gain": 36038
+          },
+          {
+            "position": 4,
+            "name": "神·田言",
+            "rule": "14%血→全体护盾",
+            "sourceValue": 1422566,
+            "gain": 199159
+          },
+          {
+            "position": 5,
+            "name": "神·小黎",
+            "rule": "14%血→全体血",
+            "sourceValue": 1546407,
+            "gain": 216496
+          },
+          {
+            "position": 6,
+            "name": "神·伏念",
+            "rule": "16%攻→追加伤害",
+            "sourceValue": 268518,
+            "gain": 42962
+          }
+        ]
+      },
+      "ties": [
+        {
+          "names": [
+            "神·焱妃",
+            "神·卫庄",
+            "神·小黎",
+            "神·胡姬",
+            "神·荆天明",
+            "神·伏念"
+          ],
+          "main": [
+            "神·田言",
+            "神·钟离昧"
+          ],
+          "vector": [
+            36006,
+            218466,
+            211027,
+            42962,
+            15839,
+            26621
+          ],
+          "positions": [
+            {
+              "position": 1,
+              "name": "神·焱妃",
+              "rule": "10%攻→全体防",
+              "sourceValue": 266216,
+              "gain": 26621
+            },
+            {
+              "position": 2,
+              "name": "神·卫庄",
+              "rule": "10%防→全体内力",
+              "sourceValue": 158394,
+              "gain": 15839
+            },
+            {
+              "position": 3,
+              "name": "神·小黎",
+              "rule": "12%攻→全体攻",
+              "sourceValue": 300058,
+              "gain": 36006
+            },
+            {
+              "position": 4,
+              "name": "神·胡姬",
+              "rule": "14%血→全体护盾",
+              "sourceValue": 1507339,
+              "gain": 211027
+            },
+            {
+              "position": 5,
+              "name": "神·荆天明",
+              "rule": "14%血→全体血",
+              "sourceValue": 1560475,
+              "gain": 218466
+            },
+            {
+              "position": 6,
+              "name": "神·伏念",
+              "rule": "16%攻→追加伤害",
+              "sourceValue": 268518,
+              "gain": 42962
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "义薄云天",
+      "count": 20160,
+      "score": 12933429,
+      "original_score": 12890621,
+      "delta": 42808,
+      "original": {
+        "names": [
+          "神·云中君",
+          "神·李牧",
+          "神·巨阙陈胜",
+          "神·田仲",
+          "神·赵高",
+          "神·紫女"
+        ],
+        "main": [
+          "神·田蜜",
+          "神·端木蓉"
+        ],
+        "vector": [
+          46168,
+          235251,
+          0,
+          45397,
+          49084,
+          31454
+        ],
+        "positions": [
+          {
+            "position": 1,
+            "name": "神·云中君",
+            "rule": "12%攻→全体防",
+            "sourceValue": 262117,
+            "gain": 31454
+          },
+          {
+            "position": 2,
+            "name": "神·李牧",
+            "rule": "12%防→全体内力",
+            "sourceValue": 166184,
+            "gain": 19942
+          },
+          {
+            "position": 3,
+            "name": "神·巨阙陈胜",
+            "rule": "14%攻→全体攻",
+            "sourceValue": 329778,
+            "gain": 46168
+          },
+          {
+            "position": 4,
+            "name": "神·田仲",
+            "rule": "2%血→全体内力",
+            "sourceValue": 1457124,
+            "gain": 29142
+          },
+          {
+            "position": 5,
+            "name": "神·赵高",
+            "rule": "16%血→全体血",
+            "sourceValue": 1470320,
+            "gain": 235251
+          },
+          {
+            "position": 6,
+            "name": "神·紫女",
+            "rule": "18%攻→追加伤害",
+            "sourceValue": 252207,
+            "gain": 45397
+          }
+        ]
+      },
+      "ties": [
+        {
+          "names": [
+            "神·紫女",
+            "神·李牧",
+            "神·巨阙陈胜",
+            "神·田仲",
+            "神·赵高",
+            "神·云中君"
+          ],
+          "main": [
+            "神·田蜜",
+            "神·端木蓉"
+          ],
+          "vector": [
+            46168,
+            235251,
+            0,
+            47181,
+            49084,
+            30264
+          ],
+          "positions": [
+            {
+              "position": 1,
+              "name": "神·紫女",
+              "rule": "12%攻→全体防",
+              "sourceValue": 252207,
+              "gain": 30264
+            },
+            {
+              "position": 2,
+              "name": "神·李牧",
+              "rule": "12%防→全体内力",
+              "sourceValue": 166184,
+              "gain": 19942
+            },
+            {
+              "position": 3,
+              "name": "神·巨阙陈胜",
+              "rule": "14%攻→全体攻",
+              "sourceValue": 329778,
+              "gain": 46168
+            },
+            {
+              "position": 4,
+              "name": "神·田仲",
+              "rule": "2%血→全体内力",
+              "sourceValue": 1457124,
+              "gain": 29142
+            },
+            {
+              "position": 5,
+              "name": "神·赵高",
+              "rule": "16%血→全体血",
+              "sourceValue": 1470320,
+              "gain": 235251
+            },
+            {
+              "position": 6,
+              "name": "神·云中君",
+              "rule": "18%攻→追加伤害",
+              "sourceValue": 262117,
+              "gain": 47181
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "天光云影",
+      "count": 5040,
+      "score": 13611983,
+      "original_score": 13383475,
+      "delta": 228508,
+      "original": {
+        "names": [
+          "神·白凤",
+          "神·张良",
+          "神·水寒高渐离",
+          "神·刘邦",
+          "神·逍遥子",
+          "神·吴旷"
+        ],
+        "main": [
+          "神·田虎"
+        ],
+        "vector": [
+          46058,
+          233921,
+          0,
+          76724,
+          18044,
+          38529
+        ],
+        "positions": [
+          {
+            "position": 1,
+            "name": "神·白凤",
+            "rule": "12%攻→全体防",
+            "sourceValue": 321080,
+            "gain": 38529
+          },
+          {
+            "position": 2,
+            "name": "神·张良",
+            "rule": "12%防→全体内力",
+            "sourceValue": 150367,
+            "gain": 18044
+          },
+          {
+            "position": 3,
+            "name": "神·水寒高渐离",
+            "rule": "14%攻→全体攻",
+            "sourceValue": 328991,
+            "gain": 46058
+          },
+          {
+            "position": 4,
+            "name": "神·刘邦",
+            "rule": "2%血→追加伤害",
+            "sourceValue": 1422557,
+            "gain": 28451
+          },
+          {
+            "position": 5,
+            "name": "神·逍遥子",
+            "rule": "16%血→全体血",
+            "sourceValue": 1462010,
+            "gain": 233921
+          },
+          {
+            "position": 6,
+            "name": "神·吴旷",
+            "rule": "18%攻→追加伤害",
+            "sourceValue": 268187,
+            "gain": 48273
+          }
+        ]
+      },
+      "ties": [
+        {
+          "names": [
+            "神·吴旷",
+            "神·张良",
+            "神·水寒高渐离",
+            "神·刘邦",
+            "神·逍遥子",
+            "神·白凤"
+          ],
+          "main": [
+            "神·田虎"
+          ],
+          "vector": [
+            46058,
+            233921,
+            0,
+            86245,
+            18044,
+            32182
+          ],
+          "positions": [
+            {
+              "position": 1,
+              "name": "神·吴旷",
+              "rule": "12%攻→全体防",
+              "sourceValue": 268187,
+              "gain": 32182
+            },
+            {
+              "position": 2,
+              "name": "神·张良",
+              "rule": "12%防→全体内力",
+              "sourceValue": 150367,
+              "gain": 18044
+            },
+            {
+              "position": 3,
+              "name": "神·水寒高渐离",
+              "rule": "14%攻→全体攻",
+              "sourceValue": 328991,
+              "gain": 46058
+            },
+            {
+              "position": 4,
+              "name": "神·刘邦",
+              "rule": "2%血→追加伤害",
+              "sourceValue": 1422557,
+              "gain": 28451
+            },
+            {
+              "position": 5,
+              "name": "神·逍遥子",
+              "rule": "16%血→全体血",
+              "sourceValue": 1462010,
+              "gain": 233921
+            },
+            {
+              "position": 6,
+              "name": "神·白凤",
+              "rule": "18%攻→追加伤害",
+              "sourceValue": 321080,
+              "gain": 57794
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "影形不离",
+      "count": 20160,
+      "score": 15415461,
+      "original_score": 15300951,
+      "delta": 114510,
+      "original": {
+        "names": [
+          "神·荆轲",
+          "神·韩信",
+          "神·渊虹盖聂",
+          "神·季布",
+          "神·掩日",
+          "神·墨鸦"
+        ],
+        "main": [
+          "神·英布",
+          "神·司徒万里"
+        ],
+        "vector": [
+          54289,
+          271619,
+          0,
+          61587,
+          49237,
+          46000
+        ],
+        "positions": [
+          {
+            "position": 1,
+            "name": "神·荆轲",
+            "rule": "14%攻→全体防",
+            "sourceValue": 328577,
+            "gain": 46000
+          },
+          {
+            "position": 2,
+            "name": "神·韩信",
+            "rule": "14%防→全体内力",
+            "sourceValue": 156661,
+            "gain": 21932
+          },
+          {
+            "position": 3,
+            "name": "神·渊虹盖聂",
+            "rule": "16%攻→全体攻",
+            "sourceValue": 339308,
+            "gain": 54289
+          },
+          {
+            "position": 4,
+            "name": "神·季布",
+            "rule": "2%血→全体内力",
+            "sourceValue": 1365293,
+            "gain": 27305
+          },
+          {
+            "position": 5,
+            "name": "神·掩日",
+            "rule": "18%血→全体血",
+            "sourceValue": 1508999,
+            "gain": 271619
+          },
+          {
+            "position": 6,
+            "name": "神·墨鸦",
+            "rule": "20%攻→追加伤害",
+            "sourceValue": 307936,
+            "gain": 61587
+          }
+        ]
+      },
+      "ties": [
+        {
+          "names": [
+            "神·墨鸦",
+            "神·季布",
+            "神·渊虹盖聂",
+            "神·韩信",
+            "神·掩日",
+            "神·荆轲"
+          ],
+          "main": [
+            "神·英布",
+            "神·司徒万里"
+          ],
+          "vector": [
+            54289,
+            271619,
+            0,
+            65715,
+            50186,
+            43111
+          ],
+          "positions": [
+            {
+              "position": 1,
+              "name": "神·墨鸦",
+              "rule": "14%攻→全体防",
+              "sourceValue": 307936,
+              "gain": 43111
+            },
+            {
+              "position": 2,
+              "name": "神·季布",
+              "rule": "14%防→全体内力",
+              "sourceValue": 155965,
+              "gain": 21835
+            },
+            {
+              "position": 3,
+              "name": "神·渊虹盖聂",
+              "rule": "16%攻→全体攻",
+              "sourceValue": 339308,
+              "gain": 54289
+            },
+            {
+              "position": 4,
+              "name": "神·韩信",
+              "rule": "2%血→全体内力",
+              "sourceValue": 1417594,
+              "gain": 28351
+            },
+            {
+              "position": 5,
+              "name": "神·掩日",
+              "rule": "18%血→全体血",
+              "sourceValue": 1508999,
+              "gain": 271619
+            },
+            {
+              "position": 6,
+              "name": "神·荆轲",
+              "rule": "20%攻→追加伤害",
+              "sourceValue": 328577,
+              "gain": 65715
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "太极两仪",
+      "count": 20160,
+      "score": 17554788,
+      "original_score": 17554788,
+      "delta": 0,
+      "original": {
+        "names": [
+          "神·凤吟弄玉",
+          "神·森罗大司命",
+          "神·太虚月神",
+          "神·兰轩紫女",
+          "神·极诣星魂",
+          "神·红莲赤练"
+        ],
+        "main": [
+          "神·墨家雪女",
+          "神·素华少司命"
+        ],
+        "vector": [
+          55210,
+          252770,
+          297772,
+          65260,
+          26757,
+          22111
+        ],
+        "positions": [
+          {
+            "position": 1,
+            "name": "神·凤吟弄玉",
+            "rule": "15%血→全体血",
+            "sourceValue": 1685137,
+            "gain": 252770
+          },
+          {
+            "position": 2,
+            "name": "神·森罗大司命",
+            "rule": "15%攻→全体攻",
+            "sourceValue": 368068,
+            "gain": 55210
+          },
+          {
+            "position": 3,
+            "name": "神·太虚月神",
+            "rule": "15%防→全体防",
+            "sourceValue": 147411,
+            "gain": 22111
+          },
+          {
+            "position": 4,
+            "name": "神·兰轩紫女",
+            "rule": "18%防→全体内力",
+            "sourceValue": 148650,
+            "gain": 26757
+          },
+          {
+            "position": 5,
+            "name": "神·极诣星魂",
+            "rule": "18%攻→追加伤害",
+            "sourceValue": 362558,
+            "gain": 65260
+          },
+          {
+            "position": 6,
+            "name": "神·红莲赤练",
+            "rule": "18%血→全体护盾",
+            "sourceValue": 1654294,
+            "gain": 297772
+          }
+        ]
+      },
+      "ties": [
+        {
+          "names": [
+            "神·凤吟弄玉",
+            "神·森罗大司命",
+            "神·太虚月神",
+            "神·兰轩紫女",
+            "神·极诣星魂",
+            "神·红莲赤练"
+          ],
+          "main": [
+            "神·墨家雪女",
+            "神·素华少司命"
+          ],
+          "vector": [
+            55210,
+            252770,
+            297772,
+            65260,
+            26757,
+            22111
+          ],
+          "positions": [
+            {
+              "position": 1,
+              "name": "神·凤吟弄玉",
+              "rule": "15%血→全体血",
+              "sourceValue": 1685137,
+              "gain": 252770
+            },
+            {
+              "position": 2,
+              "name": "神·森罗大司命",
+              "rule": "15%攻→全体攻",
+              "sourceValue": 368068,
+              "gain": 55210
+            },
+            {
+              "position": 3,
+              "name": "神·太虚月神",
+              "rule": "15%防→全体防",
+              "sourceValue": 147411,
+              "gain": 22111
+            },
+            {
+              "position": 4,
+              "name": "神·兰轩紫女",
+              "rule": "18%防→全体内力",
+              "sourceValue": 148650,
+              "gain": 26757
+            },
+            {
+              "position": 5,
+              "name": "神·极诣星魂",
+              "rule": "18%攻→追加伤害",
+              "sourceValue": 362558,
+              "gain": 65260
+            },
+            {
+              "position": 6,
+              "name": "神·红莲赤练",
+              "rule": "18%血→全体护盾",
+              "sourceValue": 1654294,
+              "gain": 297772
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "潜龙在渊",
+      "count": 20160,
+      "score": 17705041,
+      "original_score": 17379357,
+      "delta": 325684,
+      "original": {
+        "names": [
+          "神·荼蘼田蜜",
+          "神·惊鲵田言",
+          "神·梅三娘",
+          "神·龙骧章邯",
+          "神·赤霄刘季",
+          "神·秋水晓梦"
+        ],
+        "main": [
+          "神·潜蛟韩信",
+          "神·霸道田虎"
+        ],
+        "vector": [
+          54897,
+          254475,
+          271132,
+          64975,
+          30700,
+          26162
+        ],
+        "positions": [
+          {
+            "position": 1,
+            "name": "神·荼蘼田蜜",
+            "rule": "15%血→全体血",
+            "sourceValue": 1696504,
+            "gain": 254475
+          },
+          {
+            "position": 2,
+            "name": "神·惊鲵田言",
+            "rule": "15%攻→全体攻",
+            "sourceValue": 365983,
+            "gain": 54897
+          },
+          {
+            "position": 3,
+            "name": "神·梅三娘",
+            "rule": "15%防→全体防",
+            "sourceValue": 174418,
+            "gain": 26162
+          },
+          {
+            "position": 4,
+            "name": "神·龙骧章邯",
+            "rule": "18%防→全体内力",
+            "sourceValue": 170561,
+            "gain": 30700
+          },
+          {
+            "position": 5,
+            "name": "神·赤霄刘季",
+            "rule": "18%攻→追加伤害",
+            "sourceValue": 360975,
+            "gain": 64975
+          },
+          {
+            "position": 6,
+            "name": "神·秋水晓梦",
+            "rule": "18%血→全体护盾",
+            "sourceValue": 1506294,
+            "gain": 271132
+          }
+        ]
+      },
+      "ties": [
+        {
+          "names": [
+            "神·荼蘼田蜜",
+            "神·惊鲵田言",
+            "神·龙骧章邯",
+            "神·梅三娘",
+            "神·赤霄刘季",
+            "神·潜蛟韩信"
+          ],
+          "main": [
+            "神·秋水晓梦",
+            "神·霸道田虎"
+          ],
+          "vector": [
+            54897,
+            254475,
+            303143,
+            64975,
+            31395,
+            25584
+          ],
+          "positions": [
+            {
+              "position": 1,
+              "name": "神·荼蘼田蜜",
+              "rule": "15%血→全体血",
+              "sourceValue": 1696504,
+              "gain": 254475
+            },
+            {
+              "position": 2,
+              "name": "神·惊鲵田言",
+              "rule": "15%攻→全体攻",
+              "sourceValue": 365983,
+              "gain": 54897
+            },
+            {
+              "position": 3,
+              "name": "神·龙骧章邯",
+              "rule": "15%防→全体防",
+              "sourceValue": 170561,
+              "gain": 25584
+            },
+            {
+              "position": 4,
+              "name": "神·梅三娘",
+              "rule": "18%防→全体内力",
+              "sourceValue": 174418,
+              "gain": 31395
+            },
+            {
+              "position": 5,
+              "name": "神·赤霄刘季",
+              "rule": "18%攻→追加伤害",
+              "sourceValue": 360975,
+              "gain": 64975
+            },
+            {
+              "position": 6,
+              "name": "神·潜蛟韩信",
+              "rule": "18%血→全体护盾",
+              "sourceValue": 1684129,
+              "gain": 303143
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

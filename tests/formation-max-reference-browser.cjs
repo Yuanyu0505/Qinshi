@@ -12,13 +12,19 @@ for(const width of [390,1280])test(width+'px max reference remains separate from
   await openApp(page,url);
   const tab=page.locator('.tab[data-partition="formations"]');
   if(await tab.isVisible())await tab.click();else{await page.locator('#mobile-more-toggle').click();await page.locator('#mobile-more-layer [data-partition="formations"]').click();}
-  const ref=page.locator('#formation-max-reference');await ref.waitFor({state:'visible'});
+  const ref=page.locator('#formation-max-reference');
+  assert.equal(await ref.isVisible(),false);
+  await page.locator('[data-formation-view="reference"]').click();
+  await ref.waitFor({state:'visible'});
   const saved=await page.evaluate(()=>JSON.stringify(Object.fromEntries(Object.entries(localStorage))));
-  assert.equal(await ref.getAttribute('open'),null);
-  await ref.locator(':scope > summary').click();
+  assert.equal(await page.locator('.formation-selector-panel').isVisible(),false);
+  assert.equal(await ref.locator('.formation-max-controls label').count(),0);
+  assert.ok(await ref.locator('.formation-max-controls select').first().evaluate(el=>el.getBoundingClientRect().height>=44));
   const results=width<760?ref.locator('.formation-max-cards article'):ref.locator('.formation-max-table tbody tr');
   assert.equal(await results.count(),144);
+  if(width>=760)assert.ok(await ref.locator('.formation-max-table tbody tr').first().locator('th,td').evaluateAll(cells=>cells.every(cell=>getComputedStyle(cell).verticalAlign==='middle'&&getComputedStyle(cell).textAlign==='center')));
   await ref.locator('[data-max-formation]').click();
+  assert.equal(await page.locator('.qin-select-popover.formation-max-popover').evaluate(el=>getComputedStyle(el).getPropertyValue('--qin-select-row').trim()),'36px');
   await page.getByRole('listbox',{name:'极限属性合阵',exact:true}).getByRole('option',{name:'妙法阴阳',exact:true}).click();
   assert.equal(await results.count(),7);
   await ref.locator('[data-max-sort]').selectOption('attack');
@@ -29,7 +35,13 @@ for(const width of [390,1280])test(width+'px max reference remains separate from
   await ref.locator('[data-max-query]').fill('');assert.equal(await results.count(),7);
   assert.equal(await page.evaluate(()=>JSON.stringify(Object.fromEntries(Object.entries(localStorage)))),saved);
   assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=document.documentElement.clientWidth+1));
-  await ref.locator(':scope > summary').click();await ref.locator(':scope > summary').click();
+  await page.locator('[data-formation-view="main"]').click();
+  assert.equal(await ref.isVisible(),false);
+  assert.equal(await page.locator('.formation-selector-panel').isVisible(),true);
+  await page.locator('#formation-selector button').first().click();
+  assert.equal(await page.locator('.formation-personal').isVisible(),true);
+  assert.equal(await page.locator('.formation-calculator').isVisible(),true);
+  await page.locator('[data-formation-view="reference"]').click();
   assert.equal(await results.count(),7);
  }finally{await page.close();}
 });

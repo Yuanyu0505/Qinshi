@@ -1,7 +1,7 @@
 "use strict";
 
 const CACHE_PREFIX = "qinshi-site-";
-const CACHE_NAME = CACHE_PREFIX + "1.1.64";
+const CACHE_NAME = CACHE_PREFIX + "1.1.65";
 const GALLERY_CACHE_NAME = "qinshi-gallery-v1";
 const PRECACHE_URLS = [
   "./images/wooden-training-dummy.png",
@@ -9,6 +9,10 @@ const PRECACHE_URLS = [
   "./js/responsive-ux.js",
   "./css/select-picker.css",
   "./js/select-picker.js",
+  "./js/formation-progress-store.js",
+  "./js/formation-limit-adapter.js",
+  "./js/formation-recommendation-ui.js",
+  "./js/formation-worker.js",
   "./css/inscription-reference.css",
   "./js/inscription-reference.js",
   "./js/inscription-reverse.js",

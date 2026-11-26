@@ -148,5 +148,19 @@
     };
   }
 
-  return { buildLimitProgress: buildLimitProgress };
+  // Project the actual selected optimum, never the original suggested labels.
+  function recommendationRows(reference, result) {
+    return reference.members.map(function (row) {
+      var assignment = (result.assignments || []).find(function (item) {
+        return CORE.normalizeName(item.name) === CORE.normalizeName(row.name);
+      });
+      return Object.assign({}, row, {
+        position: assignment ? assignment.position : null,
+        trainAttribute: assignment ? assignment.sourceAttribute : null,
+        gainAttribute: assignment ? assignment.targetAttribute.replace(/^全体/, "") : null
+      });
+    });
+  }
+
+  return { buildLimitProgress: buildLimitProgress, recommendationRows: recommendationRows };
 });

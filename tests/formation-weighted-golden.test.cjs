@@ -14,6 +14,27 @@ vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../data/formations.js')
 // JSON transport intentionally gives the browser data ordinary Node prototypes.
 const formations = JSON.parse(JSON.stringify(context.window.FORMATIONS_DATA.items));
 const sourceKeys = { '攻': 'attack', '血': 'health', '防': 'defense' };
+
+test('limit table follows each current optimum without mutating source data', () => {
+ const source=JSON.stringify(reference);
+ for(const formation of formations){
+  const record=reference.formations.find(row=>row.name===formation.name);
+  const adapted=ADAPTER.buildLimitProgress(formation,record);
+  for(const weights of [['12','10','5','4','3','1'],['0','100','0','0','0','0']]){
+   const options={mode:'custom',weights,scales:['1','8','6','1.5','2','1']};
+   if(!formation.slots.some(slot=>slot.targetAttribute==='全体血')&&weights[0]==='0')continue;
+   const result=CORE.recommendFormation(formation,adapted.progress,options);
+   const rows=ADAPTER.recommendationRows(record,result);
+   for(const row of rows){
+    const chosen=result.assignments.find(a=>CORE.normalizeName(a.name)===CORE.normalizeName(row.name));
+    assert.equal(row.position,chosen?chosen.position:null);
+    assert.equal(row.trainAttribute,chosen?chosen.sourceAttribute:null);
+    assert.equal(row.gainAttribute,chosen?chosen.targetAttribute.replace(/^全体/,''):null);
+   }
+  }
+ }
+ assert.equal(JSON.stringify(reference),source);
+});
 const clone = value => JSON.parse(JSON.stringify(value));
 const normalize = value => String(value).replace(/[·•・\s]+/g, '');
 const order = assignments => assignments.slice().sort((a, b) => a.position - b.position);

@@ -13,6 +13,9 @@
   var limitRevision = 0;
   var limitResult = null;
   var limitContext = null;
+  var tableRevision = 0;
+  var tableRecommendations = new Map();
+  var refreshMaxReference = function () {};
   var el = {};
   var state = {
     selectedId: null,
@@ -67,7 +70,12 @@
     var rows = [];
     (reference && reference.formations || []).forEach(function (formation) {
       if (filters.formation && filters.formation !== formation.name) return;
-      formation.members.forEach(function (member) {
+      var computed = tableRecommendations.get(formation.name);
+      var members = computed && computed.rows || formation.members.map(function (row) {
+        return Object.assign({}, row, {position: null, trainAttribute: null, gainAttribute: null,
+          recommendationStatus: computed && computed.error ? computed.error : '计算中…'});
+      });
+      members.forEach(function (member) {
         var searchable = (formation.name + member.name).replace(/[\s·]/g, '').toLocaleLowerCase();
         if (!query || searchable.includes(query)) rows.push(Object.assign({ formation: formation.name, stones: formation.stones }, member));
       });
@@ -93,7 +101,7 @@
       var rows = maxReferenceRows({formation: panel.querySelector('[data-max-formation]').value, query: panel.querySelector('[data-max-query]').value, sort: panel.querySelector('[data-max-sort]').value});
       var results = panel.querySelector('[data-max-results]');
       if (!rows.length) { results.innerHTML = '<p role="status">未找到匹配资料。</p>'; return; }
-      function position(row) { return row.position == null ? '—' : String(row.position); }
+      function position(row) { return row.recommendationStatus || (row.position == null ? '—' : String(row.position)); }
       results.innerHTML = '<div class="formation-max-table" tabindex="0" role="region" aria-label="合阵弟子极限属性，可横向滚动"><table><thead><tr>' +
         ['阵眼石','合阵','弟子','攻','防','血','建议位置','培养属性','提升属性'].map(function (label) { return '<th scope="col">' + label + '</th>'; }).join('') +
         '</tr></thead><tbody>' + rows.map(function (row) { return '<tr><td>' + row.stones + '</td><td>' + escapeHtml(row.formation) + '</td><th scope="row">' + escapeHtml(row.name) + '</th><td>' +
@@ -103,6 +111,7 @@
     }
     panel.addEventListener('input', function (event) { if (event.target.matches('[data-max-query]')) refresh(); });
     panel.addEventListener('change', function (event) { if (event.target.matches('[data-max-formation],[data-max-sort]')) refresh(); if(event.target.matches('[data-max-formation]'))mountLimitRecommendation(); });
+    refreshMaxReference = refresh;
     refresh();
     mountLimitRecommendation();
   }
@@ -111,6 +120,33 @@
     recommendationRevision += 1; limitRevision += 1;
     root.FORMATION_RECOMMENDATION_UI.cancel('personal');
     root.FORMATION_RECOMMENDATION_UI.cancel('limit');
+    tableRevision += 1;
+    root.FORMATION_RECOMMENDATION_UI.cancel('limit-table');
+  }
+
+  async function generateLimitTable() {
+    var revision = ++tableRevision;
+    root.FORMATION_RECOMMENDATION_UI.cancel('limit-table');
+    tableRecommendations.clear();
+    refreshMaxReference();
+    var options = Object.assign({}, clone(appliedOptions), {offset:'0', limit:0});
+    var items = formations();
+    // Sequential Workers keep all-formations browsing responsive and bounded.
+    for (var i = 0; i < items.length; i += 1) {
+      if (revision !== tableRevision) return;
+      var formation = items[i];
+      var reference = root.FORMATION_MAX_REFERENCE_DATA.formations.find(function (row) {return row.name === formation.name;});
+      try {
+        var adapted = root.FORMATION_LIMIT_ADAPTER.buildLimitProgress(formation, reference);
+        var result = await root.FORMATION_RECOMMENDATION_UI.run('limit-table', formation, adapted.progress, options);
+        if (revision !== tableRevision) return;
+        tableRecommendations.set(formation.name, {rows:root.FORMATION_LIMIT_ADAPTER.recommendationRows(reference,result)});
+      } catch (error) {
+        if (revision !== tableRevision) return;
+        tableRecommendations.set(formation.name, {error:error.message});
+      }
+      refreshMaxReference();
+    }
   }
 
   function mountLimitRecommendation() {
@@ -118,7 +154,7 @@
     if(!host)return;
     limitRevision+=1; root.FORMATION_RECOMMENDATION_UI.cancel('limit'); limitResult=null;limitContext=null;
     var name=document.querySelector('[data-max-formation]').value;
-    if(!name){host.innerHTML='<div class="formation-limit-overview">'+formations().map(function(f){return '<button type="button" class="seg" data-limit-select="'+escapeHtml(f.name)+'">'+escapeHtml(f.name)+' · '+f.candidates.length+'名弟子</button>';}).join('')+'</div>';return;}
+    if(!name){host.innerHTML='';return;}
     try {
       var matches=formations().filter(function(f){return f.name===name;});
       if(matches.length!==1)throw new Error('合阵映射不是唯一，无法推荐。');
@@ -126,8 +162,7 @@
       var reference=root.FORMATION_MAX_REFERENCE_DATA.formations.find(function(r){return r.name===name;});
       var adapted=root.FORMATION_LIMIT_ADAPTER.buildLimitProgress(formation,reference);
       limitContext={formation:formation,adapted:adapted};
-      host.innerHTML='<div data-limit-settings></div><div data-limit-output aria-live="polite"></div>';
-      bindLimitSettings();
+      host.innerHTML='<div data-limit-output aria-live="polite"></div>';
       generateLimit();
     } catch(error){host.textContent=error.message;}
   }
@@ -136,20 +171,15 @@
     cancelRecommendations();appliedOptions=clone(next);state.recommendation=null;limitResult=null;
     var output=document.querySelector('[data-limit-output]');if(output)output.textContent='参数已更新，请重新生成。';
     renderWorkspace(true);
-    bindLimitSettings();
-  }
-
-  function bindLimitSettings(){
-    var host=document.querySelector('[data-limit-settings]');if(!host||!limitContext)return;
-    root.FORMATION_RECOMMENDATION_UI.bindSettings(host,appliedOptions,limitContext.formation,function(next){applyOptions(next);generateLimit();},function(){limitRevision+=1;root.FORMATION_RECOMMENDATION_UI.cancel('limit');var output=document.querySelector('[data-limit-output]');if(output)output.textContent='计算已取消';});
+    tableRecommendations.clear();
+    refreshMaxReference();
+    if(state.view==='reference')generateLimitTable();
   }
 
   function originalComparison(formation,adapted,result) {
     var totals=CORE.summarizeTargets(adapted.originalAssignments);
-    var differences=root.FORMATION_RECOMMENDATION_UI.targets.map(function(t){var delta=(result.totals[t]||0)-(totals[t]||0);return '<span>'+escapeHtml(t)+'：原 '+formatNumber(totals[t]||0)+' → '+formatNumber(result.totals[t]||0)+'（'+(delta>0?'+':'')+formatNumber(delta)+'）</span>';}).join('');
-    var originalScore=CORE.scoreTotals(formation,totals,appliedOptions);
-    var equal=appliedOptions.mode!=='legacy'&&appliedOptions.mode!=='target'&&String(originalScore.exactScore)===String(result.exactScore);
-    return '<details open><summary>原资料方案对照</summary><div class="formation-comparison">'+differences+'</div><p>原资料评分（非战力）：'+escapeHtml(originalScore.exactScore)+' / '+escapeHtml(originalScore.scoreDenominator)+'</p>'+(equal?'<p>当前权重下原资料已最优'+(BigInt(result.tieCount)>1n?'，存在并列方案':'')+'。</p>':'')+'<p>'+escapeHtml(adapted.originalAssignments.map(function(a){return '助阵'+a.position+' '+a.name;}).join('、'))+'</p></details>'+(adapted.conflicts.length?'<p class="formation-warning">'+escapeHtml(adapted.conflicts.map(function(c){return '助阵'+c.position+' 原资料“'+c.rawGainAttribute+'”，基础规则“'+c.targetAttribute+'”，待核实（保留原文）。';}).join('；'))+'</p>':'');
+    var differences=root.FORMATION_RECOMMENDATION_UI.targets.map(function(t){var delta=(result.totals[t]||0)-(totals[t]||0);var tone=delta>0?' formation-delta-positive':delta<0?' formation-delta-negative':'';return '<span>'+escapeHtml(t)+'：原 '+formatNumber(totals[t]||0)+' → '+formatNumber(result.totals[t]||0)+' <span class="formation-delta'+tone+'">（'+(delta>0?'+':'')+formatNumber(delta)+'）</span></span>';}).join('');
+    return '<details open><summary>原资料方案对照</summary><div class="formation-comparison">'+differences+'</div><p>'+escapeHtml(adapted.originalAssignments.map(function(a){return '助阵'+a.position+' '+a.name;}).join('、'))+'</p></details>'+(adapted.conflicts.length?'<p class="formation-warning">'+escapeHtml(adapted.conflicts.map(function(c){return '助阵'+c.position+' 原资料“'+c.rawGainAttribute+'”，基础规则“'+c.targetAttribute+'”，待核实（保留原文）。';}).join('；'))+'</p>':'');
   }
 
   function generateLimit(offset) {
@@ -166,7 +196,7 @@
 
   function tieNavigation(result,scope){
     var offset=BigInt(result.offset||0),count=BigInt(result.tieCount||0);
-    return '<div class="formation-actions">'+(offset>0n?'<button type="button" class="seg" data-tie-scope="'+scope+'" data-tie-offset="'+(offset>20n?offset-20n:0n)+'">上一页并列</button>':'')+(offset+20n<count?'<button type="button" class="seg" data-tie-scope="'+scope+'" data-tie-offset="'+(offset+20n)+'">下一页并列</button>':'')+'</div>';
+    return '<div class="formation-actions">'+(offset>0n?'<button type="button" class="seg" data-tie-scope="'+scope+'" data-tie-offset="'+(offset>20n?offset-20n:0n)+'">上一页其他方案</button>':'')+(offset+20n<count?'<button type="button" class="seg" data-tie-scope="'+scope+'" data-tie-offset="'+(offset+20n)+'">下一页其他方案</button>':'')+'</div>';
   }
 
   function percentText(value) {
@@ -289,27 +319,11 @@
     }).join("") + '</div>';
   }
 
-  function candidateReferenceHtml(formation) {
-    var rows = formation.candidates.map(function (candidate) {
-      return '<tr><th scope="row">' + escapeHtml(candidate.name) + '</th><td>' + formatNumber(candidate.level1.attack) +
-        '</td><td>' + formatNumber(candidate.level1.health) + '</td><td>' + formatNumber(candidate.level1.defense) + '</td><td>' +
-        (candidate.officialPosition ? "助阵" + candidate.officialPosition : '<span class="muted-tip">未推荐初始助阵</span>') + '</td></tr>';
-    }).join("");
-    var cards = formation.candidates.map(function (candidate) {
-      return '<article class="formation-reference-card"><strong>' + escapeHtml(candidate.name) + '</strong><span>攻 ' +
-        formatNumber(candidate.level1.attack) + '</span><span>血 ' + formatNumber(candidate.level1.health) + '</span><span>防 ' +
-        formatNumber(candidate.level1.defense) + '</span><em>' + (candidate.officialPosition ? "助阵" + candidate.officialPosition : "未推荐初始助阵") + '</em></article>';
-    }).join("");
-    return '<details class="formation-reference"><summary>候选弟子1级属性（' + formation.candidates.length + '人）</summary>' +
-      '<div class="formation-reference-table"><table><thead><tr><th>弟子</th><th>攻</th><th>血</th><th>防</th><th>官方位置</th></tr></thead><tbody>' + rows +
-      '</tbody></table></div><div class="formation-reference-cards">' + cards + '</div></details>';
-  }
-
   function officialHtml(formation) {
     return '<section class="panel formation-official"><div class="formation-section-head"><div><span class="panel-title">官方资料</span><h2>' +
       escapeHtml(formation.name) + '</h2></div><div class="formation-official-meta"><span>阵眼石 <b>' + formatNumber(formation.stone) +
       '</b></span><span>推荐主将 <b>' + escapeHtml(formation.officialMain) + '</b></span></div></div>' +
-      officialSlotsHtml(formation) + candidateReferenceHtml(formation) + '</section>';
+      officialSlotsHtml(formation) + '</section>';
   }
 
   function memberStatusText(member) {
@@ -661,8 +675,6 @@
     renderSelector();
     mountMaxReference();
     el.partition.addEventListener("click", function (event) {
-      var limitSelect=event.target.closest('[data-limit-select]');
-      if(limitSelect){var select=el.partition.querySelector('[data-max-formation]');select.value=limitSelect.dataset.limitSelect;select.dispatchEvent(new Event('change',{bubbles:true}));return;}
       var tie=event.target.closest('[data-tie-offset]');
       if(tie){if(tie.dataset.tieScope==='limit')generateLimit(tie.dataset.tieOffset);else generatePersonal(tie.dataset.tieOffset);return;}
       var tab = event.target.closest("[data-formation-view]");
@@ -675,8 +687,8 @@
       });
       el.partition.querySelector(".formation-selector-panel").hidden = state.view === "reference";
       el.partition.querySelector("#formation-max-reference").hidden = state.view !== "reference";
-      if (state.view === "reference") el.workspace.hidden = true;
-      else renderWorkspace(true);
+      if (state.view === "reference") { el.workspace.hidden = true; mountLimitRecommendation(); generateLimitTable(); }
+      else { tableRevision+=1; root.FORMATION_RECOMMENDATION_UI.cancel('limit-table'); renderWorkspace(true); }
     });
   }
 

@@ -16,14 +16,14 @@
 #partition-formations .formation-settings-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
 #partition-formations .formation-settings-row select,
 #partition-formations .formation-parameter-grid input { min-width: 0; min-height: 44px; max-width: 100%; font: inherit; padding: 8px; box-sizing: border-box; }
-#partition-formations .formation-parameter-grid { display: grid; grid-template-columns: minmax(70px,1fr) repeat(3,minmax(0,1fr)); gap: 8px; max-width: 780px; margin-block: 12px; align-items: center; }
-#partition-formations .formation-parameter-grid input { width: 100%; text-align: right; }
-#partition-formations .formation-parameter-grid output { overflow-wrap: anywhere; }
+#partition-formations .formation-parameter-grid { display: grid; grid-template-columns: minmax(70px,1fr) repeat(2,minmax(0,1fr)); gap: 8px; max-width: 600px; margin-block: 12px; align-items: center; text-align: left; }
+#partition-formations .formation-parameter-grid input { width: 100%; text-align: left; }
 #partition-formations .formation-benefits { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 8px; margin-block: 12px; }
 #partition-formations .formation-benefits > div { display: grid; gap: 6px; padding: 12px; border: 1px solid var(--line); border-radius: 6px; }
 #partition-formations .formation-benefits strong { color: var(--gold); font-size: 1.15em; overflow-wrap: anywhere; }
 #partition-formations .formation-comparison { display: grid; gap: 8px; padding-block: 12px; }
-#partition-formations .formation-limit-overview { display: flex; flex-wrap: wrap; gap: 8px; margin-block: 12px; }
+#partition-formations .formation-delta-positive { color: #66d98b; }
+#partition-formations .formation-delta-negative { color: #ff8a80; }
 #partition-formations [data-personal-output] > details,
 #partition-formations [data-limit-output] details { margin-block: 12px; }
 #partition-formations .formation-member-fields input { text-align: right; }

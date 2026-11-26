@@ -6,7 +6,7 @@ const vm=require('node:vm');
 function fixture(protocol='https:'){
  const workers=[];
  class Worker {constructor(){workers.push(this);}postMessage(message){this.message=message;}terminate(){this.terminated=true;}}
- const root={Worker,location:{protocol},FORMATIONS:{recommendFormation:()=>({exactScore:'144',scoreDenominator:'12'})}};
+ const root={Worker,location:{protocol},QinshiNumberFormat:{format:String},FORMATIONS:{recommendFormation:()=>({exactScore:'144',scoreDenominator:'12'})}};
  const sandbox={window:root,Worker,Map,Promise,BigInt};
  vm.runInNewContext(fs.readFileSync(require('node:path').join(__dirname,'../js/formation-recommendation-ui.js'),'utf8'),sandbox);
  return {api:root.FORMATION_RECOMMENDATION_UI,workers};
@@ -28,4 +28,17 @@ test('new request cancels only its own scope and old completion cannot replace i
 test('file protocol retains explicit synchronous exact fallback, no worker pretending to cancel',async()=>{
  const {api,workers}=fixture('file:');const result=await api.run('personal',{}, {},{});
  assert.equal(result.exactScore,'144');assert.equal(workers.length,0);
+});
+
+test('UI defaults always use the editable six parameter pairs',()=>{
+ const {api}=fixture();const options=api.defaults();
+ assert.equal(options.mode,'custom');
+ assert.deepEqual(Array.from(options.weights),['12','10','5','4','3','1']);
+ assert.deepEqual(Array.from(options.scales),['1','8','6','1.5','2','1']);
+});
+
+test('result omits mode, score, counts and reference-value annotations',()=>{
+ const {api}=fixture();
+ const html=api.resultHtml({slots:[]},{totals:{},mainOptions:[],assignments:[],ties:[],excluded:[],referenceCount:7,tieCount:'1',combinationCount:'2',exactScore:'15855',scoreDenominator:'12',mode:'custom'});
+ assert.doesNotMatch(html,/推荐模式|综合评分|最佳助阵排列|含主将组合|1级参考值弟子/);
 });

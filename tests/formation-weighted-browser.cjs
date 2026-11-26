@@ -19,9 +19,9 @@ for(const width of [320,390,768,820,1366,1440,1920])test(width+'px weighted reco
   const attack=p.locator('[data-scope="progress"][data-member-field="attack"]').first();
   await attack.fill('12345');await attack.press('Tab');
   await p.locator('[data-formation-view="reference"]').click();
-  await p.locator('[data-limit-select="地泽二十四"]').click();
+  await p.locator('[data-max-formation]').selectOption({label:'地泽二十四'});
   await p.locator('[data-limit-output] .formation-benefits').first().waitFor();
-  assert.match(await p.locator('[data-limit-output]').innerText(),/最佳助阵排列 2 套/);
+  assert.equal(await p.locator('[data-limit-output] [data-tie-page] > details').count(),2);
   assert.equal(await getAccountItem(p,'qinshi_formation_progress_v1'),before);
   await p.locator('[data-formation-view="main"]').click();
   assert.equal(await attack.inputValue(),'12345');
@@ -94,20 +94,22 @@ test('limit reference shows original comparison separately and exposes both tied
  const p=await open(1440);
  try{
   await p.locator('[data-formation-view="reference"]').click();
-  await p.locator('[data-limit-select="地泽二十四"]').click();
+  await p.locator('[data-max-formation]').selectOption({label:'地泽二十四'});
   const output=p.locator('[data-limit-output]');
   await output.locator('.formation-benefits').first().waitFor();
-  assert.match(await output.innerText(),/最佳助阵排列 2 套/);
+  assert.doesNotMatch(await output.innerText(),/推荐模式|综合评分|最佳助阵排列|1级参考值弟子/);
   const comparison=output.locator('details').filter({has:p.locator('summary:text("原资料方案对照")')});
   assert.equal(await comparison.count(),1);
-  assert.match(await comparison.innerText(),/原资料评分/);
+  assert.doesNotMatch(await comparison.innerText(),/原资料评分|当前权重下原资料已最优/);
+  assert.equal(await p.locator('#formation-max-reference [data-limit-cancel], #formation-max-reference [data-cancel-job]').count(),0);
+  assert.equal(await p.locator('[data-limit-settings], #formation-max-reference .formation-parameter-grid').count(),0);
   assert.equal(await output.locator('[data-tie-page] > details').count(),2);
   const expected=golden.results.find(item=>item.name==='地泽二十四');
   for(const index of [0,1]){
    const tie=output.locator('[data-tie-page] > details').nth(index);
    await tie.locator('summary').click();
    assert.equal(await tie.locator('.formation-benefits').count(),1);
-   assert.match(await tie.locator('summary').innerText(),new RegExp('并列排列 '+(index+1)));
+   assert.match(await tie.locator('summary').innerText(),new RegExp('其他方案 '+(index+1)));
    assert.ok((await tie.locator('summary').innerText()).includes(expected.ties[index].names.join('、')));
    const mainLine=(await tie.locator('p').allTextContents()).find(text=>text.includes('可选主将：'))||'';
    const actualMains=mainLine.split('可选主将：')[1]?.trim().split('、').sort();
@@ -119,19 +121,52 @@ test('limit comparison deltas match independent golden vectors',async()=>{
  const p=await open(1440);
  try{
   await p.locator('[data-formation-view="reference"]').click();
-  await p.locator('[data-limit-select="旗开得胜"]').click();
+  await p.locator('[data-max-formation]').selectOption({label:'旗开得胜'});
   const output=p.locator('[data-limit-output]');
   await output.locator('.formation-benefits').first().waitFor();
   const expected=golden.results.find(item=>item.name==='旗开得胜');
-  const rows=await output.locator('.formation-comparison span').allTextContents();
+  const rows=await output.locator('.formation-comparison > span').allTextContents();
   assert.equal(rows.length,6);
   for(let index=0;index<rows.length;index++){
-   const match=rows[index].match(/原\s+([\d,]+)\s+→\s+([\d,]+)（([+\-\d,]+)）/);
+   const match=rows[index].match(/原\s+([\d,]+)\s+→\s+([\d,]+)\s*（([+\-\d,]+)）/);
    assert.ok(match,rows[index]);
    const actual=match.slice(1).map(value=>Number(value.replaceAll(',','')));
    assert.deepEqual(actual,[expected.original.vector[index],expected.ties[0].vector[index],expected.ties[0].vector[index]-expected.original.vector[index]]);
+   const delta=output.locator('.formation-delta').nth(index);
+   assert.equal(await delta.evaluate(el=>el.classList.contains('formation-delta-positive')),actual[2]>0);
+   assert.equal(await delta.evaluate(el=>el.classList.contains('formation-delta-negative')),actual[2]<0);
   }
-  assert.ok((await output.innerText()).includes('原资料评分（非战力）：'+expected.original_score));
+  assert.doesNotMatch(await output.innerText(),/原资料评分/);
+ }finally{await p.close();}
+});
+
+test('limit table recommendations follow shared parameters and never write progress',async()=>{
+ const p=await open(1440);
+ try{
+  const saved=await getAccountItem(p,'qinshi_formation_progress_v1');
+  await p.locator('[data-formation-view="reference"]').click();
+  await p.locator('[data-max-formation]').selectOption({label:'地泽二十四'});
+  await p.locator('[data-limit-output] .formation-benefits').first().waitFor();
+  assert.equal(await p.locator('#formation-max-reference .formation-settings').count(),0);
+  await p.locator('[data-formation-view="main"]').click();
+  const form=p.locator('[data-personal-settings] form');
+  await form.locator('summary').click();
+  for(let i=0;i<6;i++)await form.locator('[name="weight'+i+'"]').fill(i===1?'100':'0');
+  await form.locator('[type="submit"]').click();
+  await p.locator('[data-formation-view="reference"]').click();
+  await p.locator('[data-limit-output] .formation-benefits').first().waitFor();
+  await p.waitForFunction(()=>!document.querySelector('[data-max-results]').textContent.includes('计算中…'));
+  const actual=await p.locator('.formation-max-table tbody tr').evaluateAll(rows=>rows.map(row=>Array.from(row.cells).slice(6).map(cell=>cell.textContent)));
+  const expected=await p.evaluate(()=>{
+   const f=window.FORMATIONS_DATA.items.find(f=>f.name==='地泽二十四');
+   const ref=window.FORMATION_MAX_REFERENCE_DATA.formations.find(row=>row.name==='地泽二十四');
+   const adapted=window.FORMATION_LIMIT_ADAPTER.buildLimitProgress(f,ref);
+   const result=window.FORMATIONS.recommendFormation(f,adapted.progress,{mode:'custom',weights:['0','100','0','0','0','0'],scales:['1','8','6','1.5','2','1']});
+   return window.FORMATION_LIMIT_ADAPTER.recommendationRows(ref,result).map(row=>[row.position==null?'—':String(row.position),row.trainAttribute||'—',row.gainAttribute||'—']);
+  });
+  assert.deepEqual(actual,expected);
+  assert.equal(await getAccountItem(p,'qinshi_formation_progress_v1'),saved);
+  assert.equal(await p.locator('[data-personal-settings] [name="weight1"]').inputValue(),'100');
  }finally{await p.close();}
 });
 test('custom settings apply, cancel and restore without accepting invalid drafts',async()=>{
@@ -139,17 +174,15 @@ test('custom settings apply, cancel and restore without accepting invalid drafts
  try{
   await p.locator('[data-personal-settings] button[type="submit"]').click();
   await p.locator('[data-personal-output] .formation-benefits').first().waitFor();
-  await p.locator('[data-formation-view="reference"]').click();
-  await p.locator('[data-limit-select="地泽二十四"]').click();
-  const form=p.locator('[data-limit-settings] form');
-  const output=p.locator('[data-limit-output]');
+  const form=p.locator('[data-personal-settings] form');
+  const output=p.locator('[data-personal-output]');
   await output.locator('.formation-benefits').first().waitFor();
   await form.locator('details summary').click();
   const weight=form.locator('input[name="weight0"]');
   await weight.fill('13');
   await form.locator('[data-cancel-parameters]').click();
   assert.equal(await weight.inputValue(),'12');
-  assert.equal(await form.locator('select[name="mode"]').inputValue(),'weighted');
+  assert.equal(await form.locator('select').count(),0);
   await weight.fill('');
   const before=await output.innerText();
   await form.locator('button[type="submit"]').click();
@@ -157,16 +190,15 @@ test('custom settings apply, cancel and restore without accepting invalid drafts
   assert.equal(await output.innerText(),before);
   await weight.fill('13');
   await form.locator('button[type="submit"]').click();
-  await p.waitForFunction(()=>document.querySelector('[data-limit-output]')?.textContent?.includes('推荐模式：自定义权重'));
-  assert.equal(await p.locator('[data-personal-settings] select[name="mode"]').inputValue(),'custom');
-  assert.equal(await p.locator('[data-personal-output] .formation-benefits').count(),0);
-  const applied=p.locator('[data-limit-settings] form');
+  await output.locator('.formation-benefits').first().waitFor();
+  assert.equal(await p.locator('[data-personal-settings] input[name="weight0"]').inputValue(),'13');
+  const applied=p.locator('[data-personal-settings] form');
   await applied.locator('details summary').click();
   await applied.locator('[data-default-parameters]').click();
   assert.equal(await applied.locator('input[name="weight0"]').inputValue(),'12');
   await applied.locator('button[type="submit"]').click();
-  await p.waitForFunction(()=>document.querySelector('[data-limit-output]')?.textContent?.includes('推荐模式：综合推荐'));
-  assert.equal(await p.locator('[data-personal-settings] select[name="mode"]').inputValue(),'weighted');
+  await output.locator('.formation-benefits').first().waitFor();
+  assert.equal(await p.locator('[data-personal-settings] input[name="weight0"]').inputValue(),'12');
  }finally{await p.close();}
 });
 test('thrown account writes preserve archive, editor draft and prior result',async()=>{
@@ -277,7 +309,7 @@ test('stale asynchronous recommendation cannot overwrite changed scoring paramet
   });
   await p.locator('[data-personal-settings] button[type="submit"]').click();
   assert.equal(await p.evaluate(()=>window.__pendingFormationRecommendation.length),1);
-  await p.locator('[data-personal-settings] select[name="mode"]').selectOption('legacy');
+  await p.locator('[data-personal-settings] input[name="weight0"]').fill('13');
   await p.locator('[data-personal-settings] button[type="submit"]').click();
   assert.equal(await p.evaluate(()=>window.__pendingFormationRecommendation.length),2);
   await p.evaluate(async()=>{
@@ -285,7 +317,7 @@ test('stale asynchronous recommendation cannot overwrite changed scoring paramet
    await new Promise(resolve=>setTimeout(resolve,0));
   });
   assert.doesNotMatch(await p.locator('[data-personal-output]').innerText(),/987654321/);
-  assert.equal(await p.locator('[data-personal-settings] select[name="mode"]').inputValue(),'legacy');
+  assert.equal(await p.locator('[data-personal-settings] input[name="weight0"]').inputValue(),'13');
  }finally{await p.close();}
 });
 test('progress editor preserves focused input through Chromium IME composition',async()=>{

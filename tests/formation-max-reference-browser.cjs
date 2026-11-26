@@ -16,6 +16,8 @@ for(const width of [390,1280])test(width+'px max reference remains separate from
   assert.equal(await ref.isVisible(),false);
   await page.locator('[data-formation-view="reference"]').click();
   await ref.waitFor({state:'visible'});
+  assert.equal(await ref.locator('[data-limit-select]').count(),0);
+  assert.equal(await page.locator('.formation-reference').count(),0);
   const saved=await page.evaluate(()=>JSON.stringify(Object.fromEntries(Object.entries(localStorage))));
   assert.equal(await page.locator('.formation-selector-panel').isVisible(),false);
   assert.equal(await ref.locator('.formation-max-controls label').count(),0);

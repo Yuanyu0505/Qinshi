@@ -114,6 +114,27 @@ for (const [width, height] of sizes) test('three surfaces at ' + width + '×' + 
       assert.equal(progress.lastCellWithinBoard, true);
       assert.equal(progress.lastCellVisibleOrScrollable, true);
       if (width >= 820) assert.equal(progress.sideBySide, true);
+      const surfaces=await page.locator('#wooden-man-progress > .panel:not(.wooden-activity-panel)').evaluateAll(nodes=>nodes.map(node=>{
+        const style=getComputedStyle(node);
+        return [style.borderTopWidth,style.backgroundColor,style.backgroundImage];
+      }));
+      surfaces.forEach(style=>assert.deepEqual(style,['1px','rgba(0, 0, 0, 0)','none']));
+      assert.equal(await page.getByText('当前游戏账号',{exact:true}).count(),0);
+      const activity=page.locator('.wooden-activity-panel');
+      const account=await activity.boundingBox();
+      const date=await activity.locator('[data-wooden-end-date]').boundingBox();
+      const remaining=await activity.locator('.wooden-remaining-time').boundingBox();
+      assert.ok(Math.abs(date.y-remaining.y)<=1 && Math.abs(date.height-remaining.height)<=1,'date and remaining time align at equal height');
+      assert.ok(Math.abs(date.width-remaining.width)<=1,'date and remaining time have matching widths');
+      const current=await page.locator('.wooden-current-panel').boundingBox();
+      assert.ok(current.y-account.y-account.height>=32,'activity and progress need additional spacing');
+      const firstCell=await page.locator('[data-wooden-cell="0"]').boundingBox();
+      const floorTitle=await page.locator('.wooden-section-head strong').boundingBox();
+      assert.ok(Math.abs(firstCell.x-floorTitle.x)<=1,'board starts at the floor title left edge');
+      const clearBoard=await page.locator('[data-wooden-action="clear-board"]').boundingBox();
+      const clearEvent=await page.locator('[data-wooden-action="clear-event"]').boundingBox();
+      assert.ok(clearEvent.y>=clearBoard.y+clearBoard.height,'account reset follows floor reset');
+      assert.ok(Math.abs(clearBoard.width-clearEvent.width)<=1 && Math.abs(clearBoard.height-clearEvent.height)<=1,'reset buttons share dimensions');
       const packages = page.locator('details[data-wooden-package-settings]');
       if (await packages.getAttribute('open') === null) await packages.locator('summary').click();
       assert.equal(await packages.locator('[data-wooden-package]').count(), 20);
@@ -127,6 +148,15 @@ for (const [width, height] of sizes) test('three surfaces at ' + width + '×' + 
     if (!base) {
       const quick = page.locator('select[data-wooden-quick-target]');
       assert.equal(await quick.locator('option').count(), 14);
+      const command=page.locator('.wooden-calculator-command');
+      assert.equal(await command.locator(runButton).count(),1);
+      if(width>=768){
+        const target=await command.locator('[data-wooden-target-input]').boundingBox();
+        const calculate=await command.locator(runButton).boundingBox();
+        assert.ok(Math.abs(target.y+target.height-calculate.y-calculate.height)<=1,'target and calculate align on one row');
+        const row=await command.boundingBox();
+        assert.ok(Math.abs(row.x+row.width-calculate.x-calculate.width)<=1,'calculation row fills the available width');
+      }
       const advanced = page.locator('[data-wooden-advanced]');
       await advanced.locator(':scope > summary').click();
       assert.equal(await advanced.locator('details[data-wooden-limit-stage]').count(), 5);
@@ -149,6 +179,8 @@ for (const [width, height] of sizes) test('three surfaces at ' + width + '×' + 
     const reference = await metrics(page);
     if (!base) {
       noOverflow(reference);
+      assert.equal(await page.locator('#wooden-man-reference h2.panel-title').count(),6);
+      assert.equal(await page.locator('.wooden-table-wrap table').first().evaluate(node=>getComputedStyle(node).fontSize),'15px');
       if (width < 768) {
         const labels = await page.locator('.wooden-table-wrap').evaluateAll(tables => tables.flatMap(table => [...table.querySelectorAll('tbody td')].map(td => td.dataset.label || td.querySelector('[aria-hidden="true"]')?.textContent || '')));
         assert.ok(labels.length > 0 && labels.every(Boolean), 'mobile card lost its field labels');

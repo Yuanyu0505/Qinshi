@@ -1161,13 +1161,16 @@
       if (!partition || partition.querySelector(".reference-module-heading")) return;
       const heading = document.createElement("header");
       heading.className = "reference-module-heading";
+      const title = partition.querySelector(".pilots-heading h2") || document.createElement("h2");
+      if (!title.textContent) title.textContent = PARTITION_TITLES[name] || name;
+      title.tabIndex = -1;
       const back = document.createElement("button");
       back.type = "button";
       back.className = "seg";
       back.dataset.referenceReturn = "true";
-      back.textContent = "返回其他资料";
-      heading.append(back);
-      partition.prepend(heading);
+      back.textContent = "返回目录";
+      heading.append(title, back);
+      (partition.querySelector(".pilots-workbench") || partition).prepend(heading);
     }
 
     function mobileMoreFocusable() {
@@ -2086,6 +2089,15 @@
   }
 
   function applyAtlas(changedId, previousEditor) {
+    const searchHints = {
+      all: "搜索弟子、图鉴、装备或获取途径；等级如：10级以下",
+      disciple: "搜索图鉴弟子姓名，如：盖聂 / 端木蓉",
+      atlas: "搜索所属图鉴名称或组别",
+      equipment: "搜索当前至目标等级所需的装备名称",
+      acquire: "搜索弟子获取途径，如：禁地 / 商店",
+      level: "搜索当前图鉴等级，如：9 / 9级 / 10级以下"
+    };
+    el.atlasSearch.placeholder = searchHints[atlasState.searchField] || searchHints.all;
     const focus = captureAtlasFocus();
     const equipmentExpanded = Boolean(el.atlasUpgradeSummary.querySelector('.atlas-summary-equipment-toggle[aria-expanded="true"]'));
     atlasRefresh.cancel();
@@ -3289,7 +3301,7 @@
 
   function bookTierDetailsHtml(item, tier) {
     if (item.stageDetailsIncomplete && Q.finalBookStage(item, tier)) {
-      return '<span class="muted-tip book-stage-unknown">中间阶段暂无资料</span>';
+      return "";
     }
     const stages = item.stages && item.stages[tier];
     if (!Array.isArray(stages) || !stages.length) return "";

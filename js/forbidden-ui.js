@@ -97,7 +97,6 @@
 
   function saveNeeds() {
     try {
-      if (ACCOUNT_STORAGE.isReadOnly && ACCOUNT_STORAGE.isReadOnly()) throw new Error("当前账号为只读状态。");
       if (ACCOUNT_STORAGE.setItem(STORE_KEY, JSON.stringify(state.needs)) === false) throw new Error("当前账号不可写入。");
       showError("", false);
       return true;

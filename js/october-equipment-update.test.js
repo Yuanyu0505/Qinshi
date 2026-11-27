@@ -151,17 +151,17 @@ test("十月增量：幻音天章只保存已知累计端点，不伪造初始�
   assert.deepEqual(plain(item.max), { 速: 148, 攻: 46, 防: 46, 血: 46, 攻防血: 46, 技免: 60, 暴击: 15, 暴伤: 15, 穿透: 15 });
 });
 
-test("十月增量：神兵幻音区分红色0锻和红金满锻累计端点", () => {
+test("十月增量：神兵幻音红色和红金统一为15阶累计且保留原属性数值", () => {
   const item = itemNamed(loadOctoberData(), "神兵幻音");
   assert.equal(item.main, "攻、内力");
   assert.equal(item.mainKey, "攻");
   assert.equal(item.bookGroup, "神兵典籍");
   assert.equal(item.stageDetailsIncomplete, true);
   assert.equal(item.stages, undefined);
-  assert.deepEqual(plain(item.summaryLabels), { 红色: "红色0锻", 红金: "红金满锻" });
+  assert.equal(item.summaryLabels, undefined);
   assert.deepEqual(plain(item.tiers.橙色), []);
   assert.deepEqual(plain(item.tiers.橙金), []);
-  assert.deepEqual(item.stageSnapshots.红色.map((entry) => entry.stage), [0]);
+  assert.deepEqual(item.stageSnapshots.红色.map((entry) => entry.stage), [15]);
   assert.deepEqual(item.stageSnapshots.红金.map((entry) => entry.stage), [15]);
   assert.deepEqual(numericTokens(item.stageSnapshots.红色[0].tokens), { 速: 145, 抗暴: 35, 攻防血: 51, 技免: 60, 暴击: 16, 暴伤: 25, 穿透: 20 });
   assert.deepEqual(numericTokens(item.stageSnapshots.红金[0].tokens), { 速: 150, 抗暴: 35, 攻防血: 51, 技免: 60, 暴击: 16, 暴伤: 25, 穿透: 20 });

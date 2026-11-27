@@ -60,13 +60,12 @@
       tiers: tiers,
       // 已知的是累计端点，不是该阶新增属性；未知品质和中间阶保持缺失。
       stageSnapshots: {
-        "红色": [{ stage: divine ? 0 : 15, tokens: tokensFor(red) }],
+        "红色": [{ stage: 15, tokens: tokensFor(red) }],
         "红金": [{ stage: 15, tokens: tokensFor(redGold) }]
       },
       stageDetailsIncomplete: true,
       max: maximums(tiers)
     };
-    if (divine) item.summaryLabels = { "红色": "红色0锻", "红金": "红金满锻" };
     return item;
   }
 

@@ -546,12 +546,12 @@
 #partition-machine-beasts .machine-core-table-scroll th:first-child { white-space: nowrap; }
 #partition-machine-beasts .machine-modification-core-reference h3 { margin: 0 0 8px; }
 #partition-machine-beasts .machine-talent-scroll { border: 1px solid var(--line); border-radius: 8px; }
-#partition-machine-beasts .machine-talent-scroll .machine-talent-element th { text-align: left; color: var(--gold); background: var(--bg2); }
+#partition-machine-beasts .machine-talent-scroll .machine-talent-element th { text-align: justify; color: var(--gold); background: var(--bg2); }
 #partition-machine-beasts .machine-talent-scroll .machine-talent-common { background: var(--bg2); }
 #partition-machine-beasts .machine-talent-scroll td { overflow-wrap: anywhere; }
 #partition-machine-beasts .machine-talent-scroll th,
-#partition-machine-beasts .machine-talent-scroll td { text-align: left; }
-#partition-machine-beasts .machine-talent-scroll thead th { text-align: center; }
+#partition-machine-beasts .machine-talent-scroll td { text-align: justify; }
+#partition-machine-beasts .machine-talent-scroll thead th { text-align: justify; }
 @media (max-width: 600px) {
   #partition-machine-beasts .machine-talent-scroll th,
   #partition-machine-beasts .machine-talent-scroll td { padding: 8px 5px; }
@@ -618,13 +618,13 @@
 #partition-machine-beasts .machine-blueprint-guide-table td { padding: 10px 12px; border-bottom: 1px solid var(--line); text-align: center; vertical-align: middle; white-space: nowrap; }
 #partition-machine-beasts .machine-blueprint-guide > h3 { margin: 14px 0 8px; }
 #partition-machine-beasts .machine-breakthrough-stage-table th:last-child,
-#partition-machine-beasts .machine-breakthrough-stage-table td:last-child { text-align: left; }
+#partition-machine-beasts .machine-breakthrough-stage-table td:last-child { text-align: justify; }
 
 #partition-machine-beasts .machine-blueprint-guide-table th { color: var(--gold-dim); }
 
 #partition-machine-beasts .machine-blueprint-guide-table thead { background: rgba(180, 138, 60, .1); }
 
-#partition-machine-beasts .machine-blueprint-guide-table th:first-child { text-align: left; }
+#partition-machine-beasts .machine-blueprint-guide-table th:first-child { text-align: justify; }
 
 #partition-machine-beasts .machine-blueprint-guide-table tbody tr:last-child > * { border-bottom: 0; }
 

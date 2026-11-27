@@ -5,6 +5,30 @@
 #partition-other-reference .ref-exp-controls > label,
 #partition-other-reference .ref-exp-form > label { display:grid;gap:6px;flex:1 1 155px;min-width:0;font-size:14px; }
 #partition-other-reference .ref-exp-controls .ref-exp-search { flex:2 1 240px; }
+#partition-other-reference [data-exp-section="fishing"] .ref-exp-controls > label { flex:1 1 120px; }
+#partition-other-reference [data-exp-section="fishing"] .ref-exp-controls .ref-exp-search { flex:2 1 220px; }
+#partition-other-reference [data-exp-section="fishing"] [data-exp-clear] { flex:0 0 auto; }
+#partition-other-reference [data-exp-section="account-levels"] .ref-exp-level-controls-scroll { overflow-x:auto;padding:5px; }
+#partition-other-reference [data-exp-section="account-levels"] [data-exp-calculation] { width:100%;box-sizing:border-box; }
+#partition-other-reference [data-exp-section="account-levels"] [data-exp-calculation]:not(:empty) { margin-bottom:20px; }
+#partition-other-reference [data-exp-section="account-levels"] .ref-exp-level-range { display:grid;grid-template-columns:repeat(2,minmax(100px,.85fr)) repeat(3,minmax(110px,1fr)) auto;min-width:760px;gap:12px; }
+#partition-other-reference [data-exp-section="account-levels"] .ref-exp-level-range > label { min-width:0; }
+#partition-other-reference [data-exp-section="account-levels"] .ref-exp-level-range button { white-space:nowrap; }
+#partition-other-reference [data-exp-section="account-levels"] [data-exp-results] table { table-layout:fixed; }
+#partition-other-reference [data-exp-section="account-levels"] [data-exp-results] th,
+#partition-other-reference [data-exp-section="account-levels"] [data-exp-results] td { vertical-align:middle;text-align:center;padding:12px 8px;min-width:0; }
+#partition-other-reference [data-exp-section="account-levels"] [data-exp-results] th { white-space:normal; }
+#partition-other-reference [data-exp-section="account-levels"] .ref-exp-cards dl > div { grid-template-columns:max-content minmax(0,1fr);gap:16px; }
+#partition-other-reference [data-exp-section="account-levels"] .ref-exp-cards dt { white-space:nowrap; }
+#partition-other-reference [data-exp-section="account-levels"] .ref-exp-cards dd { text-align:right; }
+#partition-other-reference [data-exp-section="account-levels"] [data-exp-calculation] td:first-child { width:72%;white-space:nowrap; }
+#partition-other-reference [data-exp-section="account-levels"] [data-exp-calculation] th:last-child,
+#partition-other-reference [data-exp-section="account-levels"] [data-exp-calculation] td:last-child { text-align:justify;vertical-align:middle; }
+@media(min-width:1100px){
+ #partition-other-reference [data-exp-section="fishing"] .ref-exp-controls { flex-wrap:nowrap; }
+ #partition-other-reference [data-exp-section="fishing"] .ref-exp-controls > label { flex:1 1 0; }
+ #partition-other-reference [data-exp-section="fishing"] .ref-exp-controls .ref-exp-search { flex:2 1 0; }
+}
 #partition-other-reference .ref-exp-controls input,
 #partition-other-reference .ref-exp-controls select,
 #partition-other-reference .ref-exp-form input,
@@ -12,10 +36,12 @@
 #partition-other-reference .ref-exp-check { display:inline-flex !important;align-items:center;gap:8px; }
 #partition-other-reference .ref-exp-check input { width:20px;min-height:20px;height:20px;flex:none; }
 #partition-other-reference .ref-exp-table-scroll { max-width:100%;overflow:auto;border:1px solid var(--line,#5b4522);border-radius:6px; }
+#partition-other-reference .ref-exp-table-block { display:grid;gap:10px;min-width:0; }
+#partition-other-reference .ref-exp-table-block > .ref-exp-table-title { margin:0;font-size:17px;color:var(--gold,#dfb64c);line-height:1.6; }
 #partition-other-reference .ref-exp-table-scroll table { border-collapse:collapse;width:100%;min-width:0;font-size:14px; }
 #partition-other-reference .ref-exp-table-scroll caption { text-align:left;padding:10px;color:var(--gold,#dfb64c);font-weight:600; }
 #partition-other-reference .ref-exp-table-scroll th,
-#partition-other-reference .ref-exp-table-scroll td { padding:10px 12px;text-align:left;vertical-align:middle;border-bottom:1px solid var(--line,#5b4522);white-space:pre-line;min-width:64px;line-height:1.6; }
+#partition-other-reference .ref-exp-table-scroll td { padding:10px 12px;text-align:justify;vertical-align:middle;border-bottom:1px solid var(--line,#5b4522);white-space:pre-line;min-width:64px;line-height:1.6; }
 #partition-other-reference .ref-exp-table-scroll th { color:var(--gold,#dfb64c);white-space:nowrap; }
 #partition-other-reference .ref-exp-cards { display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,280px),1fr));gap:12px; }
 #partition-other-reference .ref-exp-cards > article { min-width:0;padding:12px;border:1px solid var(--line,#5b4522);border-radius:6px; }
@@ -30,10 +56,110 @@
 #partition-other-reference .ref-exp-result > h3 { margin:0 0 10px; }
 #partition-other-reference [data-exp-calculation]:not(:empty) { margin-top:12px; }
 #partition-other-reference .ref-exp-error { color:#ffaaa0;line-height:1.6; }
+#partition-other-reference .ref-fish-name { font-weight:600; }
+#partition-other-reference .ref-fish-green { color:#66d98b; }
+#partition-other-reference .ref-fish-blue { color:#8fcaff; }
+#partition-other-reference .ref-fish-purple { color:#d4a2ff; }
+#partition-other-reference .ref-fish-orange { color:#ffbf66; }
+#partition-other-reference .ref-fish-red { color:#ff8a80; }
+#partition-other-reference [data-exp-section="disciple-awakening"] .ref-awakening-range { display:grid;grid-template-columns:repeat(2,minmax(0,1fr)) minmax(100px,.5fr);width:100%;align-items:end;gap:12px; }
+#partition-other-reference .ref-awakening-range button { white-space:nowrap;min-height:44px; }
+#partition-other-reference .ref-awakening-materials th,
+#partition-other-reference .ref-awakening-materials td,
+#partition-other-reference .ref-awakening-totals th,
+#partition-other-reference .ref-awakening-totals td { border:1px solid var(--line,#5b4522); }
+#partition-other-reference .ref-awakening-materials table,
+#partition-other-reference .ref-awakening-totals table { min-width:640px; }
+#partition-other-reference .ref-awakening-steps table { min-width:1100px; }
+#partition-other-reference .ref-awakening-steps th:nth-child(1) { width:54px; }
+#partition-other-reference .ref-awakening-steps th:nth-child(2) { width:170px; }
+#partition-other-reference .ref-awakening-steps th:nth-child(3) { width:430px; }
+#partition-other-reference .ref-awakening-steps td:nth-child(2),
+#partition-other-reference .ref-awakening-steps td:nth-child(3) { white-space:nowrap; }
+#partition-other-reference .ref-awakening-steps td:nth-child(3),
+#partition-other-reference .ref-awakening-steps th:nth-child(3) { padding-right:28px; }
+#partition-other-reference .ref-awakening-steps td:nth-child(4),
+#partition-other-reference .ref-awakening-steps th:nth-child(4) { padding-left:20px; }
+#partition-other-reference .ref-awakening-steps td:nth-child(4) { text-align:justify;text-align-last:left;text-justify:inter-character; }
+#partition-other-reference .ref-exp-packed-records table { min-width:780px;table-layout:fixed; }
+#partition-other-reference .ref-exp-packed-records th,
+#partition-other-reference .ref-exp-packed-records td { border:1px solid var(--line,#5b4522);min-width:0;overflow-wrap:anywhere; }
+#partition-other-reference [data-exp-section="first-releases"] .ref-exp-packed-records :is(th,td):nth-child(even) { white-space:nowrap;font-variant-numeric:tabular-nums; }
+#partition-other-reference :is([data-exp-section="jinchan"],[data-exp-section="sage"]) .ref-exp-controls { display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px; }
+#partition-other-reference :is([data-exp-section="jinchan"],[data-exp-section="sage"]) .ref-exp-controls .ref-exp-search { grid-column:span 2; }
+#partition-other-reference [data-exp-section="jinchan"] .ref-exp-controls { grid-template-columns:repeat(4,minmax(0,1fr)); }
+#partition-other-reference [data-exp-section="jinchan"] .ref-exp-controls .ref-exp-search { grid-column:span 3; }
+#partition-other-reference :is([data-exp-section="jinchan"],[data-exp-section="sage"]) .ref-exp-table-scroll :is(th,td) { border:1px solid var(--line,#5b4522); }
+#partition-other-reference :is([data-exp-section="jinchan"],[data-exp-section="sage"]) .ref-exp-table-scroll tbody tr:nth-child(even) { background:rgba(255,255,255,.025); }
+#partition-other-reference .ref-jinchan-events table { min-width:860px;table-layout:auto;font-size:15px; }
+#partition-other-reference .ref-jinchan-events th:nth-child(1) { width:6%; }
+#partition-other-reference .ref-jinchan-events th:nth-child(2) { width:13%; }
+#partition-other-reference .ref-jinchan-events th:nth-child(3) { width:17%; }
+#partition-other-reference .ref-jinchan-events th:nth-child(4) { width:29%; }
+#partition-other-reference .ref-jinchan-events th:nth-child(5) { width:24%; }
+#partition-other-reference .ref-jinchan-events th:nth-child(6) { width:11%; }
+#partition-other-reference .ref-jinchan-events :is(th,td) { padding:12px;line-height:1.7;vertical-align:middle; }
+#partition-other-reference .ref-jinchan-events td { white-space:normal;overflow-wrap:break-word; }
+#partition-other-reference .ref-jinchan-events :is(th,td):is(:first-child,:last-child) { white-space:nowrap; }
+#partition-other-reference .ref-jinchan-events .ref-exp-cards dl > div:last-child dd { white-space:nowrap;overflow-wrap:normal; }
+#partition-other-reference .ref-jinchan-blessings table { min-width:480px;table-layout:auto;font-size:15px; }
+#partition-other-reference .ref-jinchan-blessings :is(th,td) { padding:12px 16px;white-space:nowrap;line-height:1.7; }
+#partition-other-reference .ref-jinchan-blessings .ref-exp-cards dd { white-space:nowrap; }
+#partition-other-reference [data-exp-section="sage"] .ref-sage-controls-scroll { overflow-x:auto;max-width:100%;padding:5px; }
+#partition-other-reference [data-exp-section="sage"] .ref-sage-range { display:grid;grid-template-columns:minmax(100px,1fr) minmax(100px,1fr) minmax(120px,1.2fr) minmax(144px,1.4fr) max-content minmax(72px,.6fr);gap:12px;min-width:800px;align-items:end; }
+#partition-other-reference [data-exp-section="sage"] .ref-sage-range .ref-exp-check { min-height:44px;white-space:nowrap; }
+#partition-other-reference [data-exp-section="sage"] .ref-sage-range button { min-height:44px; }
+#partition-other-reference [data-exp-section="sage"] [data-exp-results] table { min-width:640px; }
+#partition-other-reference [data-exp-section="sage"] [data-exp-results] th:first-child { width:24%; }
+#partition-other-reference [data-exp-section="sage"] [data-exp-results] td { white-space:normal;overflow-wrap:anywhere; }
+#partition-other-reference [data-exp-section="sage"] [data-exp-calculation] table { table-layout:fixed; }
+#partition-other-reference [data-exp-section="sage"] [data-exp-calculation] th:first-child { width:65%; }
+#partition-other-reference [data-exp-section="sage"] .ref-sage-final :is(td,h3,dt,dd) { color:#ff6b66; }
+#partition-other-reference [data-exp-section="sage"] .ref-sage-store table { table-layout:fixed;min-width:0;font-size:15px; }
+#partition-other-reference [data-exp-section="sage"] .ref-sage-store th:first-child { width:230px; }
+#partition-other-reference [data-exp-section="sage"] .ref-sage-store th:nth-child(2) { width:170px; }
+#partition-other-reference [data-exp-section="sage"] .ref-sage-store th:nth-child(3) { width:calc((100% - 560px) * .2); }
+#partition-other-reference [data-exp-section="sage"] .ref-sage-store th:nth-child(4) { width:calc((100% - 560px) * .18); }
+#partition-other-reference [data-exp-section="sage"] .ref-sage-store th:nth-child(5) { width:calc((100% - 560px) * .2); }
+#partition-other-reference [data-exp-section="sage"] .ref-sage-store th:nth-child(6) { width:calc((100% - 560px) * .22); }
+#partition-other-reference [data-exp-section="sage"] .ref-sage-store th:nth-child(7) { width:calc((100% - 560px) * .2); }
+#partition-other-reference [data-exp-section="sage"] .ref-sage-store th:last-child { width:160px; }
+#partition-other-reference [data-exp-section="sage"] .ref-sage-store :is(th,td) { min-width:0;padding:12px 6px;line-height:1.7; }
+#partition-other-reference [data-exp-section="sage"] .ref-sage-store th { white-space:normal; }
+#partition-other-reference [data-exp-section="sage"] .ref-sage-store :is(th,td):first-child { white-space:nowrap;overflow-wrap:normal; }
+#partition-other-reference [data-exp-section="sage"] .ref-sage-store :is(th,td):nth-child(2) { white-space:nowrap;overflow-wrap:normal; }
+#partition-other-reference [data-exp-section="sage"] .ref-sage-store td:nth-child(n+3) { white-space:nowrap;overflow-wrap:normal; }
+#partition-other-reference [data-exp-section="sage"] .ref-sage-demand { display:flex;align-items:center;gap:8px;white-space:nowrap;min-height:44px; }
+#partition-other-reference [data-exp-section="sage"] .ref-sage-demand .ref-exp-check { flex:none;padding:0;margin:0; }
+#partition-other-reference [data-exp-section="sage"] .ref-sage-demand input[type="number"] { box-sizing:border-box;width:74px;min-width:0;min-height:44px;padding:8px;flex:none;font:inherit; }
+#partition-other-reference [data-exp-section="sage"] .ref-sage-demand [aria-invalid="true"] { border-color:#ff6b66; }
+#partition-other-reference [data-exp-section="sage"] .ref-sage-summary { display:grid;gap:18px;margin-top:24px;min-width:0; }
+#partition-other-reference [data-exp-section="sage"] .ref-sage-summary:empty,
+#partition-other-reference [data-exp-section="sage"] .ref-sage-summary[hidden] { display:none; }
+#partition-other-reference [data-exp-section="sage"] .ref-sage-summary h3 { margin:0; }
+#partition-other-reference [data-exp-section="sage"] .ref-sage-summary header .ref-exp-check { white-space:nowrap; }
+#partition-other-reference [data-exp-section="sage"] .ref-sage-summary > header { flex-wrap:nowrap;gap:8px; }
+#partition-other-reference [data-exp-section="sage"] .ref-sage-summary > header h3 { white-space:nowrap; }
+#partition-other-reference [data-exp-section="sage"] .ref-sage-summary table { min-width:600px; }
+#partition-other-reference [data-exp-section="sage"] .ref-sage-summary th:first-child { width:30%; }
+#partition-other-reference [data-exp-section="sage"] .ref-sage-summary :is(th,td) { vertical-align:middle; }
+#partition-other-reference [data-exp-section="sage"] .ref-sage-rules table { table-layout:fixed;min-width:620px;font-size:15px; }
+#partition-other-reference [data-exp-section="sage"] .ref-sage-rules th:first-child { width:180px; }
+#partition-other-reference [data-exp-section="sage"] .ref-sage-rules th:last-child { width:116px; }
+#partition-other-reference [data-exp-section="sage"] .ref-sage-rules td:first-child { white-space:nowrap;overflow-wrap:normal; }
+#partition-other-reference [data-exp-section="sage"] .ref-sage-rules :is(th,td) { text-align:justify;line-height:1.7;padding:12px; }
+@container(max-width:760px){
+ #partition-other-reference [data-exp-section="sage"] .ref-sage-store table { min-width:880px; }
+}
 @media(max-width:600px){
  #partition-other-reference .ref-exp-controls > label,
  #partition-other-reference .ref-exp-form > label { flex-basis:calc(50% - 12px); }
  #partition-other-reference .ref-exp-controls .ref-exp-search { flex-basis:100%; }
+ #partition-other-reference [data-exp-section="fishing"] .ref-exp-controls .ref-exp-search { flex:1 1 180px; }
+ #partition-other-reference [data-exp-section="account-levels"] .ref-exp-level-range { gap:6px; }
  #partition-other-reference .ref-exp-calculator,
  #partition-other-reference .ref-exp-result { padding:10px; }
+ #partition-other-reference :is([data-exp-section="jinchan"],[data-exp-section="sage"]) .ref-exp-controls { grid-template-columns:repeat(2,minmax(0,1fr)); }
+ #partition-other-reference :is([data-exp-section="jinchan"],[data-exp-section="sage"]) .ref-exp-controls .ref-exp-search { grid-column:1 / -1; }
+ #partition-other-reference [data-exp-section="disciple-awakening"] .ref-awakening-range { grid-template-columns:repeat(2,minmax(0,1fr)) 88px;gap:8px; }
 }

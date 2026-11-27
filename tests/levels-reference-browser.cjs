@@ -44,7 +44,7 @@ for(const width of [320,390,820,1366,1920])test('levels responsive layout '+widt
       }
       await p.locator('[data-ref-view]').selectOption('table');
       assert.ok(await p.locator('.ref-table th,.ref-table td').evaluateAll(nodes=>nodes.every(n=>getComputedStyle(n).verticalAlign==='middle')));
-      assert.ok(await p.locator('.ref-table th,.ref-table td').evaluateAll(nodes=>nodes.every(n=>getComputedStyle(n).textAlign==='left')));
+      assert.ok(await p.locator('.ref-table th,.ref-table td').evaluateAll(nodes=>nodes.every(n=>getComputedStyle(n).textAlign==='justify')));
       assert.ok(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
     }
     assert.equal(await p.evaluate(()=>JSON.stringify({...localStorage})),storage);
@@ -81,7 +81,7 @@ test('levels search, overlapping ranges, drafts, card switching and source viewe
     await p.locator('[data-ref-zoom="in"]').click();assert.equal(await p.locator('.ref-viewer output').innerText(),'125%');
     await p.locator('[data-ref-zoom="reset"]').click();assert.equal(await p.locator('.ref-viewer output').innerText(),'100%');
     await p.locator('[data-ref-close]').click();assert.ok(await trigger.evaluate(n=>document.activeElement===n));
-    await p.locator('[data-ref-home]').click();assert.equal(await p.locator('[data-ref-section]').count(),9);
+    await p.locator('[data-ref-home]').click();assert.equal(await p.locator('[data-ref-section]').count(),23);
     assert.deepEqual(errors,[]);
   }finally{await context.close();}
 });

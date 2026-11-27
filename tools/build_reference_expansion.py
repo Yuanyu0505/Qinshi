@@ -61,7 +61,7 @@ def build(sheets):
         ('fishing', '钓鱼', '鱼类属性、强化满级与收集汇总'),
         ('account-levels', '账号升级', '等级经验、体力与升级区间合计'),
         ('disciple-awakening', '弟子升金', '五行觉醒逐段材料与区间合计'),
-        ('jinchan', '金蟾试炼', '正式服事件选项、结果与贡献对照'),
+        ('jinchan', '金蟾试炼', '事件选项、结果与贡献对照'),
         ('sage', '小圣贤庄', '圣贤令估算、兑换与宗师奖励规则')]:
         data['sections'].append({'id': ident, 'name': title, 'description': desc, 'sourcePaths': []})
 
@@ -72,7 +72,7 @@ def build(sheets):
             'release-dates': ('弟子首发','B2:M27'), 'costume-names': ('戎装','B2:K24'),
             'fishing-species': ('钓鱼','B2:O128'), 'fishing-maxima': ('钓鱼','B2:O128'), 'fishing-totals': ('钓鱼','J2:W8'),
             'account-experience': ('账号升级','A1:F101'), 'awakening-steps': ('弟子升金','A1:E248'),
-            'awakening-source-totals': ('弟子升金','H1:U21'), 'jinchan-events': ('金蟾试炼','L10:R122'),
+            'awakening-source-totals': ('弟子升金','A1:E248'), 'jinchan-events': ('金蟾试炼','L10:R122'),
             'jinchan-blessings': ('金蟾试炼','M3:Q7'), 'sage-experience': ('小圣','C5:H35'),
             'sage-store': ('小圣','J2:P34'), 'sage-master-rules': ('小圣','R2:T20')
         }
@@ -148,6 +148,12 @@ def build(sheets):
                 if col=='B' and row==9:
                     corrections.append({'source': '弟子升金!B9', 'original': value, 'corrected': '10艮山之尘', 'reason': '用户确认 2026-11-24'})
                     value = '10艮山之尘'
+                if element == '火' and row == 152 and col == 'D':
+                    corrections.append({'source': '弟子升金!D152', 'original': value, 'corrected': '2震雷之尘', 'reason': '用户确认 2026-11-27'})
+                    value = '2震雷之尘'
+                if element == '木' and row == 59 and value == '10乾天之':
+                    corrections.append({'source': src('弟子升金', f'{col}{row}'), 'original': value, 'corrected': '10乾天之尘', 'reason': '用户确认 2026-11-27'})
+                    value = '10乾天之尘'
                 match = re.fullmatch(r'(\d+)\s*([^\d]+)', value)
                 if not match:
                     issues.append({'source': src('弟子升金',f'{col}{row}'), 'text':value})
@@ -169,7 +175,17 @@ def build(sheets):
                 complete=not any(name in issue['text'] for step in relevant for issue in step['issues'])
                 if known!=count or not complete:
                     data['sourceDiscrepancies'].append({'element':element,'name':name,'sourceCount':count,'stepCount':known if complete else None,'knownSubtotal':known,'complete':complete,'source':src('弟子升金',f'{a}{row}:{b}{row}')})
-    table('awakening-source-totals','disciple-awakening','0星至9星原表合计',['五行','材料','数量'],totals,note='原表合计与逐段求和存在差异，区间计算按逐段材料；涉及数量缺失的阶段仅提供不完整结果。')
+    # Workbook summary counts remain historical metadata only; all active totals
+    # are derived from the user-corrected individual stages.
+    totals = []
+    for element in ['金', '木', '水', '火', '土']:
+        summed = {}
+        for step in data['awakening']:
+            if step['element'] == element:
+                for material in step['materials']:
+                    summed[material['name']] = summed.get(material['name'], 0) + material['count']
+        totals.extend([element, name, count] for name, count in summed.items())
+    table('awakening-source-totals','disciple-awakening','0至9星合计',['五行','材料','数量'],totals,verification='derived-from-user-corrected-steps')
 
     s = sheets['金蟾试炼']
     place=event=choice=''
@@ -182,23 +198,23 @@ def build(sheets):
         result=s.get(f'O{row}','')
         if not place or not event or not choice or not result:continue
         data['jinchan'].append({'id':f'jinchan-{row}','place':place,'sourcePlace': '城郭' if place=='城邦' else place,'event':event,'choice':choice,'result':result,'reward':s.get(f'P{row}','—'),'contribution':s.get(f'Q{row}','—'),'source':src('金蟾试炼',f'L{row}:R{row}')})
-    table('jinchan-events','jinchan','正式服事件与选项',['地点','事件','处理选项','结果','加成／掉落','贡献'],[[x['place'],x['event'],x['choice'],x['result'],x['reward'],x['contribution']] for x in data['jinchan']])
-    table('jinchan-blessings','jinchan','正式服地点与祝福',['地点','属性加成','产出祝福','祝福加成','比例'],[[s[f'{c}3'],s[f'{c}4'],s[f'{c}5'],s[f'{c}6'],str(num(s[f'{c}7'])*100)+'%'] for c in 'NOPQ'])
+    table('jinchan-events','jinchan','事件与选项',['地点','事件','处理选项','结果','加成／掉落','贡献'],[[x['place'],x['event'],x['choice'],x['result'],x['reward'],x['contribution']] for x in data['jinchan']])
+    table('jinchan-blessings','jinchan','地点与祝福',['地点','属性加成','产出祝福','祝福加成','比例'],[[s[f'{c}3'],s[f'{c}4'],s[f'{c}5'],s[f'{c}6'],str(num(s[f'{c}7'])*100)+'%'] for c in 'NOPQ'])
 
     s = sheets['小圣']
-    data['sage']={'days':27,'weeks':4,'cumulative':True,'masterMultiplier':3,'stamina':[[50,30],[100,60],[150,90]],'activity':[[10,20],[15,30],[25,50],[40,80],[50,100]],'weeklySpend':[[5000,500],[10000,800],[30000,4000]],'weeklyRecharge':[[30,500],[198,800],[648,4000]],'rechargeExperiencePerYuan':1,'corrections':[{'source':'小圣!C7','original':10,'corrected':100,'reason':'用户确认 2026-11-24'},{'source':'小圣!C5:H35','reason':'所有档位累计领取；旧版最高档示例不作为计算规则'}]}
-    table('sage-experience','sage','经验与圣贤令',['项目','达到条件','经验奖励','周期'],[[label,value,xp,period] for key,label,period in [('stamina','日消耗体力','每日'),('activity','日活跃度','每日'),('weeklySpend','周消费元宝','每周'),('weeklyRecharge','周累计充值','每周')] for value,xp in data['sage'][key]]+[['充值额外经验','每充值1元',1,'按4周充值总额'],['圣贤令','每100经验',1,'最终向下取整'],['宗师奖励','圣贤令倍率',3,'不自动追加解锁充值']])
+    data['sage']={'days':27,'weeks':4,'cumulative':False,'masterMultiplier':3,'stamina':[[50,30],[100,60],[150,90]],'activity':[[10,20],[15,30],[25,50],[40,80],[50,100]],'weeklySpend':[[5000,500],[10000,800],[30000,4000]],'weeklyRecharge':[[30,500],[198,800],[648,4000]],'rechargeExperiencePerYuan':1,'corrections':[{'source':'小圣!C7','original':10,'corrected':100,'reason':'用户确认 2026-11-24'},{'source':'小圣!C5:H35','reason':'用户于2026-11-27修订：同项目每次只领取符合条件的最高档奖励，不累加低档奖励'}]}
+    table('sage-experience','sage','经验与圣贤令',['项目','达到条件','经验奖励','周期'],[[label,value,xp,period] for key,label,period in [('stamina','日消耗体力','每日'),('activity','日活跃度','每日'),('weeklySpend','周消费元宝','每周'),('weeklyRecharge','周累计充值','每周')] for value,xp in data['sage'][key]]+[['充值额外经验','每充值1元',1,'按4周充值总额'],['圣贤令','每100经验','得1圣贤令','最终向下取整'],['宗师奖励','圣贤令倍率','3倍圣贤令','198元购买且计入累计充值']])
     store=[]
     for row in range(5,35):
         name=s.get(f'J{row}',''); quantity=num(s.get(f'L{row}')); price=num(s.get(f'M{row}')); limit=num(s.get(f'N{row}'))
         if not name or quantity is None:continue
         band = 0 if row < 12 else 60 if row < 20 else 180 if row < 28 else 300
         store.append([band,name,quantity,price,limit,num(s.get(f'O{row}')),num(s.get(f'P{row}'))])
-    table('sage-store','sage','商城兑换',['原表分档','商品','每份数量','单价／圣贤令','兑换上限','总数量','总价／圣贤令'],store)
+    table('sage-store','sage','商城兑换',['消耗圣贤令数量','商品','每份数量','单价','兑换上限','总数量','总价'],store)
     rules=[]
     for row in range(4,21):
         if s.get(f'S{row}'):rules.append([s.get(f'S{row}'),s.get(f'T{row}','—')])
-    table('sage-master-rules','sage','宗师奖励计入规则',['项目','原表规则'],rules,note='原表历史资料，不代表当前活动承诺。')
+    table('sage-master-rules','sage','宗师奖励计入规则',['项目','原表规则'],rules)
     data['meta']={'sourceFile':'秦时相关（更新贯侯钟离昧）20260618.xlsx','sourceSheets':['弟子首发','戎装','钓鱼','账号升级','弟子升金','金蟾试炼','小圣'],'confirmedAt':'2026-11-24'}
     return data
 

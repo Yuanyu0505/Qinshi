@@ -30,8 +30,7 @@ async function scenario(width, separate, run) {
       }
       window.QinshiAccounts.setItem(key, JSON.stringify(state));
     }, { key: KEY, separate });
-    await page.locator('[data-realm-action="reload"]').click();
-    await page.locator('[data-realm-id="gaoyue"]').click();
+    await page.evaluate(()=>window.dispatchEvent(new Event('pageshow')));
     await page.locator('[data-realm-mode="planner"]').click();
     const before = await page.evaluate(key => window.QinshiAccounts.getItem(key), KEY);
     await page.locator('[data-realm-calculate]').click();
@@ -52,7 +51,7 @@ for (const width of [320, 390, 820, 1280]) test(width + ': period cash is identi
     assert.doesNotMatch(await plan.innerText(), /折后金额合计|预算取整差额/);
     const budget = plan.locator('.realm-budget');
     assert.doesNotMatch(await budget.innerText(), /向上取整/);
-    assert.match(await budget.innerText(), /^总计折后预算\s*¥2,330$/);
+    assert.match(await budget.innerText(), /^总计折后预算\s*¥2330$/);
     assert.equal(await budget.evaluate(node => getComputedStyle(node).whiteSpace), 'nowrap');
     assert.equal(await budget.evaluate(node => {
       const label = document.createRange(); label.selectNode(node.firstChild);

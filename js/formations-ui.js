@@ -95,7 +95,7 @@
       '<div class="formation-max-controls"><select data-max-formation aria-label="极限属性合阵"><option value="">全部合阵</option>' +
       reference.formations.map(function (formation) { return '<option value="' + escapeHtml(formation.name) + '">' + escapeHtml(formation.name) + '</option>'; }).join('') +
       '</select><select data-max-sort aria-label="极限属性排序"><option value="source">资料顺序</option><option value="attack">攻击降序</option><option value="defense">防御降序</option><option value="hp">血量降序</option></select>' +
-      '<input class="formation-max-query" type="search" data-max-query aria-label="搜索极限属性" placeholder="搜索合阵或弟子名称" autocomplete="off"></div><div data-limit-recommendation></div><div data-max-results aria-live="polite"></div>';
+      '<input class="formation-max-query" type="search" data-max-query aria-label="搜索极限属性" placeholder="搜索合阵或极限属性弟子，如：地泽二十四 / 典庆" autocomplete="off"></div><div data-limit-recommendation></div><div data-max-results aria-live="polite"></div>';
     el.workspace.parentNode.insertBefore(panel, el.workspace);
     function refresh() {
       var rows = maxReferenceRows({formation: panel.querySelector('[data-max-formation]').value, query: panel.querySelector('[data-max-query]').value, sort: panel.querySelector('[data-max-sort]').value});

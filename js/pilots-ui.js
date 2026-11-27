@@ -60,7 +60,7 @@
       '<div class="pilots-filter-row" data-pilots-ranks role="group" aria-label="非机师突破阶数" hidden>' +
       button('data-pilots-rank', '', '全部阶数', true) + [15, 20, 25].map(function (rank) { return button('data-pilots-rank', rank, rank + '阶', false); }).join('') + '</div>' +
       '<div class="pilots-search-field"><label class="pilots-search-label" for="pilots-search">搜索名字、条件或效果</label>' +
-      '<input id="pilots-search" class="pilots-search" type="search" placeholder="如：端木蓉、护盾、夜之信条" autocomplete="off"></div>' +
+      '<input id="pilots-search" class="pilots-search" type="search" placeholder="搜索弟子、触发条件或效果，如：端木蓉 / 护盾" autocomplete="off"></div>' +
       '<div class="pilots-category-notes" data-pilots-category-notes role="note" aria-label="机师类别生效说明" hidden>' +
       data.categories.map(function (category) {
         return '<p data-pilots-category-note="' + escape(category.id) + '"><strong>' + escape(category.name) + '：</strong>' + escape(category.condition) + '</p>';

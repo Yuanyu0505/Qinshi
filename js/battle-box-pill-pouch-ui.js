@@ -159,7 +159,7 @@
       escapeHtml(definition.name) + '</strong><span>+' + DATA.battleQualityCaps[slot.quality] +
       '级上限</span></div><label><span>装备名称（选填）</span><input type="search" autocomplete="off" aria-controls="' + listId +
       '" value="' + escapeHtml(slot.itemName) + '" data-edit-equipment="' + definition.id +
-      '" placeholder="可留空，输入关键词匹配装备"></label><div id="' + listId +
+      '" placeholder="可留空，输入' + escapeHtml(definition.name) + '名称匹配装备"></label><div id="' + listId +
       '" class="battle-pouch-equipment-matches" role="group" aria-label="装备匹配结果" hidden></div><label><span>品质（必填）</span><select required data-edit-equipment-quality="' + definition.id + '">' +
       qualityOptions(DATA.battleQualityNames, slot.quality, false) +
       '</select></label></article>';

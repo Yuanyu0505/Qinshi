@@ -7,11 +7,15 @@
   function directorySections(root){
     var sections=root.OTHER_REFERENCE_DATA.sections.slice(),ids=new Set(sections.map(function(s){return s.id;}));
     ((root.REFERENCE_EXPANSION_DATA||{}).sections||[]).forEach(function(section){if(!ids.has(section.id)){sections.push(section);ids.add(section.id);}});
-    return sections;
+    return sections.filter(function(s){return s.id!=='settings';}).concat(sections.filter(function(s){return s.id==='settings';}));
   }
   function normalizeSectionOrder(sections,saved){
     var ids=sections.map(function(s){return s.id;}),order=[];
     (Array.isArray(saved)?saved:[]).concat(ids).forEach(function(id){if(ids.includes(id)&&!order.includes(id))order.push(id);});
+    var savedIds=(Array.isArray(saved)?saved:[]).filter(function(id){return ids.includes(id);});
+    if(!savedIds.includes('settings')||savedIds.indexOf('settings')===savedIds.length-1){
+      order=order.filter(function(id){return id!=='settings';}).concat(order.includes('settings')?['settings']:[]);
+    }
     return order;
   }
   function filterSections(sections,query){var q=String(query||'').trim().toLocaleLowerCase();return sections.filter(function(s){return s.name.toLocaleLowerCase().includes(q);});}
@@ -188,7 +192,7 @@
     }
     function home(){
       parkSixHalls();
-      body.innerHTML='<section class="panel"><h2 tabindex="-1">其他资料</h2><div class="ref-directory-controls"><label><input type="search" aria-label="搜索分区" data-ref-directory-search placeholder="输入分区名称" value="'+esc(directoryQuery)+'"'+(sorting?' disabled':'')+'></label><button type="button" class="seg" data-ref-sort-toggle aria-pressed="'+sorting+'">'+(sorting?'完成排序':'自定义排序')+'</button><button type="button" class="seg" data-ref-order-reset'+(sorting?'':' hidden')+'>恢复默认</button></div><p class="ref-order-error" data-ref-order-status role="status" hidden></p><nav class="ref-index" aria-label="其他资料目录"></nav><p data-ref-directory-empty hidden>没有符合条件的分区</p></section>';
+      body.innerHTML='<section class="panel ref-directory"><h2 tabindex="-1">其他资料</h2><div class="ref-directory-controls"><label><input type="search" aria-label="搜索分区" data-ref-directory-search placeholder="输入分区名称" value="'+esc(directoryQuery)+'"'+(sorting?' disabled':'')+'></label><button type="button" class="seg" data-ref-sort-toggle aria-pressed="'+sorting+'">'+(sorting?'完成排序':'自定义排序')+'</button><button type="button" class="seg" data-ref-order-reset'+(sorting?'':' hidden')+'>恢复默认</button></div><p class="ref-order-error" data-ref-order-status role="status" hidden></p><nav class="ref-index" aria-label="其他资料目录"></nav><p data-ref-directory-empty hidden>没有符合条件的分区</p></section>';
       directoryResults();
     }
     function directoryResults(){
@@ -207,6 +211,19 @@
     }
     function sectionTables(){var list=tables.filter(function(t){return t.section===sectionId&&t.id!=='cards-album';});if(sectionId==='levels')list.sort(function(a,b){return (a.id==='levels-features'?-1:0)-(b.id==='levels-features'?-1:0);});return list;}
     function currentTable(){var s=state(),list=sectionTables();return list.find(function(t){return t.id===s.table;})||list[0];}
+    function searchHint(table){
+      var id=table&&table.id||'';
+      if(sectionId==='cards')return '搜索卡片属性或档位数值，如：速度 / 2.52';
+      if(sectionId==='origins')return '搜索弟子名或获取来源，如：自选包 / 活动';
+      if(sectionId==='treasure')return '搜索灵宝进阶阶段、材料或消耗数量';
+      if(sectionId==='speed')return /components/.test(id)?'搜索速度加成项目或原图说明':'搜索神将名、编号或速度数值';
+      if(sectionId==='levels')return id==='levels-leagues'?'搜索联赛、服务器类别或等级区间':'搜索开放功能、等级或前置条件';
+      if(sectionId==='spirits')return id==='spirits-combinations'?'搜索命格名称或搭配内容':id==='spirits-fates'?'搜索命格、加成属性或剑／盾位弟子':'搜索器灵名、五行、品质或基础属性';
+      if(sectionId==='disciples')return id==='disciples-soul-fruit'?'搜索弟子阶数或神魄、神果需求数量':'搜索技能进化等级或内力丹、进化石需求数量';
+      if(sectionId==='elements')return /mappings/.test(id)?'搜索五行词条、属性或气蕴组合':/gains/.test(id)?'搜索品质、进度或五行加成数值':'搜索五行培养项目或消耗说明';
+      if(sectionId==='guardians')return /materials/.test(id)?'搜索守护神阶数或碎片、残卷、印记数量':/aid/.test(id)?'搜索援助神将、编号或技能效果':'搜索守护神名、阶数或技能效果';
+      return '搜索'+(table?table.columns.slice(0,3).join('、'):'当前资料内容');
+    }
     function controls(){
       if(sectionId==='six-halls'){showSixHalls();return;}
       parkSixHalls();
@@ -215,8 +232,9 @@
       var s=state(),section=data.sections.find(function(x){return x.id===sectionId;}),list=sectionTables(),table=currentTable();
       if(table)s.table=table.id;
       var cards=sectionId==='cards';
-      body.innerHTML='<section class="panel ref-section"'+(cards?' data-ref-kind="cards"':sectionId==='speed'?' data-ref-kind="speed"':'')+'><header class="ref-heading"><h2 tabindex="-1">'+esc(section.name)+'</h2><button type="button" class="seg" data-ref-home>返回目录</button></header><div class="ref-controls"><label>'+(cards?'查找属性':'查找资料')+'<input type="search" data-ref-search placeholder="'+(cards?'输入属性名称或属性数值':'名称、等级、属性或来源关键词')+'" value="'+esc(s.query)+'"></label>'+columnMenu(list,s.table)+(sectionId==='elements'?'<label data-ref-attribute-label hidden>属性<select data-ref-attribute><option value="">全部属性</option></select></label>':'<label data-ref-quality-label hidden>品质<select data-ref-quality><option value="">全部品质</option></select></label>')+'<label'+(sectionId==='levels'?'':' hidden')+'>等级区间<select data-ref-band><option value="">全部等级</option>'+Array.from({length:10},function(_,i){return '<option value="'+(i*10)+'">'+(i*10)+'–'+(i===9?100:i*10+9)+'级</option>';}).join('')+'</select></label><label>展示方式<select data-ref-view></select></label><label data-ref-sort-label'+(sectionId==='speed'?'':' hidden')+'>浏览排序<select data-ref-sort><option value="panel">面板速度降序</option><option value="pvp">PVP速度降序</option></select></label><button class="seg" type="button" data-ref-clear>清除筛选</button></div><div data-ref-results aria-live="polite"></div></section>';
+      body.innerHTML='<section class="panel ref-section"'+(cards?' data-ref-kind="cards"':sectionId==='speed'?' data-ref-kind="speed"':'')+'><header class="ref-heading"><h2 tabindex="-1">'+esc(section.name)+'</h2><button type="button" class="seg" data-ref-home>返回目录</button></header><div class="ref-controls"><label>'+(cards?'查找属性':'查找资料')+'<input type="search" data-ref-search placeholder="'+esc(searchHint(table))+'" value="'+esc(s.query)+'"></label>'+columnMenu(list,s.table)+(sectionId==='elements'?'<label data-ref-attribute-label hidden>属性<select data-ref-attribute><option value="">全部属性</option></select></label>':'<label data-ref-quality-label hidden>品质<select data-ref-quality><option value="">全部品质</option></select></label>')+'<label'+(sectionId==='levels'?'':' hidden')+'>等级区间<select data-ref-band><option value="">全部等级</option>'+Array.from({length:10},function(_,i){return '<option value="'+(i*10)+'">'+(i*10)+'–'+(i===9?100:i*10+9)+'级</option>';}).join('')+'</select></label><label>展示方式<select data-ref-view></select></label><label data-ref-sort-label'+(sectionId==='speed'?'':' hidden')+'>浏览排序<select data-ref-sort><option value="panel">面板速度降序</option><option value="pvp">PVP速度降序</option></select></label><button class="seg" type="button" data-ref-clear>清除筛选</button></div><div data-ref-results aria-live="polite"></div></section>';
       body.querySelector('.ref-section').dataset.refKind=sectionId;
+      body.querySelector('[data-ref-search]').placeholder=searchHint(table);
       body.querySelector('[data-ref-sort]').value=s.sort;body.querySelector('[data-ref-band]').value=s.band;
       if(sectionId==='disciples')body.querySelector('[data-ref-clear]').insertAdjacentHTML('beforebegin','<label>快捷查找等级<select data-ref-level-search><option value="">全部等级</option></select></label>');
       fillQuality();results();
@@ -309,6 +327,7 @@
       s.perTable[s.table]={query:s.query,quality:s.quality,attribute:s.attribute,view:s.view,sort:s.sort,band:s.band};s.table=id;
       Object.assign(s,s.perTable[id]||{query:'',quality:'',attribute:'',view:sectionId==='cards'?'table':'auto',sort:sectionId==='speed'?'pvp':'source',band:''});
       body.querySelector('[data-ref-band]').value=s.band;body.querySelector('[data-ref-search]').value=s.query;body.querySelector('[data-ref-sort]').value=s.sort;
+      body.querySelector('[data-ref-search]').placeholder=searchHint(currentTable());
       body.querySelector('[data-ref-column-title]').textContent=titleFor(currentTable());
       body.querySelectorAll('[data-ref-table-option]').forEach(function(button){if(button.dataset.refTableOption===id)button.setAttribute('aria-current','true');else button.removeAttribute('aria-current');});
       fillQuality();results();closeColumnMenu(true);

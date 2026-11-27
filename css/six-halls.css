@@ -28,8 +28,8 @@
 #partition-six-halls .six-halls-phase-column { width:70px; }
 #partition-six-halls .six-halls-bonuses th,
 #partition-six-halls .six-halls-bonuses td { padding:10px 8px;border-bottom:1px solid var(--line);vertical-align:middle; }
-#partition-six-halls .six-halls-bonuses th { width:auto;color:var(--six-halls-accent);text-align:left;white-space:nowrap;font-size:13px; }
-#partition-six-halls .six-halls-bonuses td { text-align:left;white-space:normal;overflow-wrap:break-word;word-break:normal; }
+#partition-six-halls .six-halls-bonuses th { width:auto;color:var(--six-halls-accent);text-align:justify;white-space:nowrap;font-size:13px; }
+#partition-six-halls .six-halls-bonuses td { text-align:justify;white-space:normal;overflow-wrap:break-word;word-break:normal; }
 #partition-six-halls .six-halls-members { list-style:none;display:flex;flex-wrap:wrap;gap:8px 14px;padding:0;margin:0;line-height:1.7; }
 #partition-six-halls .six-halls-members li { max-width:100%;white-space:nowrap;font-size:14px; }
 #partition-six-halls .six-halls-sr-only { position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap; }
@@ -190,7 +190,7 @@
   #partition-six-halls .six-halls-reference-table tbody { display: grid; gap:8px; }
   #partition-six-halls .six-halls-reference-table tr { display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0 12px;padding:8px 12px;border:1px solid var(--line, #3a3125);border-radius:6px;background:var(--bg2, #191611); }
   #partition-six-halls .six-halls-reference-table td,
-  #partition-six-halls .six-halls-reference-table tbody th { display:grid;gap:3px;padding:6px 0;text-align:left;font-size:14px;font-variant-numeric:tabular-nums; }
+  #partition-six-halls .six-halls-reference-table tbody th { display:grid;gap:3px;padding:6px 0;text-align:justify;font-size:14px;font-variant-numeric:tabular-nums; }
   #partition-six-halls .six-halls-reference-table td { grid-template-columns:minmax(0,1fr) max-content;gap:6px;align-items:center; }
   #partition-six-halls .six-halls-reference-table td::before { content:attr(data-label);color:var(--muted, #aaa08b);font-size:12px;font-weight:400; }
   #partition-six-halls .six-halls-reference-table tbody th { grid-column:1/-1;color:var(--six-halls-gold); }

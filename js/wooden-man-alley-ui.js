@@ -510,18 +510,18 @@
           return '<label><span>' + entry[1] + '</span><input type="number" min="0" step="1" inputmode="numeric" data-wooden-package="' + item.id + '" data-package-field="' + entry[0] + '" value="' + item[entry[0]] + '"></label>';
         }).join("") + '</div></article>';
     }).join("");
-    updateMarkup(elements.progress, '<section class="panel wooden-account-panel"><div><span>当前游戏账号</span><strong>' + escapeHtml(active.accountLabel()) + '</strong></div>' +
+    updateMarkup(elements.progress, '<section class="panel wooden-activity-panel">' +
       '<label class="wooden-end-date"><span>活动结束时间</span><input type="date" data-wooden-end-date value="' + escapeHtml(progress.activityEndDate) + '"></label>' +
-      '<div><span>剩余时间</span><strong>' + (days === null ? "未设置" : days + "天") + '</strong></div></section><div class="error" role="alert" data-wooden-error-slot></div>' +
+      '<div class="wooden-remaining-field"><span>剩余时间</span><output class="wooden-remaining-time" aria-label="剩余时间">' + (days === null ? "未设置" : days + "天") + '</output></div></section><div class="error" role="alert" data-wooden-error-slot></div>' +
       '<section class="panel wooden-current-panel"><div class="wooden-section-head"><div><span>当前进度</span><strong>' + (progress.completedAllFloors ? "500层已全部完成" : "第" + progress.currentFloor + "层") + '</strong></div>' +
       '<label><span>当前层数</span><input type="number" min="1" max="500" step="1" inputmode="numeric" data-wooden-floor value="' + progress.currentFloor + '"' + (progress.completedAllFloors ? " disabled" : "") + '></label></div>' +
       '<div class="wooden-board-layout"><div class="wooden-board-scroll">' + renderBoard(data, core, progress) + '</div><aside class="wooden-board-actions"><strong>已击破 ' + progress.openedCells.length + ' / ' + core.boardCellCount(progress.currentFloor, data) + '</strong>' +
       '<button type="button" class="seg active" data-wooden-action="complete"' + (progress.completedAllFloors ? " disabled" : "") + '>已取得本层最终大奖</button>' +
       '<button type="button" class="seg" data-wooden-action="undo"' + (!active.state.undo.length ? " disabled" : "") + '>撤销</button>' +
-      '<button type="button" class="seg wooden-clear-board" data-wooden-action="clear-board"' + (!progress.openedCells.length ? " disabled" : "") + '>清空本层记录</button></aside></div></section>' +
+      '<button type="button" class="seg wooden-clear-board" data-wooden-action="clear-board"' + (!progress.openedCells.length ? " disabled" : "") + '>清空本层记录</button>' +
+      '<button type="button" class="seg wooden-clear-event" data-wooden-action="clear-event">清空当前账号木人巷数据</button></aside></div></section>' +
       '<section class="panel"><h2 class="panel-title">当前资源</h2>' + resourceFields(data, progress.resources, false) + '</section>' +
-      '<details class="panel wooden-package-settings" data-wooden-package-settings><summary>礼包设置</summary><p class="muted">秘匣仅记录数量，不参与资源换算。</p><div class="wooden-package-grid">' + packages + '</div></details>' +
-      '<div class="wooden-danger-actions"><button type="button" class="seg" data-wooden-action="clear-event">清空当前账号木人巷数据</button></div>');
+      '<details class="panel wooden-package-settings" data-wooden-package-settings><summary>礼包设置</summary><p class="muted">秘匣仅记录数量，不参与资源换算。</p><div class="wooden-package-grid">' + packages + '</div></details>');
   }
 
   function formatNumber(value, digits) {
@@ -584,7 +584,7 @@
   }
 
   function forwardResult(root, result) {
-    if (!result) return '<div class="wooden-result-empty">设置目标后点击“开始计算”。</div>';
+    if (!result) return "";
     if (result.error) return '<div class="error wooden-result-error">' + escapeHtml(result.error) + '</div>';
     var selected = result.demand.risk;
     var riskCards = [["expected", "理论期望", result.demand.expected], ["conservative", "保守估计", result.demand.conservative], ["worst", "模型最坏", result.demand.worst]].map(function (item) {
@@ -609,7 +609,7 @@
   }
 
   function reverseResult(root, result) {
-    if (!result) return '<div class="wooden-result-empty">设置现有资源后点击“开始计算”。</div>';
+    if (!result) return "";
     if (result.error) return '<div class="error wooden-result-error">' + escapeHtml(result.error) + '</div>';
     var range = result.exact === false ? '（该口径上界 ' + result.upperBoundFloor + '层）' : '';
     var risk = result.risk === "expected" ? "理论期望" : result.risk === "conservative" ? "保守估计" : "最坏情况";
@@ -640,12 +640,12 @@
       return '<option value="' + target.floor + '"' + (calculator.targetFloor === target.floor ? ' selected' : '') + '>' + target.floor + '层 · ' + escapeHtml(target.reward) + '</option>';
     }).join("");
     updateMarkup(elements.calculator, '<section class="panel wooden-calculator-controls"><div class="filter-row"><span class="filter-label">计算方向</span><div class="segs"><button type="button" class="seg' + (calculator.direction === "target" ? " active" : "") + '" data-wooden-calc-direction="target">达到目标层</button><button type="button" class="seg' + (calculator.direction === "reachable" ? " active" : "") + '" data-wooden-calc-direction="reachable">现有资源能到哪层</button></div></div>' +
-      '<div class="wooden-target-row"' + (calculator.direction === "target" ? "" : " hidden") + '><label><span>快捷目标</span><select data-wooden-quick-target><option value="">选择奖励层</option>' + targets + '</select></label><label><span>任意目标层</span><input type="number" min="1" max="500" step="1" inputmode="numeric" data-wooden-target-input value="' + calculator.targetFloor + '"></label></div>' +
       '<div class="filter-row"><span class="filter-label">风险档位</span><div class="segs"><button type="button" class="seg' + (calculator.risk === "expected" ? " active" : "") + '" data-wooden-risk="expected">理论期望</button><button type="button" class="seg' + (calculator.risk === "conservative" ? " active" : "") + '" data-wooden-risk="conservative">保守估计</button><button type="button" class="seg' + (calculator.risk === "worst" ? " active" : "") + '" data-wooden-risk="worst">最坏情况</button></div></div>' +
+      '<div class="wooden-calculator-command"><div class="wooden-target-row"' + (calculator.direction === "target" ? "" : " hidden") + '><label><span>快捷目标</span><select data-wooden-quick-target><option value="">选择奖励层</option>' + targets + '</select></label><label><span>目标层数</span><input type="number" min="1" max="500" step="1" inputmode="numeric" data-wooden-target-input value="' + calculator.targetFloor + '"></label></div><button type="button" class="seg active" data-wooden-calc-action="calculate">开始计算</button></div>' +
       '<label class="wooden-package-toggle"><input type="checkbox" data-wooden-include-packages' + (calculator.includePurchasablePackages ? " checked" : "") + '> 计入当前账号仍可购买的礼包</label>' +
-      '<h2 class="panel-title">本次计算资源</h2>' + resourceFields(data, draft.resources, true) +
+      '</section><section class="panel wooden-calculator-resources"><h2 class="panel-title">本次计算资源</h2>' + resourceFields(data, draft.resources, true) +
       '<details data-wooden-advanced class="wooden-advanced"><summary>高级设置：各阶段道具限制</summary><div class="wooden-limit-stages">' + renderStageLimits(root, draft) + '</div></details>' +
-      '<div class="wooden-calculator-actions"><button type="button" class="seg" data-wooden-calc-action="reload">从个人进度重新读取</button><button type="button" class="seg active" data-wooden-calc-action="calculate">开始计算</button><button type="button" class="seg" data-wooden-calc-action="save">保存回个人进度</button></div></section>' +
+      '<div class="wooden-calculator-actions"><button type="button" class="seg" data-wooden-calc-action="reload">从个人进度重新读取</button><button type="button" class="seg" data-wooden-calc-action="save">保存回个人进度</button></div></section>' +
       '<div class="error" role="alert" data-wooden-error-slot></div><section class="wooden-calculation-result" id="wooden-calculation-result"><h2>计算结果</h2>' + (calculator.direction === "target" ? forwardResult(root, active.state.calculatorResult) : reverseResult(root, active.state.calculatorResult)) + '</section>');
   }
 
@@ -663,12 +663,12 @@
     var targets = data.targets.map(function (target) { return '<article><strong>' + target.floor + '层</strong><span>' + escapeHtml(target.reward) + '</span></article>'; }).join("");
     var packages = data.defaultPackages.map(function (item) { return '<tr>' + cells(['礼包', '价格', '木剑', '秘匣', '限购'], [item.name, item.price + '元', item.swords, item.mysteryBoxes, item.limit]) + '</tr>'; }).join("");
     var guideRows = [[75,850,119000],[180,2980,417200],[230,4230,592200],[330,7830,1096200],[500,16160,2262400]].map(function(row){return '<tr>' + cells(['完成层数', '全清木人数', '攻略估价（元宝）'], [row[0], row[1], formatNumber(row[2], 0)]) + '</tr>';}).join('');
-    elements.reference.innerHTML = '<section class="panel"><div class="panel-title">地图与消耗</div><div class="wooden-table-wrap"><table><thead><tr><th>层数</th><th>棋盘</th><th>木人</th><th>铁剑</th><th>横／纵／十字</th></tr></thead><tbody>' + tierRows + '</tbody></table></div></section>' +
-      '<section class="panel"><div class="panel-title">辅助道具</div><div class="wooden-reference-grid">' + tools + '</div></section>' +
-      '<section class="panel"><div class="panel-title">快捷目标</div><div class="wooden-reference-grid">' + targets + '</div></section>' +
-      '<section class="panel"><div class="panel-title">礼包默认模板</div><div class="wooden-table-wrap"><table><thead><tr><th>礼包</th><th>价格</th><th>木剑</th><th>秘匣</th><th>限购</th></tr></thead><tbody>' + packages + '</tbody></table></div></section>' +
-      '<section class="panel wooden-method-notes"><div class="panel-title">计算口径</div><p><strong>理论期望：</strong>大奖在尚未击破木人中等概率分布且不放回，取得大奖即进入下一层。</p><p><strong>保守估计：</strong>汇总全部剩余期望后统一乘1.20并向上取整，但不超过同一道具方案的最坏需求；并非成功率保证。</p><p><strong>最坏情况：</strong>大奖位于最后一个尚未击破的木人中。</p><p>秘匣内容暂未明确，只记录数量，不参与资源换算；木剑不会自动产出；不计算活动结束后的未使用道具退款。</p></section>' +
-      '<section class="panel wooden-method-notes"><div class="panel-title">攻略对照参考（从第1层开始）</div><p>图片按全清木人数×200元宝×0.7估价；0.7依据未说明，不是工具采用的购剑折扣。以下仅为攻略参考，不参与计算。实际规划按概率、风险档位、辅助道具、已有库存和半价券计算。</p><div class="wooden-table-wrap"><table><thead><tr><th>完成层数</th><th>全清木人数</th><th>攻略估价（元宝）</th></tr></thead><tbody>'+guideRows+'</tbody></table></div><p>331–500层均为7×7、49个木人。75／230／330层奖励图片有“灵媒／灵宝”不同字样，工具暂沿用“灵宝四选一”简称。</p></section>';
+    elements.reference.innerHTML = '<section class="panel"><h2 class="panel-title">地图与消耗</h2><div class="wooden-table-wrap"><table><thead><tr><th>层数</th><th>棋盘</th><th>木人</th><th>铁剑</th><th>横／纵／十字</th></tr></thead><tbody>' + tierRows + '</tbody></table></div></section>' +
+      '<section class="panel"><h2 class="panel-title">辅助道具</h2><div class="wooden-reference-grid">' + tools + '</div></section>' +
+      '<section class="panel"><h2 class="panel-title">快捷目标</h2><div class="wooden-reference-grid">' + targets + '</div></section>' +
+      '<section class="panel"><h2 class="panel-title">礼包默认模板</h2><div class="wooden-table-wrap"><table><thead><tr><th>礼包</th><th>价格</th><th>木剑</th><th>秘匣</th><th>限购</th></tr></thead><tbody>' + packages + '</tbody></table></div></section>' +
+      '<section class="panel wooden-method-notes"><h2 class="panel-title">计算口径</h2><p><strong>理论期望：</strong>大奖在尚未击破木人中等概率分布且不放回，取得大奖即进入下一层。</p><p><strong>保守估计：</strong>汇总全部剩余期望后统一乘1.20并向上取整，但不超过同一道具方案的最坏需求；并非成功率保证。</p><p><strong>最坏情况：</strong>大奖位于最后一个尚未击破的木人中。</p><p>秘匣内容暂未明确，只记录数量，不参与资源换算；木剑不会自动产出；不计算活动结束后的未使用道具退款。</p></section>' +
+      '<section class="panel wooden-method-notes"><h2 class="panel-title">攻略对照参考（从第1层开始）</h2><p>图片按全清木人数×200元宝×0.7估价；0.7依据未说明，不是工具采用的购剑折扣。以下仅为攻略参考，不参与计算。实际规划按概率、风险档位、辅助道具、已有库存和半价券计算。</p><div class="wooden-table-wrap"><table><thead><tr><th>完成层数</th><th>全清木人数</th><th>攻略估价（元宝）</th></tr></thead><tbody>'+guideRows+'</tbody></table></div><p>331–500层均为7×7、49个木人。75／230／330层奖励图片有“灵媒／灵宝”不同字样，工具暂沿用“灵宝四选一”简称。</p></section>';
   }
 
   function renderFeedback() {

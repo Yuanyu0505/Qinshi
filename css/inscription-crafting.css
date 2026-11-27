@@ -54,7 +54,7 @@
 .craft-values>summary { cursor:pointer; font-weight:600; padding:3px 0; }
 .craft-scroll { overflow-x:auto; max-width:100%; overscroll-behavior-x:contain; }
 .craft-table { width:100%; border-collapse:collapse; font-size:13px; }
-.craft-table th,.craft-table td { text-align:left; padding:9px; border-bottom:1px solid #49412f; vertical-align:top; }
+.craft-table th,.craft-table td { text-align:justify; padding:9px; border-bottom:1px solid #49412f; vertical-align:top; }
 .craft-matrix { min-width:700px; }
 .craft-matrix td { min-width:110px; }
 .craft-table small { display:block; color:var(--muted,#b7ad99); }

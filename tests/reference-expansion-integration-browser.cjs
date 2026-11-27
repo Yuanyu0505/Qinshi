@@ -19,17 +19,21 @@ for(const width of [320,390,820,1440])test('real app new reference navigation, c
   for(const id of ['first-releases','costumes','fishing','account-levels','disciple-awakening','jinchan','sage']){
    await page.locator('[data-ref-section="'+id+'"]').click();
    await page.locator('[data-exp-section="'+id+'"]').waitFor();
-   await page.locator('[data-exp-query]').fill('不存在的查询');
-   assert.match(await page.locator('[data-exp-results]').textContent(),/未找到/);
-   await page.locator('[data-exp-clear]').click();
+   if(id==='account-levels')assert.equal(await page.locator('[data-exp-query]').count(),0);
+   else{
+    await page.locator('[data-exp-query]').fill('不存在的查询');
+    assert.match(await page.locator('[data-exp-results]').textContent(),/未找到/);
+   }
+   if(id!=='account-levels')await page.locator('[data-exp-clear]').click();
+   else assert.equal(await page.locator('[data-exp-clear]').count(),0);
    if(id==='sage'){
     await page.locator('[data-exp-calculate]').click();
-    assert.match(await page.locator('[data-exp-calculation]').textContent(),/336/);
+    assert.match(await page.locator('[data-exp-calculation]').textContent(),/397/);
     assert.ok(await page.locator('[data-exp-calculation] table').evaluate(table=>table.getBoundingClientRect().width<=table.parentElement.clientWidth+1));
     await page.locator('[data-exp-input="master"]').check();
     assert.equal(await page.locator('[data-exp-calculation]').textContent(),'');
     await page.locator('[data-exp-calculate]').click();
-    assert.match(await page.locator('[data-exp-calculation]').textContent(),/1008/);
+    assert.match(await page.locator('[data-exp-calculation]').textContent(),/1191/);
    }
    if(id==='account-levels'){
     await page.locator('[data-exp-input="from"]').fill('99');

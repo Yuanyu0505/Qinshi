@@ -267,7 +267,7 @@
       }).join("") + '</nav>' +
       '<p id="six-halls-readonly" class="six-halls-notice" role="status" hidden>当前账号为只读状态，个人进度不能保存；仍可调整临时规划。</p>' +
       '<p id="six-halls-error" class="six-halls-error" role="alert" hidden></p>' +
-      '<section id="six-halls-halls" class="six-halls-page" aria-label="堂口资料" hidden><div class="six-halls-field six-halls-member-search"><label for="six-halls-member-search">搜索阵营神将</label><input id="six-halls-member-search" type="search" placeholder="输入神将名称" autocomplete="off" aria-controls="six-halls-search-results"><div id="six-halls-search-results" class="six-halls-search-results" aria-live="polite"></div></div><nav class="six-halls-hall-tabs" aria-label="选择堂口">' + data.halls.map(function (hall) {
+      '<section id="six-halls-halls" class="six-halls-page" aria-label="堂口资料" hidden><div class="six-halls-field six-halls-member-search"><label for="six-halls-member-search">搜索阵营神将</label><input id="six-halls-member-search" type="search" placeholder="搜索阵营神将姓名，定位所属堂口" autocomplete="off" aria-controls="six-halls-search-results"><div id="six-halls-search-results" class="six-halls-search-results" aria-live="polite"></div></div><nav class="six-halls-hall-tabs" aria-label="选择堂口">' + data.halls.map(function (hall) {
         return '<button type="button" class="seg" data-six-halls-hall="' + hall.id + '" data-hall-theme="' + hall.id + '" aria-pressed="false">' + escapeHtml(hall.name) + '</button>';
       }).join("") + '</nav><div id="six-halls-hall-details"></div></section>' +
       '<section id="six-halls-progress" class="six-halls-page" aria-label="个人进度"><div class="panel six-halls-shared"><div class="six-halls-section-heading"><h3>玩家与共用库存</h3><span id="six-halls-account" class="six-halls-muted"></span></div>' +

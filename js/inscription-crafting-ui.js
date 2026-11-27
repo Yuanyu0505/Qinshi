@@ -319,7 +319,7 @@
     el.innerHTML='<div data-craft-status class="craft-status" role="alert" hidden></div>'+
       '<section class="craft-panel"><h3>'+(mode==='crafting-paths'?'合成路径查询':'合成模拟')+'</h3>'+
       '<div class="craft-controls craft-filters"'+(child==='reverse'?' hidden':'')+'><label class="craft-search">弟子搜索（可不选）'+
-      '<input type="search" data-craft-field="search" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="'+searchId+'" placeholder="输入姓名，例如盖聂">'+
+      '<input type="search" data-craft-field="search" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="'+searchId+'" placeholder="搜索合成目标弟子名，如：盖聂">'+
       '<span id="'+searchId+'" class="craft-suggestions" data-craft-suggestions role="listbox" hidden></span></label>'+
       '<label>弟子天遁位<select data-craft-field="slot"></select></label>'+
       '<label>目标品质<select data-craft-field="quality">'+options(R.qualities,'o2')+'</select></label>'+
@@ -554,7 +554,7 @@
       '<label>弟子分类<select data-result-filter="group">'+options([{id:'all',label:'全部弟子'},{id:'formation',label:'合阵弟子'},{id:'common',label:'常用弟子'},{id:'other',label:'其他弟子'}],filters.group)+'</select></label>'+
       '<label>天位<select data-result-filter="prefix">'+options(R.prefixes,filters.prefix,'全部天位')+'</select></label>'+
       '<label>遁位<select data-result-filter="dun">'+options(R.duns.map(function(d){return d.id;}),filters.dun,'全部遁位')+'</select></label>'+
-      '<label>搜索弟子<input type="search" data-result-filter="search" value="'+esc(filters.search)+'" placeholder="输入弟子姓名"></label></div><p class="craft-note">非查询词条X需应用后选择。</p><div data-reverse-cards>'+content+'</div></section>';
+      '<label>搜索弟子<input type="search" data-result-filter="search" value="'+esc(filters.search)+'" placeholder="按弟子名筛选可用合成目标"></label></div><p class="craft-note">非查询词条X需应用后选择。</p><div data-reverse-cards>'+content+'</div></section>';
   }
   function renderAnalysis(v) {
     var target=targetFor(v),dun=position(target).dun,host=area(v,'analysis');

@@ -42,7 +42,13 @@ for (const width of [375, 768, 1280]) {
         return { type: bounds('[aria-label="弟子分类"]'), ranks: bounds('[data-pilots-ranks]'), search: bounds('#pilots-search') };
       });
       assert.ok(rankLayout.ranks.y >= rankLayout.type.bottom && rankLayout.ranks.y - rankLayout.type.bottom <= 14, 'rank filters immediately follow type filters');
-      assert.ok(rankLayout.search.y > rankLayout.ranks.bottom, 'rank filters precede search');
+      assert.ok(rankLayout.search.y > rankLayout.ranks.bottom, 'search follows expanded filters at every width');
+      const searchAlignment=await page.locator('.pilots-search-field').evaluate(field=>{
+        const label=field.querySelector('label').getBoundingClientRect(),input=field.querySelector('input').getBoundingClientRect();
+        return {labelMiddle:(label.top+label.bottom)/2,inputMiddle:(input.top+input.bottom)/2,labelRight:label.right,inputLeft:input.left};
+      });
+      assert.ok(Math.abs(searchAlignment.labelMiddle-searchAlignment.inputMiddle)<1);
+      assert.ok(searchAlignment.inputLeft>searchAlignment.labelRight);
       assert.equal(await page.locator('[data-pilots-category-notes]').isVisible(), false);
       const selectedStyle = await page.locator('[data-pilots-type="nonPilot"]').evaluate(el => {
         const sample = document.createElement('button'); sample.className = 'seg active'; document.body.append(sample);
@@ -76,8 +82,9 @@ for (const width of [375, 768, 1280]) {
       });
       assert.equal(categoryLayout.directButtons, true, 'category buttons share one compact row without expanding hint wrappers');
       assert.ok(categoryLayout.categories.y >= categoryLayout.type.bottom && categoryLayout.categories.y - categoryLayout.type.bottom <= 14, 'category filters immediately follow type filters');
-      assert.ok(categoryLayout.search.y > categoryLayout.categories.bottom, 'category filters precede search');
-      assert.ok(categoryLayout.notes.y >= categoryLayout.search.bottom && categoryLayout.notes.y - categoryLayout.search.bottom <= 14, 'one shared note block immediately follows search');
+      assert.ok(categoryLayout.search.y > categoryLayout.categories.bottom, 'search follows expanded categories');
+      const contentBottom=Math.max(categoryLayout.search.bottom,categoryLayout.categories.bottom);
+      assert.ok(categoryLayout.notes.y >= contentBottom && categoryLayout.notes.y - contentBottom <= 14, 'shared notes follow the filter and search area');
       for (let i = 1; i < categoryLayout.buttons.length; i++) {
         const previous = categoryLayout.buttons[i - 1], current = categoryLayout.buttons[i];
         if (Math.abs(current.y - previous.y) < 1) assert.ok(current.x - previous.right <= 10, 'adjacent category buttons stay tightly spaced');
@@ -103,11 +110,13 @@ for (const width of [375, 768, 1280]) {
       await page.locator('[data-pilots-type="pilot"]').click();
       assert.equal(await page.locator('.pilots-card').count(), 32);
       await page.locator('[data-pilots-type="nonPilot"]').click();
-      const nonpilotBackground = await page.locator('.pilots-badge-nonpilot').first().evaluate(el => getComputedStyle(el).backgroundColor);
+      const nonpilotColor = await page.locator('.pilots-badge-nonpilot').first().evaluate(el => getComputedStyle(el).color);
       await page.locator('[data-pilots-type="pilot"]').click();
-      const backgrounds = [nonpilotBackground];
-      for (const category of ['backpack', 'god25', 'traditional']) backgrounds.push(await page.locator('.pilots-badge-' + category).first().evaluate(el => getComputedStyle(el).backgroundColor));
-      assert.equal(new Set(backgrounds).size, 4);
+      const colors = [nonpilotColor];
+      for (const category of ['backpack', 'god25', 'traditional']) colors.push(await page.locator('.pilots-badge-' + category).first().evaluate(el => getComputedStyle(el).color));
+      assert.equal(new Set(colors).size, 4);
+      const cardTheme=await page.locator('.pilots-card').first().evaluate(el=>({gradient:getComputedStyle(el).backgroundImage}));
+      assert.equal(cardTheme.gradient,'none');
       assert.equal(await page.locator('.pilots-condition, .pilots-source').count(), 0);
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
       assert.deepEqual(errors, []);

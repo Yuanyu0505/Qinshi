@@ -12,6 +12,15 @@
   --status: #6b6353;
 }
 * { box-sizing: border-box; }
+/* Use a complete flat border instead of the browser's dark inset edges.
+   Low specificity preserves partition-specific borders and validation states. */
+:where(input:not([type]), input[type="text"], input[type="search"],
+       input[type="number"], input[type="date"], input[type="datetime-local"],
+       input[type="time"], input[type="month"], input[type="week"],
+       input[type="email"], input[type="password"], input[type="tel"],
+       input[type="url"], textarea, select) {
+  border: 1px solid var(--line);
+}
 html, body { margin: 0; padding: 0; }
 body {
   background: var(--bg);
@@ -588,7 +597,7 @@ header.top {
 .ins-reference-block h3 { margin: 0 0 10px; color: var(--gold); font-size: 17px; }
 .ins-reference-table { min-width: 920px; }
 .ins-reference-table td:first-child { color: var(--gold); font-weight: 700; white-space: nowrap; }
-.ins-shield-note { min-width: 230px; color: var(--text); text-align: left; }
+.ins-shield-note { min-width: 230px; color: var(--text); text-align: justify; }
 .q-dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin: 0 3px; vertical-align: middle; }
 .q-dot-purple { background: #7030a0; }
 .q-dot-orange { background: #f79646; }
@@ -1135,7 +1144,7 @@ tr.hit-row td { background: rgba(212, 175, 55, .06); }
 #partition-forging .prog-material-table .prog-material-col { width: auto; }
 #partition-forging .prog-material-table td { vertical-align: middle; }
 #partition-forging .prog-material-table td:first-child { white-space: nowrap; }
-#partition-forging .prog-material-table td:last-child { text-align: left; }
+#partition-forging .prog-material-table td:last-child { text-align: justify; }
 .prog-material-table tr.search-hit-row > td {
   background: rgba(212, 175, 55, .18);
   box-shadow: inset 0 2px 0 var(--gold), inset 0 -2px 0 var(--gold);
@@ -1411,12 +1420,6 @@ td.name { font-weight: 600; white-space: nowrap; }
 #partition-equipment .book-tier-summary {
   display: contents;
 }
-#partition-equipment .book-stage-unknown {
-  grid-column: 1 / -1;
-  min-width: 0;
-  white-space: normal;
-  overflow-wrap: anywhere;
-}
 #partition-equipment .book-tier-summary-label {
   grid-column: 1;
   grid-row: 1;
@@ -1440,6 +1443,9 @@ td.name { font-weight: 600; white-space: nowrap; }
 }
 #partition-equipment .book-stage-values .tier-attr,
 #partition-equipment .book-stage-values .tier-status { display: block; text-align: left; }
+#partition-equipment table .book-stage-values,
+#partition-equipment table .book-stage-values .tier-attr,
+#partition-equipment table .book-stage-values .tier-status { text-align: justify; }
 #partition-equipment .book-detail-toggle {
   grid-column: 2;
   grid-row: 2;
@@ -1738,12 +1744,12 @@ figcaption { color: var(--muted); font-size: 13px; margin-top: 8px; }
   width: 100%;
   max-width: 860px;
   margin: 0 0 14px;
-  padding: 8px;
+  padding: 0;
   box-sizing: border-box;
-  border: 1px solid var(--gold-dim);
-  border-radius: 10px;
-  background: rgba(20, 15, 10, .82);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, .28);
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
 }
 .settings-section-tab {
   display: grid;
@@ -3663,6 +3669,7 @@ tbody tr:hover { background-color: rgba(217, 173, 60, .06); }
 .zhulu-progress-query-row {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
+  max-width: 100%;
   gap: 12px;
   align-items: center;
 }
@@ -3672,6 +3679,7 @@ tbody tr:hover { background-color: rgba(217, 173, 60, .06); }
   padding-block: 9px;
   font-size: 15px;
 }
+#zhulu-progress-clear { min-height:44px;padding:8px 16px;white-space:nowrap; }
 .zhulu-season-primary-filters {
   display: grid;
   grid-template-columns: 150px 150px minmax(260px, 1fr);
@@ -3693,18 +3701,19 @@ tbody tr:hover { background-color: rgba(217, 173, 60, .06); }
 .zhulu-progress-table { width: 100%; border-collapse: collapse; table-layout: fixed; }
 .zhulu-progress-table th,
 .zhulu-progress-table td { padding: 13px 18px; border-bottom: 1px solid var(--line); text-align: center; }
-.zhulu-progress-table th { color: var(--gold); background: rgba(113, 72, 19, .17); }
+.zhulu-progress-table th { color: var(--gold); background: rgba(113, 72, 19, .17); font-weight: 400; }
+.zhulu-progress-table td { font-weight: 400; }
 .zhulu-progress-table th:nth-child(odd) { width: 16%; }
 .zhulu-progress-table th:nth-child(even) { width: 34%; }
-.zhulu-progress-table tr.has-book-reward td {
-  background: linear-gradient(90deg, rgba(160, 105, 28, .11), rgba(205, 160, 61, .18), rgba(160, 105, 28, .11));
+.zhulu-progress-table td.is-book-reward {
+  background: rgba(205, 160, 61, .16);
 }
-.zhulu-progress-table tr.has-book-reward td:first-child { box-shadow: inset 4px 0 #d8aa3d; }
+.zhulu-progress-table td.is-book-start { box-shadow: inset 4px 0 #d8aa3d; }
 .zhulu-progress-table tbody tr:last-child td { border-bottom: 0; }
 .zhulu-progress-table tr.is-located { background: rgba(184, 59, 52, .13); box-shadow: inset 4px 0 var(--red); }
 .zhulu-progress-book-link,
-.zhulu-progress-item-name { color: var(--text); font-weight: 700; }
-.zhulu-progress-quantity { margin-left: 3px; color: var(--text); font-weight: 700; white-space: nowrap; }
+.zhulu-progress-item-name { color: var(--text); font-weight: 400; }
+.zhulu-progress-quantity { margin-left: 3px; color: var(--text); font-weight: 400; white-space: nowrap; }
 .zhulu-progress-book-link {
   appearance: none;
   padding: 5px 9px;
@@ -5934,7 +5943,7 @@ tbody tr:hover {
     border: 1px solid rgba(109, 82, 43, .46);
     background: rgba(31, 23, 14, .5);
     font-size: 15px;
-    text-align: left;
+    text-align: justify;
   }
 
   #partition-forging .forging-summary-table-wrap .summary-table td::before {
@@ -5942,7 +5951,7 @@ tbody tr:hover {
     color: var(--qin-color-gold);
     font-size: 14px;
     font-weight: 800;
-    text-align: left;
+    text-align: justify;
     white-space: nowrap;
   }
 
@@ -5957,7 +5966,7 @@ tbody tr:hover {
     box-shadow: none;
     color: var(--qin-color-gold-bright);
     font-size: 15px;
-    text-align: left;
+    text-align: justify;
   }
 
   #partition-forging .forging-summary-table-wrap .summary-table tr > :first-child::before { content: none; }
@@ -5980,7 +5989,7 @@ tbody tr:hover {
   #partition-forging #forge-results .forge-h-table tbody { display: block; width: 100%; min-width: 0; }
   #forge-results .forge-h-table thead { display: none; }
   #forge-results .forge-h-table tr { display: block; margin-bottom: 14px; padding: 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg2); }
-  #forge-results .forge-h-table td { display: grid; grid-template-columns: 90px minmax(0, 1fr); gap: 8px; align-items: center; width: auto; min-width: 0; padding: 10px 0; white-space: normal; text-align: left; }
+  #forge-results .forge-h-table td { display: grid; grid-template-columns: 90px minmax(0, 1fr); gap: 8px; align-items: center; width: auto; min-width: 0; padding: 10px 0; white-space: normal; text-align: justify; }
   #forge-results .forge-h-table td::before { content: attr(data-label); color: var(--gold); font-size: 14px; font-weight: 700; }
   #partition-forging #forge-results .forge-h-table .forge-eq { display: block; position: static; width: auto; min-width: 0; box-shadow: none; padding-top: 0; }
   #forge-results .forge-h-table .forge-eq::before { content: none; }
@@ -6056,7 +6065,7 @@ header.top{display:flex;align-items:center;justify-content:space-between;gap:16p
 }
 
 @media (max-width:767px) {
-  .settings-section-nav { grid-template-columns:repeat(2,minmax(0,1fr)); gap: 7px; padding: 7px; }
+  .settings-section-nav { grid-template-columns:repeat(2,minmax(0,1fr)); gap: 7px; padding: 0; }
   .settings-section-tab { min-height: 66px; padding: 8px 9px; }
   .settings-section-tab strong { font-size: 14px; }
   .settings-section-tab span { font-size: 11px; }
@@ -6072,7 +6081,7 @@ header.top{display:flex;align-items:center;justify-content:space-between;gap:16p
 }
 
 /* 木人巷 */
-#partition-wooden-man-alley { display: grid; gap: 14px; min-width: 0; overflow-x: clip; }
+#partition-wooden-man-alley { display: grid; gap: 20px; min-width: 0; overflow-x: clip; }
 #partition-wooden-man-alley[hidden] { display: none; }
 #partition-wooden-man-alley > section,
 #partition-wooden-man-alley .panel,
@@ -6080,14 +6089,23 @@ header.top{display:flex;align-items:center;justify-content:space-between;gap:16p
 #partition-wooden-man-alley [data-wooden-error-slot]:empty { display: none; }
 #partition-wooden-man-alley button { min-height: 44px; }
 #partition-wooden-man-alley .panel { margin: 0; }
-#partition-wooden-man-alley .wooden-man-modes { position: static; padding: 8px; border: 1px solid rgba(173, 124, 36, .48); border-radius: 9px; background: rgba(14, 10, 7, .94); }
-#partition-wooden-man-alley .wooden-account-panel { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; align-items: end; }
-#partition-wooden-man-alley .wooden-account-panel > div,
+#partition-wooden-man-alley > section { display: grid; gap: 24px; }
+#partition-wooden-man-alley [hidden] { display: none !important; }
+#partition-wooden-man-alley > section > .panel { padding: 0; border: 0; background: transparent; box-shadow: none; }
+#partition-wooden-man-alley > section > .panel:not(.wooden-activity-panel) { padding: 16px; border: 1px solid var(--line); border-radius: 8px; }
+#partition-wooden-man-alley > section > .panel::before,
+#partition-wooden-man-alley > section > .panel::after { display: none; }
+#partition-wooden-man-alley .panel-title { margin: 0 0 14px; padding: 0; color: var(--gold); font-size: 19px; letter-spacing: normal; line-height: 1.5; }
+#partition-wooden-man-alley .panel-title::before { display: none; }
+#partition-wooden-man-alley .wooden-man-modes { position: static; padding: 0; border: 0; background: transparent; gap: 10px; }
+#partition-wooden-man-alley .wooden-activity-panel { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; align-items: end; margin-bottom: 12px; }
+#partition-wooden-man-alley .wooden-activity-panel > div,
 #partition-wooden-man-alley .wooden-end-date { display: grid; gap: 6px; }
-#partition-wooden-man-alley .wooden-account-panel span,
+#partition-wooden-man-alley .wooden-activity-panel span,
 #partition-wooden-man-alley .wooden-field span,
-#partition-wooden-man-alley .wooden-package-fields span { color: var(--muted); font-size: 13px; }
-#partition-wooden-man-alley .wooden-account-panel strong { color: #f5d36e; font-size: 15px; overflow-wrap: anywhere; }
+#partition-wooden-man-alley .wooden-package-fields span { color: var(--text); font-size: 14px; }
+#partition-wooden-man-alley .wooden-activity-panel > * { min-width: 0; }
+#partition-wooden-man-alley .wooden-remaining-time { display: flex; align-items: center; width: 100%; min-height: 44px; padding: 9px 11px; border: 1px solid var(--qin-line); border-radius: var(--qin-radius-control); background: rgba(13, 10, 7, .9); color: var(--text); font: inherit; font-size: 16px; }
 #partition-wooden-man-alley .wooden-current-panel { display: grid; gap: 16px; }
 #partition-wooden-man-alley .wooden-section-head { display: flex; align-items: end; justify-content: space-between; gap: 16px; }
 #partition-wooden-man-alley .wooden-section-head > div,
@@ -6096,7 +6114,7 @@ header.top{display:flex;align-items:center;justify-content:space-between;gap:16p
 #partition-wooden-man-alley .wooden-section-head label { flex: 0 1 112px; min-width: 84px; }
 #partition-wooden-man-alley .wooden-board-scroll { min-width: 0; overflow-x: auto; }
 #partition-wooden-man-alley .wooden-board-layout { display: grid; gap: 18px; align-items: start; }
-#partition-wooden-man-alley .wooden-board { display: grid; grid-template-columns: repeat(var(--wooden-board-size), minmax(0, 1fr)); gap: clamp(5px, 1vw, 10px); width: min(100%, 540px); margin: 0 auto; }
+#partition-wooden-man-alley .wooden-board { display: grid; grid-template-columns: repeat(var(--wooden-board-size), minmax(0, 1fr)); gap: clamp(5px, 1vw, 10px); width: min(100%, 540px); margin: 0; }
 #partition-wooden-man-alley .wooden-cell { aspect-ratio: 1; min-width: 0; min-height: 0; display: grid; place-items: center; padding: 0; border: 1px solid rgba(171, 123, 40, .62); border-radius: 8px; background: #19130c; color: #b49b72; font-size: 18px; font-weight: 800; cursor: pointer; }
 #partition-wooden-man-alley .wooden-cell:hover { border-color: #e5b94c; box-shadow: inset 0 0 0 1px rgba(255, 224, 128, .2); }
 #partition-wooden-man-alley .wooden-cell.is-opened { border-color: #38d276; background: #17432b; color: #f1fff6; }
@@ -6104,30 +6122,35 @@ header.top{display:flex;align-items:center;justify-content:space-between;gap:16p
 #partition-wooden-man-alley .wooden-cell > span,
 #partition-wooden-man-alley .wooden-advice-cell { position: relative; }
 #partition-wooden-man-alley .wooden-dummy-icon { position: absolute; inset: 0; display: block; width: 100%; height: 100%; object-fit: contain; pointer-events: none; user-select: none; }
-#partition-wooden-man-alley .wooden-board-actions { display: grid; gap: 8px; }
+#partition-wooden-man-alley .wooden-board-actions { display: grid; gap: 12px; }
 #partition-wooden-man-alley .wooden-board-actions > strong { color: #f5d36e; font-size: 18px; }
 #partition-wooden-man-alley .wooden-complete-state { display: grid; min-height: 220px; place-items: center; border: 2px solid #42cc79; border-radius: 12px; background: rgba(28, 100, 56, .18); color: #66ee98; font-size: clamp(22px, 5vw, 34px); font-weight: 900; }
-#partition-wooden-man-alley .wooden-resource-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
-#partition-wooden-man-alley .wooden-resource-group { min-width: 0; border: 0; padding: 0; margin: 10px 0 0; }
+#partition-wooden-man-alley .wooden-resource-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 140px), 1fr)); gap: 14px; }
+#partition-wooden-man-alley .wooden-resource-group { min-width: 0; border: 0; padding: 0; margin: 16px 0 0; }
 #partition-wooden-man-alley .wooden-resource-group legend { color: var(--gold); padding: 0 0 6px; }
 #partition-wooden-man-alley .wooden-field { display: grid; gap: 6px; min-width: 0; }
 #partition-wooden-man-alley input[type="number"],
 #partition-wooden-man-alley input[type="date"],
-#partition-wooden-man-alley .wooden-target-row select { width: 100%; min-width: 0; min-height: 44px; }
-#partition-wooden-man-alley .wooden-package-settings > summary { color: var(--gold); cursor: pointer; font-weight: 700; padding-block: 8px; }
-#partition-wooden-man-alley .wooden-package-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
-#partition-wooden-man-alley .wooden-package-card { padding: 13px; border: 1px solid rgba(161, 113, 32, .55); border-radius: 10px; background: rgba(11, 8, 5, .5); }
+#partition-wooden-man-alley .wooden-target-row select { width: 100%; min-width: 0; min-height: 44px; padding: 9px 11px; font: inherit; font-size: 16px; }
+#partition-wooden-man-alley .wooden-package-settings > summary { color: var(--gold); cursor: pointer; font-size: 19px; font-weight: 700; padding-block: 8px; }
+#partition-wooden-man-alley .wooden-package-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); gap: 16px; }
+#partition-wooden-man-alley .wooden-package-card { padding: 16px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg2); }
 #partition-wooden-man-alley .wooden-package-card h4 { margin: 0 0 10px; color: #f0c85c; font-size: 17px; }
-#partition-wooden-man-alley .wooden-package-fields { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
+#partition-wooden-man-alley .wooden-package-fields { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
 #partition-wooden-man-alley .wooden-package-fields label { display: grid; gap: 5px; min-width: 0; }
-#partition-wooden-man-alley .wooden-danger-actions { display: flex; justify-content: flex-end; }
-#partition-wooden-man-alley .wooden-danger-actions .seg,
+#partition-wooden-man-alley .wooden-clear-event,
 #partition-wooden-man-alley .wooden-clear-board { border-color: #a8473d; color: #ffaaa1; }
-#partition-wooden-man-alley .wooden-target-row { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 10px; margin: 12px 0; }
+#partition-wooden-man-alley .wooden-board-actions :is(.wooden-clear-board,.wooden-clear-event) { width: 100%; height: 44px; padding: 8px 12px; font-size: 14px; white-space: nowrap; }
+#partition-wooden-man-alley .wooden-calculator-controls > .filter-row { display: grid; grid-template-columns: 5em minmax(0, 1fr); gap: 12px; margin-bottom: 14px; }
+#partition-wooden-man-alley .wooden-calculator-controls > .filter-row > .segs { display: flex; flex-wrap: wrap; min-width: 0; }
+#partition-wooden-man-alley .wooden-calculator-controls > .filter-row .seg { flex: 1 1 120px; }
+#partition-wooden-man-alley .wooden-calculator-command { display: grid; grid-template-columns: minmax(0, 1fr) minmax(130px, .25fr); align-items: end; gap: 12px; margin-top: 18px; }
+#partition-wooden-man-alley .wooden-calculator-command:has(.wooden-target-row[hidden]) { grid-template-columns: 1fr; }
+#partition-wooden-man-alley .wooden-target-row { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 12px; margin: 0; }
 #partition-wooden-man-alley .wooden-target-row[hidden] { display: none; }
 #partition-wooden-man-alley .wooden-target-row label { display: grid; min-width: 0; gap: 5px; }
 #partition-wooden-man-alley .wooden-package-toggle { display: flex; align-items: center; gap: 9px; min-height: 44px; margin: 10px 0; }
-#partition-wooden-man-alley .wooden-advanced { margin-top: 14px; border: 1px solid rgba(155, 112, 38, .5); border-radius: 10px; background: rgba(10, 8, 5, .5); }
+#partition-wooden-man-alley .wooden-advanced { margin-top: 20px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg2); }
 #partition-wooden-man-alley .wooden-advanced > summary { min-height: 44px; padding: 12px 14px; color: #e5bd53; font-weight: 700; cursor: pointer; }
 #partition-wooden-man-alley .wooden-limit-stages { display: grid; gap: 12px; padding: 0 12px 12px; }
 #partition-wooden-man-alley .wooden-limit-stage { padding: 12px; border: 1px solid rgba(120, 86, 31, .55); border-radius: 8px; background: rgba(20, 14, 8, .6); }
@@ -6135,7 +6158,7 @@ header.top{display:flex;align-items:center;justify-content:space-between;gap:16p
 #partition-wooden-man-alley .wooden-limit-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 10px; }
 #partition-wooden-man-alley .wooden-limit-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(100px, .7fr); align-items: center; gap: 8px; }
 #partition-wooden-man-alley .wooden-limit-row label { display: flex; align-items: center; gap: 6px; min-width: 0; min-height: 44px; }
-#partition-wooden-man-alley .wooden-calculator-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; margin-top: 14px; }
+#partition-wooden-man-alley .wooden-calculator-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 18px; }
 #partition-wooden-man-alley .wooden-calculation-result { display: grid; gap: 16px; scroll-margin-top: 18px; }
 #partition-wooden-man-alley .wooden-calculation-result h2,
 #partition-wooden-man-alley .wooden-calculation-result h3 { margin: 0; color: #e8bd4a; }
@@ -6171,43 +6194,49 @@ header.top{display:flex;align-items:center;justify-content:space-between;gap:16p
 #partition-wooden-man-alley .wooden-reference-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; }
 #partition-wooden-man-alley .wooden-reference-grid article { display: grid; gap: 6px; padding: 12px; border: 1px solid rgba(145, 103, 34, .48); border-radius: 8px; background: rgba(14, 10, 6, .55); }
 #partition-wooden-man-alley .wooden-reference-grid strong { color: #edc85e; }
-#partition-wooden-man-alley .wooden-table-wrap { max-width: 100%; overflow-x: auto; }
-#partition-wooden-man-alley .wooden-table-wrap table { width: 100%; min-width: 0; border-collapse: collapse; }
+#partition-wooden-man-alley .wooden-reference-grid article > span { text-align: justify; line-height: 1.7; }
+#partition-wooden-man-alley .wooden-table-wrap { max-width: 100%; overflow-x: auto; border: 1px solid var(--line); border-radius: 6px; }
+#partition-wooden-man-alley .wooden-table-wrap table { width: 100%; min-width: 0; border-collapse: collapse; font-size: 15px; line-height: 1.65; font-variant-numeric: tabular-nums; }
 #partition-wooden-man-alley .wooden-table-wrap th,
-#partition-wooden-man-alley .wooden-table-wrap td { padding: 10px; border-bottom: 1px solid rgba(126, 91, 35, .45); text-align: center; }
+#partition-wooden-man-alley .wooden-table-wrap td { padding: 11px 14px; border-bottom: 1px solid var(--line); text-align: center; vertical-align: middle; }
+#partition-wooden-man-alley .wooden-table-wrap tbody tr:nth-child(odd) { background: var(--bg); }
+#partition-wooden-man-alley .wooden-table-wrap tbody tr:nth-child(even) { background: var(--qin-color-lacquer-raised); }
+#partition-wooden-man-alley .wooden-table-wrap tbody td { background: inherit; }
 #partition-wooden-man-alley .wooden-table-label { display: none; }
 #partition-wooden-man-alley .wooden-result-note { margin: 0; }
-#partition-wooden-man-alley .wooden-method-notes p { line-height: 1.7; }
+#partition-wooden-man-alley .wooden-method-notes p { line-height: 1.7; margin: 10px 0 0; text-align: justify; }
 
 @media (min-width: 768px) {
-  #partition-wooden-man-alley .wooden-board-layout { grid-template-columns: minmax(0, 540px) minmax(180px, 264px); }
+  #partition-wooden-man-alley .wooden-board-layout { grid-template-columns: minmax(0, 1.3fr) minmax(220px, 1fr); }
   #partition-wooden-man-alley .wooden-advice { grid-template-columns: minmax(0, 1fr) 230px; }
 }
 
 @media (max-width: 1024px) {
-  #partition-wooden-man-alley .wooden-resource-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  #partition-wooden-man-alley .wooden-resource-grid { grid-template-columns: repeat(auto-fit, minmax(min(100%, 140px), 1fr)); }
   #partition-wooden-man-alley .wooden-package-fields { grid-template-columns: repeat(3, minmax(0, 1fr)); }
   #partition-wooden-man-alley .wooden-limit-grid { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 767px) {
-  #partition-wooden-man-alley { gap: 10px; }
+  #partition-wooden-man-alley { gap: 16px; }
   #partition-wooden-man-alley .wooden-man-modes { position: static; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
   #partition-wooden-man-alley .wooden-man-modes .seg { padding-inline: 5px; font-size: 14px; }
   #partition-wooden-man-alley .wooden-package-grid,
   #partition-wooden-man-alley .wooden-result-summary,
   #partition-wooden-man-alley .wooden-purchase-grid,
   #partition-wooden-man-alley .wooden-stage-grid { grid-template-columns: 1fr; }
-  #partition-wooden-man-alley .wooden-account-panel { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
-  #partition-wooden-man-alley .wooden-account-panel > div:first-child { grid-column: 1 / -1; grid-template-columns: auto minmax(0, 1fr); align-items: baseline; }
+  #partition-wooden-man-alley > section > .panel:not(.wooden-activity-panel) { padding: 12px; }
   #partition-wooden-man-alley .wooden-risk-card { padding: 8px; font-size: 12px; }
   #partition-wooden-man-alley .wooden-risk-card strong { font-size: 17px; overflow-wrap: anywhere; }
   #partition-wooden-man-alley .wooden-package-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  #partition-wooden-man-alley .wooden-resource-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  #partition-wooden-man-alley .wooden-calculator-controls > .filter-row { grid-template-columns: 1fr; gap: 8px; }
+  #partition-wooden-man-alley .wooden-calculator-command { grid-template-columns: 1fr; }
   #partition-wooden-man-alley .wooden-limit-row { grid-template-columns: minmax(0, 1fr) minmax(88px, .8fr); }
   #partition-wooden-man-alley .wooden-calculator-actions { display: grid; grid-template-columns: 1fr; }
   #partition-wooden-man-alley .wooden-board { width: 100%; min-width: calc(var(--wooden-board-size) * 32px + (var(--wooden-board-size) - 1) * 4px); gap: 4px; }
   #partition-wooden-man-alley .wooden-cell { border-radius: 6px; padding: 0; }
-  #partition-wooden-man-alley .wooden-table-wrap { overflow: visible; }
+  #partition-wooden-man-alley .wooden-table-wrap { overflow: visible; border: 0; border-radius: 0; }
   #partition-wooden-man-alley .wooden-table-wrap table,
   #partition-wooden-man-alley .wooden-table-wrap tbody,
   #partition-wooden-man-alley .wooden-table-wrap tr,
@@ -6215,7 +6244,7 @@ header.top{display:flex;align-items:center;justify-content:space-between;gap:16p
   #partition-wooden-man-alley .wooden-table-wrap thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
   #partition-wooden-man-alley .wooden-table-wrap tr { margin-bottom: 10px; padding: 10px; border: 1px solid rgba(145, 103, 34, .48); border-radius: 8px; background: rgba(14, 10, 6, .55); }
   #partition-wooden-man-alley .wooden-table-wrap td { display: flex; justify-content: space-between; gap: 10px; padding: 4px 0; border: 0; text-align: right; }
-  #partition-wooden-man-alley .wooden-table-label { display: inline; color: var(--muted); text-align: left; }
+  #partition-wooden-man-alley .wooden-table-label { display: inline; color: var(--muted); text-align: justify; }
 }
 
 /* Touch devices and tablet layouts avoid full-viewport repainting while scrolling. */

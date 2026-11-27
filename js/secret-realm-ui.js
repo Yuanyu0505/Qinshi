@@ -127,7 +127,15 @@
   function render(c){
     restoreResult(c);
     var state=c.state,realm=state.realms[c.realmId],disabled=readonly(c)||c.readError;
-    var html='<div class="realm-toolbar"><div class="segs realm-switches" aria-label="当前秘境">'+realmIds(c).map(function(id){var definition=c.data.realms.find(function(d){return d.id===id;});return '<button type="button" class="seg'+(c.realmId===id?' active':'')+'" data-realm-id="'+esc(id)+'" aria-pressed="'+(c.realmId===id)+'">'+esc(definition?definition.name:id)+'</button>';}).join('')+'</div><button type="button" class="seg" data-realm-action="reload">重新读取</button></div><nav class="segs realm-modes" aria-label="秘境内容">'+[['progress','个人进度'],['planner','目标规划'],['reference','资料参考']].map(function(m){return '<button type="button" class="seg'+(c.mode===m[0]?' active':'')+'" data-realm-mode="'+m[0]+'" aria-pressed="'+(c.mode===m[0])+'">'+m[1]+'</button>';}).join('')+'</nav><p data-realm-error class="error" role="alert"'+(c.error?'':' hidden')+'>'+esc(c.error)+'</p>'+(readonly(c)?'<p role="status">当前账号只读，可查看及临时计算，不能保存修改。</p>':'');
+    var ids=realmIds(c);
+    var realmNames=ids.map(function(id){
+      var definition=c.data.realms.find(function(d){return d.id===id;});
+      var name=esc(definition?definition.name:id);
+      if(ids.length===1)return '<h2 class="realm-title">'+name+'</h2>';
+      return '<button type="button" class="seg'+(c.realmId===id?' active':'')+'" data-realm-id="'+esc(id)+'" aria-pressed="'+(c.realmId===id)+'">'+name+'</button>';
+    }).join('');
+    if(ids.length>1)realmNames='<div class="segs realm-switches" aria-label="当前秘境">'+realmNames+'</div>';
+    var html='<div class="realm-toolbar">'+realmNames+'</div><nav class="segs realm-modes" aria-label="秘境内容">'+[['progress','个人进度'],['planner','目标规划'],['reference','资料参考']].map(function(m){return '<button type="button" class="seg'+(c.mode===m[0]?' active':'')+'" data-realm-mode="'+m[0]+'" aria-pressed="'+(c.mode===m[0])+'">'+m[1]+'</button>';}).join('')+'</nav><p data-realm-error class="error" role="alert"'+(c.error?'':' hidden')+'>'+esc(c.error)+'</p>'+(readonly(c)?'<p role="status">当前账号只读，可查看及临时计算，不能保存修改。</p>':'');
     if(c.mode==='reference')html+=referenceMarkup(c);
     else if(!realm)html+='<p>当前账号已无秘境记录。删除的秘境不会自动恢复；共用平台和代金设置仍保留。</p>'+settingsMarkup(c);
     else{
@@ -206,7 +214,6 @@
       }
       else if(b.dataset.realmMode){pause(c);c.mode=b.dataset.realmMode;render(c);}
       else if(b.dataset.realmPeriod){pause(c);c.period=Number(b.dataset.realmPeriod);render(c);}
-      else if(b.dataset.realmAction==='reload'){c.drafts={};load(c);render(c);}
       else if(b.dataset.realmAction==='goal'){var action=c.host.querySelector('[data-realm-calculate]:not(:disabled)')||c.host.querySelector('.realm-goal input:not(:disabled)');if(action){action.focus({preventScroll:true});action.scrollIntoView({block:'center',behavior:'instant'});}}
       else if(b.dataset.realmAction==='all'||b.dataset.realmAction==='none')commit(c,function(s){return c.core.setAll(s,c.realmId,c.period,b.dataset.realmAction==='all',Date.now(),c.data);});
       else if(b.dataset.realmAction==='following')commit(c,function(s){return c.core.applyFollowing(s,c.realmId,c.period,Date.now(),c.data);});

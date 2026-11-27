@@ -14,7 +14,7 @@
   ];
   var categories = [
     { id: 'backpack', name: '背包机师', condition: '突破25阶后，机师效果不在机师位也可生效。' },
-    { id: 'god25', name: '神将25阶机师', condition: '突破25阶后，在机师位置有机师效果。瑶瑶名称依原图，不添加“神”前缀。' },
+    { id: 'god25', name: '神将25阶机师', condition: '突破25阶后，在机师位置有机师效果。' },
     { id: 'traditional', name: '传统机师', condition: '自身技能携带机师效果，需在机师位置生效；部分效果另有技能进化或时装条件。' }
   ];
   var disciples = [];

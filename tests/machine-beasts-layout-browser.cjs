@@ -248,8 +248,8 @@ test('reference search preserves unrelated sections and independent stage school
   assert.equal(await page.locator('a[href="#machine-reference-effects"]').first().textContent(), '研发效果');
   assert.equal(await page.locator('a[href="#machine-reference-talents"]').first().textContent(), '突破/改造效果');
   assert.equal(await talents.locator('.muted-tip').count(), 0);
-  assert.ok(await talents.locator('thead th').evaluateAll(cells => cells.every(cell => getComputedStyle(cell).textAlign === 'center')));
-  assert.ok(await talents.locator('tbody th, tbody td').evaluateAll(cells => cells.every(cell => getComputedStyle(cell).textAlign === 'left')));
+  assert.ok(await talents.locator('thead th').evaluateAll(cells => cells.every(cell => getComputedStyle(cell).textAlign === 'justify')));
+  assert.ok(await talents.locator('tbody th, tbody td').evaluateAll(cells => cells.every(cell => getComputedStyle(cell).textAlign === 'justify')));
   const directoryLinks = await page.locator('.machine-reference-index-group').first().locator('a').evaluateAll(links => links.map(link => link.getBoundingClientRect().top));
   assert.ok(directoryLinks.every(top => Math.abs(top - directoryLinks[0]) < 1));
   assert.equal(await talents.locator('[data-talent-beast="zero-white-tiger"]').count(), 2);

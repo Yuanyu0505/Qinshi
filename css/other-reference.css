@@ -1,6 +1,10 @@
 /* All presentation is scoped to the independent read-only partition. */
 #partition-other-reference { min-width:0; container-type:inline-size; }
 #partition-other-reference [hidden] { display:none !important; }
+#partition-other-reference .ref-directory,
+#partition-other-reference .ref-section { border:0;box-shadow:none;background:transparent; }
+#partition-other-reference :is(.ref-directory,.ref-section)::before,
+#partition-other-reference :is(.ref-directory,.ref-section)::after { display:none; }
 #partition-other-reference h2 { margin:0 0 12px; color:var(--gold); font-size:22px; }
 #partition-other-reference h3 { margin:16px 0 8px; color:var(--gold); font-size:17px; }
 #partition-other-reference .ref-muted,
@@ -18,7 +22,8 @@
 #partition-other-reference .ref-directory-controls button { min-height:44px; }
 #partition-other-reference .ref-index-item > button[aria-pressed="true"] { border-color:var(--gold);background:var(--bg3, #302511);box-shadow:inset 0 0 0 2px var(--gold); }
 #partition-other-reference .ref-order-error { color:#ff9b91; }
-.reference-module-heading { display:flex;align-items:center;justify-content:flex-end;gap:12px;margin-bottom:16px; }
+.reference-module-heading { display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px; }
+.reference-module-heading h2 { margin:0;color:var(--gold);font-size:22px;min-width:0; }
 .reference-module-heading button { min-height:44px;flex-shrink:0; }
 #partition-other-reference .ref-index span { color:var(--gold);grid-row:span 2;font-size:14px; }
 #partition-other-reference .ref-index strong { font-size:17px; }
@@ -78,10 +83,10 @@
 #partition-other-reference .ref-table th,
 #partition-other-reference .ref-table td { border-bottom:1px solid var(--line);padding:10px 12px;vertical-align:top;text-align:right;min-width:70px;max-width:560px;white-space:pre-line;font-variant-numeric:tabular-nums; }
 #partition-other-reference .ref-table th { color:var(--gold);font-weight:600; }
-#partition-other-reference .ref-table th:first-child { text-align:left;min-width:110px; }
+#partition-other-reference .ref-table th:first-child { text-align:justify;min-width:110px; }
 #partition-other-reference .ref-table thead th { background:var(--panel);white-space:nowrap; }
 #partition-other-reference .ref-table tbody tr:nth-child(even) { background:rgba(255,255,255,.025); }
-#partition-other-reference .ref-table td.ref-long-text { text-align:left;min-width:240px; }
+#partition-other-reference .ref-table td.ref-long-text { text-align:justify;min-width:240px; }
 #partition-other-reference .ref-element-mappings { table-layout:fixed;min-width:620px; }
 #partition-other-reference .ref-element-mappings th,
 #partition-other-reference .ref-element-mappings td { vertical-align:middle; }
@@ -89,13 +94,13 @@
 #partition-other-reference .ref-element-mappings th:nth-child(2),
 #partition-other-reference .ref-element-mappings td:nth-child(2) { width:12%;text-align:center; }
 #partition-other-reference .ref-element-mappings th:nth-child(3),
-#partition-other-reference .ref-element-mappings td:nth-child(3) { text-align:left;white-space:normal; }
+#partition-other-reference .ref-element-mappings td:nth-child(3) { text-align:justify;white-space:normal; }
 #partition-other-reference .ref-member { display:inline-block;white-space:nowrap; }
 #partition-other-reference .ref-quality-step { display:inline-block;white-space:nowrap; }
 #partition-other-reference .ref-origin-table { table-layout:fixed;min-width:480px; }
 #partition-other-reference .ref-origin-table th:first-child { width:28%; }
 #partition-other-reference .ref-origin-table th:nth-child(2),
-#partition-other-reference .ref-origin-table td:nth-child(2) { text-align:left;vertical-align:middle;white-space:normal; }
+#partition-other-reference .ref-origin-table td:nth-child(2) { text-align:justify;vertical-align:middle;white-space:normal; }
 #partition-other-reference [data-ref-kind="elements"] .ref-table,
 #partition-other-reference [data-ref-kind="origins"] .ref-table { table-layout:fixed; }
 #partition-other-reference [data-ref-kind="elements"] .ref-table th,
@@ -118,7 +123,7 @@
 #partition-other-reference [data-ref-kind="guardians"] .ref-table td { min-width:0;max-width:none;padding:10px clamp(8px,1.2cqi,16px);vertical-align:middle;text-align:center;white-space:normal;overflow-wrap:anywhere; }
 #partition-other-reference [data-ref-kind="guardians"] .ref-table td.ref-long-text { text-align:justify;text-align-last:left; }
 #partition-other-reference [data-ref-kind="guardians"] .ref-table[data-ref-table-id="guardians-aid-skills"] :is(th,td):last-child,
-#partition-other-reference [data-ref-kind="guardians"] .ref-table[data-ref-table-id="guardians-aid-special"] :is(th,td):last-child { text-align:left;text-align-last:auto; }
+#partition-other-reference [data-ref-kind="guardians"] .ref-table[data-ref-table-id="guardians-aid-special"] :is(th,td):last-child { text-align:justify;text-align-last:auto; }
 #partition-other-reference [data-ref-kind="guardians"] .ref-detail-body dl > div { align-items:center; }
 #partition-other-reference [data-ref-kind="guardians"] .ref-detail-body dt,
 #partition-other-reference [data-ref-kind="guardians"] .ref-detail-body dd { text-align:center; }
@@ -148,10 +153,12 @@
 #partition-other-reference .ref-spirit-combination li { padding:8px 0;border-top:1px solid var(--line);text-align:center;line-height:1.6;overflow-wrap:anywhere; }
 #partition-other-reference .ref-element-gains { display:grid;gap:16px; }
 #partition-other-reference .ref-element-gains h3 { margin-top:0; }
-#partition-other-reference .ref-card-stats { table-layout:fixed;min-width:580px; }
-#partition-other-reference .ref-card-stats th,
-#partition-other-reference .ref-card-stats td { text-align:center;padding:10px 8px;min-width:0;max-width:none; }
-#partition-other-reference .ref-card-stats th:first-child { width:24%;text-align:left; }
+#partition-other-reference .ref-table.ref-card-stats { table-layout:fixed;min-width:580px;font-size:15px;line-height:1.65; }
+#partition-other-reference .ref-table.ref-card-stats :is(th,td) { text-align:center;padding:11px 8px;min-width:0;max-width:none; }
+#partition-other-reference .ref-card-stats tbody tr:nth-child(odd) { background:var(--bg); }
+#partition-other-reference .ref-card-stats tbody tr:nth-child(even) { background:var(--qin-color-lacquer-raised); }
+#partition-other-reference .ref-table.ref-card-stats tbody tr > :is(th,td) { background:inherit; }
+#partition-other-reference .ref-card-stats th:first-child { width:24%;text-align:justify; }
 #partition-other-reference .ref-positive-high,
 #partition-other-reference [data-ref-table-id^="cards-substats-"]:not([data-ref-table-id="cards-substats-ratio"]) thead th:nth-child(2) { color:#ff786f; }
 #partition-other-reference .ref-speed-cards { display:grid;gap:0; }
@@ -192,7 +199,7 @@
 #partition-other-reference [data-ref-kind="levels"] .ref-table th,
 #partition-other-reference [data-ref-kind="levels"] .ref-table td { vertical-align:middle;min-width:0;max-width:none;white-space:normal;overflow-wrap:anywhere;padding:10px clamp(8px,1.2cqi,16px); }
 #partition-other-reference [data-ref-kind="levels"] .ref-table th,
-#partition-other-reference [data-ref-kind="levels"] .ref-table td { text-align:left; }
+#partition-other-reference [data-ref-kind="levels"] .ref-table td { text-align:justify; }
 #partition-other-reference [data-ref-kind="levels"] .ref-timeline > li,
 #partition-other-reference [data-ref-kind="levels"] .ref-timeline dl > div { align-items:center; }
 #partition-other-reference .ref-leagues { display:grid;gap:0; }

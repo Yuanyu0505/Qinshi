@@ -75,9 +75,10 @@
   }
 
   function progressRowHtml(row, highlighted) {
-    var cells = row.items.map(function (item) {
-      return '<td data-label="进度"><strong>' + number(item.progress) + "</strong></td>" +
-        '<td data-label="奖励">' + progressRewardHtml(item) + "</td>";
+    var cells = row.items.map(function (item, index) {
+      var bookClass = item.seasonTier ? ' class="is-book-reward' + (index === 0 || !row.items[index - 1].seasonTier ? ' is-book-start' : '') + '"' : '';
+      return '<td data-label="进度"' + bookClass + '>' + number(item.progress) + "</td>" +
+        '<td data-label="奖励"' + (item.seasonTier ? ' class="is-book-reward"' : '') + '>' + progressRewardHtml(item) + "</td>";
     }).join("");
     if (row.items.length < 2) cells += '<td class="is-empty" aria-hidden="true"></td><td class="is-empty" aria-hidden="true"></td>';
     return '<tr class="' + (highlighted ? "is-located " : "") + (row.hasBookReward ? "has-book-reward" : "") + '">' +

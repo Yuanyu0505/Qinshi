@@ -18,10 +18,9 @@ test('budget label and amount stay together without redundant rounding totals',a
  }finally{await context.close();}
 });
 
-test('active realm is a prominent pressed button with Gaoyue period two and no retired entry',async()=>{
-  const {context,page}=await open();try{const buttons=page.locator('[data-realm-id]');assert.equal(await buttons.count(),1);assert.equal(await page.locator('[data-realm-id=guigu]').count(),0);assert.equal(await page.locator('#secret-realm-select').count(),0);
-    await page.locator('[data-realm-id=gaoyue]').click();assert.equal(await page.locator('[data-realm-id=gaoyue]').getAttribute('aria-pressed'),'true');assert.match(await page.locator('[data-realm-status]').innerText(),/第2期/);
-    const box=await page.locator('[data-realm-id=gaoyue]').boundingBox();assert.ok(box.height>=48);
+test('only active realm appears as a heading with Gaoyue period two and no selector',async()=>{
+  const {context,page}=await open();try{assert.equal(await page.locator('[data-realm-id],#secret-realm-select').count(),0);
+    assert.equal(await page.getByRole('heading',{level:2,name:'千泷高月',exact:true}).count(),1);assert.match(await page.locator('[data-realm-status]').innerText(),/第2期/);
   }finally{await context.close();}
 });
 
@@ -35,7 +34,7 @@ test('currency-only goal and overflow mode calculate on worker and merge identic
       for(let n=1;n<6;n++)state.realms.gaoyue.periods[n]={startDate:null,locked:true,ended:true,sources:{}};
       window.QinshiAccounts.setItem('qinshi_secret_realms_v1',JSON.stringify(state));
     });
-    await page.locator('[data-realm-action=reload]').click();
+    await page.evaluate(()=>window.dispatchEvent(new Event('pageshow')));
     await page.locator('[data-realm-mode=planner]').click();await page.locator('[data-realm-action=none]').click();await page.locator('[data-realm-enable=pack98]').check();
     await page.locator('[name=targetEnabled]').uncheck();await page.locator('[name=currencyTargetEnabled]').check();await page.locator('[name=currencyTarget]').fill('40');await result(page);
     assert.equal(await page.locator('.realm-plan').count(),1);assert.match(await page.locator('.realm-plan').innerText(),/最快.*最省钱/);
@@ -116,7 +115,7 @@ test('Gaoyue currency and independent period receipts survive navigation reload 
       Object.assign(state.realms.guigu,{currency:123,cumulative:777,inventory:9});
       window.QinshiAccounts.setItem('qinshi_secret_realms_v1',JSON.stringify(state));return state.realms.guigu;
     });
-    await page.locator('[data-realm-action=reload]').click();
+    await page.evaluate(()=>window.dispatchEvent(new Event('pageshow')));
     await page.locator('[name=currency]').fill('80');
     const today=await page.evaluate(()=>new Date(Date.now()+28800000).toISOString().slice(0,10));await page.locator('[name=startDate]').fill(today);await page.locator('[data-realm-form=date] [type=submit]').click();
     const source=page.locator('[data-realm-source=panda]');await source.locator('[name=currencyObtained]').fill('20');

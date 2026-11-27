@@ -1,53 +1,57 @@
 #partition-pilots .pilots-workbench {
-  --pilot-border: rgba(195, 156, 80, .27);
-  --pilot-gold: #d9b86e;
-  --pilot-muted: #b3ad9f;
-  color: #e9e2d4;
-  max-width: 1500px;
+  --pilot-border: var(--line, #46351f);
+  --pilot-gold: var(--gold, #d4af37);
+  --pilot-muted: var(--muted, #bdb29f);
+  color: var(--text, #e9e2d4);
+  max-width: 100%;
   margin: 0 auto;
-  padding: 18px;
+  padding: 0;
   min-width: 0;
 }
 #partition-pilots [hidden] { display: none !important; }
-#partition-pilots .pilots-heading { margin-bottom: 20px; }
-#partition-pilots h2 { margin: 5px 0 10px; color: #ead6a4; font-size: 24px; }
-#partition-pilots .pilots-heading > p:last-child { margin: 0; line-height: 1.7; color: var(--pilot-muted); font-size: 13px; }
-#partition-pilots .pilots-toolbar { display: grid; gap: 12px; margin-bottom: 12px; }
-#partition-pilots .pilots-filter-row { display: flex; flex-wrap: wrap; gap: 8px; }
+#partition-pilots .pilots-heading { margin-bottom: 18px; }
+#partition-pilots h2 { margin: 0 0 12px; color: var(--pilot-gold); font-size: 22px; }
+#partition-pilots .reference-module-heading h2 { margin:0; }
+#partition-pilots .pilots-heading > p:last-child { margin: 0; line-height: 1.7; color: var(--pilot-muted); font-size: 14px; }
+#partition-pilots .pilots-toolbar { display: grid; grid-template-columns: minmax(0, 1fr); align-items: end; gap: 12px; margin-bottom: 18px; padding: 16px; border: 1px solid var(--pilot-border); border-radius: 8px; background: var(--panel); }
+#partition-pilots .pilots-filter-row { display: flex; flex-wrap: wrap; gap: 8px; min-width: 0; }
+#partition-pilots [data-pilots-categories], #partition-pilots [data-pilots-ranks] { grid-column: 1; }
+#partition-pilots .pilots-search-field { grid-column: 1; }
+#partition-pilots .pilots-category-notes { grid-column: 1 / -1; }
 #partition-pilots .pilots-filter-row button {
-  min-height: 40px; padding: 8px 16px; border-radius: 8px; font: inherit; font-size: 13px;
+  min-height: 44px; padding: 8px 16px; border-radius: 5px; font: inherit; font-size: 14px;
 }
-#partition-pilots .pilots-category-notes { border-left: 2px solid var(--pilot-border); padding: 9px 12px; background: rgba(180, 144, 66, .04); color: var(--pilot-muted); font-size: 12px; line-height: 1.75; overflow-wrap: anywhere; }
+#partition-pilots .pilots-category-notes { border-top: 1px solid var(--pilot-border); padding: 12px 0 0; color: var(--pilot-muted); font-size: 14px; line-height: 1.7; overflow-wrap: anywhere; }
 #partition-pilots .pilots-category-notes p { margin: 0; }
 #partition-pilots .pilots-category-notes p + p { margin-top: 5px; }
 #partition-pilots .pilots-category-notes strong { color: var(--pilot-gold); font-weight: 600; }
 #partition-pilots button:focus-visible, #partition-pilots input:focus-visible { outline: 2px solid var(--pilot-gold); outline-offset: 3px; }
-#partition-pilots .pilots-search-label { color: var(--pilot-muted); font-size: 12px; }
-#partition-pilots .pilots-search-field { display: grid; gap: 6px; min-width: 0; }
-#partition-pilots .pilots-search { width: 100%; max-width: 600px; min-height: 44px; box-sizing: border-box; border: 1px solid var(--pilot-border); border-radius: 8px; color: #ece6d9; background: #171a1d; padding: 10px 12px; font-size: 16px; }
-#partition-pilots .pilots-result-count { color: var(--pilot-muted); font-size: 13px; margin: 14px 0; }
-#partition-pilots .pilots-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 350px), 1fr)); gap: 14px; align-items: start; }
-#partition-pilots .pilots-card { min-width: 0; background: linear-gradient(145deg, #252722, #1b1e21); border: 1px solid var(--pilot-border); border-radius: 12px; overflow: hidden; }
-#partition-pilots .pilots-card > header { padding: 16px; background: rgba(180, 144, 66, .06); border-bottom: 1px solid var(--pilot-border); }
-#partition-pilots .pilots-card h3 { margin: 0 0 10px; font-size: 17px; color: #ead5a0; }
+#partition-pilots .pilots-search-label { color: var(--text); font-size: 14px; }
+#partition-pilots .pilots-search-field { display: grid;grid-template-columns:max-content minmax(0,1fr);align-items:center;gap:12px;min-width:0; }
+#partition-pilots .pilots-search { width: 100%; min-height: 44px; box-sizing: border-box; border: 1px solid var(--pilot-border); border-radius: 5px; color: var(--text); background: var(--bg); padding: 8px 10px; font: inherit; }
+#partition-pilots .pilots-result-count { color: var(--pilot-muted); font-size: 14px; margin: 18px 0 12px; }
+#partition-pilots .pilots-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 350px), 1fr)); gap: 16px; align-items: start; }
+#partition-pilots .pilots-card { min-width: 0; background: var(--bg2); border: 1px solid var(--pilot-border); border-radius: 8px; overflow: hidden; }
+#partition-pilots .pilots-card > header { padding: 14px; background: var(--panel); border-bottom: 1px solid var(--pilot-border); }
+#partition-pilots .pilots-card h3 { margin: 0 0 10px; font-size: 17px; color: var(--pilot-gold); }
 #partition-pilots .pilots-badges, #partition-pilots .pilots-costumes { display: flex; flex-wrap: wrap; gap: 6px; }
-#partition-pilots .pilots-badge { display: inline-block; border: 1px solid var(--pilot-border); border-radius: 5px; padding: 3px 7px; font-size: 11px; color: var(--pilot-gold); background: rgba(181, 148, 75, .07); }
-#partition-pilots .pilots-badge-nonpilot { color: #c3c7cf; background: #343941; border-color: #555d6a; }
-#partition-pilots .pilots-badge-backpack { color: #aee0c2; background: #213e32; border-color: #427858; }
-#partition-pilots .pilots-badge-god25 { color: #edc48d; background: #4a3523; border-color: #8b643e; }
-#partition-pilots .pilots-badge-traditional { color: #cbc0f0; background: #37304e; border-color: #70608e; }
+#partition-pilots .pilots-badge { display: inline-block; border: 1px solid currentColor; border-radius: 4px; padding: 2px 7px; font-size: 13px; color: var(--pilot-gold); background: var(--bg); }
+#partition-pilots .pilots-badge-nonpilot { color: #b5b5b5; background:#292929;border-color:#555; }
+#partition-pilots .pilots-badge-backpack { color: #69db94; }
+#partition-pilots .pilots-badge-god25 { color: #ff8a80; background:#441e1b;border-color:#a7433b; }
+#partition-pilots .pilots-badge-traditional { color: #d2a2ff; }
 #partition-pilots .pilots-effects { list-style: none; margin: 0; padding: 0 16px; }
-#partition-pilots .pilots-effects > li { padding: 14px 0; border-bottom: 1px solid rgba(255, 255, 255, .07); }
+#partition-pilots .pilots-effects > li { padding: 14px 0; border-bottom: 1px solid var(--pilot-border); }
 #partition-pilots .pilots-effects > li:last-child { border: 0; }
 #partition-pilots .pilots-effect-title { margin: 0; color: var(--pilot-gold); font-size: 14px; font-weight: 600; line-height: 1.5; }
 #partition-pilots .pilots-effects p { margin: 8px 0; font-size: 14px; line-height: 1.85; overflow-wrap: anywhere; }
-#partition-pilots .pilots-notes { background: rgba(180, 124, 52, .1); padding: 10px 16px; }
-#partition-pilots .pilots-notes p, #partition-pilots .pilots-effects .pilots-warning { color: #dfbc85; font-size: 12px; line-height: 1.75; margin: 4px 0; }
+#partition-pilots .pilots-notes { background: var(--panel); padding: 10px 16px; border-bottom: 1px solid var(--pilot-border); }
+#partition-pilots .pilots-notes p, #partition-pilots .pilots-effects .pilots-warning { color: var(--pilot-muted); font-size: 14px; line-height: 1.7; margin: 4px 0; }
 #partition-pilots .pilots-empty { color: var(--pilot-muted); line-height: 1.7; grid-column: 1 / -1; padding: 24px 0; }
-#partition-pilots .pilots-reference { margin-top: 24px; padding: 16px; background: #202321; border: 1px solid var(--pilot-border); border-radius: 10px; color: var(--pilot-muted); font-size: 12px; line-height: 1.7; overflow-wrap: anywhere; }
-#partition-pilots .pilots-reference h3 { margin: 0 0 10px; color: var(--pilot-gold); font-size: 14px; }
+#partition-pilots .pilots-reference { margin-top: 20px; padding: 16px; background: var(--panel); border: 1px solid var(--pilot-border); border-radius: 8px; color: var(--pilot-muted); font-size: 14px; line-height: 1.7; overflow-wrap: anywhere; }
+#partition-pilots .pilots-reference h3 { margin: 0 0 12px; color: var(--pilot-gold); font-size: 17px; }
 @media (max-width: 600px) {
-  #partition-pilots .pilots-workbench { padding: 12px; }
+  #partition-pilots .pilots-toolbar { padding: 14px; }
   #partition-pilots h2 { font-size: 21px; }
   #partition-pilots .pilots-grid { grid-template-columns: minmax(0, 1fr); }
   #partition-pilots .pilots-filter-row { gap: 6px; }
